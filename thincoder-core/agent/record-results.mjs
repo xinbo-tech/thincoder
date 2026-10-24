@@ -26,6 +26,8 @@
 import { pushReal } from "../context.mjs"
 import { specForModel } from "../config.mjs"
 import { FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
+// F-LC6（LIGHT-CHANNEL §2.9 · 台账 #1753）：无账之笔提醒叶（谓词 + 文案 + 闩单源）。
+import { unbookedPenNotice } from "./unbooked-pen.mjs"
 import { capHistoryImages } from "../provider/normalize.mjs"
 import { resolve } from "node:path"
 import { advisorRuns, stripApprovedSuffix } from "../agent-tools/advisor-async.mjs"
@@ -82,7 +84,10 @@ export async function recordToolResults(agent, toolByName, results) {
         }
       } catch { /* Parse failure doesn't affect normal tool messages */ }
     }
-    pushReal(agent, { role: "tool", tool_call_id: toolCall.id, name: toolCall.name, content: result })
+    // F-LC6（LIGHT-CHANNEL §2.9）：主 agent 会话首笔产品源文件笔 ⇒ 回执末尾追加一行通道提醒
+    // （零拦截——只拼回执文本、入史时机不变；命中后本会话不再提示）。
+    const penNotice = unbookedPenNotice(agent, toolCall, ok, tool)
+    pushReal(agent, { role: "tool", tool_call_id: toolCall.id, name: toolCall.name, content: penNotice ? result + penNotice : result })
     if (tool && ok) {
       if (FILE_MUTATORS.has(toolCall.name)) {
         // Direct file edit — code was changed. The prior advisor review and

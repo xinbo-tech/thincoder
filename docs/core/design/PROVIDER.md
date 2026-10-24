@@ -98,7 +98,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - **413 可操作化（D-PR32）**：请求体超限（HTTP 413——长会话图片累积的高频形态）⇒ 错误文本携带处置提示（`/compact` 压缩历史 ∥ 移除历史图片；图片累计预算机制见 §6.7）——从裸 HTTP 码变为可执行指引。
 - **400 图像语义 = 剥除自愈（非「立抛」）**：HTTP 400 ∧ 错误文本命中图像语义词表 ∧ 历史含 image part ⇒ 不就此收束——剥除历史图像 + 机读注记 + **重发一次**（触发 / 处置全文 = §6.26——本行不重述）；既有 `isNonRetryableError` 判据零改（自愈发生在错误已抛至 agent 层之后，由 agent 层承接）。
 - **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 计算；四 transport 经 opts `_headerTimeoutMs` 携带）——**消费面 = 代理分支**（`proxyFetch` 两分支：https 目标 `tunnelHttps` ∥ http 目标 `tcpConnectProxy`+`streamHttpResponse`）；
-  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）；**body 阶段**用读侧**空闲**超时 `READ_IDLE_MS = 120s`（有数据流动就永不超时，连续无新 chunk 才判死）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
+  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）；**body 阶段**用读侧**空闲**超时 `agent.bodyIdleTimeoutMs`（默认 120s，`effectiveBodyIdleMs(provider)` 计算，八处消费点同源；有数据流动就永不超时，连续无新 chunk 才判死；机制单源 = `docs/core/design/TIMEOUT-DIGEST.md` §2.1）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
 - **abort / 超时来源标注**：超时 / 中止产生点的错误对象自带结构化 `abortInfo`（trigger / layer / detail）——词汇表与判定归 AGENT-LOOP 板（本档只指针）。
 - **body 终止守卫（崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody` 以错误终止 body——可 destroy 形态走 `destroyBody`（先挂永久兜底 `'error'` 监听者，防未处理 `'error'` 杀进程）；
   **web `ReadableStream`（直连 fetch）走内部 abort 通道**（`IDLE_ABORT`——建设点 = `proxyFetch` 直连分支单点〔两条流式直连链同经〕；看门狗不再 no-op）。机制单源 = `doc:PROXY.md:§2`。消费面语义零变（含 google 的 partial 保留径）。
@@ -144,7 +144,7 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 
 ### 6.8 原生 transport（anthropic / google）
 
-- **Anthropic**（`format: "anthropic"`）：POST `/v1/messages`，头 `anthropic-version: 2023-06-01`，key 走 `x-api-key`；system 消息抽离到顶层 `system`；tool 用 `tool_use` / `tool_result` block；
+- **Anthropic**（`format: "anthropic"`）：POST `/v1/messages`，头 `anthropic-version: 2023-06-01`，key 走 `x-api-key`；system 消息抽离到顶层 `system`；OpenAI 形态历史在 transport 内转成 Messages API 形态（`tool_calls` ⇒ `tool_use`、`role:"tool"` ⇒ `tool_result`；规则全集 = §6.27）；
 事件流解析（`message_start` / `content_block_start` / `content_block_delta`（`text_delta` / `thinking_delta` / `input_json_delta`）/ `message_delta` / `message_stop`）；usage `cache_read` / `cache_creation_input_tokens` → 内部 cache 字段；`tool_choice` 映射；接入 rateGate / recordRate + 通用退避链。
 - **Gemini**（`format: "google"`）：`generateContent` / `streamGenerateContent?alt=sse`（key 走 query 参数）；role 映射 `assistant → model`（system 抽到顶层 `systemInstruction`）；相邻同 role 合并；图像 data URL → `inlineData`；`generationConfig`；safetySettings 全 BLOCK_NONE；
 事件流解析（`usageMetadata` / `part.thought` → reasoning / `part.functionCall` → toolCalls，同名去重合并、id 合成 `name_N`）；接入闸门 + 退避链。
@@ -1057,6 +1057,128 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - **图持久化体积**（session 落盘随图膨胀）∥ **请求体总量**（网络层）——不同问题域，不在射程。
 - **引擎级图降尺寸**（自动 resize）= 未立（零第三方依赖约束下无图像处理管线；指引形 = 注记内「re-read a smaller copy」）。
 
+### 6.27 Anthropic 消息适配层（OpenAI 形态历史 → Messages API）
+
+**问题面**：会话历史是 OpenAI 形态的持久表示——`agent/record-results.mjs:62` 与 `:90` 推 `{ role: "tool", tool_call_id, name, content }`，assistant 带 `tool_calls`。Anthropic Messages API 不认 `role:"tool"`；原样透传 ⇒ 用过工具的会话下一轮必被上游 400 拒（`Unexpected role "tool"`，GitHub #20 ∥ Gitee IKKJEE）。本层 = 该通道进入请求体前的唯一转换点。
+
+**位置与顺序**：`provider/core.mjs:151` 的 anthropic 分支先跑 `normalizeToolPairing(messages)`（`:155`），再交 `provider/anthropic.mjs` 的 `chat()`（`:156`）；`chat()` 完成 system 抽离（`anthropic.mjs:157-166`）后调 `convertMessages(messages)`（导出纯函数，`anthropic.mjs:97`；调用点 `:169`），结果写入请求体 `messages`（`:174`）。
+
+**返回契约（定死签名）**：`convertMessages(messages) → { messages, warnings }`。
+
+- `messages` = 转换后的新消息数组；
+- `warnings` = 数组，元素 `{ name, message }`——R7 触发时 `name = "anthropic-tool-args-malformed"`、`message` 带工具名与截断原文；零触发 ⇒ `[]`。
+- **告警投递点**：`anthropic.mjs` 的 `chat()` 在 `finishAnthropic(result)`（`:232`）之后合并 `result._warnings = [...(result._warnings ?? []), ...warnings]`（`:234`）；消费面 = `agent/run-stages.mjs:44-45`（按 `name` 去重后进机读线）。请求失败时告警不投递——错误本身可见（D-PR42：不静默），不另开通道。
+- **告警码唯一发射点** = `convertMessages` 的 R7 分支。
+
+复用 `normalizeToolPairing`（`provider/normalize.mjs:127`）的理由：缺回执的 `tool_call` 在 Anthropic 侧表现为 `tool_use` 无对应 `tool_result`，上游同样拒收；该函数已实现「tool 消息钉回 owner assistant / 缺失结果合成占位 / 孤儿丢弃」，输出正是本层需要的前置形态，且是纯函数 + 拷贝语义。另写一份 = 同一协议修复两份实现（违 D2）。
+
+**copy-on-write 契约（硬约束）**：`convertMessages` 只读入参，返回新数组；未改动的消息可原引用复用，内容块一律新建。`agent.history` 本体零写——历史是四条通道共用的持久表示，就地改写会让 OpenAI / responses / google 三径读出 Anthropic 块而崩。
+
+**转换规则全集**（按角色分组；输入形 → 输出形 → 场景 / 依据）：
+
+| # | 组 | 输入（OpenAI 形） | 输出（Messages API 形） | 场景 / 依据 |
+|---|---|---|---|---|
+| R1 | system | `role:"system"` | 抽到顶层 `system`，多条以 `\n\n` 连接（现状不变） | 既有实现（`anthropic.mjs:157-166` ∥ `:180`），本层不动 |
+| R2 | user | `content` 为字符串 | `[{type:"text", text}]` | 仓内产出点：`record-results.mjs:75-81`（非视觉模型的「图未注入」提醒，role = user） |
+| R3 | user | `content` 为 part 数组 | text part ⇒ `{type:"text"}`；`image_url` ⇒ image 块（R12）；按原序成块 | 仓内主路径：`record-results.mjs:67-69` 多模态 `read_image` 每次推 `[{type:"text"}, ...images]`（role = user）——缺这一行则工具文本在 Anthropic 通道静默消失 |
+| R4 | assistant | `content` 为字符串 ∥ 文本 part | `[{type:"text", text}]` | 产出点 `model-specs.mjs:431`（`content: response.content \|\| null`）；文本是两协议共有的无损块 |
+| R5 | assistant | `tool_calls:[{id, function:{name, arguments}}]` | 追加 `{type:"tool_use", id, name, input}`；文本块在前、`tool_use` 块在后 | 用户报告：`role:"tool"` 被上游 400（GitHub #20 ∥ Gitee IKKJEE）；产出点 `model-specs.mjs:432-436` |
+| R6 | 参数 | `arguments` 缺 ∥ 空串 ∥ `null` | `input:{}` | 真实形态：Anthropic 侧无参工具调用零 `input_json_delta` ⇒ `arguments:""`（`anthropic.mjs:290` 初值、`:302-304` 推入）⇒ 落史（`model-specs.mjs:434`）⇒ 下一轮重放入本支；无参调用是合法形态 |
+| R7 | 参数 | `arguments` 非法 JSON ∥ 解析结果非普通对象（数组 / 数字 / 字符串 / `null`） | `input:{}` + 告警 `anthropic-tool-args-malformed`（工具名 + 截断原文），**不抛** | 仓内已按「畸形会出现」防御：`record-results.mjs:44` 对 `toolCall.arguments` 逐个 try/catch。复现径：会话档 `tool_calls[].arguments` 改成 `"{"` 后重放 ⇒ 不处置则原串成为 `input`，上游按类型拒收（400）。历史持久 ⇒ 抛错会让该会话此后每轮必死；真实结果仍在 `tool_result` 里（D-PR42） |
+| R8 | tool | `role:"tool"` + `tool_call_id` + `content` | user 消息内 `{type:"tool_result", tool_use_id, content}`；`content` 字符串原样，空 ∥ 缺失 ⇒ `"(no output)"` | 官方文档原句「the tool_result blocks must come FIRST in the content array」（platform.claude.com 检索摘要实读）。空输出可达：`record-results.mjs:90` 原样推 `content: result`（无归一），无 stdout 的成功调用 = `""` |
+| R9 | tool | 连续多条 `role:"tool"`（并行调用） | 并进**同一条** user 消息，每条形一个 `tool_result`；`tool_result` 恒在其它块之前 | 仓内产出点：`record-results.mjs:54-90` 并行结果循环——N 个并行工具调用 ⇒ N 条连续 `role:"tool"`（`:49-51` 注释即此场景） |
+| R10 | 合并 | 转换后相邻同 role | 合并为一条，块按原序拼接；user 消息内 `tool_result` 恒在前 | 仓内产出点：`record-results.mjs:52` `deferredUserMsgs`——并行工具轮的多模态 user 消息延后于工具消息落史 ⇒ 历史呈 `… assistant, tool×N, user(图)` ⇒ 转换后两条相邻 user |
+| R11 | 首条 | 首条为 assistant ∥ 无 user 在前 | 前置 `{role:"user", content:[{type:"text", text:"[conversation continued from the history below]"}]}` | 产出点：截断续写精简历史 `core.mjs:331-336`（`prefixMode` 取末 N 条非 system 消息，可 assistant 开头；切片 `:335`），该子请求走同一 `chat()`（`core.mjs:292`）。上游「首条须 user」原文未取得（unverified——见真机验证项） |
+| R12 | 图像 | `image_url.url` 为 data URL ∥ http(s) 引用 | data URL ⇒ `{type:"image", source:{type:"base64", media_type, data}}`；http(s) ⇒ `{type:"image", source:{type:"url", url}}` | 仓内产出点：`read_image` 图像 part（`record-results.mjs:69` 的 `...parsed.images`，data URL 形）；官方 Vision 文档检索摘要实读（base64 与 url 两种 source 合法） |
+| R13 | 空 | 转换后无块的消息（任何 role；含 `content` 为 `null` ∥ 空串且无 `tool_calls` 的 assistant） | 丢弃该消息 | 空块数组上游拒收（I3）；assistant 的 `null` 产出点 = `model-specs.mjs:431`（`content: response.content \|\| null`）；带 `tool_calls` 的 `null` content 不丢——`tool_use` 块填充 |
+
+**表外默认**：未列出的 part 类型原样直通（上游按类型拒收 = 显式失败），本层不静默丢弃——仓内 part 产出点只有 `text` / `image_url`（`record-results.mjs:67-69`），出现别型即调用方契约破坏。
+
+**输出不变量**（可机检，批内单测逐条断言）：
+
+- I1 输出首条为 `role:"user"`；`role ∈ {user, assistant}`；输入全部为空消息（R13 全丢）⇒ 输出空数组——本层不造占位消息，空 `messages` 由上游显式拒绝。
+- I2 相邻消息 role 不同。
+- I3 每条 `content` 为非空块数组。
+- I4 无 OpenAI 残留字段：`tool_calls` / `tool_call_id` / `image_url` / `function`。
+- I5 copy-on-write：入参深比较前后相等（`JSON.stringify(messages)` 相同），且 `out.messages !== messages`；未改动消息可原引用复用。
+- I6 R7 触发 ⇒ `out.warnings` 恰一条（`name = "anthropic-tool-args-malformed"`、`message` 含工具名与截断原文）且该 `input` 为 `{}`；零触发 ⇒ `warnings = []`。
+- I7 text part 零丢弃：输入的全部文本（`content` 字符串 ∥ part 数组内的 `{type:"text"}`，user 与 assistant 同判）在输出中逐字出现。
+
+**用例表（批内单测——正常 / 边界 / 错误）**：
+
+| # | 规则 | 夹具（输入） | 期望 |
+|---|---|---|---|
+| T-1 | R1 | system 两条 + user 一条 | 请求体 `system` = 两文本 `\n\n` 连接；`messages` 无 system |
+| T-2 | R2 ∥ I7 | `{role:"user", content:"hi"}` | `[{type:"text",text:"hi"}]` |
+| T-3 | R3 ∥ R12 ∥ I7 | `{role:"user", content:[{type:"text",text:"图已读"},{type:"image_url",image_url:{url:"data:image/png;base64,AAA"}}]}`（= `record-results.mjs:67-69` 形） | 两块：text 逐字 = `图已读`、image base64 source；text 不丢 |
+| T-4 | R4 | assistant `content:"done"` | `[{type:"text",text:"done"}]` |
+| T-5 | R5 | assistant `content:null` + 一条 `tool_calls` | `[{type:"tool_use", id, name, input}]`；无 text 块；无 `tool_calls` 残留 |
+| T-6 | R6 | `arguments` ∈ {`""`, 缺, `null`} | `input:{}`；零告警 |
+| T-7 | R7 ∥ I6 | `arguments` ∈ {`"{"`, `"[1]"`, `"null"`, `"42"`} | `input:{}`；`warnings` 恰 1 条（name = `anthropic-tool-args-malformed`，message 含工具名）；不抛 |
+| T-8 | R8 | `{role:"tool", tool_call_id:"t1", name:"read_file", content:"ok"}` | user 内 `{type:"tool_result", tool_use_id:"t1", content:"ok"}` |
+| T-9 | R8 空输出 | 同上 `content:""` ∥ 缺 `content` | `content:"(no output)"` |
+| T-10 | R9 | assistant（`tool_calls` ×2）+ 连续两条 tool | 一条 user 消息、两个 `tool_result` 按原序；`tool_result` 在数组最前 |
+| T-11 | R10 | `… assistant, tool, tool, user(图)`（= `record-results.mjs:52` 落史形） | 转换后相邻 user 合并为一条；`tool_result` 块在 text ∥ image 块之前 |
+| T-12 | R11 | 首条 assistant（= `core.mjs:334-335` 精简历史形） | 首条 user 占位（文案逐字）、第二条原 assistant |
+| T-13 | R13 | `{role:"assistant", content:null}` 无 `tool_calls`；`{role:"user", content:[]}` | 两条均丢；输出无空块消息 |
+| T-14 | I1–I4 | 混合历史（assistant 开头 ∥ 连续 tool ∥ 图文混排） | 四条不变量全成立 |
+| T-15 | I5 | 任意夹具 | 入参 `JSON.stringify` 前后相等；`out.messages !== messages` |
+| T-16 | 告警投递 | T-7 夹具直调 + 假 fetch 驱动 `chat()` | `result._warnings` 含该条；`run-stages.mjs:44-45` 消费（桩断言） |
+
+**受影响文件清单（行数口径 = `read` 行号；`wc -l` 读数各差 1——末尾换行计一行，Δ 与结论不变）**：
+
+| # | 文件 | 现量（实施后实读） | 动作 ∥ 本层增量 |
+|---|---|---|---|
+| 1 | `thincoder-core/provider/anthropic.mjs` | 363 | 新增 `convertMessages`（`:97`，R1–R13）+ `chat()` 接转换（`:169`）与告警并入 `_warnings`（`:234`）；批前 240 ⇒ +123 |
+| 2 | `thincoder-core/provider/core.mjs` | 479 | anthropic 分支（`:151`）加 `messages = normalizeToolPairing(messages)`（`:155`）——本层两行 |
+| 3 | `thincoder-core/test/anthropic-message-adapt.test.mjs`（新档） | 229 | 批内单测（T-1–T-16；closeout 删除可执行档） |
+
+tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normalize.mjs` 零改（复用既有函数）。
+
+**与工具定义的关系**：不新增「有工具块但 `tools` 为空」的守卫。工具块与 tools 定义同源同调用（同一个 `chat()` 入参），仓内不存在带工具链历史却不带 tools 的调用点；将来若出现属调用方契约破坏，不在本层静默修补（降级成文本会让模型以为工具从未被调用）。
+
+**先例与公开来源**：
+
+- **三问行（既有件核对）**：`existing: thincoder-core/provider/google.mjs:42 · name: "convertMessages" · consumers: google.mjs:82`（`chat()` 内唯一调用点；无跨档消费者）。
+  处置 = 名沿用、语义按本通道另立：骨架对齐（纯函数 ∥ transport 内转换 ∥ 相邻同 role 合并 ∥ 图像 data URL → 原生块），工具协议无仓内先例、按 Messages API 定义。
+  导出面 = transport 自持（`anthropic.mjs` 导出供批内单测直调；核内调用点仅本档 `chat()`）。
+- **最近先例（改正）**：`provider/google.mjs:42-76` 的 `convertMessages`——骨架可对齐；**工具协议不可对齐**：该函数 `:51-63` 只搬 text / `image_url`，`tool_calls` 全文零读（grep 零命中），`role:"tool"` 按 `:48` 一律映射 user ⇒ 压成 user 文本 part；assistant `content` 为 `null` 且带 `tool_calls` 时零 part ⇒ 在 `:65` 整条丢弃。故 R5 ∥ R8 ∥ R9 无仓内先例，按 Messages API 形态定义（偏离理由由此更强：google 通道工具轮语义不进历史）。
+- **公开来源核查**：docs.anthropic.com ∥ platform.claude.com 正文在本机被区域拦（页面实读返回「App unavailable in region」）；可得的官方片段经检索取到两处原文：① tool_result 必须位于 user content 数组最前、文本在其后；② image block 的 source 类型含 base64 与 url。
+- **真机验证项（不阻塞实施，阻塞核销）**：两条未取得原文页的约束——① 首条须 user；② assistant 文本块置于 `tool_use` 之前——按保守形态落地（R11 ∥ R5）；真机 Anthropic 端点各发一请求验证，被拒 ⇒ 按错误文案改形（如文本后置）并重跑 T-12 ∥ T-5，读数回填批档 §6。
+
+**边界（不做）**：
+
+- 不做 Anthropic → OpenAI 方向转换（响应侧已是原生解析，`anthropic.mjs:248-362`）。
+- 不回带 extended-thinking 块：本 transport 的请求体从不携带 thinking 参数（`anthropic.mjs:172-192`），历史里不存在 thinking 块。
+- 不动另外三条通道：`core.mjs:173` responses 径、`:186` OpenAI 径、google 径。
+- 不引入第三方依赖、不新增 config 项。
+- 不做 prompt caching（`cache_control`）与文档 ∥ PDF 块：仓内无此形态产出点。
+- **google 通道同类缺陷（观察项 · 另批）**：`google.mjs:42-76` 不读 `tool_calls`、`role:"tool"` 压成 user 文本 part、assistant `null` content 带 `tool_calls` 整条丢弃——与本层同族但不在本批射程；登记为观察项，另批处置。
+
+### 6.28 集成测试设计（Anthropic 消息适配层）
+
+依据 = `docs/core/requirements/TESTING.md` §6.1 的 F34（集成测试设计 = 设计交付物必项）∥ F28（端到端用例落 `test/integration/` 类落点、由发布门执行）。
+业务可观察点 = 用户在配了 Anthropic 原生通道的会话里，用过工具之后还能继续对话。
+
+本节用例从该入口驱动整条链（会话 → agent 循环 → transport → 上游端点），断言只落在业务结果上：会话流里出现工具调用与结果、模型给出下一段回复、不出现 `400 Unexpected role "tool"` ∥ 502。
+内部形态（块结构 ∥ 告警计数）由 §6.27 用例表 T-1–T-16 在单元层断言；两层不重复持有同一断言。
+
+| # | 场景 | 业务可观察入口 | 判据（业务可观察结果） | 指回 |
+|---|---|---|---|---|
+| G1 | 带一次工具调用的会话继续（正常） | CLI 起一个配 Anthropic 原生通道的会话，让它调一次工具（`read` 读一个内容已知的小文件），工具结果回灌后继续对话 | 会话流出现该工具调用与结果，模型随后给出引用该结果的回复；全程无 `400 Unexpected role "tool"`、无 502 | #20 ∥ IKKJEE（生产报告：带工具的会话下一轮被拒） |
+| G2 | 一轮多个工具调用后继续（边界 · R9 ∥ R10 历史形） | 同一会话里让模型一轮发起 ≥2 个工具调用，结果回灌后继续对话 | 两个工具的结果都出现在会话流里，模型下一段回复正常；无 400 | #20 ∥ IKKJEE |
+| G3 | 用过工具的会话重开后继续（边界 · 持久历史回放） | 关掉 CLI 进程、重开同一会话（历史从盘上回放），再发一句话 | 会话接上原上下文继续，回复正常；无 400 | #20 ∥ IKKJEE |
+
+**夹具（确定性）**：模型侧 = 本地脚本化假 Anthropic 端点，按 Messages API 回两个回合（第一回合 `tool_use`、第二回合文本），并对「请求体含 `role:"tool"`」按上游语义回 `400 Unexpected role "tool"`。
+该拒收规则是 G1–G3 的可证伪点：请求体残留 `role:"tool"` 即红。零外网、零付费端点；真端点 smoke 不属本套件。
+
+**落点**：`thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`（常驻档），由 `thincoder-cli/test/run.mjs:3` 的两层 glob 收集，随发布门跑——不是批内单测档（单元与集成两类永不互转）。
+
+**边界**：只落 CLI 实例（本档持有的业务入口）；VSC ∥ desktop 的实例化按 F14 各端原文自持，不在本档单源。
+R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报过的场景，集成层不复制。
+
+**窗口读数**：`thincoder-cli/test/` 实读现量 = `run.mjs` ∥ `session-observability.test.mjs` ∥ `slow.mjs`，无 `integration/` 目录 ⇒ 集成集 0 例，本表 3 例为其首批；50–100 为上限约束（超窗裁减旧场景）。
+
 ## 7. 关键决策记录
 
 | # | 决策 | 理由 |
@@ -1066,7 +1188,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | D-PR3 | **发送前净化而非改历史** | 历史是模型上下文真相；净化只作用于线上载荷、可逆 |
 | D-PR4 | 429 **双通道**（闸门 + 退避） | 闸门防患于未然，退避兜底（未配置预算也安全） |
 | D-PR5 | 流规则 abort 后**重试**（注入提醒让模型自修正） | 比事后清洗更可靠——内容合规是硬需求 |
-| D-PR6 | 超时拆两段（响应头 `fetchTimeoutMs` + body 读侧空闲 `READ_IDLE_MS`） | 原绝对墙钟 600s 会把长上下文子代理腰斩；废弃绝对墙钟 |
+| D-PR6 | 超时拆两段（响应头 `fetchTimeoutMs` + body 读侧空闲 `agent.bodyIdleTimeoutMs`，默认 120000） | 原绝对墙钟 600s 会把长上下文子代理腰斩；废弃绝对墙钟 |
 | D-PR7 | prefix 续写**精简历史**（过滤工具链消息，保留最近 8 条非工具文本） | 网关约束的直接解法 |
 | D-PR8 | 续写 400 **失败可见**（注入 `_warnings`，不静默吞） | 静默吞 = 长回合期间 deepseek 直接报错飞出的表象源 |
 | D-PR9 | **escape v5 双层**（发送前 sanitize + 源头 safeSliceUTF16） | 孤立代理是 400 根因；只做一层会在其他截断点复发 |
@@ -1101,3 +1223,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | D-PR38 | **原生路回带**（functionCall parts 复建）= 边界外（捕获在位 · 回带缓） | 原生路现不复建 functionCall parts（工具轮历史压平为文本）⇒ 不触本 400；补建 = 新机制（functionResponse 配对 + 修复前历史无签名 ⇒ 直接补发反引新 400）。 |
 | D-PR39 | 图片拒绝自愈 = **agent 层全剥 + 单次重发**（T1 图像语义 ∥ T2 同态重复；copy-on-write 只动机读线） | 四环缺一即烧死（图进史 ⇒ 400 立抛 ⇒ 毒图留场 ⇒ 每回合重发、零自愈）；自愈须持久改史 ⇒ 不能住净化面（D-PR3 契约：净化只改副本、可逆；副本面改不了历史）。 |
 | D-PR40 | 兜底面（压缩 ∥ 降级）**零改**；用户知会 = 机读注记（模型转述）+ `llm:image-heal` 落账；端侧主动提示不立 | 压缩只跟 token 阈值走（与「剂量无关的拒绝」不同域——阈值不触 ⇒ 不愈）；降级面只触 `role:"tool"` / string 内容（图消息不在判据内）。 |
+| D-PR41 | Anthropic 消息适配 = **transport 内纯函数 `convertMessages`** + **anthropic 分支内、转换前**复用 `normalizeToolPairing`；copy-on-write | 格式知识归 transport（同一协议的全部形变在一个文件）；配对修复已有单源（D2），另写一份 = 两份实现必然漂移。copy-on-write 是 D-PR3「净化只改副本」在本层的延伸——历史是四条通道共用的持久表示 |
+| D-PR42 | 畸形 `arguments` ⇒ `input:{}` + 机读告警，**不抛** | 历史持久：抛错会把一次畸形固化成此后每轮必死（毒化）；真实结果已在 `tool_result` 里，重放只需结构合法。静默不是选项——告警走 `_warnings`（#30 教训：外部形状不可信，处置要写死） |
+| D-PR43 | 首条非 user ⇒ 前置中性 user 占位；相邻同 role 合并；user 内 `tool_result` 恒在前 | 上游要求首条 user；连续同 role 的容忍度因网关而异 ⇒ 两者都在转换层收口。不在 agent 层补消息：那会改动四条通道共用的历史形态（本批明令不改 history 本体） |

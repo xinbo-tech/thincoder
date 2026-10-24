@@ -130,8 +130,18 @@ browser {
 
 ### 2.4 会话模型
 
+**设计前置两行（本批）**：先例行 = walkthrough 启动超时形（`scripts/console-walkthrough.mjs:124-127`——deadline + 50ms 轮询 `DevToolsActivePort`）——**对齐**；偏离 = 新增 env 覆盖 + 钳位（walkthrough 为硬编码窗口，无逃生口）。
+公开源核查行：查过 本仓 `docs/` 树（本档 §2.9 ∥ `docs/core/requirements/BROWSER-TOOL.md` F-BT16 / N-BT5）+ 代码 `thincoder-core/browser/launch.mjs:34`、`:148`；登记公共源仓 = 无（`PROJECT-MANIFEST.json` `index.publicRepos` 实读 `[]`）；结论 = 无外部权威可对，先例即 walkthrough 脚本与 `BROWSER_PATH` 逃生口（`:47`）。
+
 - **单会话/进程**：模块级单例（`session.mjs`）——同进程所有 agent（主 ∥ 子代）共一份浏览器；动作**串行队列**（promise 链——批并行工具调用天然排队）。
-- **惰性开启**：首动作即开（`navigate` 为常规入口）；开启序 = 发现浏览器 → profile 锁 → spawn（`--headless=new` ∥ 有头；`--remote-debugging-port=0`）→ 轮询 `DevToolsActivePort`（≤ `START_TIMEOUT_MS` = 25s 缺省；env `BROWSER_START_TIMEOUT_MS` 覆盖，钳 2–30s——walkthrough `:124-127` 同式）
+- **惰性开启**：首动作即开（`navigate` 为常规入口）；开启序 = 发现浏览器 → profile 锁 → spawn（`--headless=new` ∥ 有头；`--remote-debugging-port=0`）→ 轮询 `DevToolsActivePort`（≤ `START_TIMEOUT_MS` = 25s 缺省；env `BROWSER_START_TIMEOUT_MS` 覆盖，钳 `[2_000, 30_000]`——walkthrough `:124-127` 同式）
+- **启动窗取值（钳位与非法值，本批定死）**：env 值经 `browserStartTimeoutMs(env)` 解算——`Number.isFinite(v) && v > 0` 才采纳，随后夹进 `[2_000, 30_000]`；非数值 ∥ 空串 ∥ `0` ∥ 负值 ⇒ **回落缺省 25s**（同族口径 = `AGENT-PARAMS.md` §2「非法一律回退默认」）。
+  下限 2s 防「瞬间判失败」；上限 30s 把首动作的总墙钟压在「启动窗 + 动作预算」两段各自有帽的范围内（`navigate` 45s **不含**自启——KD-26）；要更长的时间窗走动作级 `timeoutMs`（硬上限 120s——§2.9），它与启动窗各算各的。
+- **冷启预算（本批定死）**：会话自启段受自身帽界定（启动窗 ≤30s ∥ 三域 enable 各 10s），**不占动作预算**——动作时钟自会话就绪后起算（排队期仍计入，U22）。
+  实现面 = `thincoder-core/browser/queue.mjs` 的 `pauseBudget` / `resumeBudget` **成对**（`:61` `_pausedAt` · `:65-67` `remaining()` 暂停期读暂停点 · `:71-75` · `:78-83`），`resumeBudget` 经 `extendBy`（`:87-94`）把暂停时长还给 deadline 并重挂定时器；
+  接线点 = `thincoder-core/browser/session.mjs:199-208`（`:200` 开段暂停 · `:205` 失败腿恢复 · `:208` 就绪恢复）。
+  **事后回补不能替代暂停**：`type` / `snapshot` 的 15s 预算短于启动窗 25s，只在自启结束后 `extendBy` 的形态挡不住「自启窗口内预算钟先裁决」——旧句 `stuck in launch browser` 仍在（U62 要消灭的正是它）。
+  判据 = 无会话时首动作 `type`（15s 预算）配 12s 假自启 ⇒ 不超时、拿满 15s（§8 U62）；首动作 `navigate` 同判——45s 预算自就绪起算（§8 U63）；自启超启动窗 ⇒ `browser failed to start … within <生效秒数>s`。
   → `PUT /json/new?about:blank`（GET 兜底，walkthrough `:131-132`）→ WebSocket（`:133-141`）→ `Page.enable` + `Runtime.enable` + `Network.enable`。
 - **无头 ∥ 有头**（F-BT2）：`headless` 参数 = **会话开启参数**——默认 true；开启后传同值 = 忽略；传异值 = `Error: session is already running (headless=<现态>) — close it first to switch mode`。切换 = close → 下轮以新参数重开（同 profile ⇒ 登录态保留，F-BT6）。
 - **空闲自动关**：无动作 15 分钟 ⇒ 自动 close（资源卫生——桌面/CLI 长驻进程不为一次用过的浏览器永久占 100–200MB；任何动作重置计时）。**进程退出**：`process.on("exit")` 同步杀树兜底。
@@ -193,7 +203,7 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 
 | 动作 | 预算 | 说明 |
 |---|---|---|
-| navigate | 45s | 含会话自启（启动帽 25s 缺省 ∥ 上限 30s 在内）+ 导航 + 就绪轮询 + 快照 |
+| navigate | 45s | **不含**会话自启（自启段自成一界：启动窗帽 + 三域 enable 帽——§2.4 冷启预算 / KD-26）；计的是导航 + 就绪轮询 + 快照。首动作总墙钟 = 启动窗 + 本预算 |
 | click / evaluate / screenshot / close / press / hover / wheel / mouse / drag / touch / insert / clipboard | 30s | — |
 | type / snapshot | 15s | 单页内快动作 |
 | wait | 谓词帽（`timeoutMs`：默认 30s · 上限 120s）+ 15s 余量 | 谓词语义零变（F-BT5） |
@@ -208,10 +218,10 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 
 **步名（`stuck in`）**：`h.call` 自动记为 CDP 方法名（`Page.navigate` / `Runtime.evaluate` …）；非调用阶段显式标注（`queue wait` / `launch browser` / `connect CDP` / `waitForReady` / `wait poll` / `scroll settle`）。**取消**（§2.11）与超时共用同一控制器——错误句分形（`cancelled` ∥ `timed out`），卡点步名同样入句（N-BT10）。
 
-**开启段中止**：预算到点落于会话自启序列中途（半开态——连接 / 进程已置而 `enable` 序列未完）⇒ 按 §2.10 同式处置：复位会话态 + 释放 profile 锁（子进程仍活 ⇒ 杀树兜底）+ 置重开注记——下一次动作干净重开（不中毒；判据同 §8 U52）。
+**开启段中止**：动作被取消 ∥ 自启段帽到点落于会话自启序列中途（半开态——连接 / 进程已置而 `enable` 序列未完）⇒ 按 §2.10 同式处置：复位会话态 + 释放 profile 锁（子进程仍活 ⇒ 杀树兜底）+ 置重开注记——下一次动作干净重开（不中毒；判据同 §8 U52）。
 
 **取消接线（一条机制两个因由：`process` kill ∥ 回合收尾 discard）**：动作控制器（超时 / 取消单点，KD-19）的取消路径接线 = `thincoder-core/browser/queue.mjs:157` `enqueue(action, args, run, signal = null)` ∥
- `thincoder-core/browser/session.mjs:489` `runAction(action, args, ctx, { signal = null } = {})`（透传）；信号入队 ⇒ 控制器 `cancel()`（queued 丢队 ∥ running abort 即时展开）。
+ `thincoder-core/browser/session.mjs:493` `runAction(action, args, ctx, { signal = null } = {})`（透传）；信号入队 ⇒ 控制器 `cancel()`（queued 丢队 ∥ running abort 即时展开）。
 
 **开启段句面（登记）**：开启段内层帽命中（`Page.enable` / `Runtime.enable` / `Network.enable` 各 10s）⇒ 回执为 CDP 层超时句 `<method> did not respond within <ms>ms`（`browser/cdp.mjs:80`）——方法名属本节步名词表（CDP 方法名）成员，句面合规（非动作面 `(stuck in …)` 形）；开启段内 WS 断连 ⇒ 走 §2.10 会话健康路径（F-BT17 面）。**到期条件 = 动作面失败句面下次触碰统一时一并收编**（不动）。
 
@@ -344,12 +354,12 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 
 | 文件 | 实施后实读 | 说明 |
 |---|---|---|
-| `thincoder-core/browser/queue.mjs`（新档） | 171 | 串行队列 ∥ 动作预算表 ∥ 动作控制器（超时 / 取消单点）∥ 步名跟踪 ∥ abort 快速失败 |
-| `thincoder-core/browser/session.mjs` | 494 | 会话健康（探针 ∥ `failSession` ∥ 自愈注记）∥ 队列接线 ∥ 步名 |
+| `thincoder-core/browser/queue.mjs`（新档） | 199 | 串行队列 ∥ 动作预算表 ∥ 动作控制器（超时 / 取消单点）∥ 步名跟踪 ∥ abort 快速失败 |
+| `thincoder-core/browser/session.mjs` | 498 | 会话健康（探针 ∥ `failSession` ∥ 自愈注记）∥ 队列接线 ∥ 步名 |
 | `thincoder-core/browser/cdp.mjs` | 161 | 命令缺省帽 15s ∥ 断连回调 ∥ `connectCdp` 帽 10s ∥ `/json/new` 帽 5s |
 | `thincoder-core/browser/actions.mjs` | 163 | 步名标注 ∥ wait 余量口径 |
 | `thincoder-core/browser/input-actions.mjs` | 197 | `scroll settle` / html5 拦截步名 |
-| `thincoder-core/browser/launch.mjs` | 189 | 启动帽 25s 缺省 + env `BROWSER_START_TIMEOUT_MS` 覆盖（钳 2–30s）；超时前已杀树（`:168`） |
+| `thincoder-core/browser/launch.mjs` | 200 | 启动帽 25s 缺省 + env `BROWSER_START_TIMEOUT_MS` 覆盖（钳 2–30s）；超时前已杀树（`:168`） |
 | `thincoder-core/browser/{snapshot,input,clipboard}.mjs` | 270 ∥ 256 ∥ 142 | 零改 |
 | `thincoder-core/agent-tools/browser-async.mjs`（新档） | 198 | 池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点 ∥ wait 判据 ∥ subject 标签（复用 bg 族单点——D2） |
 | `thincoder-core/tools/browser.mjs` | 161 | `async` 参 ∥ `timeoutMs` 描述收正 ∥ depth 第二道 ∥ 起跑动态 import |
@@ -366,13 +376,23 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | 单元测试 A 组（批次本地单元测试档 · 新档） | 334 | 机检单元测试（假传输 ∥ 假子进程事件——零真实浏览器） |
 | 单元测试 B 组（批次本地单元测试档 · 新档） | 386 | B 组（agent 集成 ∥ 异步通道 ∥ kill / 收尾面——夹具同 A 组） |
 | 冒烟探测档（批次本地 · 新档） | 173 | 真 Edge 冒烟 S19–S22（硬超时 ∥ 自愈重开 ∥ 异步 ack+摘要 ∥ kill） |
-| `docs/core/design/TOOLS.md` | 1353 | §6.7 browser 条 +`async` / 预算 / 会话自愈；§6.19 后台任务族 +`browser`（wait_for / kill 路由随动 ∥ +合并错误句——回填轮）；设计轮 3 处行内改；回填轮 1 处；变更记录 2 条 |
+| `docs/core/design/TOOLS.md` | 1,739 | §6.7 browser 条 +`async` / 预算 / 会话自愈；§6.19 后台任务族 +`browser`（wait_for / kill 路由随动 ∥ +合并错误句——回填轮）；设计轮 3 处行内改；回填轮 1 处；变更记录 2 条 |
 | `docs/core/design/API-CONTRACT.md` | 3345 | 生成区随动——收口时跑 `node scripts/api-contract.mjs --write`（新档导出行 + 行号——生成器唯一笔） |
 
-**拆分决定**：**拆出新档 `thincoder-core/browser/queue.mjs`**（现读 171；`session.mjs` 现读 494）——域界 = 「调度策略（排队 ∥ 预算 ∥ 控制器 ∥ 步名）」∥「会话机制（生命周期 ∥ 页原语 ∥ 安全助手 ∥ 健康）」。
+**本批受影响面（启动窗旋钮 + 冷启预算；行数 = `split("\n").length − 1` 实读 · 2026-10-24）**：
+
+| 档 | 改动前 | 本批 Δ | 实施后（实读）∥ 说明 |
+|---|---|---|---|
+| `thincoder-core/browser/launch.mjs` | 189 | +11 | **200** — 导出 `browserStartTimeoutMs(env)` · `START_TIMEOUT_MS` = 25_000 · `launchBrowser` 缺省参数改调用（`:159`） |
+| `thincoder-core/browser/queue.mjs` | 171 | +28 | **199** — `pauseBudget` / `resumeBudget` 成对（`:71-83`）+ `extendBy`（`:87-94`）：自启段预算钟暂停、就绪后回补；`remaining()` 暂停期读暂停点（`:65-67`）；`:15` `navigate` 注释改「不含自启」 |
+| `thincoder-core/browser/session.mjs` | 494 | +4 | **498** — 冷启段暂停 / 恢复接线（`:199-208`）——失败腿与就绪腿都恢复（§2.9 冷启预算） |
+
+主表其余行 = 上一批实施后读数，本批零触。
+
+**拆分决定**：**拆出新档 `thincoder-core/browser/queue.mjs`**（现读 199；`session.mjs` 现读 498）——域界 = 「调度策略（排队 ∥ 预算 ∥ 控制器 ∥ 步名）」∥「会话机制（生命周期 ∥ 页原语 ∥ 安全助手 ∥ 健康）」。
 
 **档位处置（有 Δ 者与新档——不拆；触发条件 = 下次实质改动时核 ∥ 越 800 即拆）**：`tools/ops.mjs`（346，余 454 行）∥ `helpers.mjs`（490，余 310 行）∥ `suspension.mjs`（351，余 449 行）∥ `async-settle.mjs`（327，余 473 行）∥
-`subagent-scheduler.mjs`（450，余 350 行）∥ `subagent-async.mjs`（477，余 323 行）∥ `session.mjs`（**494——余 306 行；最紧面**）∥ `queue.mjs`（171——新档）∥ `agent-tools/browser-async.mjs`（198——新档）∥ 单元测试档两档（A 334 ∥ B 386；不拆）。余量 = 距 800 硬限（实读）。
+`subagent-scheduler.mjs`（450，余 350 行）∥ `subagent-async.mjs`（477，余 323 行）∥ `session.mjs`（**498——距 500 建议线余 2 行、距 800 硬限余 302 行；最紧面**——下批任何实质改动先做拆分评审，不等越线）∥ `queue.mjs`（199——新档，本批 +28，两线均远）∥ `agent-tools/browser-async.mjs`（198——新档）∥ 单元测试档两档（A 334 ∥ B 386；不拆）。余量 = 距 800 硬限（实读）。
 **域界（增行）**：异步桥 = `agent-tools/browser-async.mjs`（族名对齐 bash-async / subagent-async / advisor-async——池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点）；入径 = `tools/browser.mjs` ∥ `tools/ops.mjs` **动态 import**（W8 契约②——agent-tools 静态链达 node:sqlite；端壳静态闭包零命中）。
 **依赖单向无环**：`tools/browser.mjs` → `session.mjs` → {`actions` / `input-actions` / `clipboard`} → {`input` / `snapshot` / `cdp`}；`session → queue`；`queue → actions`（wait 帽常量——`thincoder-core/browser/queue.mjs:11`）；`browser-async → session`（入队面）+ agent-tools 族单点——无环。
 **click / type 不拆不迁**（裁决项②——§6 KD-10）。
@@ -407,6 +427,8 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | KD-22 | 异步 = **池化排队执行**（同一串行队列）+ 独立域池 `_browserTasks`（帽 4） | 单页不引入并发（对外语义零变、调用序保持）；独立域池 ⇒ 帽 / 错误句 / 结算不与他族混；复用 bg 族单点（D2 零第二套） |
 | KD-23 | 取消 = queued 丢队 ∥ running abort；**不杀浏览器**（重置经 `close`） | 保持「杀 ⟺ 控制器已中止」不变式；浏览器重置是独立动作、且 `close` 自身有界 |
 | KD-24 | 全 16 动作统一可异步；审批门在起跑调用处照常 | 零二次分类（门面已有一张分类表——不再叠）；异步 ≠ 免审 |
+| KD-25 | 启动窗旋钮走 env（`BROWSER_START_TIMEOUT_MS`），钳 2–30s；非法值回落 25s | 三问：功能现址 = `thincoder-core/browser/launch.mjs:34`（`START_TIMEOUT_MS` 常量）· 现名 = `START_TIMEOUT_MS` / `launchBrowser({timeoutMs})` 显式入参（保留、零改）· 消费者 = `launchBrowser` 缺省参数（`:148`）与冒烟探针（显式 4000）。同工具唯一配置键 `browser.allowDomains`（§3.2）不住启动段，且落 config 键要过 DEFAULTS + 四端配置面——沿 `BROWSER_PATH`（`:47`）env 先例。钳位理由：下限 2s 防瞬间判失败；上限 30s 把首动作总墙钟压在「启动窗 + 动作预算」两段各自有帽的范围内（`navigate` 45s **不含**自启——KD-26）；超 30s 走动作级 `timeoutMs`，硬上限 120s |
+| KD-26 | 冷启段独立帽、**不占动作预算**（动作时钟自会话就绪后起算；排队期照旧计入） | 旧形态「首动作非 `navigate`（15s）也含自启」⇒ 自启吃掉整格预算、半开复位后重试再撞（无界循环）。被否方案：限定仅 `navigate` 可开会话——收窄既有语义，且自愈重开后首动作本就可为任意动作；冷启段由启动窗帽 + 三域 enable 帽界定，总墙钟界 = 启动窗 + 动作预算（两段各有帽，仍无界为零） |
 
 ## 7. 验收标准回指（F-BT1–19 / N-BT1–10 → 设计条目 → 用例）
 
@@ -437,6 +459,8 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | **N-BT8** 兼容与不回归 | §5 ∥ §7 本表 | 旧单元测试 21/21 全绿（**唯一随动 = T1 枚举 8⇒16**）∥ 旧冒烟 S1–S7 全绿；新动作逐条配用例（T16+ / S8+）∥ **S18**（有头抽样复跑——`press` + `clipboard` 两动作；仅本地跑、CI 面可跳，沿 S7 先例）= 「无头∥有头双支持」覆盖格（U51） |
 | **N-BT9** 剪贴板隐私面 | §3.5 ∥ §3.1 | 单元测试 T24（全量过门 + read 上限截断 + 无落盘路径）∥ T23（write 回执不回显） |
 | **F-BT16** 动作硬超时 | §2.9 ∥ §5 `thincoder-core/browser/queue.mjs` | 单元测试 T27–T30 · T27b（新档——挂死型假传输 ⇒ 逐动作拒绝于预算内 ∥ 开启段中止 ⇒ 干净重开 ∥ `ACTION_BUDGETS` 覆盖全动作 ∥ 命令缺省帽 ∥ 卡点步名）；冒烟 S19（永不响应服务） |
+| **F-BT16b**（本批·启动窗旋钮） | §2.4 启动窗取值 ∥ §6 KD-25 | 单元测试 T45（`browserStartTimeoutMs` 逐态：缺省 25000 ∥ `"4000"` = 4000 ∥ `"1500"` 钳 2000 ∥ `"40000"` 钳 30000 ∥ `"abc"` ∥ `"0"` ∥ `"-5"` = 25000）∥ T46（启动失败句含生效秒数：缺省 `within 25s`、env 2000 ⇒ `within 2s`） |
+| **F-BT16**（本批·冷启预算） | §2.4 冷启预算 ∥ §2.9 ∥ §6 KD-26 | 单元测试 T47（假自启 12s + 首动作 `type` 15s ⇒ 动作拿满 15s、不超时；旧形态 ⇒ `timed out after 15000ms (stuck in launch browser)`——红/绿对照）∥ T48（首动作 `navigate`：假自启 12s + 导航 40s ⇒ 不超时、总墙钟 52s；旧形态 ⇒ 45s 含自启 ⇒ 33s 到点、卡点步名 = 导航步——红/绿对照 = 预算表与 §2.4 同口径的机判格） |
 | **F-BT17** 外部关闭可感知与自愈 | §2.10 ∥ §2.4 | 单元测试 T31–T33 · T44（新档——假 WS close ∥ 假 child exit ⇒ 在飞即时拒（下一事件循环内——非墙钟界）+ 态复位 + 重开计数 + 注记；探针三检；外部关闭遇排队条目不呆等）；冒烟 S20；走查 W1（真关窗——用户复核） |
 | **F-BT18** 异步通道 | §2.11 ∥ §2.5 | 单元测试 T34–T39（新档——ack ∥ 池 ∥ 结算 ∥ 摘要文法 ∥ kill 两态（即时展开——非墙钟界）∥ 帽 ∥ depth 门）；冒烟 S21 / S22 |
 | **F-BT19** 用法认知（描述面） | §2.11 ∥ `thincoder-core/tool-docs/browser.md`（F-BT19 段） | 单元测试 T42（新档——描述档四小节存在；文本面 grep，落笔后生效） |
@@ -506,11 +530,15 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 | U58 | 错误 | 异步任务在飞遇外部关闭 | 摘要 `failed: …closed externally…` 必达（不吞）；队列未启动条目 ⇒ 自愈重开后照跑（不呆等）；下一动作自愈重开 | 单元测试 T36 · T44（新档） |
 | U59 | 正常 | `process{action:kill, id:N}`（queued ∥ running） | queued ⇒ 从未运行 + 墓碑 `cancelled`；running ⇒ abort 即时展开（下一事件循环内——确定性判据，非墙钟界）⇒ 结算 cancelled；重复幂等 | 单元测试 T37–T38 · 冒烟 S22（新档） |
 | U60 | 边界 | 第 5 条异步起跑 | `Error: …cap reached (4/4 running…)`（显式拒） | 单元测试 T39（新档） |
+| U61 | 边界 | 启动窗旋钮：env 未设 ∥ `"4000"` ∥ `"1500"` ∥ `"40000"` ∥ `"abc"` ∥ `"0"` ∥ `"-5"` | 25000 ∥ 4000 ∥ 2000（钳底）∥ 30000（钳顶）∥ 25000 ∥ 25000 ∥ 25000（负值回落缺省）；启动失败句回显生效秒数 | 单元测试 T45 ∥ T46（新档） |
+| U62 | 边界 | 无会话时首动作 = `type`（15s 预算），假自启耗时 12s | 动作不因自启超时、拿满 15s（旧形态 ⇒ 15s 到点 `stuck in launch browser`）；自启超启动窗 ⇒ `browser failed to start … within 25s` | 单元测试 T47（新档） |
+| U63 | 边界 | 无会话时首动作 = `navigate`（45s 预算），假自启 12s + 导航 40s | 不超时（自启段不计入 45s 预算；总墙钟 52s）；`navigate` 超时句的卡点步名是导航步、不是 `launch browser` | 单元测试 T48（新档） |
 
 **单元测试档用例**：单元测试（T1–T15——假传输 + 打桩，零真实浏览器/文件系统）与冒烟（S1–S7——真 Edge/Chrome 无头 + 进程内 fixture 服务）＝ §7 表逐格引用面（**落点列** = U 条执行档；无编号者 = 单元测试组内，格内归属以 §7 判据列为准）；先红后绿。
 扩展轮件 = 批次本地单元测试档 ∥ 批次本地冒烟档——T16–T26 ∥ S8–S18（剪贴板端到端 = 本机 OS 面——Windows 以 PowerShell `Get-Clipboard` / `Set-Clipboard` 为对照）。
 异步化单元测试档 = 批次本地单元测试档（A 组 ∥ B 组）∥ 同族冒烟档——单元测试 T27–T44（含 T27b）∥ 冒烟 S19–S22（走查 W1 = 真关窗——用户复核）。
 旧件复跑 = 零回归（T1 枚举断言随动 8⇒16 为唯一例外——§7 N-BT8 行）。
+**冷启用例的批测落形（登记）**：墙钟按 100× 缩比（设计档 12s / 15s / 40s → 120ms / 150ms / 400ms）；T48 的动作取 `evaluate` + navigate 格预算的比例值（45s → 450ms）——机制在控制器与入口计量上、不随动作类型分叉；真 `navigate` 的真机抽样 = 集成档 I-BT3（§11）。单测判的是红 / 绿两条同一机制的读数，真机墙钟不入门（§11 末两条）。
 - T27b 开启段中止（U52 开启段一格）——批次本地单元测试档 `:168`。
 
 ## 9. 边界（不做）
@@ -536,4 +564,20 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 6. **输入面差异说明**（tool-docs 模型面）：click = DOM 级语义点击（`isTrusted=false`——遮挡面亦可激活）∥ mouse = 真指针（受信 / 命中测试）——选用判据写明；insert 回执仅字符数（值不回显——沿 N-BT4 口径）。
 7. **几何与卷动读数**：回执 `[outside]` 标记 + wheel 的 `window` 读数 = 现场可读信息（人 / 模型同面）。
 8. **超时 / 外部关闭 / 异步三面文案**（人可见——与模型面同句）：超时错误句携卡点步名（诊断面）；重开注记一行（人可读）；ack / 摘要沿用 `bash#` 族文法（`browser#<N>`）；kill 确认句同 `process` 既有形。
+
+## 11. 集成测试设计（F34 · 本批 · 收口口径）
+
+**业务可观察点** = 用户在会话里调 `browser` 时看到的失败句 ∥ 回执 ∥ 会话还能不能继续用。本批两处业务改动 = 启动窗缺省 25s + `BROWSER_START_TIMEOUT_MS` 可配（F-BT16b）∥ 冷启段不占动作预算（KD-26）。集成用例：
+
+| # | 入口（业务可观察点） | 判据（断言什么） | 指回 |
+|---|---|---|---|
+| I-BT1 | 会话 env `BROWSER_START_TIMEOUT_MS=2000`，`BROWSER_PATH` 指向立刻退出的替身（`process.execPath`——浏览器参数被 node 拒收即退），调 `browser{navigate}`；同一会话再调一次 | 首回失败句含 `within 2s`（生效值入句，不是缺省 25s）；二次同句，不是 `session is already running`、不悬挂 ⇒ 旋钮到用户面生效，失败后会话仍可用 | F-BT16b |
+| I-BT2 | 同一替身、不设该 env，同一会话调 `browser{navigate}` | 失败句含 `within 25s`（12s 时代的句子不再出现）⇒ 缺省窗口到用户面 | F-BT16b（缺省半） |
+| I-BT3 | 真 Edge/Chrome、无会话，首动作 `navigate` 一个本地 fixture 页 | 回执 = `[navigate]` + 页摘（自启段没把动作预算提前吃掉）；若出超时句，卡点步名不是 `launch browser` | F-BT16（KD-26 冷启预算） |
+
+- **I-BT1 ∥ I-BT2 零等待**：替身立刻退出 ⇒ `thincoder-core/browser/launch.mjs:166` 的 `child.exitCode !== null` 支直接走 `:168` 的失败句，`Math.round(timeoutMs / 1000)` 即生效窗口 ⇒ 判据读的是「把哪个值当窗」，不需要等窗到点。
+- **窗到点的时长半不入发布门**：要判「这个值真当期限用」得有常驻不退出、又不写 `DevToolsActivePort` 的替身可执行档；`launchBrowser` 的 spawn 不带 shell（`thincoder-core/browser/launch.mjs:160`）⇒ Windows 上 `.cmd` / `.js` 不能当 exe 起，造这种档等于往仓里加包装器。该半由单测 T45（取值）∥ `launch.mjs:163` 的 `deadline = Date.now() + timeoutMs`（同一值即期限）判。
+- **冷启首动作的墙钟半同理不入门**：真机自启耗时可复现但不可控；判据住单测 T47 / T48（假传输，两格红/绿），真机面 = 冒烟 S1（首动作 `navigate` 成功）。I-BT3 是门内那一格的真机抽样：宿主无 Chromium ⇒ skip 并打印 `no Chromium-based browser — I-BT3 skipped`（沿 §7 S7 先例），跳过不算绿。
+- **慢机（启动 13–17s）不再 12s 早夭不设门内格**：要一台真慢机或人工降速；证据面 = Gitee IKP6ZI 现场 + 用户机走查。设计侧不为此造假慢分支。
+- **落点**：`thincoder-cli/test/integration/browser-start-window.test.mjs`（常驻——随 `npm test` 走、不随批删）。收集面 = `thincoder-cli/test/run.mjs:3` 两层 glob；`test/integration/` 之外的档被同档 `:38` 拒收集。本批单测档（T45–T48）仍随批删，与集成档是两个对象。
 

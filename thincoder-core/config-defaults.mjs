@@ -12,6 +12,10 @@
 import { join } from "node:path"
 import { configDir } from "./config-io.mjs"
 
+/** provider 响应体（body）阶段读侧空闲超时的单源缺省：provider 缺省 ∥ 传输层缺省同值同源。
+ *  可经 `agent.bodyIdleTimeoutMs` 覆盖；`≤0` / 非有限数回退本值（不禁用——无现场判据）。 */
+export const DEFAULT_BODY_IDLE_MS = 120000
+
 export const DEFAULTS = {
   defaultModel: null, // top-level "provider:model" composite — new-session starting point (F-1)
   agent: {
@@ -20,6 +24,10 @@ export const DEFAULTS = {
     subagentModel: null,  // default subagent model: "provider:model" | model name (parent provider); null = inherit parent provider
     subagentModels: {},   // per-type override: { explore, plan, coder, "eng-coder" } — priority: subagent tool model arg > this[role] > subagentModel > parent provider
     goalTurns: 200,
+    // body 阶段读侧空闲超时（毫秒，TIMEOUT-DIGEST.md §2.1）：长生成只要有数据流动就不超时，
+    // 连续该值无新 chunk 才断。登记进 DEFAULTS 是为了 `settings list` 可见（判据 A3）——
+    // 与 `agent.fetchTimeoutMs`（只被 config 提升、不进本表）不同的一处偏离，理由即此。
+    bodyIdleTimeoutMs: DEFAULT_BODY_IDLE_MS,
     // compactThreshold: 键缺省 = auto（CONTEXT-COMPACTION.md §6.17 三档落值）——无默认值：留着默认值
     // 会让每份配置看着都像显式。派生线只进 agent.compactThresholdResolved（内存面，不落盘）。
     verifyGuard: false,  // push model back to verify when files were mutated but verify not run (opt-in)

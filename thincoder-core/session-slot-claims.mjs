@@ -22,6 +22,8 @@ import { probeOwnersSync, ownerState, filterDeadOwners } from "./process-probe.m
 import { getSessionId, manifestPath, slotPath } from "./session-slots.mjs"
 // 清单读写（落盘单源住原档——静态环见头注；反向 re-export 保 import 面）。
 import { loadManifest, saveManifest } from "./session-slots-manifest.mjs"
+// 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：分到全新号时落 `slot:allocate`。
+import { logEvent } from "./log.mjs"
 
 /** 本进程**残留认领集**（F-CR1 释放谓词 —— **判据单源** · SESSION.md §6.2 / §6.16）：
  *  「释放 A ⟺ `slotSessions[A]` 为本进程 ∧ `A ∉ 保留集`」。`keep` = 保留集 = 落点槽 ∪ 本进程
@@ -177,9 +179,11 @@ export function allocateFresh(cwd, m, deadParam = null, bundle = null) {
   }
   let newSlot = allSlots.length > 0 ? allSlots[allSlots.length - 1] + 1 : 1
   while (liveClaimed(newSlot) || existsSync(slotPath(cwd, newSlot))) newSlot++
+  const prevSlot = Number.isInteger(m.active) ? m.active : null // 分配前 active（无则 null）
   m.active = newSlot
   m.slotSessions[newSlot] = mySessionId
   saveManifest(cwd, m, deadParam?.() ?? null, { setActive: true })
+  logEvent("slot:allocate", { slot: newSlot, prevSlot, reason: "all-slots-live" })
   return newSlot
 }
 

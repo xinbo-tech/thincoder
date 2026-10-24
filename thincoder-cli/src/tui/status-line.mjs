@@ -15,6 +15,11 @@ import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7�
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs" // B6 回退链：首条真实 user 消息谓词（纯件单源）
 import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族判据单源
 
+/** 标题单行化（docs/cli/design/TUI.md §7.4 = 单源）：固定断行字符集命中 ⇒ 一个空格（一字符换一空格——
+ *  宽度账逐个守恒）；具名导出——入口 / 回退 / status 行写出口三处同用。 */
+const TITLE_BREAK_RE = /[\r\n\t\v\f\u0085\u2028\u2029]/g
+export function singleLineTitle(s) { return typeof s === "string" ? s.replace(TITLE_BREAK_RE, " ") : s }
+
 // ---------- status bar slash-command hints ----------
 const SLASH_HINTS = {
   "/config": "open config menu",
@@ -72,7 +77,9 @@ function sessionTitleFallback(agent) {
   const fm = (agent?._recordStore?.counters?.().firstMessage ?? "")
     || (agent?._fullHistory ?? agent?.history ?? []).find(isRealUserMsg)?.content
   if (typeof fm !== "string" || fm === "") return "(empty)"
-  return `"${fm.length <= 40 ? fm : fm.slice(0, 39) + "…"}"`
+  // TUI.md §7.4：回退标题同规则单行化（`"(empty)"` 分支无控制字符，不处理）
+  const title = singleLineTitle(fm)
+  return `"${title.length <= 40 ? title : title.slice(0, 39) + "…"}"`
 }
 
 function buildStatusLine(state, agent, { cols, slashCommands }) {
@@ -169,7 +176,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
   // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 40 列截断。
   // B6 消（#677）：空白 ⇒ 回退链值（对位 VSC 顶栏——生成前 ∕ 失败期两端同值；值逐字，行级超宽走 statusMax）。
-  const titleRaw = typeof agent.title === "string" ? agent.title.trim() : ""
+  const titleRaw = typeof agent.title === "string" ? singleLineTitle(agent.title).trim() : ""
   const titleShown = titleRaw ? (stringWidth(titleRaw) > 40 ? sliceByWidth(titleRaw, 39) + "…" : titleRaw) : sessionTitleFallback(agent)
   const titleHint = ` │ ${titleShown}`
   // 团队登录态段（登录面补全批 · `docs/cli/design/TUI.md` §7.8）：簇尾末位（titleHint 后、`│ <enterHint>` 前）

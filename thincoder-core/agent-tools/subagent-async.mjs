@@ -21,7 +21,7 @@ import { runWithContinue, TURN_CAP_MARK } from "../agent/spawn-child.mjs"
 import { pushReal } from "../context.mjs"
 import { offloadToolResult } from "../agent/helpers.mjs"
 import { logEvent } from "../log.mjs"
-import { digestBudgetOver, persistOverflowReport } from "./digest-budget.mjs"
+import { digestBudgetOver, persistOverflowReport, _digestOffloadDirForTest } from "./digest-budget.mjs"
 // 群 B 批 B5（AGENT-LOOP.md §6.14 D-DG4）：预算单源迁出（digest-budget.mjs）——原处 re-export 保测试
 // 导入面零改（DIGEST_INJECT_BUDGET / _setDigestOffloadDirForTest）。
 export { DIGEST_INJECT_BUDGET, _setDigestOffloadDirForTest } from "./digest-budget.mjs"
@@ -380,10 +380,13 @@ export async function injectAsyncResult(agent, entry) {
   const body = entry.error ?? entry.report ?? "(no report)"
   // F-2（BATCH-3-STRUCTURE）+ AGENT-LOOP.md §6.14 D-DG2（群 B 批 B5）：注入前查轮累计（单源）——超限条目不
   // inline 全文，改清单行（全文经 persistOverflowReport 落盘——path 随行）。首条豁免
-  // （used===0 不判超）：单条大报告 >64K offload 预览照旧——轮预算只约束累计。
+  // （used===0 不判超）。
   const raw = String(body)
   const over = digestBudgetOver(agent, raw.length)
-  const preview = (over && await persistOverflowReport(raw, { tag: `async-subagent-${entry.id}` })) || await offloadToolResult(raw, `async-subagent-${entry.id}`)
+  // TIMEOUT-DIGEST.md §2.2：轮累计超预算 ⇒ 清单行（正文不进请求体）；否则无条件落盘——`force` 跳过
+  // 长度门（≤64K 的报告也上盘，父回合丢了还能按路径回读）；渲染二分全在 offloadToolResult。
+  const preview = (over && await persistOverflowReport(raw, { tag: `async-subagent-${entry.id}` }))
+    || await offloadToolResult(raw, `async-subagent-${entry.id}`, _digestOffloadDirForTest(), { force: true })
   // §6.10: advisor entries label themselves (role "advisor") — the digest
   // reminder says "async advisor review #N finished" (T-24b2 shape); subagent
   // entries keep the legacy wording verbatim.

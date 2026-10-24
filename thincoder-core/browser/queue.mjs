@@ -12,7 +12,7 @@ import { WAIT_TIMEOUT_DEFAULT, WAIT_TIMEOUT_MAX } from "./actions.mjs"
 
 /** 动作预算表（§2.9——机检）：动作 ⇒ 预算 ms。wait 无固定值（谓词帽 + 余量——`budgetFor` 解算）。 */
 export const ACTION_BUDGETS = {
-  navigate: 45_000, // 含会话自启（12s 启动帽内）+ 导航 + 就绪轮询 + 快照
+  navigate: 45_000, // 不含会话自启（自启段有自身帽——§2.4 / KD-26）+ 导航 + 就绪轮询 + 快照
   click: 30_000,
   evaluate: 30_000,
   screenshot: 30_000,
@@ -58,11 +58,39 @@ export class ActionController {
     this._abortHooks = []
     this._abortP = new Promise((resolve) => { this._resolveAbort = resolve })
     this._timer = setTimeout(() => this.abort("timeout"), budgetMs)
+    this._pausedAt = null // 冷启段暂停点（null = 计时中——§2.4 冷启预算）
   }
 
-  /** 剩余预算（ms）——动作内调用帽的下界参照（§2.9 层一：动作内调用随控制器）。 */
+  /** 剩余预算（ms）——动作内调用帽的下界参照（§2.9 层一：动作内调用随控制器）；暂停期读暂停点。 */
   remaining() {
-    return Math.max(1, this._deadline - Date.now())
+    return Math.max(1, this._deadline - (this._pausedAt ?? Date.now()))
+  }
+
+  /** 冷启段暂停计量（§2.4 冷启预算 / KD-26）：自启窗口内动作预算钟不裁决——清钟、记暂停点。
+   *  与 `resumeBudget` 成对；自启段自身由启动窗帽 + 三域 enable 帽界定（session.mjs 开启序）。 */
+  pauseBudget() {
+    if (this.aborted || this._pausedAt !== null) return
+    this._pausedAt = Date.now()
+    if (this._timer) { clearTimeout(this._timer); this._timer = null }
+  }
+
+  /** 冷启段恢复计量：把暂停时长还给 deadline（经 `extendBy` 重设并重挂）——动作时钟自会话就绪后起算。 */
+  resumeBudget() {
+    if (this._pausedAt === null) return
+    const pausedMs = Math.max(0, Date.now() - this._pausedAt)
+    this._pausedAt = null
+    this.extendBy(pausedMs)
+  }
+
+  /** 冷启段回补（§2.4 冷启预算 / KD-26）：把给定时长加回 deadline 并重挂定时器（`ms = 0` 也重挂——
+   *  暂停后恢复的零时长路径仍须有活钟）。`budgetMs` 不动（超时句仍报动作本预算）；中止后无效果。 */
+  extendBy(ms) {
+    if (this.aborted) return
+    const extra = Number(ms)
+    if (!Number.isFinite(extra) || extra < 0) return
+    this._deadline += extra
+    if (this._timer) clearTimeout(this._timer)
+    this._timer = setTimeout(() => this.abort("timeout"), Math.max(1, this._deadline - Date.now()))
   }
 
   /** 快速失败（§2.9）：abort 之后一切后续调用即刻拒绝（清理路径不得再起命令）。 */

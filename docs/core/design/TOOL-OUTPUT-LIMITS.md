@@ -8,7 +8,7 @@
 
 ## 1. 定位
 
-统一额度：工具结果 **超过 64K 字符**才落盘；落盘后内联 preview 采**保头保尾**。
+统一额度：**工具结果族**超过 64K 字符才落盘；**报告族**（子代理 / advisor / escalate 的注入报告，`force: true`）无条件落盘。落盘后内联 preview 采**保头保尾**；报告族正文 ≤64K 时给正文一份，不上预览（§3）。
 
 ## 2. 常量与预算（`thincoder-core/agent/helpers.mjs`）
 
@@ -32,8 +32,17 @@ head（≤16K）  +  \n\n… [middle omitted: N chars] …\n\n  +  tail（预算
 
 ## 3. 落盘（`offloadToolResult`）与失败回退
 
-- `≤ 65536`：原样返回，**不进落盘路径**（`thincoder-core/agent/helpers.mjs:125`）。
-- `> 65536`：写时自清理（删 offload 目录内 mtime 超 `TMP_RETENTION_MS` = **3 天**的文件——`thincoder-core/agent/helpers.mjs:80`）→ `mkdir` → `writeFile` 全文落盘 → 返回双端 preview + 路径提示语（`thincoder-core/agent/helpers.mjs:131`–`:135`）：
+`offloadToolResult(text, callId, dir?, { force })`（`thincoder-core/agent/helpers.mjs:157`）按 `force` 分两族：**工具结果族**（`force` 缺省，调用点 `thincoder-core/agent/dispatch-run.mjs:148`——非 multimodal 结果统一过落盘守卫）过长度门；**报告族**（`force: true`，调用点 `thincoder-core/agent-tools/subagent-async.mjs:389`）恒落盘。
+
+**落盘条件分族，渲染形态不分族**——两族按同一常量 `TOOL_RESULT_OFFLOAD_LIMIT`（`thincoder-core/agent/helpers.mjs:36`）二分：
+
+| 族 | 正文长度 | 落盘 | 返回体 |
+|---|---|---|---|
+| 工具结果族 | `≤ 65536` | 不落盘（长度门：`thincoder-core/agent/helpers.mjs:159`） | 原样返回 |
+| 两族 | `> 65536` | 恒写 | 双端 preview + 路径提示语（下框） |
+| 报告族 | `≤ 65536` | 恒写 | 正文原样一份 + `full content saved to: PATH` + 读取提示（无 `middle omitted`、无 `too large` 字样） |
+
+`> 65536` 的落盘路径：写时自清理（删 offload 目录内 mtime 超 `TMP_RETENTION_MS` = **3 天**的文件——`thincoder-core/agent/helpers.mjs:80`）→ `mkdir` → `writeFile` 全文落盘 → 返回双端 preview + 路径提示语（`thincoder-core/agent/helpers.mjs:161`–`:167`）：
 
 ```text
 [... output too large (N chars total), full content saved to: PATH
@@ -41,13 +50,10 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 ```
 
 - **提示语与路径格式不变**（模型契约稳定）：需要完整内容时定向读——但 preview 已含尾部，多数场景无需读回。
-- **落盘失败回退**：同用双端切片 + **无路径提示**（`thincoder-core/agent/helpers.mjs:136`–`:139`）：
-
-```text
-[... truncated: N chars total, offload to disk failed]
-```
-
-- 调用点：`thincoder-core/agent/dispatch.mjs:428`——非 multimodal 工具结果统一过落盘守卫（函数内部行为改、调用点零改）。
+- **落盘失败回退**：**无路径提示**（`thincoder-core/agent/helpers.mjs:168`–`:172`），按同一长度门分两形：
+  - 正文 `> 65536`：双端切片 + 原文案 `[... truncated: N chars total, offload to disk failed]`。
+  - 报告族正文 `≤ 65536`：正文整段在前（本就不截断，不谎称 `truncated`）+ `[... full text kept inline above (N chars), offload to disk failed]`。
+- 报告族进入对话的形态（预览 / 路径 / 轮预算档）= `docs/core/design/TIMEOUT-DIGEST.md` §2.2；本档只管落盘与渲染形态。
 
 ## 4. advisor 结果截断
 
@@ -79,8 +85,9 @@ Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do 
 | offload 目录保留期 | `thincoder-core/agent/helpers.mjs:80`（`TMP_RETENTION_MS` = 3 天） | 在位 |
 | 双端切片（本档私有） | `thincoder-core/agent/helpers.mjs:45`（head）· `:56`（tail） | 在位 |
 | preview 构造 | `thincoder-core/agent/helpers.mjs:71`（`buildDualEndPreview`） | 在位 |
-| 落盘主函数 + 写时自清理 | `thincoder-core/agent/helpers.mjs:124` · `:114`（清理判定）· `:127`（清理调用） | 在位 |
-| 主链路调用点 | `thincoder-core/agent/dispatch.mjs:428` | 非 multimodal 结果过守卫 |
+| 落盘主函数 + 写时自清理 | `thincoder-core/agent/helpers.mjs:157`（`offloadToolResult`）· `:134`（清理函数）· `:161`（清理调用） | 在位 |
+| 主链路调用点（工具结果族） | `thincoder-core/agent/dispatch-run.mjs:148` | 非 multimodal 结果过守卫 |
+| 报告族调用点 | `thincoder-core/agent-tools/subagent-async.mjs:389` | 无条件 `{ force: true }` |
 | 共享 UTF-16 安全切片 | `thincoder-core/text-budget.mjs:55` · `:69` | 单一来源（agent 捕获 + TUI 额度共用） |
 | advisor 上限常量 | `thincoder-core/advisor/compaction.mjs:38`（`MAX_RESULT_CHARS`） | 由 `thincoder-core/advisor/run.mjs:16` re-export |
 | advisor 双端截断 | `thincoder-core/advisor/truncate.mjs:14` · 调用 `thincoder-core/advisor/loop.mjs:282` | 头/尾预算行级累加 |

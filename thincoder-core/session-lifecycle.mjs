@@ -39,7 +39,9 @@ import { mergeAdjacentAssistantEchoes } from "./context.mjs"
 // 打开态读数公式（§6.24 判据句 2——与 CLI 状态行 / VSC 同式；零新公式，只组合）。
 import { historyPercent } from "./token-window.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
-import { restoreEngTokens } from "./token-ttl.mjs"
+import { restoreEngTokens, tokenExpired } from "./token-ttl.mjs"
+// 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：`slot:new` 走核日志单一通道。
+import { logEvent } from "./log.mjs"
 import { clearPlanMode } from "./agent-tools/plan.mjs"
 import { bindRecordStore, unbindRecordStore, RECORD_WINDOW_MESSAGES } from "./session-store.mjs"
 // 会话级档位（§6.21 判据句 4）判据单源：off 形族（`think-off.mjs`）+ 逐模型枚举
@@ -73,8 +75,9 @@ function stripTruncatedToolArgs(m) {
   return changed ? { ...m, tool_calls } : m
 }
 
-/** Apply loaded session data onto an agent object; returns true if the runtime composite
- *  was switched. 2026-08-31 会诊 F1：清空 _slot/_slotMtime 缓存——切换后下次保存重新认领。
+/** Apply loaded session data onto an agent object; returns `{ switched, droppedDesignTokens }`
+ *  （`switched` = 运行态渠道是否被切——原布尔值；`droppedDesignTokens` = 离开本会话的未过期
+ *  设计凭证数，设计档 §3.2）。2026-08-31 会诊 F1：清空 _slot/_slotMtime 缓存——切换后下次保存重新认领。
  *
  *  MODEL-MERGE-SESSION（F-4）applySession 重写为两支 + 删旧支（评审 #7/#9 措辞——防
  *  "三支"误读）：
@@ -121,8 +124,8 @@ export function applySession(agent, data, opts = {}) {
   agent.goal = data.goal ?? null
   agent._pendingReminders = data.pendingReminders ?? []
   agent._sessionStart = data.sessionStart ?? null
-  // R16 token 字段恢复（过期过滤——见 token-ttl.mjs restoreEngTokens）
-  restoreEngTokens(agent, data)
+  // R16 token 字段恢复（过期过滤——见 token-ttl.mjs restoreEngTokens）；返回值 = 离开集计数（§3.2）
+  const restored = restoreEngTokens(agent, data)
   // engineering is session-level (2026-08-29): the slot value is the CLI session's authority
   // — config.json is only the initial default / cross-end mirror. A legacy slot without the
   // field keeps whatever config.json seeded (unchanged behavior).
@@ -207,11 +210,11 @@ export function applySession(agent, data, opts = {}) {
         agent.provider.reasoningEffort = data.effort
       }
     }
-    return switched
+    return { switched, droppedDesignTokens: restored.droppedDesignTokens }
   }
   // ② 槽无 key ∥ 不在册 → D-S3 保留——静默保持现状（落 config 链：config 统一解析产物已是
   //    `agent.provider`；不报错不纠正——两方都无效由调用侧复验 validateProvider 弹重选）
-  return false
+  return { switched: false, droppedDesignTokens: restored.droppedDesignTokens }
 }
 
 /**
@@ -266,6 +269,7 @@ export async function newSession(cwd, opts = {}) {
   writeSessionFile(slotPath(cwd, slot), data)
   // 摘要 `ts` 地板入参（#503 同族随动——保存面写后取 mtime；`slotMtime` 读失败 ⇒ null ⇒ 裸墙钟）
   m.slots[slot] = slotDigest(data, slotMtime(cwd, slot))
+  const prevSlot = Number.isInteger(m.active) ? m.active : null // 覆盖前 active（无则 null）
   m.active = slot
   // 2026-08-31 advisor round1 🟡：与 ensureActive 认领模型一致——立即记录新 slot 所有权，
   // 否则 /new 后到首次保存之间并发方（VS Code/另一 CLI）会把新 active 槽当"空闲可恢复"
@@ -287,19 +291,29 @@ export async function newSession(cwd, opts = {}) {
   saveManifest(cwd, m, deletions, opts.releaseStale ? { setActive: true, release: [slot] } : { setActive: true })
   // 2026-09-05 §6.10 D-4：/new 落点写本端记录（显式切换跟随——T-M8）
   writeEndMarker(cwd, slot)
+  // 槽事件（设计档 §3.1）：落定后一行——字段闭集，不带标题 / 路径。
+  logEvent("slot:new", { slot, prevSlot, reason: "new-session" })
   return slot
 }
 
 /** 清空会话运行态（/new 用，2026-08-31 会诊 F3）：_fullHistory/title/_sessionStart 等
  *  全部会话级状态 + 一次性注入标志必须全清——否则新会话首次落盘把旧会话完整人类线 +
  *  旧标题写进新槽（实锤 .19/.3 双副本）；注入标志不清则 /new 后新会话永不注入
- *  OS/cwd reminder（2026-09-01 会诊 glm 🟡）。autoApprove 是用户偏好，跨会话保留（有意）。 */
+ *  OS/cwd reminder（2026-09-01 会诊 glm 🟡）。autoApprove 是用户偏好，跨会话保留（有意）。
+ *  返回 `{ droppedDesignTokens }`（设计档 §3.2）——重建 Map 前数一遍的未过期凭证数。 */
 export function resetSessionState(agent) {
   agent._fullHistory = []
   agent.history = []
   agent.title = ""
   agent.tasks = []
   agent._sessionStart = null
+  // 设计档 §3.2（R2）：重建 Map 前数一遍「未过期」条目——返回值 = 端壳报明口径（离开集）
+  let droppedDesignTokens = 0
+  if (agent._engDesignTokens instanceof Map) {
+    for (const t of agent._engDesignTokens.values()) {
+      if (!(typeof t === "string" && tokenExpired(t))) droppedDesignTokens++
+    }
+  }
   // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：单值镜像 `_engDesignToken` 退役——不再维护
   agent._engDesignTokens = new Map() // multi-design slots die with the session (2026-09-01 fix #2)
   agent._compressFailures = 0
@@ -322,6 +336,7 @@ export function resetSessionState(agent) {
   agent._lastEngState = false
   // /new 或切换：记录存储解绑（新槽由 cmd-new / 首保存补绑重新挂载——§6.14 绑定与对账）
   unbindRecordStore(agent)
+  return { droppedDesignTokens }
 }
 
 /** Switch the manifest active pointer to a slot. Returns the slot's session data

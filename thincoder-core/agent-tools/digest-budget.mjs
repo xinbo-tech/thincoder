@@ -58,6 +58,8 @@ export function digestBudgetOver(agent, size) {
 /** Test seam: 落盘目录重定向（单元测试沙箱——生产从不调用）。 */
 let _digestOffloadDirOverride = null
 export function _setDigestOffloadDirForTest(dir) { _digestOffloadDirOverride = dir }
+/** 缝的读取面（无参）：生产恒 undefined ⇒ 消费方取各自默认目录。一条缝覆盖本档与 `offloadToolResult` 两族（TIMEOUT-DIGEST.md §2.2）。 */
+export function _digestOffloadDirForTest() { return _digestOffloadDirOverride ?? undefined }
 
 /** 超限条目全量落盘（返回清单行文本；失败 null——调用方回退 inline——结果零丢失）。
  *  tag 入文件名（溯源：写入族 + 条目 id）。 */

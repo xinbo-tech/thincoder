@@ -308,8 +308,8 @@ A11 unborn 仓（`git init` 零提交）：`status` ⇒ `(clean — no changes)`
 A12 谓词反证：非仓消息**含**指引句；unborn / bad-revision 消息**不含**（谓词 = 128 ∧ stderr 含 `not a git repository`）；
 A13 调用方普查 · 集成测试级：三包全量 `npm test` 失败集合 ⊆ 批前失败集合（口径同 A-MS6 · `AGENT-LOOP-SUBAGENT.md:713`）；H3 夹具读数落 §5。
 
-**测试**：`thincoder-core/test/tool-seams.test.mjs:88-106`（#59 审批门用例）——该用例 ctx.cwd = `git init` 洁净仓（`execFileSync("git", ["init","-q"], { cwd: dir })`）⇒ 断言原样成立（= A9 真洁净路径）；
-② 非仓路径另立断言（同档）⇒ `status` **抛错** + 消息含 `not a git repository`（A7，测试侧用 `assert.rejects`）。两例分离后「洁净」与「非仓」不再共用同一期望值。
+**测试**：两例分列（批次本地用例——收口随批删）——A9 洁净路径（`git init` 空仓 ⇒ `(clean — no changes)`；真洁净零假阳）∥
+② 非仓路径 ⇒ `status` **抛错** + 消息含 `not a git repository`（A7，测试侧用 `assert.rejects`）。两例分离后「洁净」与「非仓」不再共用同一期望值。
 
 **对账口径**：收口判定一律以 `git status --porcelain`（bash，仓内）为准；工具侧自 **#62 起**已自带仓发现（**缺省 = 发现的项目仓根**，显式 `workdir` 优先）。
 
@@ -392,7 +392,8 @@ A17 workdir 优先 + 无注记；A18 两类 cwd 零行为变（既有用例全�
 **前置（已满足）**：A15 依赖 §6.12（#55 fail-closed）——已落地
 （`thincoder-core/tools/git.mjs` 的 `runGitRaw` 失败 throw · §6.12 的 A7–A12 判据）⇒ A15 可判。
 
-**测试**：单元测试档（批档伴随件——用后即删 · 零留存；不进 `test/` 树——`thincoder-core/test/` 现盘 = `run.mjs` / `slow.mjs`）：`_setProjectRootForTest` **须复位**（发现面走真判据）；
+**测试**：单元测试档（批档伴随件——用后即删 · 零留存；不进 `test/` 树）。
+`thincoder-core/test/` 现盘 = `run.mjs` / `slow.mjs` + 6 个常驻 `*.test.mjs`（`advisor-project-context` / `anthropic-message-adapt` / `doc-check-builtins` / `doc-check-scope` / `manifest-five-keys` / `subagent-design-token-gate`——2026-10-24 实读）；`_setProjectRootForTest` **须复位**（发现面走真判据）；
 用例 = A14–A22（上表）∥ `discoverRepos` 四态 + 候选保序（T41 / T42——用例表 = `docs/core/design/MANIFEST.md` §3.2）∥ `resolveProjectRoot` 零语义回归面（判据 = `MANIFEST.md` §3.2 T42 行）。
 
 **边界（本节不做）**：工具描述正文**已收口**（`thincoder-core/tool-docs/git.md:39` + `thincoder-core/tools/git.mjs:85` 内联描述——两面逐字同口径 = `Default: the discovered project repo root（缺省 = 发现的项目仓根；显式 workdir 优先）`）· 不改
@@ -517,12 +518,12 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 |---|---|---|---|---|
 | 1 | `thincoder-core/tools/git-run.mjs`（已落） | 0 | `GIT_ENV` · `GIT_TIMEOUT_MS` / `GIT_NET_TIMEOUT_MS` · `gitTimeoutNote(ms)` · `spawnGit()`（async · SIGTERM→树杀→kick · 错误形 = `execFileSync` 同构 + `.timedOut`） | ≈ +95（< 300 建议档） |
 | 2 | `thincoder-core/tools/process-tree.mjs`（已落） | 0 | `killProcessTree(child)` **单源**（自 `execute.mjs` 抽出，行为逐字同；抽出的理由 = 避免 `shared → git-run → execute → shared` 循环——`execute.mjs:29` 在模块求值期调 `DESC`（`const`，TDZ）） | ≈ +18 |
-| 3 | `thincoder-core/tools/execute.mjs` | 243 | `killProcessTree` 定义改 import + `export { killProcessTree }` | 导出面不变（`test/tool-seams.test.mjs:26` 与 `configureProcessTreeKill` 缺省消费零改） |
+| 3 | `thincoder-core/tools/execute.mjs` | 243 | `killProcessTree` 定义改 import + `export { killProcessTree }` | 导出面不变（`configureProcessTreeKill` 缺省消费零改） |
 | 4 | `thincoder-core/tools/shared.mjs` | 467 | `runGit` 体改 `await spawnGit(...)` 薄壳（trim / `\r` / 溢出 / 抛出四形逐字保留）；`gitFailureMessage` 增 `timedOut` 分支（嵌 `gitTimeoutNote`） | ±6 ⇒ **≈473 / 500 硬限**——不得在该档再增内容 |
 | 5 | `thincoder-core/tools/git.mjs` | 420 | `runGitRaw` 改 async 薄壳；**30 处**加 `await`（`runGit` 7 · `runGitRaw` 1 · `runGitStrict` **22**） | ±0 |
 | 6 | `thincoder-core/tools/git-ext.mjs` | 173 | `runGitStrict` 改 async 薄壳（`{ok, out, err}` 形逐字保留 + `timedOut` 分支）；**15 处**加 `await`（`runGit` 3 · `runGitStrict` 12） | ±0 |
 | 7 | `thincoder-core/tools/git-checkpoint.mjs` | 143 | `lazyClearIfCommitted` 1 处 `await`（已 try/catch 面——§6.12 普查表行 4 语义零变） | ±0 |
-| 8 | `thincoder-core/test/git-noninteractive.test.mjs`（已落） | 0 | A23–A28 用例（scratch 仓 + 挂死夹具 + 本地 401 服务 + 结构断言） | ≈ +150 |
+| 8 | 批次本地单元测试档（`git` 非交互面——收口随批删） | 0 | A23–A28 用例（scratch 仓 + 挂死夹具 + 本地 401 服务 + 结构断言） | ≈ +150（收口删） |
 | 9 | `thincoder-vscode/src/tools/ide.mjs` | 144 | `changesSection`（`:133`）转 async + `:136` 1 处 `await`（核 `runGit` 转 async 的**端侧扇出面**——`:70` `collectSection` 已 async ⇒ 受控；`:48` 调用面零改） | ±0 |
 | 10 | `thincoder-vscode/test/tools-ide-changes.test.mjs`（已落） | 0 | VSC `ide` 工具面 changes 路径用例（= A27 的 VSC 半：未提交变更出段 / 洁净无段 / 非仓零抛错——真 `git init` 仓夹具） | ≈ +45 |
 | 11 | `thincoder-vscode/test/files.mjs` | 127 | 用例登记 1 行（runner fail-closed：未登记 = 永不执行） | +1 |
@@ -560,11 +561,11 @@ timed out after <n>s (killed) — no interactive input is possible here (editor 
 | ③ 超时兜底 + 明确报错（冻结绝不再现） | A24 · A26 |
 | ④ 全 action 面清算 | A29 · A28 |
 
-**测试**：新档 `thincoder-core/test/git-noninteractive.test.mjs`（已落）——夹具三形态：① scratch 仓（`git init` + 本地 identity + 冲突态构造）② 挂死进程夹具（.cmd / 脚本，启动即写 pid 档——**判据 = pid 档出没**，跨平台可跑）③ 本地 401 HTTP 服务（node `http`）。
+**测试**：批次本地单元测试档（收口随批删）——夹具三形态：① scratch 仓（`git init` + 本地 identity + 冲突态构造）② 挂死进程夹具（.cmd / 脚本，启动即写 pid 档——**判据 = pid 档出没**，跨平台可跑）③ 本地 401 HTTP 服务（node `http`）。
 `process.env.GIT_EDITOR` 注入须在 `finally` 复位（同式纪律：A25 的 `LC_ALL`、A24 的 `_setGitTimeoutForTest` / `_resetGitTimeoutForTest`）。
-**VSC 侧回归** = `thincoder-vscode/test/tools-ide-changes.test.mjs`（**已落** · 经 `test/files.mjs` 登记——runner fail-closed：未登记 = 永不执行；夹具 = temp `git init` 仓 + 未提交改动，真 git 子进程，先例 `thincoder-vscode/test/git-commit-pathspec.test.mjs:25-36`）：
+**VSC 侧回归** = 批次本地单元测试档（收口随批删；夹具 = temp `git init` 仓 + 未提交改动，真 git 子进程）：
 经 **`ideTool.execute({what:"changes"}, {cwd})` 真工具面**断言三格——① 未提交变更 ⇒ 输出含 `## 未提交变更 (N)` + 文件名行（**中间态红**：核 `runGit` 已 async ∧ `changesSection` 未转 ⇒ 输出变 `(error: …)`——防漏改）② 洁净 ⇒ 不出该段 ③ 非仓 cwd ⇒ 不出该段、零抛错（`catch` 路）。
-回归守卫：`thincoder-core/test/tool-seams.test.mjs`（`killProcessTree` 导出面 + #55 用例）· `thincoder-core/test/git-repo-discovery.test.mjs`（§6.13 A14–A22）· `thincoder-cli/test/git-commit-pathspec.test.mjs`（commit 路径）——**零改**。
+回归守卫 = 本节用例表 A23–A29（判据保留在表；批次本地单测档收口随批删，无随批留下的可执行档）。
 
 **边界（本节不做）**：不改 `bash` 工具（其加固照旧，`thincoder-core/tools/bash.mjs` 零改）· 不新增 action / 参数 / 用户选项（超时与加固均为常量，不进 schema）· 成功路径输出形态零变（加固走 env，不加命令行参数）· checkpoint / 快照语义零改 · 不接 Stop / abort（`runGit` 族无 `ctx.signal` 通路——不做）
  · 「表外复核」五位中 `gitDiffOne` / `patch.mjs` 两处落（转 `spawnGit`）；余三位（`thincoder-core/git/checkpoint.mjs` / `advisor/repos.mjs` / `bash.mjs`）维持零改（见上表）· 不做 ssh 面 `GIT_SSH_COMMAND` 覆盖（会夺用户自配）+ 不设 `SSH_ASKPASS`（登记为超时兜底面）· 不改 README / 需求档 / 发布面。
@@ -1352,6 +1353,8 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 - **退避** = 固定 500 ms、单次（不解析 `Retry-After`——5 QPS 账号级限速下 429 罕见；见 ⑨ D-WB5）。
 - **回落提示（仅 search）**：资格命中而 DeepSeek 未出结果 ⇒ 结果末尾追加一行，**文案按返回态分叉**：`failed`（失败 ∥ 已熔断）⇒ `(deepseek backend unavailable — results from <tavily|bing>)`；`empty`（后端成功、零结果）⇒ `(deepseek returned no results — results from <tavily|bing>)`（`<tavily|bing>` = 实际承接腿名，小写）。
 - **零提示面**：fetch 内容面两态均不加（保正文保真——D-WB6）；无渠道（`unavailable`）∥ `local` ⇒ 零提示（零回归）；search 回落腿**零结果**（`tavily` ∥ `bing` 也没搜到——无承接腿可名）⇒ 零提示。
+- **404 分支依据（本批）**：需求 W3 判词（`docs/core/requirements/TOOLS.md:232`「404（无可提取内容）」——需求档实读）+ 本批来源 Gitee IKQ2KZ（一次抓取 404 停掉后续 search 的现场）；复现径 = ⑦ T7 行（`:1409`：fetch 404 ⇒ transport 1 次、同 agent 紧随 search 仍 1 次）。
+  上游错误码语义已落需求档「上游事实」块（`docs/core/requirements/TOOLS.md:221`：404 = 被取页面的状态、401 / 402 / 403 才是继续发请求无意义的三类）——取证链两侧同址可追。
 
 #### ⑤ 日志行（NW3）
 
@@ -1365,7 +1368,7 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | 面 | 落点 | 形 |
 |---|---|---|
 | 工具面（链头） | `thincoder-core/tools/web.mjs`（`websearch.execute` ∥ `fetch.execute`） | 先 `backendMode(agent.config, "websearch" ∥ "fetch")`：`"local"` ⇒ 零调用直走既有链；否则调 `deepseekSearch` ∥ `deepseekFetch`，按返回 `status` 分派 |
-| 实现面（导出） | `thincoder-core/tools/web-deepseek.mjs`（新） | `backendMode(cfg, key)` · `deepseekSearch({ cfg, query, limit, proxy, agent })` · `deepseekFetch({ cfg, url, proxy, agent })` · 测试缝 `_setDeepseekTransportForTest(fn)` / `_resetDeepseekTransportForTest()`（⑦） |
+| 实现面（导出） | `thincoder-core/tools/web-deepseek.mjs`（新） | `backendMode(cfg, key)` · `deepseekSearch({ cfg, query, limit, proxy, agent })` · `deepseekFetch({ cfg, url, proxy, agent })` · 测试缝 `_setDeepseekTransportForTest(fn)` / `_resetDeepseekTransportForTest()`（⑦）· 只读断言面 `_TRIP_STATUS_FOR_TEST`（冻结数组，不改行为——⑦） |
 | `backendMode` | 同上 | `cfg?.[key]?.backend === "local"` ⇒ `"local"`；其余（缺键 ∥ 拼写错 ∥ 非串）⇒ `"auto"`（fail-open——键面同 `CONFIG.md` §6.5） |
 | 返回形 | 同上 | 四态：`{ status: "ok", text, n }` ∥ `{ status: "empty" }`（后端成功、零结果——search 零条 ∥ fetch 空 `content`）∥ `{ status: "failed", reason }`（尝试后失败 ∥ 已熔断）∥ `{ status: "unavailable" }`（无合格渠道、零网络调用）——**纯值返回、不抛错**（工具腿永不失败，W4） |
 | 跳过信号 | `web.mjs` | `unavailable` = 无合格渠道（零网络调用）⇒ 直走回落链、**零提示行**；`local` 由链头拦截，不进本模块 |
@@ -1397,6 +1400,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 #### ⑦ 测试计划（单测 · 假 transport 替身 · 收口随批删）
 
 **测试缝**（③ 缝，`CONFIG.md` §6.2）：`web-deepseek.mjs` 导出 `_setDeepseekTransportForTest(fn)` / `_resetDeepseekTransportForTest()`（缺省 = `proxyFetch`；**复位即清熔断 WeakMap 并复位时钟缝**——成对，无第三缝）与 `_setDeepseekClockForTest(fn)`（TTL 用例拨时钟）；用例 `finally` 复位。
+另导出**只读断言面** `_TRIP_STATUS_FOR_TEST`（`thincoder-core/tools/web-deepseek.mjs:49`：`Object.freeze([...TRIP_STATUS])`）——供用例机械断言「404 零命中」（T7）；它不改行为、不参与复位，**不是缝**（断言面与缝分开登记）。
 
 | # | 面 | 用例（输入 → 期望） |
 |---|---|---|
@@ -1428,9 +1432,9 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 
 | 档 | 现况 | Δ | 说明 |
 |---|---|---|---|
-| `thincoder-core/tools/web-deepseek.mjs` | **173**（新） | **173** 实读 | 探测 / 键读 / 熔断 / 请求 / 映射 / 重试 / 日志（单点） |
+| `thincoder-core/tools/web-deepseek.mjs` | **187**（2026-10-24 实测） | 本批 +15 | 探测 / 键读 / 熔断（`TRIP_STATUS` 去 404 + `BREAKER_TTL_MS`） / 时钟缝 / 只读断言面 / 请求 / 映射 / 重试 / 日志（单点） |
 | `thincoder-core/tools/web.mjs` | **253** | +**26** 实读 | 链头接线（search ∥ fetch）+ 回落提示行；Tavily / Bing / 本地三支零改 |
-| `thincoder-core/config.mjs` | **570** | +**3** 实读 | `websearch.backend` ∥ `fetch.backend` 两键（DEFAULTS）；**软线已超（570 > 500）**——拆分计划见 `CORE-UNIFICATION.md` §2.8.1 第 1 行（台账 `#1612`）；本批零重构 |
+| `thincoder-core/config.mjs` | **456**（2026-10-24 实测；含在跑批次的 `bodyIdleTimeoutMs` 4 行） | +19 / −1（净 +18；本批净 +14） | `promoteAgentViews` 导出 + `loadConfig:372` 改调（行数增量来自该批）；`websearch.backend` ∥ `fetch.backend` 两键（DEFAULTS）；软线与拆分计划见 `CORE-UNIFICATION.md` §2.8.1 第 1 行（台账 `#1612`） |
 | `thincoder-core/tool-docs/websearch.md` | **19** | +2 实读 | 建议文本（⑥） |
 | `thincoder-core/tool-docs/fetch.md` | **14** | +1 实读 | 建议文本（⑥） |
 | `thincoder-vscode/src/agent/setup.mjs` | **323** | +3 实读 | `cfgFetch` 形三处：声明 ∥ try 内赋值（`{ ...DEFAULTS.fetch, ...(raw.fetch ?? {}) }`）∥ cfgBag 条目（形同 `cfgTraces`；读点 `agent.config.fetch.backend`） |
@@ -1439,9 +1443,9 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | `thincoder-cli/CHANGELOG.md` | **933** | +5 实读（新增 `[Unreleased]` 段） | 新键条目（两产品 CHANGELOG——`CONFIG.md:65` 契约） |
 | `thincoder-vscode/CHANGELOG.md` | **1078** | +5 实读（同上） | 同上 |
 | `docs/batches/2026-10-17-deepseek-search-fetch.test.mjs` | **398**（新） | 398 实读 | 单测 T1–T17（含 VSC 装配用例；收口删） |
-| `docs/core/design/TOOLS.md` | **1549** | +238 实读 | 本节 |
+| `docs/core/design/TOOLS.md` | **1,739** | — | 本节（行数 = `split("\n").length − 1` 口径 · 2026-10-24 实测；自读数随修订刷新，不表历史 Δ） |
 | `docs/core/design/CONFIG.md` | **202** | +16 实读 | §6.5 键面 |
-| `docs/core/design/SETTINGS-TOOL.md` | **131** | ±0（叶子数已回填 **33**） | 预载叶子数已删（§2.4）；实施轮落键后按 `flatten` 本体实测回填（与本节同拍——见「报告发现」） |
+| `docs/core/design/SETTINGS-TOOL.md` | **162**（2026-10-24 实测） | ±0（叶子数已回填 **33**） | 预载叶子数已删（§2.4）；实施轮落键后按 `flatten` 本体实测回填（与本节同拍——见「报告发现」） |
 
 端侧 = VSC 装配补 `fetch` 键：`setup.mjs` 三处（声明 ∥ try 内赋值 ∥ cfgBag 条目）+ `agent-state.mjs` 一处；CLI / 桌面 / server 零改（核内单实现）。
 
@@ -1508,6 +1512,21 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 
 - `SETTINGS-TOOL.md` 的叶子计数须与本批键面同步：本批两键落 `DEFAULTS` 后按 `flatten` 本体实测回填（`SETTINGS-TOOL.md` §2.4 与本节同拍——实施轮落键后一次写入；D3 计数随表）。敏感命中面仍 = 仅 `websearch.apiKey`（两新键非敏感）。
 - `thincoder-core/tool-docs/fetch.md:11`「Non-HTML responses … truncated at ~50000 chars」与 `truncate` 实帽（200K，`tools/shared.mjs:22` `MAX_OUTPUT_CHARS`）不符——**非本批面**（英文运行期面），登记不动。
+
+#### 集成测试设计（F34 · 本批 · 收口口径）
+
+**业务可观察点** = 用户在会话里调 `websearch` ∥ `fetch` 时看到的工具结果与提示行。本批两处业务改动 = 404 不再熔断 ∥ 熔断限时 10 分钟。集成用例：
+
+| # | 入口（业务可观察点） | 判据（断言什么） | 指回 |
+|---|---|---|---|
+| I-WB1 | 配 DeepSeek 渠道的会话：`fetch` 一个上游回 404 的地址（本地 fixture 页），随即同一会话 `websearch` | 首次回执 = fixture 页正文（本地直取承接，可读、非「后端不可用」）；第二次回执以 `1. [deepseek]` 起头 ∧ DeepSeek search 替身命中 **1** 次 ⇒ 一次页面 404 没把后端停掉 | W4（`404` 行） |
+| I-WB2 | 同一会话：DeepSeek fetch 替身回 401 ⇒ `fetch` 一个 fixture 页；随后再 `websearch` 一次 | 首次回执 = fixture 页正文（回落本地直取成功）；第二次 DeepSeek search 替身命中 **0** 次且调用在预算内结算（不悬挂）⇒ 熔断只停后端、不停工具 | W4（`401` / `402` / `403` 行） |
+| I-WB3 | 未配 DeepSeek 渠道的会话 `websearch` 一次 | 回执与改动前逐字相等；零 `(deepseek …)` 提示行；DeepSeek 替身零命中 ⇒ 无渠道用户零变化 | W1 · W5 · NW1 |
+
+- **端点固定常量 ⇒ 替身走既有传输缝**：① 判据只认 `api.deepseek.com`、端点 = 固定常量（D-WB2）⇒ 业务入口指不到本机假上游；门内用例用既有 `_setDeepseekTransportForTest(fn)` 作替身（⑦ 同一对缝，`finally` 复位），不放宽产品语义、不引新缝。
+- **10 分钟到期解封不设门内格**：业务入口没有时钟缝，门里断言它要实等 10 分钟（N16 单用例硬超时）。该半由单测 T18 判（`_setDeepseekClockForTest` 两读数：`+599 999 ms` ⇒ 0 次 ∥ 再 `+2 ms` ⇒ 1 次）；门内只判「窗口未到期时零请求」（I-WB2）。
+- **回落腿的文本面不进集成格**：`(deepseek backend unavailable — results from <腿名>)` 的文案分叉由单测 T16 / T17 判；集成格只判上游命中计数与调用结算——承接腿（Tavily ∥ Bing）是外网腿，门内零外网（N15）。
+- **落点**：`thincoder-cli/test/integration/web-backend-404.test.mjs`（常驻——随 `npm test` 走，不随批删；收集面 = `thincoder-cli/test/run.mjs:3` 两层 glob，别处的档被 `:38` 拒收集）。本批单测档仍随批删（⑦）；集成档是长期守点，与单测档是两个对象。
 
 ### 6.24 `batch` 收口前置与重开径的文本面（链完整性门 · 带审计重开）
 
@@ -1618,7 +1637,8 @@ export function gateDesignToken(parent, args) {
 }
 ```
 
-`buildSpawnChild` 的 token 门块（`:245-258`）改为 `issuedToken = gateDesignToken(parent, args)`——**返回值必须落回 `issuedToken`**：`:345-347` 的 `if (role === "eng-coder" && issuedToken) child._engDesignId = args.designId ?? null` 依赖它，丢返回值即丢 designId 回写。`resolveDesignSlot` 的 `:131` 无槽拒句改为 `throw designTokenRefusal("missing")`（单行换单行，行数 ±0）。sync / async 两路共经 `buildSpawnChild`，一处改双路生效。
+`buildSpawnChild` 的 token 门块（`:245-258`）改为 `issuedToken = gateDesignToken(parent, args)`——**返回值必须落回 `issuedToken`**：`:345-347` 的 `if (role === "eng-coder" && issuedToken) child._engDesignId = args.designId ?? null` 依赖它，丢返回值即丢 designId 回写。
+`resolveDesignSlot` 的 `:131` 无槽拒句改为 `throw designTokenRefusal("missing")`（单行换单行，行数 ±0）。sync / async 两路共经 `buildSpawnChild`，一处改双路生效。
 
 **导出与 import 面**：两枚 `export function`（`designTokenRefusal` / `gateDesignToken`）住 `thincoder-core/agent-tools/subagent-spawn.mjs`；测试 import 面 = `import { gateDesignToken, designTokenRefusal } from "../agent-tools/subagent-spawn.mjs"`（测试档在 `thincoder-core/test/` 下，上一级即 `agent-tools/`）。
 
@@ -1667,7 +1687,8 @@ export function gateDesignToken(parent, args) {
 
 **边界（本节不做）**：自动补全（缺参 + 活槽时代取）——需用户单独裁定 · 令牌签发 / TTL / 消费零改 · depth>0 子通道 schema 裁剪零改（`agent/family-tools.mjs:90-110`）· 普通模式零改 · 评审链零改 · `resolveDesignSlot` 的未知 designId / 多槽缺 designId 两条诊断零改 · 不改 `batch` / 台账 / 批次档机制 · invalid 句不细分畸形形态（段数 ≠ 2 / uuid 不合形同句；槽值非字符串落 mismatch 或 missing，不入 invalid）。
 
-**外部档案处置（本条不在本批写入面）**：`ENG-TOKEN-BINDING.md:43` / `:170` 所引 `subagent-spawn.mjs:237` 在 L7 落模块尾时**不漂移** ⇒ 该档两处坐标继续有效、本批零改。若实施席改落他处致 `:237` 漂移：父侧收口按 `grep -n "validateRoundParam(args)" thincoder-core/agent-tools/subagent-spawn.mjs` 的实测行号同步该两处（到期条件 = L5 落地即触发；不得留待无人认领）。`TOOLS.md:395` 的「`thincoder-core/test/` 现盘 = `run.mjs` / `slow.mjs`」为陈旧读数（`test/` 已另有常驻档），属 §6.13 面，本批只标注、不改写——父侧收口一并处置。
+**外部档案处置（本条不在本批写入面）**：`ENG-TOKEN-BINDING.md:43` / `:170` 所引 `subagent-spawn.mjs:237` 在 L7 落模块尾时**不漂移** ⇒ 该档两处坐标继续有效、本批零改。
+若实施席改落他处致 `:237` 漂移：父侧收口按 `grep -n "validateRoundParam(args)" thincoder-core/agent-tools/subagent-spawn.mjs` 的实测行号同步该两处（到期条件 = L5 落地即触发；不得留待无人认领）。
 
 **关键决策**：
 
@@ -1689,7 +1710,7 @@ export function gateDesignToken(parent, args) {
 | `thincoder-core/agent-tools/subagent.mjs` | 422 行 / 31,340 字符 | ±0 行 / `:146` 描述改写 | schema description |
 | `thincoder-core/agent-tools/subagent-spawn.mjs` | 419 行 / 23,685 字符 | 实测 +15 行 / +1,580 字符（434 行 / 25,265 字符；实施后读数） | helper + gate 提取 + 四条拒句 |
 | `thincoder-core/test/subagent-design-token-gate.test.mjs` | 新增 | 约 120 行 | T1–T9 |
-| `docs/core/design/TOOLS.md` | 1,714 行 / 150,361 字符（2026-10-19 修订后实测） | 本节 = 160 行（L1539–1698） | 实施轮零触 |
+| `docs/core/design/TOOLS.md` | 1,739 行（2026-10-24 实测） | 本节 = 设计令牌门小节（行区间随修订漂移，不重复记） | 实施轮零触 |
 
 **实施拆分（两舱 · 按面）**：
 

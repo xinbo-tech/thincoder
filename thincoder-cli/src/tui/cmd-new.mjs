@@ -13,7 +13,7 @@ export async function handleNewCommand(ctx) {
     // 多槽设计凭证（_engDesignTokens——单值镜像 _engDesignToken 已退役 D3）/压缩与验证计数
     // 等）——原实现只清 agent.history，新会话首次落盘把旧会话完整人类线 + 旧标题写进新
     // slot（实锤 .19/.3 双副本）。_slot 更新为粘性新槽位。
-    resetSessionState(agent)
+    const { droppedDesignTokens } = resetSessionState(agent)
     agent._slot = slot
     // SESSION.md §6.14：/new 绑定新槽记录存储（baseHistory 空——identity 此时为 null = 待固化；
     // 首次保存/首条追加时补写现场身份）
@@ -24,6 +24,10 @@ export async function handleNewCommand(ctx) {
     state.streaming = ""
     render()
     pushLine(`New session started (slot ${slot}; /session to switch back)`, C.dim)
+    // 设计档 §3.2（R2）：> 0 才输出恰一行警示（= 0 零输出——负向锁）
+    if (droppedDesignTokens > 0) {
+      pushLine(`⚠ ${droppedDesignTokens} 个已批准设计凭证离开本会话，继续本会话需重走设计评审`, C.warn)
+    }
   }
 
   if (agent.history.length > 0) {

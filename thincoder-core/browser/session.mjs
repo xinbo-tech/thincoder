@@ -196,12 +196,16 @@ async function ensureSession(wanted) {
     return
   }
   let opened
+  const ctl = currentController
+  ctl?.pauseBudget() // 冷启段不占动作预算（§2.4 冷启预算 / KD-26）：自启窗口内预算钟暂停（自启段自身由启动窗帽 + 三域 enable 帽界定）
   try {
     opened = await runFrame("launch browser", () => (_deps.openBrowser ?? openBrowserReal)({ headless: wanted === undefined ? true : wanted }))
   } catch (e) {
     if (e?.browserAbort) state.reopenNote = true
+    ctl?.resumeBudget() // 失败腿同样恢复（自启失败的裁决归启动窗帽与错误本体）
     throw e
   }
+  ctl?.resumeBudget() // 动作时钟自会话就绪后起算（自启用时不计入动作预算；排队期照旧计入）
   state.cdp = opened.cdp
   state.child = opened.child ?? null
   state.lockPath = opened.lock ?? null

@@ -9,8 +9,9 @@
  *
  * The tools never fail because of this backend: every export returns a pure value
  * (`{ status: "ok" | "empty" | "failed" | "unavailable" }`) and never throws.
- * 401/402/403/404 trip a per-agent breaker (WeakSet); 408/429/5xx retry once (500 ms);
- * everything else falls back to the caller's existing chain.
+ * 401/402/403 trip a per-agent breaker for `BREAKER_TTL_MS` (10 min — auto-unseals, no restart);
+ * 404 does NOT trip (the target page is missing — not a credential failure, D-WB3); 408/429/5xx
+ * retry once (500 ms); everything else falls back to the caller's existing chain.
  */
 import { URL } from "node:url"
 import { truncate, isPrivateHost } from "./shared.mjs"
@@ -27,7 +28,8 @@ const DEEPSEEK_HOST = "api.deepseek.com"
 const TIMEOUT_MS = 15_000
 const RETRY_DELAY_MS = 500 // D-WB5: fixed single backoff (no Retry-After parsing)
 const COST_PER_CALL = 0.00075 // $0.75 / 1000 successful requests — `count` does not change the price
-const TRIP_STATUS = new Set([401, 402, 403, 404])
+const TRIP_STATUS = new Set([401, 402, 403]) // 404 = 目标页面的状态，不是凭据失效（D-WB3）
+const BREAKER_TTL_MS = 600_000 // 熔断限时 10 分钟——到期自动放行（改完 key 无需重启会话）
 const RETRY_STATUS = (() => {
   const codes = new Set([408, 429])
   for (let code = 500; code <= 599; code++) codes.add(code)
@@ -35,11 +37,16 @@ const RETRY_STATUS = (() => {
 })()
 
 let _transport = proxyFetch
-let _breaker = new WeakSet()
+let _now = Date.now
+let _breaker = new WeakMap() // agent → expiresAtMs（单域——search ∥ fetch 共享，D-WB3）
 
-/** Test seam (CONFIG.md §6.2 ③ — paired): swap the transport; reset also clears the breaker. */
+/** Test seam (CONFIG.md §6.2 ③ — paired): swap the transport ∥ the clock; reset also clears the breaker. */
 export function _setDeepseekTransportForTest(fn) { _transport = typeof fn === "function" ? fn : proxyFetch }
-export function _resetDeepseekTransportForTest() { _transport = proxyFetch; _breaker = new WeakSet() }
+export function _setDeepseekClockForTest(fn) { _now = typeof fn === "function" ? fn : Date.now }
+export function _resetDeepseekTransportForTest() { _transport = proxyFetch; _now = Date.now; _breaker = new WeakMap() }
+
+/** 熔断名单只读面（用例断言 404 零命中——D-WB3）。 */
+export const _TRIP_STATUS_FOR_TEST = Object.freeze([...TRIP_STATUS])
 
 /** `local` skips the DeepSeek backend; anything else (missing ∥ misspelled ∥ non-string) = `auto` (fail-open). */
 export function backendMode(cfg, key) {
@@ -66,11 +73,19 @@ function deepseekChannel(cfg) {
   return null
 }
 
-const tripped = (agent) => agent !== null && typeof agent === "object" && _breaker.has(agent)
+/** 熔断未到期？到期 ⇒ 删条目并放行（判活读时钟——改完 key 不必重启会话）。 */
+function tripped(agent) {
+  if (agent === null || typeof agent !== "object") return false
+  const expiresAt = _breaker.get(agent)
+  if (typeof expiresAt !== "number") return false
+  if (expiresAt > _now()) return true
+  _breaker.delete(agent)
+  return false
+}
 
-/** Break the backend for this agent identity (single domain — search ∥ fetch share it, D-WB3). */
+/** Break the backend for this agent identity for `BREAKER_TTL_MS` (single domain — search ∥ fetch share it, D-WB3). */
 function trip(agent) {
-  if (agent !== null && typeof agent === "object") _breaker.add(agent)
+  if (agent !== null && typeof agent === "object") _breaker.set(agent, _now() + BREAKER_TTL_MS)
 }
 
 /** One POST. Returns `{ kind: "ok", data }` | `{ kind: "http", status }` | `{ kind: "net", timeout }` | `{ kind: "json" }`. */
@@ -95,7 +110,7 @@ async function postOnce(url, body, apiKey, proxyUri) {
   } finally { clearTimeout(timer) }
 }
 
-/** One logical call: retry once (408/429/5xx), trip on 401/402/403/404, otherwise fall back. */
+/** One logical call: retry once (408/429/5xx), trip on 401/402/403, otherwise fall back. */
 async function request(url, body, apiKey, proxyUri, tool, agent) {
   const started = Date.now()
   let r = await postOnce(url, body, apiKey, proxyUri)
@@ -107,7 +122,7 @@ async function request(url, body, apiKey, proxyUri, tool, agent) {
   if (r.kind === "http" && TRIP_STATUS.has(r.status) && agent !== null && typeof agent === "object") {
     trip(agent)
     // Tripping line only (transient fallbacks stay quiet — ⑤).
-    logEvent("web:deepseek", { tool, status: r.status, tripped: true, ms: Date.now() - started })
+    logEvent("web:deepseek", { tool, status: r.status, tripped: true, ttlMs: BREAKER_TTL_MS, ms: Date.now() - started })
   }
   const reason = r.kind === "http" ? `http ${r.status}`
     : r.kind === "net" ? (r.timeout ? "timeout" : "network")

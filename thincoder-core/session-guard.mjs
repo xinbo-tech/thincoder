@@ -22,6 +22,7 @@ import { RECORD_DIR_SUFFIX } from "./session-store.mjs"
 // 本进程端名（创建端取值链缺省值）——静态环：本档 ↔ session-slots.mjs（经 session.mjs，同
 // 两档头注：函数体内运行时使用、求值期零顶层调用 ⇒ 环安全）。
 import { sessionEnd } from "./session-slots.mjs"
+import { logEvent } from "./log.mjs" // 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：guard 侧轮转同报 `via=guard`。
 
 /** 轮转时随迁记录存储（.bak 路径联动）——本会话活动绑定面跳过（防拔掉活动存储）。 */
 function moveSidecar(src, dst, agent) {
@@ -55,10 +56,12 @@ export function guardForeignSlotFile(agent, p, slot) {
     const myStart = agent._sessionStart ?? null
     const diskForeign = typeof disk?.cwd === "string" && disk.cwd.toLowerCase() !== agent.cwd.toLowerCase()
     if (diskIsNewer || diskForeign || (diskStart && diskStart !== myStart)) {
+      const reason = diskIsNewer ? "newer-version" : diskForeign ? "foreign-cwd" : "other-session"
       const bak = `${p}.bak-${Date.now()}`
       renameSync(p, bak)
       moveSidecar(p, bak, agent)
       console.error(`[session] slot ${slot} holds ${diskIsNewer ? `a newer-version file (v${disk.version})` : diskForeign ? `a foreign-cwd file (${disk.cwd})` : `another session (start ${diskStart}, ours ${myStart})`} — preserved as ${basename(bak)}`)
+      logEvent("slot:rotate", { slot, reason, bak: true, via: "guard" })
       agent._slotMtime = { p, mtimeMs: st.mtimeMs }
       agent._slotCreatedBy = sessionEnd() // 轮转：现场已让位 ⇒ 本端将首物化新文件
       return bak
@@ -70,9 +73,12 @@ export function guardForeignSlotFile(agent, p, slot) {
     // 文件存在但不可读（损坏/半写）：改名 .corrupted 保留现场（2026-09-01 advisor 🔵——
     // 与自身 loadSlotFile 的 .corrupted 约定 + VS Code saveSessionToSlot 对齐；.bak 保留
     // 给 F2 轮转路径，损坏现场不再混入轮转后缀）。
+    // 设计档 §3.1 / D13：catch 补 `preserved` 跟踪——否则 `unreadable` / `rotate-failed` 两值不可判。
+    let preserved = false
     if (existsSync(p)) {
-      try { renameSync(p, `${p}.corrupted`) } catch {}
+      try { renameSync(p, `${p}.corrupted`); preserved = true } catch {}
     }
+    logEvent("slot:rotate", { slot, reason: preserved ? "unreadable" : "rotate-failed", bak: false, via: "guard" })
     agent._slotCreatedBy = sessionEnd() // 损坏改名：现场已让位 ⇒ 本端将首物化新文件
     return null
   }

@@ -37,6 +37,8 @@ import { getSessionId, manifestPath, slotPath, writeSessionFile } from "./sessio
 // 认领面（2026-09-28 拆分外提——见头注）：本档 import `staleClaims` 供 dropStaleClaims 取用，
 // 并在下方 re-export 全族保既有 import 面。
 import { staleClaims } from "./session-slot-claims.mjs"
+// 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：拒写 / 读回失败两处写时点。
+import { logEvent } from "./log.mjs"
 
 /** Extract slot metadata from history (shared by slotDigest and loadSlotMeta) */
 export function extractSlotMeta(history, activeProvider, updatedAt, title = "") {
@@ -145,6 +147,7 @@ export function ledgerHealth(cwd) {
 function refuseManifestWrite(p, reason, preserved = null) {
   noteRefusal(reason, p)
   console.error(`[session] saveManifest: write refused (reason=${reason}) path=${p}${preserved ? ` preserved=${preserved}` : ""}`)
+  logEvent("slot:refuse", { reason })
   return false
 }
 
@@ -162,6 +165,7 @@ function writeManifestBase(p, m) {
   if (trusted) return true
   noteRefusal("readback-failed", p)
   console.error(`[session] saveManifest: readback-failed path=${p} preserved=${preserveScene(p)}`)
+  logEvent("slot:refuse", { reason: "readback-failed" })
   return false
 }
 

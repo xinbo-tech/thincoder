@@ -15,6 +15,7 @@ import { createBrotliDecompress, createGunzip, createInflate } from "node:zlib"
 import { abortError, timeoutError } from "./abort-provenance.mjs"
 import { createChunkedDecoder } from "./proxy-chunked.mjs"
 import { destroyBody } from "./stream-destroy.mjs"
+import { DEFAULT_BODY_IDLE_MS } from "./config-defaults.mjs"
 
 export const FETCH_TIMEOUT = 15_000
 
@@ -35,10 +36,11 @@ const CE_DECODERS = { gzip: createGunzip, "x-gzip": createGunzip, deflate: creat
  * absoluteForm: 请求行发绝对 URI（http:// 目标的经典代理转发用），默认发 origin-form。
  * 2026-08-31 会诊 #4：timeout 只覆盖"响应头阶段"；settle 后 body 空闲 > bodyIdleMs 即
  * 断流（原实现头部 timer 到齐即清，流式中途停摆会无限挂起直到用户 Ctrl+C）。
- * bodyIdleMs 默认 120s（provider 长生成用 0 即禁用，由调用方决定）。
+ * bodyIdleMs 缺省 = DEFAULT_BODY_IDLE_MS（与 `agent.bodyIdleTimeoutMs` 同源）；传 0 不是「禁用」——
+ * 定时器立即触发（本批不提供禁用开关）。
  * 导出供测试（裸 socket，无需 TLS/CONNECT）；生产路径走 tunnelHttps / proxyFetch。
  */
-export function streamHttpResponse(sock, urlStr, opts = {}, timeout = FETCH_TIMEOUT, absoluteForm = false, bodyIdleMs = 120_000) {
+export function streamHttpResponse(sock, urlStr, opts = {}, timeout = FETCH_TIMEOUT, absoluteForm = false, bodyIdleMs = DEFAULT_BODY_IDLE_MS) {
   return new Promise((resolve, reject) => {
     const target = new URL(urlStr)
     const method = opts.method ?? "GET"
@@ -229,7 +231,7 @@ export function tunnelHttps(urlStr, opts, proxyUri, timeout = FETCH_TIMEOUT) {
     }
     const signal = opts?.signal
     const headerTimeoutMs = Number.isFinite(opts?._headerTimeoutMs) ? opts._headerTimeoutMs : 60_000
-    const bodyIdleMs = opts?._bodyIdleMs ?? 120_000
+    const bodyIdleMs = opts?._bodyIdleMs ?? DEFAULT_BODY_IDLE_MS
 
     if (signal?.aborted) return reject(abortError(signal, "provider", "proxy"))
 

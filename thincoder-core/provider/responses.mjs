@@ -11,7 +11,7 @@
  * 事件流规范：流以 response.completed / response.incomplete / response.failed 结束，
  * 没有 "data: [DONE]"。
  */
-import { effectiveFetchTimeoutMs } from "./core.mjs"
+import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
@@ -244,8 +244,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
         headers,
         body: JSON.stringify(body),
         signal,
-          _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
-        _bodyIdleMs: 120_000,
+        _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
+        _bodyIdleMs: effectiveBodyIdleMs(provider),
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
     )
@@ -263,8 +263,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
         headers,
         body: JSON.stringify(fullBody),
         signal,
-          _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
-        _bodyIdleMs: 120_000,
+        _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
+        _bodyIdleMs: effectiveBodyIdleMs(provider),
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
     )
@@ -281,8 +281,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
         headers,
         body: JSON.stringify(fresh2.body),
         signal,
-          _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
-        _bodyIdleMs: 120_000,
+        _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
+        _bodyIdleMs: effectiveBodyIdleMs(provider),
       }, provider.proxyUri),
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
     )

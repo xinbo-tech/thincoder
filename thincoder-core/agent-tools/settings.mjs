@@ -12,7 +12,7 @@
  * 走显式形状表（_NULL_LEAF_SHAPES 相等面 / _SIBLING_SHAPES 存在性面——按各自真实消费形态
  * 校验，完备性机械锁 + 一次性警告；SETTINGS-TOOL.md §8）；set 侧效走审批门（dispatch 动作级分类）。
  */
-import { DEFAULTS, configPath, writeConfigAtomic } from "../config.mjs"
+import { DEFAULTS, configPath, promoteAgentViews, writeConfigAtomic } from "../config.mjs"
 import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/settings.md
 
 /** 敏感键段判定（完整点分路径的段级匹配——两句取或：词表段 ∨ 开口键族段；SETTINGS-TOOL.md §2.4）。
@@ -136,14 +136,38 @@ function _checkShape(path, spec, value) {
   }
 }
 
+/* ─── advisor 写面（本批——D-ST18 ∥ promoted 视图同步；SETTINGS-TOOL.md §2.3 / §2.6） ─── */
+
+/** `agent.advisor.*` ⇄ promoted `advisor.*` 路径映射（写面三条腿的同步面——§2.3）；其它键 ⇒ null。 */
+function _promotedAdvisorPath(path) {
+  const key = String(path)
+  if (key === "agent.advisor") return "advisor"
+  if (key.startsWith("agent.advisor.")) return `advisor.${key.slice("agent.advisor.".length)}`
+  return null
+}
+
+/** D-ST18：advisor 超时的两个写面键只收 `null`（显式清除）∥ 有限正数（ms）。
+ *  读面的「非法一律回退默认」是手写 config.json 的兜底，不是写面的许可证——收下 `0` 再回显
+ *  「运行中已生效」= D-ST6 要防的静默面。拒绝句点名键与可消费形态。 */
+function _checkAdvisorTimeout(value) {
+  if (value === null) return
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return
+  throw new Error("advisor.timeoutMs must be a finite positive number (ms) or null")
+}
+
 /**
  * 已知键值校验（set 写盘前；违例抛错——磁盘/内存零变化）：
+ * ⓪ advisor 写面两键先判（D-ST18：只收 null ∥ 有限正数；整段赋值腿对对象内 timeoutMs 同规则）；
  * ① 形状表命中键（`_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` **两表都查**——表值 = 形状规格）→ 形状校验
  *    （`null` = 显式清除，放行）；② 非 null 叶子（派生表值 = `typeof` 串）→ 既有语义逐字保留
  *    （`want === "array"` 跳过 / `null` + `want ∈ _NULL_CLEARABLE` 放行——#645 扩 number/boolean）；
  *  ③ 未知键 → 原样通过（全量域）。
  */
 function _checkKnownKeyValue(path, value) {
+  if (path === "agent.advisor.timeoutMs" || path === "advisor.timeoutMs") return _checkAdvisorTimeout(value)
+  if ((path === "agent.advisor" || path === "advisor") && value !== null && typeof value === "object" && !Array.isArray(value) && "timeoutMs" in value) {
+    _checkAdvisorTimeout(value.timeoutMs) // 整段赋值腿（两个段名）：对象内该键同规则校验（§2.6）
+  }
   const spec = _NULL_LEAF_SHAPES[path] ?? _SIBLING_SHAPES[path]
   if (spec) {
     if (value === null) return // 显式清除 = 有效动作（消费面均有「未设置」态——D-S2.3）
@@ -293,11 +317,29 @@ export function settingsTool(opts = {}) {
         else setKeyPath(disk, args.key, value)
       })
       if (!r.ok) throw new Error("config changed on disk concurrently — retry (settings set not applied)")
+      const promotedPath = _promotedAdvisorPath(args.key) // `agent.advisor.*` 的 promoted 副本路径（其它键 ⇒ null）
+      const fresh = (v) => (v !== null && typeof v === "object" ? structuredClone(v) : v) // DEFAULTS 是共享常量——回填不别名
       if (value === null) {
         deleteKeyPath(config, args.key)
+        // `null` 删除腿：副本同子键同删，**不再 re-derive**——promote 会把 config.advisor 旧值带回（§2.3）
+        if (promotedPath) deleteKeyPath(config, promotedPath)
         const d = resolvePath(DEFAULTS, String(args.key))
-        if (d.ok) setKeyPath(config, args.key, d.value) // 回填默认（形状表键默认 null ⇒ 与今日同形）
-      } else setKeyPath(config, args.key, value)
+        if (d.ok) {
+          setKeyPath(config, args.key, fresh(d.value)) // 回填默认（形状表键默认 null ⇒ 与今日同形）
+          if (promotedPath) setKeyPath(config, promotedPath, fresh(d.value)) // 副本与 reload 等价（loadConfig 以 nested 为准）
+        }
+      } else {
+        setKeyPath(config, args.key, value)
+        // promoted 视图同步（§2.3）：整段赋值 = `promoteAgentViews` 合并语义；子键 set = **只同步被写的键**。
+        // 子键也整段 re-derive 会拿嵌套面上的同名默认值盖回运行面（`DEFAULTS.agent.advisor.guard = false`，
+        // 经 `loadConfig` 并进 `agent.advisor`）⇒ `/advisor` 打开的会话级 guard 会被静默关掉，
+        // 违反「运行面独有的会话级键在合并中保留」。
+        if (promotedPath === "advisor") {
+          promoteAgentViews(config) // 整段赋值 = 同一条 promote 规则（合并语义：只覆盖、不删除；非对象段不展开）
+        } else if (promotedPath !== null) {
+          setKeyPath(config, promotedPath, value) // 子键 set：键级同步（与 null 腿同一种「同一子键」口径）
+        }
+      }
       const sensitive = isSensitiveKey(String(args.key))
       const shown = sensitive ? MASKED : value
       const suffix = value === null

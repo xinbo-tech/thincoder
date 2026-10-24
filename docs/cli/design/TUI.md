@@ -7,7 +7,7 @@
 > 另有输入框契约档 `docs/cli/design/TUI-INPUT-BOX.md` 与工具输出档 `docs/cli/design/TUI-TOOL-OUTPUT.md`。
 > 对位档 = `docs/vsc/design/WEBVIEW*.md`（VSC webview 族——**非同机制**）——**已裁保留（A9 三件齐）**：
 > ① 结构性不对称 = 渲染宿主不同（VSC webview DOM + 宿主↔面板消息协议 ∥ CLI 裸 ANSI 终端行内渲染；消息协议仅单侧存在）；
-> ② 证据 = 两实现树（`thincoder-vscode/webview/**` + `WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；
+> ② 证据 = 两实现树（`thincoder-vscode/webview/**` + `docs/vsc/design/WEBVIEW-PROTOCOL.md` ∥ `thincoder-cli/src/tui/**`）；
 > ③ 显式裁定 = 「逻辑 / 渲染分家」（同判据）。
 
 ## 1. 设计原则与模块地图
@@ -334,13 +334,13 @@ todo 面板（task 列表，≤5 行，全部 done 自动收起）
    启动 → 清 waiting 标转正常 running 头（同 key 不重建）；取消 / 出队 → 移除块（不冻结）。**`⟦ev⟧cancelled` 发射源（按族 × 落点逐条列名）**：
    - **子代理族**：`executeCancelAction` 工具路径与 mouse ⏹ 直连路径（`thincoder-core/agent-tools/subagent-async.mjs` · `thincoder-cli/src/tui/mouse.mjs`）——两路互斥（同一事件只有其中一路在链上），通道分别是 `ctx.callbacks.onToken` 与 `routeSubToken` 就地路由。
    - **评审族**：核 `cancelAsyncAdvisor` queued 分支 = **唯一发射点**（工具路径 / mouse ⏹ / VSC ⏹ 三路各传本层通道、均不另发）——
-      （机制细节见 `AGENT-LOOP-ASYNC-POOL.md` §6.11 第 3 条）。
+      （机制细节见 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.11 第 3 条）。
    **已移除块不复建（裁定落条文）**：`⟦ev⟧cancelled` 移除分支**同址落键级墓碑**——经**新增 helper** `tombstoneSubKey(state, key)`（定义于 `subagent-freeze.mjs`，与墓碑写点 `freezeSubTaskLines` 同址
    ⇒ **墓碑写入单一权威**保持〔§6.8.3.3〕；**只写** `_frozenSubKeys`、**不写** `_frozenSubTask` 载体行）⇒ 后续 `⟦ev⟧stopped` 经 `ensureSubTaskKey` 直接丢弃（零幻影块——探针实证的 `state.lines` 0 → 1 路径封死）；
    写入条件 = **与移除同一守卫**（`live && !live.done && live.async !== true`——命中即移除 + 写墓碑；无块可移除的 no-op 面不写，语义零扩）。
    **与墓碑存活闸（§6.8.3.2 P0-a）的交互**：写入时该条目已终态（`cancelled` + `done` + 出池）⇒ 存活判据 false ⇒ 维持丢弃（不再建块）；
    若同 key 条目仍存活（未来重启路径清终态位）⇒ 闸门摘墓碑 + 重建块（`ev:subagent-block-revived` 留痕）——**不构成永久失明**。
-   同一幻影的**另一面已封死（c1）**：补位不启动终态条目（`AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
+   同一幻影的**另一面已封死（c1）**：补位不启动终态条目（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.9）——「取消后仍被 settle」的燃料族无关消失。
 - **冻结头**：`[✓ explore#1 · sync · model · done 45s]`——**图标三态互斥（M5）**：`⏸`（审批态）→ `⏹`（`stopped` ∪ `error`）→ `✓`（其余），与动词同源（三词 `stopped` / `error` / `done`；错误面注记 ` — <err>` 居括号外——跨端归一面；
   `thincoder-cli/src/tui/render-segments.mjs` `frozenSubTaskLines` 图标行；跨端标尺 = 核件 `thincoder-render-core/subblocks/activity-view.mjs` 冻结头——`error` 面与 stopped 面同形；运行中面板头无 `stopped` 分支 ⇒ 不并）；
   动词按状态（cancel 冻结 → `stopped`；interrupt 清场 → `interrupted` 标）；**已结算待消化中间态**（settle 一律 `⟦ev⟧settled`——挂起 ∥ 非挂起两态统一）——等待消化，面板显示 `done · awaiting digestion`。
@@ -575,11 +575,14 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **落点**：`buildStatusLine`（`thincoder-cli/src/tui/render-frame.mjs`）**状态段簇尾**——`ledgerHint` 之后、键位组（` │ ${enterHint}`）之前；与「L1 台账常驻标记」同区（先例 = LEDGER-SURFACE，`:401-406`）。
 - **取值 = 活对象单读**：`agent.title`（写点四处：载入 `applySession` / 新建 `resetSessionState` / 回合尾 `ensureSessionTitle` / `/rename`）。每帧 recompute——零缓存副本、零推送链（§7.3 同纪律）。
 - **形态**：` │ <title>`；段宽 = `sliceByWidth` 截断至 **40 显示列**（超宽补 `…`）；**空值回退链**（`title` 空白 ⇒ 显回退值——`firstMessage` ≤40 截断 ∥ `"(empty)"`）；
+- **单行化不变式（本档 §7.4 = 单源）**：标题与回退标题先过 `singleLineTitle` 再进宽预算。正则 `const TITLE_BREAK_RE = /[\r\n\t\v\f\u0085\u2028\u2029]/g`，命中字符替换为**一个**空格；一字符换一空格 ⇒ 宽度账逐个守恒（`\r\n` 连写 = 两字符 = 两空格）。理由：状态栏按行绝对定位差分重绘（`thincoder-cli/src/tui/render-loop.mjs:111`），标题里一个 LF 就是一次真实换行 ⇒ 滚屏 + 差分基准错位 ⇒ 旧行残留。
+- **单行化应用点（三处）**：状态栏入口标题（`thincoder-cli/src/tui/status-line.mjs:172`）· 回退标题 `sessionTitleFallback`（同档 `:71-76`，`"(empty)"` 分支不处理）· status 行写出口 `put()`（下行 `thincoder-cli/src/tui/render-frame.mjs:265`）。
+- **写出口兜底**：status 行 `put()`（`thincoder-cli/src/tui/render-frame.mjs:265`）。`singleLineTitle` 由 `status-line.mjs` 具名导出，`render-frame.mjs` 同目录直接 import。
 - **宽度预算**：标题段入既有 `statusMax` 链（整行 ≤ `cols − 1` 口径不变）；宽度紧张时键位组先让位（标题在键位组之前 ⇒ 标题存活优先）。
 - **可见态**：idle / processing 常态在行；模态提示态（question / permission / picker / wizard / slash 提示）状态行整行让位（既有形态，零改）。
 - **VSC 对位**：顶栏常显（`#session-title`）保持、端侧零改；**列表面**（`/session` / VSC `pushSessions`）两端同字段（`title`）同回退链（`listSlots` 派生——VSC `panel-session.mjs:235-243`）；
   本段取值 = `agent.title` 活读 · 空值回退链（`sessionTitleFallback`——值同 VSC：`firstMessage` ≤40 截断 ∥ `"(empty)"`）；空窗差（生成前 / 失败期）= **消**（对位 `thincoder-vscode/src/extension/panel-session.mjs:235-243`）。
-- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 空值 ⇒ 含回退值（`"(empty)"` 形）」两段（用例 = 单元测试档 T-XL2）。
+- **可机判**：`renderStatus` 纯函数直驱——`agent.title` 置值 / 清空两次调用，strip-ANSI 文本读「含 ` │ <title>` / 空值 ⇒ 含回退值（`"(empty)"` 形）」两段（用例 = 单元测试档 T-XL2）。单行化面同法机判：`agent.title = "a\nb"` ⇒ 该行含 `a b` 且字符数与替换前相等、行高不变；`"a\r\nb"` ⇒ `a  b`；41 列纯 ASCII ⇒ 截断结果与改动前逐字节相同。
 
 ### 7.5 queued 反馈面（F16 · 排队期可见）
 
@@ -640,8 +643,8 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **合并消费面**：`planQueuedInput` / `formatMergedMessages` 纯函数直驱——2 条短消息 ⇒ 单动作（`merged:true`，文本逐字 = 头 `你排队了 2 条消息：` + 编号 + 尾 `——一次处理`）∧ 跨 8 条 ⇒ 截批（首动作 count ≤ 8）∧ 单条 > 2000 字符 ⇒ `merged:false` 直发。
 
 **VSC 对位**：**busy 即排队面**（`running`——挂起会话内与普通回合同判据；队列载体两态（容量 8）：会话在飞入会话队列 `susp.pendingInput` / 无会话入 `_busyQueued`）——
-机制单源 = `WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）；
-**排队期标记** = 各条气泡带 `pending` 标记 + 标签行 `⏳ 待发送 · …`（键 = `queued.pending`）；消费即除标记、**多条批就地合并为一条气泡**（单条批就地保留——回声面；细则⑦——同处 C-B2-6）；**步边界消费**（用户回合在飞——端壳循环头同址回调；同判据 = `WEBVIEW-INPUT.md` §1 C-B2-6 细则②④）同走「消费成形」快照。
+机制单源 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6；webview 反馈 = 本地气泡（提交入槽即现 / 送达即 user 回声面——形态各端自落，语义同源）；
+**排队期标记** = 各条气泡带 `pending` 标记 + 标签行 `⏳ 待发送 · …`（键 = `queued.pending`）；消费即除标记、**多条批就地合并为一条气泡**（单条批就地保留——回声面；细则⑦——同处 C-B2-6）；**步边界消费**（用户回合在飞——端壳循环头同址回调；同判据 = `docs/vsc/design/WEBVIEW-INPUT.md` §1 C-B2-6 细则②④）同走「消费成形」快照。
 
 ### 7.6 timer 可见面（三态 · 有才出声——FR24 同法）
 

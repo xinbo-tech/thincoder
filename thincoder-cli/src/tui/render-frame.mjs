@@ -21,7 +21,7 @@ import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族�
 // SSH 凭据窗标题（SSH-SESSION 批 §6.22 ⑧——overlay 标题行 keys.title 投影；面体单源 = secret-prompt.mjs）
 import { secretPromptTitle } from "./secret-prompt.mjs"
 // 状态栏（#1437 拆分——族体居 status-line.mjs；renderRows 状态行 put 走此引，导出面转发见下）
-import { renderStatus } from "./status-line.mjs"
+import { renderStatus, singleLineTitle } from "./status-line.mjs"
 // 掩码面在场判据单源（#1437 显示面同归——框题侧消费；内容侧 = layout.mjs）
 import { maskSurfacePresent } from "./ask-steps.mjs"
 
@@ -262,7 +262,7 @@ export function renderRows(state, agent, opts) {
   const boxLayout = qFree ? (layout.questionLayout ?? layout.inputLayout) : layout.inputLayout
   const boxOffset = qFree ? (layout.questionOffset ?? 0) : layout.inputOffset
   put(panels.inputBox.y, renderInputBox(state, W, boxLines, cols, boxLayout, boxOffset))
-  put(panels.status.y, [renderStatus(state, agent, cols, slashCommands)])
+  put(panels.status.y, [singleLineTitle(renderStatus(state, agent, cols, slashCommands))])
 
   let cursorRow = 0, cursorCol = 0
   if (!state.permission && !state.picker && state.wizard?.step !== "provider" && !qOptionsOnly) {

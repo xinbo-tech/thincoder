@@ -31,10 +31,23 @@ CLI 装配 = `thincoder-cli/src/cli/make-agent.mjs`（baseTools）。dispatch �
 （**D-F5b 语义**：磁盘新鲜读 + 只改被设键——**默认值不固化**——+ mtime 门控；冲突 / 畸形抛错 → 内存不热应用，零虚假成功——语义权威 = `MULTI-INSTANCE-COLLAB.md` §6.3）。
 **不整 reload**（直接改内存对象等价且无副作用）。
 
-**promoted 视图同步（承 §2.8 W16 端差条）**：`agent.config` 的部分段是**装载期派生副本**——`thincoder-core/config.mjs:354` 把 `agent.advisor` promote 成顶层 `advisor`，而运行读面读的是**副本**（`thincoder-core/advisor/loop.mjs:103`；VSC `thincoder-vscode/src/advisor/loop.mjs:98` 同形）。
-  所以 `set` 写到 `agent.advisor*` 之后必须调 `promoteAgentViews(config)` 重 derive 副本，`null` 删除腿在副本上同步删同一子键
-  否则盘与嵌套键都变了、读面仍是旧值——回显的「运行中已生效」就成了假承诺。
-  运行面独有的会话级键（如 `advisor.guard`）在合并（`{ ...config.advisor, ...config.agent.advisor }`）中保留。
+**promoted 视图同步（本机制设计单源）**：`agent.config` 的部分段是**装载期派生副本**——`thincoder-core/config.mjs:354` 把 `agent.advisor` promote 成顶层 `advisor`，而运行读面读的是**副本**（`thincoder-core/advisor/loop.mjs:103`；VSC `thincoder-vscode/src/advisor/loop.mjs:98` 同形）。
+写点不同步 ⇒ 盘与嵌套键都变了、读面仍是旧值——回显的「运行中已生效」就成了假承诺。
+
+**设计前置两行（本批）**：先例行 = `loadConfig` 装载期 promote（`thincoder-core/config.mjs:354`）——本批把同一条规则提成导出函数 `promoteAgentViews(config)` 供 `settings set` 共用，**对齐**（装载行为逐字不变），零偏离。
+公开源核查行：查过 本仓 `docs/` 树（本档 §2.3 ∥ `AGENT-PARAMS.md` §2）+ 代码 `thincoder-core/config.mjs:354`；登记公共源仓 = 无（`PROJECT-MANIFEST.json` `index.publicRepos` 实读 `[]`）；结论 = 无外部权威可对（本机制是仓内配置派生面）。
+
+**写面三条腿（唯一规则；`AGENT-PARAMS.md` §2 只留读取链与默认值单一来源，机制指针回本节）**：
+
+- **子键 set**（`agent.advisor.<k>`）：写嵌套后**只把被写的那个键同步进 promoted 副本**（键级：`thincoder-core/agent-tools/settings.mjs:340` 的 `setKeyPath(config, "advisor.<k>", v)`），**不整段 re-derive**。
+  理由：`DEFAULTS.agent.advisor.guard = false`（`thincoder-core/config-defaults.mjs:40`）经 `loadConfig` 并进 `agent.advisor`；整段 re-derive 会拿嵌套面的同名默认值盖回运行面 ⇒ 一次 `settings set agent.advisor.timeoutMs` 就会静默关掉 `/advisor` 打开的会话级 `guard`，违反本节末「会话级键在合并中保留」。
+  判据：`config.advisor.guard = true`、`agent.advisor` 无 `guard` 键 ⇒ set `agent.advisor.timeoutMs` 后 `guard` 仍为 `true`。
+- **`null` 删除腿**：删嵌套同一子键 → **再删 promoted 副本上的同一子键** → **不再 re-derive**（`settings.mjs:322-330`）。
+  理由：promote 本体 = `{ ...config.advisor, ...config.agent.advisor }`（`thincoder-core/config.mjs:202`；**非对象段不展开**——手写 config.json 的畸形段是字符串时 spread 会产出 `0/1/2` 垃圾键，而读面本就「非法一律回退默认」，本函数同口径）——只删嵌套再 re-derive，会把 `config.advisor` 里的旧值原样带回副本，删除即失效。
+  判据（对不在 DEFAULTS 的 advisor 键，如 `timeoutMs`）：删除后两个视图都不再有该键（`settings get` 两条路径均报无此键）；DEFAULTS 内的键（如 `guard`）按既有 #645 口径回填默认值。
+- **整段赋值**（`agent.advisor` 为对象）：调 `promoteAgentViews(config)`（`settings.mjs:337-338`）——同一条合并语义。合并只覆盖、不删除——显式写入的段里去掉的键仍留在副本上，要清某键走 `null` 删除腿（键级语义）。
+
+运行面独有的会话级键（如 `advisor.guard`——`thincoder-cli/src/tui/cmd-advisor.mjs:14` 只写 promoted、会话恢复 `thincoder-core/session-lifecycle.mjs:138` 只恢复 promoted）在合并中保留。
 
 ### 2.4 敏感判定（判定谓词 = 两句**取或**）
 
@@ -67,6 +80,10 @@ parse 失败 → 字符串字面（`:226` `return s`——裸 `abc`）。两端�
 - **校验语义**（`_checkKnownKeyValue`）：未知键原样通过；非 null 叶子 typeof 语义逐字保留；形状表命中键 = `null` 放行（显式清除——消费面均有「未设置」态）+
   不可消费形态抛错（字符串类键拒空串 / 纯空白，`defaultModel` 另需 `provider:model` 形态；`memory.team` 须 `repo` 非空串、额外键放行；`agent.subagentModels` 值须非空串、角色名不校验）；
   错误消息模板值位在敏感键命中时替换为 `••••（masked）`。
+- **`advisor.timeoutMs` 写面校验（本批新增——D-ST18）**：`agent.advisor.timeoutMs` ∥ `advisor.timeoutMs` 只接受 `null`（显式清除）或有限正数；
+  其余（`0` / 负数 / 非数值串 / `NaN` / `Infinity`）⇒ 拒绝，报 `advisor.timeoutMs must be a finite positive number (ms) or null`。
+  理由：该值是读面运行期校验（`AGENT-PARAMS.md` §2「非法一律回退默认」）的对象——写面收下却按默认跑，回显的「运行中已生效」即假承诺。
+  整段赋值腿（`agent.advisor` ∥ `advisor` 两个段名的对象值）对对象内该键同规则校验（`thincoder-core/agent-tools/settings.mjs:168`）——两个入口两种结果 = 写面假承诺。手写 `config.json` 不经本校验——仍按读面回退默认（D-P3 不撤）。
 - **加键流程**：核 `config.mjs` DEFAULTS 一处 → 护栏自动跟随（消除手写漂移——W16：双源面收单）。
 - **测试缝导出**（`_` 前缀——`:297`）：`_buildShapeTable` / `_nullLeafPaths` / `_NULL_LEAF_SHAPES` / `_SIBLING_SHAPES` / `_checkKnownKeyValue` / `_checkShapeCompleteness`。
 - **测试缝双缝纪律**：写侧假体（`settingsTool({ configPath })`）+ 读侧 `_setConfigPathForTest` **必须同指临时文件**——防用例读写真实用户配置（`config.mjs` 默认 `configPath`）；两端单元测试档（CLI / VSC）同守此规。
@@ -112,6 +129,7 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | D-ST15 | **遮蔽面用例落新档**（`settings-mask.test.mjs`——单元测试树重建时回迁该档形） | 单档行数超 500 行硬限（工具面 480 行 + 遮蔽面用例 ≈95 行 ⇒ ≈575）；分档 = 工具面 / 遮蔽面，runner 通配 `test/*.test.mjs` 自动收 |
 | D-ST16 | **`${env:VAR}` 引用形态 = 已受理做** | 属新增能力（配置内放引用 + 消费侧展开）；机制（解析点 ∕ 生效面 ∕ 语义 ∕ 与遮蔽关系）单源 = `doc:CONFIG.md:§6.3`——本档遮蔽谓词零改（引用串同住敏感值位 ⇒ 族遮罩内）；解析产物永不回显 |
 | D-ST17 | **段内复合段名入遮 = 采纳**（camelCase / 前缀复合敏感名） | 谓词扩段内边界（形如 `refreshToken` / `clientSecret` / `privateKey`）；假阳取舍 = 方向安全（只丢值、键名仍可见）；**先红夹具格**（§2.4 / §4 同拍） |
+| D-ST18 | **`advisor.timeoutMs` 非法值在写面即拒**（收 `null` ∥ 有限正数） | 读面「非法一律回退默认」是给手写 `config.json` 的兜底，不是写面的许可证：收下 `0` 再回显「运行中已生效」= D-ST6 要防的静默面（写了等于没写）。拒绝句点名键与可消费形态 |
 
 ## 4. 边界（不做）
 
@@ -133,3 +151,12 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | CLI 装配 | 核 `thincoder-core/agent/assemble.mjs` 装配 + `thincoder-cli/src/cli/make-agent.mjs` 留面（MCP ∕ 剔除经 `toolsFinalize` 缝）；dispatch 动作级只读分类（list/get 放行） |
 | 读取器判据点 | `thincoder-core/config.mjs:216`（defaultModel 非串→null）· 核 `thincoder-core/agent/assemble.mjs:31`（`!team?.repo`）· `thincoder-core/agent-tools/subagent-spawn.mjs:82`（subagentModels 回落）· `thincoder-core/tools/bash.mjs:120`（`shell ?? true`） |
 | 单元测试档 | `thincoder-cli/test/settings.test.mjs`（480 行 · T-S2 族 25 例 · T-S3 族 3 例）· 遮蔽面档（`settings-mask.test.mjs`；夹具键集逐键 6 例，D-ST15）· VSC 端 `thincoder-vscode/test/settings-tool.test.mjs`（9 例——W16 改指核工具；双缝并用）——单元测试树重建时回迁 |
+
+**受影响文件（本批——promote 同步 ∥ 写面校验；行数 = `split("\n").length − 1` 实读 · 2026-10-24）**：
+
+| 档 | 改动前 | 本批 Δ | 实施后（实读）∥ 说明 |
+|---|---|---|---|
+| `thincoder-core/config.mjs` | 438 | +19 / −1（净 +18；其中 4 行为在跑批次的 `bodyIdleTimeoutMs`，本批净 +14） | **456** — 导出 `promoteAgentViews(config)`（`:192-204`）；`loadConfig:372` 改调（行为逐字不变；软线超限已在册，本批不重构） |
+| `thincoder-core/agent-tools/settings.mjs` | 315 | +45 / −3 | **357** — set 腿（子键键级同步 ∥ 整段 promote）· `null` 腿删副本同子键 · `advisor.timeoutMs` 写面校验（`:139-181` · `:319-345`） |
+
+本档自身 = 设计面单源（文档行数不入表）；`AGENT-PARAMS.md` 本批零代码改动。

@@ -26,6 +26,8 @@ import { existsSync, readFileSync, renameSync, statSync } from "node:fs"
 
 import { getSessionId, loadManifest, saveManifest, slotDigest, slotPath, writeSessionFile, sessionEnd } from "./session-slots.mjs"
 import { loadSlotFile, isLegacyTransient } from "./session.mjs"
+// 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：走核日志单一通道 `logEvent`。
+import { logEvent } from "./log.mjs"
 // token 形态单源（格式校验 + 到期时刻）——本档的保存面合并规则复用同一判定。
 import { tokenExpiryMs } from "./token-ttl.mjs"
 // 会话级偏好写面（§6.21 判据句 3）的判据单源——档位值域（`specForModel(...).reasoningEffortEnum`）
@@ -77,9 +79,11 @@ function rotateIfForeign(p, slot, data) {
     const diskLonger = Array.isArray(disk?.history) && Array.isArray(data?.history) &&
       disk.history.filter((m) => !isLegacyTransient(m)).length > data.history.length
     if (!(diskIsNewer || diskForeign || (diskStart && diskStart !== myStart) || diskLonger)) return null
+    const reason = diskIsNewer ? "newer-version" : diskForeign ? "foreign-cwd" : diskLonger ? "longer-record" : "other-session"
     const bak = `${p}.bak-${Date.now()}`
     renameSync(p, bak)
     console.error(`[session] slot ${slot} holds ${diskIsNewer ? `a newer-version file (v${disk.version})` : diskForeign ? `a foreign-cwd file (${disk.cwd})` : diskLonger ? `a longer record (${disk.history.length} > ${data.history.length} messages — concurrent append)` : `another session (start ${diskStart}, ours ${myStart})`} — preserved as ${bak}`)
+    logEvent("slot:rotate", { slot, reason, bak: true, via: "write" })
     return bak
   } catch (e) {
     // 文件存在但不可读（损坏 / 半写）：改名保留现场，不覆盖
@@ -89,6 +93,8 @@ function rotateIfForeign(p, slot, data) {
     }
     // 排障面：区分「现场不可读」与「轮转失败」——静默会让半写/占用现场无从定位。
     console.error(`[session] slot ${slot}: pre-write rotation check failed (${e?.message ?? e}) —${preserved ? " preserved as .corrupted" : " the scene could NOT be preserved"}`)
+    // 判别式（设计档 §3.1）：已保全 ⇒ unreadable；未保全 ⇒ rotate-failed（同一个 catch 的两个现场）。
+    logEvent("slot:rotate", { slot, reason: preserved ? "unreadable" : "rotate-failed", bak: false, via: "write" })
     return null
   }
 }

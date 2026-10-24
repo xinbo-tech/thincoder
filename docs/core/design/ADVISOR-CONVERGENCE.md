@@ -14,7 +14,7 @@
 > `thincoder-core/advisor/citations.mjs`（host-verified citations）· `thincoder-core/advisor/history.mjs`（响应表 / 对话背景提取）·
 > `thincoder-core/advisor/repos.mjs`（评审范围采集）· `thincoder-core/agent-tools/advisor.mjs` / `advisor-async.mjs`（工具面与异步池）·
 > `thincoder-core/agent-tools/advisor-settle.mjs`（结算 / 陈旧判定）· `thincoder-core/agent/record-results.mjs`（工具结果记账）· `thincoder-core/agent/completion.mjs`（完成 guard 推回）。
-> 档位判据（>500 主动拆 / >800 硬顶）= 纪律层代码结构判据节；行数标注义务（限源 / 测试文件）——文档规范节不再承载行数义务；评审核查维度行为 = 本档 §9 ∥ §14 ∥ §15 ∥ §16。
+> 档位判据（>500 主动拆 / >800 硬顶）= 纪律层代码结构判据节；行数标注义务（限源 / 测试文件）——文档规范节不再承载行数义务；评审核查维度行为 = 本档 §9 ∥ §14 ∥ §15 ∥ §16 ∥ §17。
 
 ## 1. 目标
 
@@ -399,6 +399,7 @@ advisor design review 标准维度补一条：
 | A-AC15 | 同类先例核查维度在位（「同类先例」行：先例坐标 + 对齐 ∥ 偏离理由；偏离理由显式判据；无先例须显式声明）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 9 条；**已落笔**（EN 在盘——2026-10-10） | 同类先例 |
 | A-AC16 | 勘察证据行核查维度在位（「勘察证据行」：查过哪些公共源文档 ∥ 有无相关；缺行 ⇒ 未查或未记；无相关须照记）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 10 条；**已落笔**（EN 在盘——2026-10-14） | 勘察证据 |
 | A-AC17 | 分支出处核查维度在位（每条新增分支带「依据」：真实观测 ∥ 复现命令；两者都给不出 ⇒ 🔴；真防御给得出复现路径即过）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 `6b` 条（第 6 条与第 7 条之间） | 分支出处 |
+| A-AC18 | 集成测试设计段核查维度在位（设计档缺该段 ⇒ 🔴（设计不完整）；改动未触及业务行为 ⇒ 段内写明「无变化 + 理由」，理由须是「未触及业务行为」本身，以窗口上限为由不成立 ⇒ 仍 🔴；段内场景逐条回指业务需求）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 12 条（**逐字读核对**；机检限行为面 / 结构机检）；**待落笔**（该档现止第 11 条 `:48`——第 12 条由实现轮写入后标日期） | 集成测试设计段 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:207-217` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。
@@ -430,3 +431,25 @@ advisor design review 标准维度补一条：
 - **分支出处核查**：设计档是否逐条给出新增分支的**出处**——真实观测（数据读数 ∥ 日志一行 ∥ 用户报告，引读数或原文）或可复现的失败路径（把它复现出来的命令）。**两者都给不出** ⇒ 该分支防的是一个没有发生过的场景 ⇒ **🔴**。
 - **真防御能过**：给得出复现路径的分支照过——本维度杀的是「说不出场景」的分支，不是防御本身。
 - **与第 6 条 `Scope` 的分工**：第 6 条判**范围总量**（该不该做 · 有无简化机会 · 有无蔓延）；本节判**单条分支的出处**——两条独立判红，不得以第 6 条过掩本节红，也不得把本节的红记成范围问题。
+
+## 17. 集成测试设计段核查（设计评审维度）
+
+> 权威链（指环单向化）：集成测试设计段**义务**（业务设计一并设计集成测试——场景 + 业务可观察判据 + 逐条回指业务需求）= 纪律层设计步（需求 = `docs/core/requirements/TESTING.md` F34 `:199`，该条明书「不是评估项、不是可选项」）；**核查维度行为语义 = 本节**；执行实现 = 设计评审提示词的对应维度——落点 = `thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条。
+
+- **核查**：设计档是否含集成测试设计段——本次改动新增 ∥ 修改的集成场景表、每场景断言的业务可观察结果，且**逐条回指业务需求**（F34 `:199`「场景表 + 判据，逐条回指业务需求」）。
+- **缺段 ⇒ 🔴**（设计不完整）；改动未触及业务行为 ⇒ 该段写明「无变化 + 理由」，这是唯一替代形态。
+- **理由不成立 ⇒ 仍判 🔴**：理由须是「改动未触及业务行为」本身；以集成窗口已满（50–100 用例）为由不成立——F34 `:199` 明书该窗口是**上限约束**（超窗裁减旧场景），不是「不新增」的理由。
+- **同类先例**：先例坐标 = 本档 §14（`:407`）∥ §15（`:416`）∥ §16（`:425`）的同一形（权威链引块 + 核查条目 + A-AC 行 + 提示词逐字建议）；实现坐标 = `thincoder-core/prompts/advisor-design.md:40`（第 9 条）∥ `:44`（第 10 条）。**对齐**：本节整形复用，不另立专名。**偏离**：无。
+- **勘察证据**：`index.publicRepos` = `[]`（`PROJECT-MANIFEST.json:35`）⇒ **零仓外声明源**（无相关也照记）。本节成形所据的树内公共源 = `docs/core/requirements/TESTING.md`（F34 `:199` = 唯一需求依据 ∥ N20 `:115` = 集成集只住三前端）· 本档 §14 ∥ §15 ∥ §16（同形先例）。
+- **为什么必须查**：集成测试是唯一从用户可见入口走的验收回路；批内单测档收口即删——设计时没定下集成场景，这个改动收口后就没有验收了。
+
+**【提示词逐字建议】`thincoder-core/prompts/advisor-design.md` §Review Criteria 第 12 条**：
+
+```text
+12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that section.
+    **A reason that is not "this change alters no business behavior" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
+    **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
+```
+
+**本批集成测试设计**：无新增集成场景——理由三条：① 本改动 = 评审判据文本（提示词 ∥ 过程面）；② 裁决面依赖模型输出，无可确定性断言的前端入口；③ 集成集只住三前端（`docs/core/requirements/TESTING.md` N20 `:115`）。验证面 = 逐字读核对 + doc-check gate。

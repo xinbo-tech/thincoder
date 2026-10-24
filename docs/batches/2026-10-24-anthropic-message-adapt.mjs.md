@@ -84,6 +84,36 @@
 
 **其余评审项落点**：分支场景逐支入 design §6.27 规则表「场景 / 依据」列；用例表 T-1–T-16 入 §6.27；assistant `null` 无 `tool_calls` 的处置 = R13；先例段改正（google 不读 `tool_calls`、`:64` 整条丢弃）∥ 三问行 ∥ 真机验证项两条（阻塞核销）均在 §6.27；`normalize.mjs:131` 坐标已正；D-PR41 措辞统一为「anthropic 分支内、转换前」；google 通道同类缺陷登记为 §6.27 边界观察项（另批）。
 
+**实施后坐标收正（设计席 · 2026-10-24）**
+
+实施落地后按实读复核 `docs/core/design/PROVIDER.md` §6.27：原坐标是设计时读数，已逐条收正（只动坐标与行数，规则面 R1–R13 ∥ I1–I7 与实现代码零改）。
+
+| # | 漂移项 | 处置 |
+|---|---|---|
+| 1 | system 抽离 `anthropic.mjs:41-49` ⇒ 实读 `:157-166`；anthropic 分支 `core.mjs:143` ⇒ `:151`；`convertMessages` 导出 `:97`、调用 `:169`、告警合并 `:232-234` | 已改 |
+| 2 | 同节其它 `file:line` 按实施后实读复核：`normalize.mjs:127` · `record-results.mjs:44/52/54-90/62/67-69/75-81/90` · `core.mjs:173/186/292/331-336` · `anthropic.mjs:172-192/248-362/290/302-304` · `google.mjs:42/48/51-63/65/82` | 已改 |
+| 3 | 受影响文件表：`anthropic.mjs` 现量 363（批前 240 ⇒ +123）· `core.mjs` 现量 479（本层两行；余量来自工作树其它在途改动）· 测试档 229 | 已改；tier 结论不变（均 < 500 软线） |
+| 4 | `API-CONTRACT.md` 生成区未再生（新导出缺席、`chat` 仍 `:39`） | 跑 `node scripts/api-contract.mjs --write` 再生：`anthropic.mjs:97` / `:156`；`--check` = 骨架零漂移 |
+
+`doc_check(mode:"gate")` = PASS（2 档 · 0 命中）。
+
+**补记 · F34 集成测试设计段（设计席 · 2026-10-24）**
+
+**补什么**：`design/PROVIDER.md` §6.28「集成测试设计（Anthropic 消息适配层）」成段（`:1158`–`:1180`），形制对齐 `TIMEOUT-DIGEST.md` §9 ∥ `SESSION-OBSERVABILITY.md` §9（场景表 · 判据 · 回指）。依据 = `docs/core/requirements/TESTING.md` §6.1 F34 ∥ F28。
+
+**为何判本批触及业务行为**：本批把带工具的会话在 Anthropic 通道下从「第二轮必 400」变成「能正常继续」——用户可见结果变了，不是内部形态调整。故收口行不能写「集成场景无变化」（F34：该行只在改动未触及业务行为时成立）。
+
+**场景（设计面 · 表见 §6.28）**：G1 正常（一次工具调用后继续）· G2 边界（一轮多个工具调用后继续 · R9 ∥ R10 历史形）· G3 边界（用过工具的会话重开后继续 · 持久历史回放）。判据 = 业务可观察结果（模型给出下一段回复、无 `400 Unexpected role "tool"` ∥ 502），逐条回指 #20 ∥ IKKJEE。
+
+**夹具**：本地脚本化假 Anthropic 端点（零外网、零付费端点），按上游语义对「请求体含 `role:"tool"`」回 400——可证伪点，请求体残留该 role 即红。
+**落点**：`thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`（常驻档；`thincoder-cli/test/run.mjs:3` 两层 glob 收集，随发布门跑）。用例档的写入 = 实施面（eng-coder），不在设计席写面；不是批内单测档（两类永不互转）。
+
+**受影响文件**：`docs/core/design/PROVIDER.md` 1205 → 1229（read 行号读数；+24 = §6.28）。代码面零改。
+
+**验收**：§6.28 含场景表 + 判据 + 逐条回指；`doc_check(mode:"gate")` = PASS（1 档 · 0 命中）。
+
+**窗口读数**：`thincoder-cli/test/` 集成集现量 0 例（实读无 `integration/` 目录）；本表 3 例为首批，50–100 上限约束不变（超窗裁减旧场景）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -188,5 +218,66 @@ VERDICT: pass
 
 **doc_check**：本会话 gate 判 ERROR（引擎档 mtime 晚于进程启动——与 §2 上抛项同一因，需重启会话后复跑）。
 report 态旧引擎读数：行宽 0 命中；锚 17 命中，全部位于 §3 的不带目录段档名引用（行 91–132），非本笔可改面——交父侧路由（补全路径即可解析）。
+
+**本笔交付**：设计档 §6.28 的 G1–G3 三条集成用例落成常驻档（F34 的常驻验收面——批内单测档收口即删，本档留下）。
+
+**改动文件（行数口径 = `read` 行号）**
+
+| 文件 | 改前 | 改后 | 改动 |
+|---|---|---|---|
+| `thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`（新档） | 0 | 365（`wc -l` = 364） | G1–G3 三例 + 假 Anthropic 端点 + ACP 客户端驱动器 |
+| `thincoder-cli/test/integration/`（目录） | 不存在 | — | 新建（`test/run.mjs` 两层 glob 的集成层落点） |
+
+`thincoder-core/provider/*` 零改；批内单测档（`thincoder-core/test/anthropic-message-adapt.test.mjs`）未触碰（按 closeout 删除）。
+
+**用例与判据（G1–G3）**
+
+| # | 场景 | 业务入口 | 判据（机检） |
+|---|---|---|---|
+| G1 | 一次工具调用后继续（正常） | `node bin/thincoder.mjs acp` 子进程：`session/new` → `session/prompt`（模型回 `read note.txt`） | 会话流 1 个 `tool_call`（`read` ∥ `path: note.txt`）+ 1 个 `tool_call_update completed`（内容含 PINEAPPLE-42）；回复含该内容；假端点零 400 |
+| G2 | 一轮 ≥2 个工具调用后继续（边界） | 同上，首回合回两个 `tool_use` 块（note-a ∥ note-b） | 会话流 2 个 `tool_call` + 2 个 completed；回复同时含 ALPHA-1 ∥ BETA-2；零 400 |
+| G3 | 关进程重开同一会话后继续（边界） | 第一程跑完关进程；第二程 `initialize` → `session/load`（同槽号，历史从盘回放）→ `session/prompt` | 第二程回复含上一程工具结果（PINEAPPLE-42）+ 本程新问题；零 400 |
+
+**夹具**：本地脚本化假 Anthropic 端点（`node:http`，零外网、零付费端点）。按 Messages API 回 SSE 两态（tool_use 回合 ∥ 文本回合）；文本由本进程实际收到的 `tool_result` 拼成——「模型看见过工具结果」「历史是否回放」直接落在回复文本里，断言不必窥探内部形态。拒收规则 = 上游语义：`messages[].role` 只收 user / assistant，出现其它 role（含 `role:"tool"`）回 `400 Unexpected role "<role>"`——可证伪点。
+
+**验收读数**
+
+- `node --check test/integration/anthropic-tool-roundtrip.test.mjs` = OK。
+- 新档单跑：tests 3 · pass 3 · fail 0（≈4.0s）。
+- `cd thincoder-cli && node test/run.mjs`：tests 32 · pass 32 · fail 0（批前 29 ⇒ 本档 3 例被两层 glob 收集；既有 `session-observability` 零回归）。
+- **先红（旧实现）**：`git checkout HEAD -- thincoder-core/provider/anthropic.mjs`（HEAD = 批前版本，`convertMessages` 零命中）后单跑 = tests 3 · pass 0 · fail 3，三例均以 `Anthropic API error 400: ... Unexpected role "tool"` 失败（= 生产症状）。
+- **后绿**：还原后（`git diff --stat` 与还原前逐字相同：127 insertions / 4 deletions）复跑 = 3/3 绿。
+
+**关键实施决定**
+
+- **业务入口选 ACP（`thincoder acp`），不选 `chat`**：`chat` 是一次性 `runAgent`、不落会话，满足不了 G3「关进程重开同一会话（历史从盘上回放）」；TUI 需真 TTY 且入口自带父包装 spawn。ACP 是本仓 CLI 唯一同时给出「会话流」「多轮」「槽位持久化 + `session/load` 回放」三项的用户入口，且 NDJSON 可确定性驱动；三条判据逐条落在 §6.28 的规定面上。
+- **本层只断言业务结果**：块结构 ∥ 告警计数不在此层重复（§6.27 T-1–T-16 归属单元层）；本层只断言会话流、回复文本、上游零拒收。
+- **不发权限请求**：`read` 是只读工具（`thincoder-core/tools/file.mjs:76` `readonly: true`），dispatch 免审批——夹具无需模拟审批窗；驱动器仍对反向 RPC 应答（真实客户端行为），正常零到达。
+
+**偏离项**：无功能偏离。入口选择（ACP）见上条——设计未钉子命令，判据逐条满足。
+
+**上抛项（父侧路由）**
+
+1. 设计档 §6.28 两处读数随本笔过时：① `:1180`「窗口读数 = … 无 `integration/` 目录 ⇒ 集成集 0 例」——现为 3 例；② `:1175` 的 `run.mjs:3` 指注释行（真正的两层 glob 在 `run.mjs:50`）。两条均在设计席写面，本笔未改。
+2. `doc_check` 报告态对本批档判 3 条锚·档缺，全在 §2 `:102`：三条相对 `docs/core/design/` 的裸档名（PROVIDER ∥ TIMEOUT-DIGEST ∥ SESSION-OBSERVABILITY，其 §6.28 ∥ §9 节引用）从批档目录解析不到。§2 非本笔写面，未改，请父侧路由。
+   本笔 §5 初稿把这三条裸档名原样引用，自身也造出同形锚（6 条里的另外 3 条）——已就地改写，本笔自伤自修，零遗留。
+   gate 态本会话判 `ERROR`（引擎档 mtime 晚于进程启动，须重启会话后复跑）——非内容命中。
+
+**自审（explore 只读审计）**：AUDIT clean —— 13 项逐条 PASS（三例在场 ∥ 判据对位 ∥ 夹具零外网 ∥ role 守卫 ∥ 只断言业务面 ∥ 落点与收集 ∥ 清单外改动 = 0）。读数：修正轮次 0。
+
+**独立代码评审（advisor · `type=code`）**：VERDICT pass —— 🔴 0 · 🟡 2（均 optional，非 must-fix）· 🔵 4 · 报告项 2。逐条处置（5 条就地修入，3 条留报告）：
+
+| # | 级别 | 项 | 处置 |
+|---|---|---|---|
+| 1 | 🟡 | 假端点只按「历史里有无 `tool_use`」决定回合，无回合上限——转换层若退化成「角色合法但 `tool_use` 没了」，失败表现为 90–150s 超时而非可读断言 | 已修：改为**首个模型请求**派工具（`requests.length === 1`），之后一律文本；退化路径当场以「回复里没有工具结果」可读失败 |
+| 2 | 🟡 | 「无 400」断言只证 role 类 400，文案覆盖面过宽 | 已修：三处文案收窄为「上游无 role 类 400（本档证伪点）」；结构类 400 的加固（`tool_use`/`tool_result` 配对检查）未加——§6.28 只把 role 约束定为证伪点，加了属超设计 |
+| 3 | 🔵 | 子进程 stdin 无 `error` 监听——CLI 中途死掉时写 pipe 会抛 unhandled EPIPE，崩整档 | 已修：`child.stdin.on("error", () => {})`，死进程走既有 `exited` 可读报错 |
+| 4 | 🔵 | 时间预算自相矛盾：场景上限 180s < G3 两回合 × 回合上限 150s ⇒ 卡死时报裸测试超时 | 已修：场景上限 240s ∥ 回合上限 90s（本地假端点，无需长窗） |
+| 5 | 🔵 | 关进程无升级路径——CLI 若被在飞回合拖住，清理会挂死 | 已修：SIGTERM 后 5s 强杀（`SIGKILL`） |
+| 6 | 🔵 | 夹具写文件未建父目录（将来带子目录的夹具会 ENOENT） | 已修：`mkdirSync(dirname(...), {recursive:true})` |
+| 7 | 🟡 | 设计档 §6.28 窗口读数「集成集 0 例」已过时 | 报告：设计席写面，见上抛项 1 |
+| 8 | 🔵 | 设计档 §6.28 的 `run.mjs:3` 指注释行（可执行 glob 在 `:50`） | 报告：设计席写面，见上抛项 1 |
+
+**修正轮次**：1（评审 optional 项 5 条就地修入；修后复跑 3/3 绿，先红读数同步重取——仍 3/3 红）。**终态**：clean。
 
 ## §6 验证与收口（父代理）

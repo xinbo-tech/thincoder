@@ -5,6 +5,7 @@
  */
 
 import { providerSpec, requestBudget, resolveEnableThinking } from "../config.mjs"
+import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
 import { resolveProviderSecrets } from "../env-ref.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
@@ -63,14 +64,21 @@ export function createProvider(config) {
 
 /** Send a streaming chat completion request with automatic continuation on truncation */
 // 2026-09-01 根因修复：600s 绝对墙钟曾腰斩长上下文子代理（eng-coder TTFB>10min 即死）——TTFB 阶段改用
-// fetchTimeoutMs（默认 600s，agent.fetchTimeoutMs 可配），body 阶段 idle 超时（FETCH_BODY_IDLE_MS，无新数据才断）。
-const FETCH_BODY_IDLE_MS = 120_000
+// fetchTimeoutMs（默认 600s，agent.fetchTimeoutMs 可配），body 阶段 idle 超时（agent.bodyIdleTimeoutMs 可配，无新数据才断）。
 /** §6.14 设计值：prefix 续写只保留最近 8 条非工具文本（截断点语境足够，N 以测试锁定） */
 const PREFIX_CONTINUATION_KEEP = 8
 
 /** 2026-09-01：响应头阶段超时（默认 600s，agent.fetchTimeoutMs 可配）——anthropic/responses transport 共用 */
 export function effectiveFetchTimeoutMs(provider) {
   return Number.isFinite(provider?.fetchTimeoutMs) && provider.fetchTimeoutMs > 0 ? provider.fetchTimeoutMs : 600_000
+}
+
+/** body 阶段读侧空闲超时（TIMEOUT-DIGEST.md §2.1 —— 唯一解析点，各消费点同读本函数）：
+ *  键 `agent.bodyIdleTimeoutMs` 经 loadConfig 提升为 `provider.bodyIdleTimeoutMs`；
+ *  非法 ∥ 缺省 ⇒ 回退 DEFAULT_BODY_IDLE_MS（不抛错、不解释成「禁用」）。 */
+export function effectiveBodyIdleMs(provider) {
+  return Number.isFinite(provider?.bodyIdleTimeoutMs) && provider.bodyIdleTimeoutMs > 0
+    ? provider.bodyIdleTimeoutMs : DEFAULT_BODY_IDLE_MS
 }
 
 export async function chat(provider, opts = {}) {
@@ -143,6 +151,8 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   if (provider.format === "anthropic") {
     const { chat: anthropicChat } = await import("./anthropic.mjs")
     const { normalizeTools } = await import("./anthropic.mjs")
+    // §6.27：配对归一见转换前（缺回执的 tool_call 会变成孤儿 tool_use，上游同样拒收）——复用 OpenAI 径同一函数
+    messages = normalizeToolPairing(messages)
     const result = await anthropicChat(provider, {
       messages,
       tools: tools?.length ? normalizeTools(tools) : null,
@@ -243,7 +253,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   await rateGate(provider, estimated, onWait, signal)
 
   const response = await requestWithRetry(provider, body, signal, onWait)
-  const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns })
+  const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns, idleMs: effectiveBodyIdleMs(provider) })
   recordRate(provider, estimated, result.usage)
 
   // Stream rule triggered, user interrupted, or network partial — return immediately.
@@ -261,7 +271,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       await sleepInterruptible(3000, signal)
     }
     const retryResponse = await requestWithRetry(provider, body, signal, onWait)
-    const retryResult = await readSSE(retryResponse, { onToken, onReasoning })
+    const retryResult = await readSSE(retryResponse, { onToken, onReasoning, idleMs: effectiveBodyIdleMs(provider) })
     recordRate(provider, estimated, retryResult.usage)
     if (retryResult.finishReason !== "insufficient_system_resource") {
       // Merge any partial content from the failed attempt (streaming already showed it)
@@ -395,12 +405,12 @@ async function requestWithRetry(provider, body, signal, onWait) {
         body: JSON.stringify(body),
         // 2026-09-01 根因修复：原 600s 绝对墙钟会腰斩长上下文子代理（TTFB/首 token >10min 即死）。
         // 拆分语义：响应头阶段仍用 fetchTimeoutMs（600s，覆盖网关排队）；body 阶段由读侧 idle 超时管
-        // （sse.mjs readIdleMs——无新数据才断）。signal 只保留用户取消链，不再叠加绝对墙钟。
+        // （sse.mjs idleMs——effectiveBodyIdleMs 传入，无新数据才断）。signal 只保留用户取消链，不再叠加绝对墙钟。
         signal,
         // 2026-08-31 会诊 #4：代理路径响应头超时对齐直连语义（原 15s 与直连 600s 割裂，
         // DeepSeek 排队 TTFB>15s 即误报）— 仅 _ 前缀内部字段，proxyFetch 消费
         _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
-        _bodyIdleMs: FETCH_BODY_IDLE_MS,
+        _bodyIdleMs: effectiveBodyIdleMs(provider),
       }
       // #878 D-PX8：请求调用点收口——恒走 `proxyFetch`（无 proxyUri 即直连分支，内部 abort 通道单点建设；
       // 原 call-site 分叉删除）。

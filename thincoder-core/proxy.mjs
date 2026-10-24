@@ -5,6 +5,7 @@
  */
 import { URL } from "node:url"
 import { normalizeProxy } from "./config.mjs"
+import { DEFAULT_BODY_IDLE_MS } from "./config-defaults.mjs"
 import { IDLE_ABORT } from "./stream-destroy.mjs"
 import { isLoopbackTarget, resolveProxyConfig, resolveWebProxy } from "./proxy-target.mjs"
 import { FETCH_TIMEOUT, streamHttpResponse, tcpConnectProxy, tunnelHttps } from "./proxy-transport.mjs"
@@ -48,6 +49,6 @@ export async function proxyFetch(urlStr, opts, proxyUri) {
   // http:// 目标：TCP 直连代理，请求行发绝对 URI（GET http://host/path HTTP/1.1）
   const sock = await tcpConnectProxy(proxyUri, opts?.signal, FETCH_TIMEOUT)
   const headerTimeoutMs = Number.isFinite(opts?._headerTimeoutMs) ? opts._headerTimeoutMs : FETCH_TIMEOUT
-  const bodyIdleMs = opts?._bodyIdleMs ?? 120_000
+  const bodyIdleMs = opts?._bodyIdleMs ?? DEFAULT_BODY_IDLE_MS
   return streamHttpResponse(sock, urlStr, opts, headerTimeoutMs, true, bodyIdleMs)
 }

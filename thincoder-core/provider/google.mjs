@@ -6,10 +6,11 @@
 
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
-import { effectiveFetchTimeoutMs } from "./core.mjs"
+import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
 import { abortError, timeoutError } from "../abort-provenance.mjs"
 import { terminateBody } from "../stream-destroy.mjs"
 import { requestBudget } from "../config.mjs"
+import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -130,12 +131,12 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       // 2026-09-01：同 core.mjs——绝对墙钟废除；响应头阶段 fetchTimeoutMs（600s 默认），body 阶段读侧 idle 管
       signal,
       _headerTimeoutMs: effectiveFetchTimeoutMs(provider),
-      _bodyIdleMs: 120_000,
+      _bodyIdleMs: effectiveBodyIdleMs(provider),
     }, provider.proxyUri),
     { signal, onWait, buildMessage: (status, text) => `Gemini API error ${status}: ${text}` },
   )
 
-  const result = await parseGeminiStream(response, { onToken, onReasoning, signal })
+  const result = await parseGeminiStream(response, { onToken, onReasoning, signal, idleMs: effectiveBodyIdleMs(provider) })
   recordRate(provider, estimated, result.usage)
 
   const usage = result.usage
@@ -168,7 +169,7 @@ function mapGeminiFinishReason(reason) {
  * Parse Gemini SSE stream.
  * Format: data: {...}\n\n (each line is a complete JSON object)
  */
-async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
+async function parseGeminiStream(response, { onToken, onReasoning, signal, idleMs = DEFAULT_BODY_IDLE_MS }) {
   const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
@@ -214,8 +215,7 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
   }
 
   if (!response.body) throw new Error("No stream response body")
-  // 2026-09-01 读侧 idle 超时（同 sse.mjs）：body 有数据流动即不超时；连续 120s 无新 chunk 判死
-  const READ_IDLE_MS = 120_000
+  // 2026-09-01 读侧 idle 超时（同 sse.mjs）：body 有数据流动即不超时；连续 `idleMs` 无新 chunk 判死
   let idleTimer = null
   let idleError = null
   const armIdle = () => {
@@ -223,9 +223,9 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal }) {
     idleTimer = setTimeout(() => {
       // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道；
       // proxy 形回落 destroyBody（原契约）。相位串 = 本分支专属 google-sse-idle。
-      idleError = timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "google-sse-idle")
+      idleError = timeoutError(`SSE idle timeout: no data for ${idleMs / 1000}s`, "provider", "google-sse-idle")
       try { terminateBody(response, idleError) } catch { /* already gone */ }
-    }, READ_IDLE_MS)
+    }, idleMs)
     idleTimer.unref?.()
   }
   armIdle()

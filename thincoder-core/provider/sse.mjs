@@ -4,6 +4,7 @@
  */
 import { abortError, timeoutError } from "../abort-provenance.mjs"
 import { terminateBody } from "../stream-destroy.mjs"
+import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
 
 /**
  * Normalize provider cache fields into DeepSeek-style prompt_cache_hit/miss_tokens.
@@ -89,7 +90,7 @@ function finalizeToolCalls(result) {
   }
 }
 
-export async function readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns: sharedFired }) {
+export async function readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns: sharedFired, idleMs = DEFAULT_BODY_IDLE_MS }) {
   // Early intercept: non-SSE responses — either error bodies (HTTP >= 400) or
   // valid single-chunk JSON completions (some APIs return JSON despite stream:true).
   const contentType = response.headers.get("content-type") || ""
@@ -196,9 +197,9 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
   if (!response.body) throw new Error("No stream response body")
   // 2026-09-01 读侧 idle 超时（根因修复）：原实现靠 fetch 层的 600s 绝对墙钟兜底——长上下文子代理
   // 单次生成（或上游排队）超 10 分钟即被腰斩（"The operation was aborted due to timeout" 直透）。
-  // 现改为：读侧空闲超时——body 只要有数据流动就永不超时，连续 READ_IDLE_MS 无新 chunk 才判死。
+  // 现改为：读侧空闲超时——body 只要有数据流动就永不超时，连续 `idleMs` 无新 chunk 才判死
+  // （`idleMs` 由 provider/core.mjs 的 effectiveBodyIdleMs 算好传入，缺省 DEFAULT_BODY_IDLE_MS）。
   // 直连 fetch 与 proxyFetch 统一走这里（proxy 的 _bodyIdleMs 语义与之等价，双保险）。
-  const READ_IDLE_MS = 120_000
   let idleTimer = null
   let idleError = null
   const armIdle = () => {
@@ -206,9 +207,9 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
     idleTimer = setTimeout(() => {
       // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道，
       // proxy 形回落 destroyBody（原契约）。
-      idleError = timeoutError(`SSE idle timeout: no data for ${READ_IDLE_MS / 1000}s`, "provider", "sse-idle")
+      idleError = timeoutError(`SSE idle timeout: no data for ${idleMs / 1000}s`, "provider", "sse-idle")
       try { terminateBody(response, idleError) } catch { /* already gone */ }
-    }, READ_IDLE_MS)
+    }, idleMs)
     idleTimer.unref?.()
   }
   armIdle()

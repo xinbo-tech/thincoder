@@ -215,4 +215,62 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+
+**状态行**：实施完成
+
+### 交付摘要（三件）
+
+| 条目 | 实现落点 | 判据覆盖 |
+|---|---|---|
+| R1 槽事件结构化 | `session-slot-write.mjs:82,86,97`（write 侧轮转成功 / 异常支）· `session-guard.mjs:60,64,81`（guard 侧，含 `preserved` 跟踪）· `session-slot-claims.mjs:182,186`（`slot:allocate`）· `session-lifecycle.mjs:272,295`（`slot:new`）· `session-slots-manifest.mjs:150,168`（`slot:refuse` 拒写 / 读回失败） | §7 C1–C7d 全绿；今日真实日志 `~/.thincoder/logs/agent-2026-10-24.log` 现场读数 `slot:rotate=2 · slot:allocate=1 · slot:new=2 · slot:refuse=1`（字段闭集见下行） |
+| R2 凭证丢弃报明 | `session-lifecycle.mjs:128,212,215,308-315,338`（`resetSessionState` 未过期计数 + `applySession` 中继）· `token-ttl.mjs:132-138,154-156`（`restoreEngTokens` 离开集）· `cmd-new.mjs:16,27-30` · `cmd-session.mjs:122,138-141`（取值 / 打印分离） | §7 C8–C10 全绿；五格机判（2→2 / 0→0 / A(2)→B(2)=2 / A(2)→B(0)=2 / A(0)→B(2)=0 / 过期项=1） |
+| R3 标题单行化 | `status-line.mjs:18-21`（`TITLE_BREAK_RE` + 具名导出 `singleLineTitle`）· `:80-83`（回退）· `:179`（入口）· `render-frame.mjs:24,265`（status 行写出口兜底） | §7 C11–C15 全绿；正则与 `docs/cli/design/TUI.md` §7.4 逐字一致，宽度口径未动 |
+
+### 改动文件（行数按 `\n` 切分实测；与设计档 §4 的 `read` 口径同差 1，增量列可比）
+
+| 文件 | 基线（HEAD） | 现值 | 增量 | 设计档 §4 上限 |
+|---|---|---|---|---|
+| `thincoder-core/session-slot-write.mjs` | 234 | 240 | +6 | ≤+6 ✅ |
+| `thincoder-core/session-guard.mjs` | 79 | 85 | +6 | ≤+6 ✅ |
+| `thincoder-core/session-slots-manifest.mjs` | 243 | 247 | +4 | ≤+4 ✅ |
+| `thincoder-core/session-slot-claims.mjs` | 230 | 234 | +4 | ≤+5 ✅ |
+| `thincoder-core/session-lifecycle.mjs` | 403 | 418 | +15 | ≤+18 ✅ |
+| `thincoder-core/token-ttl.mjs` | 296 | 306 | +10 | ≤+10 ✅ |
+| `thincoder-cli/src/tui/status-line.mjs` | 197 | 204 | +7 | ≤+10 ✅ |
+| `thincoder-cli/src/tui/render-frame.mjs` | 321 | 321 | 0 | ≤+2 ✅ |
+| `thincoder-cli/src/tui/cmd-new.mjs` | 38 | 42 | +4 | ≤+4 ✅ |
+| `thincoder-cli/src/tui/cmd-session.mjs` | 139 | 143 | +4 | ≤+8 ✅ |
+| `thincoder-cli/test/session-observability.test.mjs` | 新档 | 406 | 新档 | — |
+
+无档越 500 行硬限。`log.mjs` / `generate-title.mjs` / VSC / 桌面渲染层零触碰。
+
+### 读书记数（本会话实跑）
+
+- `cd thincoder-cli; node test/run.mjs` ⇒ `tests 29 · pass 29 · fail 0`（本批新增档 29 用例）。
+- `cd thincoder-core; node test/run.mjs` ⇒ `tests 56 · pass 56 · fail 0`。
+- 注：两条 runner 用相对 glob（`test/*.test.mjs`），必须在各自包目录内跑；在仓根跑会收集 0 档（输出 `tests 0`——那是空清单，不是绿）。
+- `node --check` × 11 档（10 实现 + 1 测试）全 `Syntax OK`。
+- `doc_check(mode:"gate")` ⇒ `DOC-CHECK GATE: PASS（0 档）`——本会话未写 `.md` 档，空清单不得读作「已检」。
+- R1 现场读数（非测试进程，写真实日志）：`slot:rotate {"slot":1,"reason":"foreign-cwd","bak":true,"via":"write"}` · `{"reason":"newer-version","bak":true,"via":"guard"}` · `slot:allocate {"slot":2,"prevSlot":1,"reason":"all-slots-live"}` · `slot:new {"slot":2,"prevSlot":1,"reason":"new-session"}` · `slot:refuse {"reason":"parse-failed"}`；事件行不含标题 / 原文 / 路径（字段集只有数字与枚举）。
+
+### 决策披露
+
+- **计数式**：两分支同判「离开集」——`/new` = 重建前未过期条目数；切槽 = 旧 Map 未过期 id ∖ 新 Map id（`token-ttl.mjs:154-156`）。C9b（A(2)→B(2) ⇒ 2）专抓 `max(0,before-after)` 的漏报。
+- **打印落点**：切槽取值在 `cmd-session.mjs:122` 存局部量 `applied`，打印在 `:138-141`（晚于 `:130` `state.lines = []` 与 `:132` `restoreLines`）；`/new` 打印在既有 New session 行之后（`cmd-new.mjs:26` 后）。
+- **`applySession` 契约**：返回 `{ switched, droppedDesignTokens }`；`switched` 保留两返回点原值。6 处调用面实读全为裸语句（零返回消费）。
+- **不做**：VSC / 桌面两端报明（设计档 §8；台账 `#1752`）；凭证跨槽持久化；`logEvent` 通道语义变更。
+
+### 设计档漂移（归设计席 / 父侧，本轮未改设计档）
+
+1. **`prevSlot` 无前值时整键缺席**：设计档 §3.1 写「无则 `null`」，代码按字面传 `null`，但 `log.mjs:125` 对 `null` 字段整键丢弃 ⇒ 项目首个 `/new` 的 `slot:new` 行无 `prevSlot` 键，与 §6「每行含必填字段」在那格张力。二选一收正：注明「无前值时该键省略」，或改发非 null 哨兵并同步闭集表 + 测试。
+2. **`unreadable` / `rotate-failed` 判别式粒度过粗**：按设计档 §3.1 的 `preserved` 代理量实现；`.bak` 改名自身失败时会记成 `unreadable`（实况盘面可读）。代码与设计档一致，属设计档判别式待拆分支。
+3. **`docs/core/design/SESSION.md:187-188`** 仍写「返回 switched」——旧返回形表述未随契约收正，属设计档笔。
+
+### 审计与评审轮次（终态 = converged）
+
+- **explore 分歧审计 1 轮**：结论 DEVIATIONS 2 条 🟡 doc-drift（① `session-lifecycle.mjs` 函数头 JSDoc 停在旧返回形 ⇒ 本轮已修；② `SESSION.md` 旧表述 ⇒ 归设计席）；逐条验收 ①–⑥ 全一致（事件字段闭集 / 离开集口径 / 三处单行化 / 契约零回归 / 行数增量 / 零夹带）。
+- **advisor 代码评审 1 轮（`type:"code"`）**：`VERDICT: pass`；🔴 ×0 · 🟡 ×3（均非阻塞：prevSlot 缺席 · rotate 判别式 · 批档读数缺）· 🔵 ×2。
+- **自修轮次 1（已落）**：两处 JSDoc 同步（`applySession` / `resetSessionState` 返回形）；advisor 🔵2 全落——测试补 `longer-record` / `other-session` 两格（29 用例），隐私断言改按键排除（`k === "ev"` 放行，其余字符串字段一律过路径 / 换行扫描）。🟡 三项中 prevSlot / rotate 归设计席，批档读数由本段与 §6 承担。
+- **未覆盖**：VSC / 桌面报明（§8 不做）；集成面 I1–I4 由父侧收口跑；首个 `slot:new` 事件的键集按现状不锁测试（等设计档口径收正后再锁，避免锁错方向）。
+
 ## §6 验证与收口（父代理）

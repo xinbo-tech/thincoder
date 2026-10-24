@@ -211,6 +211,60 @@
 
 **门禁**：`doc_check(mode:"gate")` = PASS（`docs/core/design/BROWSER-TOOL.md` / `docs/core/design/TOOLS.md` / `docs/core/design/AGENT-PARAMS.md` 三档 · 0 命中）。自读三表：清单 6 档与磁盘一致；SETTINGS-TOOL 160 / TOOLS 1722 / `session.mjs` 494 均为本轮实测。
 
+### 补轮（F34 集成测试设计段 · 2026-10-24）
+
+**缺项**：本批三件都改变用户可见结果，设计档却无「集成测试设计」段——F34（`docs/core/requirements/TESTING.md:199` 实读）判该缺项 = 设计不合格；收口删掉批次单测档后，就只剩单测，没有从用户入口走的验收。
+
+**逐件业务可见性判定**（三件全部触及业务行为，故无「集成场景无变化」项）：
+
+| # | 业务可见结果 | 判定 |
+|---|---|---|
+| ① 404 不熔断 | 抓一个不存在的页面之后，同一会话的 `websearch` 仍打到 DeepSeek（不再整个后端停 10 分钟）；凭据类失败后 10 分钟自动放行、不用重启 | 触及业务行为 |
+| ② 启动窗可配 | 慢机上不再 12s 早夭；`BROWSER_START_TIMEOUT_MS` 改了下一调用即生效，失败句回显生效秒数 | 触及业务行为 |
+| ③ advisor 超时热改 | `settings set agent.advisor.timeoutMs` 之后下一次评审按新值跑，不用重启 | 触及业务行为 |
+
+**落点（三处 · 常驻集成档——不随批删）**：
+
+| 设计档 | 新段 | 档 | 场景数 |
+|---|---|---|---|
+| `docs/core/design/TOOLS.md` | §6.23 末「集成测试设计（F34 · 本批 · 收口口径）」（`:1515` 起） | `thincoder-cli/test/integration/web-backend-404.test.mjs` | I-WB1–I-WB3 |
+| `docs/core/design/BROWSER-TOOL.md` | §11「集成测试设计（F34 · 本批 · 收口口径）」（`:563` 起） | `thincoder-cli/test/integration/browser-start-window.test.mjs` | I-BT1–I-BT3 |
+| `docs/core/design/AGENT-PARAMS.md` | §6.2 末「集成测试设计（F34 · 本批 · 收口口径）」（`:78` 起） | `thincoder-cli/test/integration/advisor-timeout-hot.test.mjs` | I-AP1–I-AP3 |
+
+每条场景的判据 = 业务可观察结果（回执句 ∥ 结果文本 ∥ 上游命中计数 ∥ 会话还能不能继续用），表内逐行回指业务需求（W4 ∥ F-BT16b ∥ F-BT16 KD-26 ∥ F-ST2 ∥ D-ST18）。
+
+**不入门的三半（逐条写理由，不留空）**：熔断 10 分钟到期解封（业务入口无时钟缝，门里要实等 10 分钟；单测 T18 拨时钟判两读数）∥ 启动窗「时长」半（需常驻不退出又不写端口的替身可执行档；`launch.mjs:160` spawn 不带 shell，Windows 上 `.cmd`/`.js` 当不了 exe；单测 T45 + `launch.mjs:163` 判同值即期限）∥ 冷启首动作墙钟半（真机耗时不可控；单测 T47/T48 判两格，真机面 = 冒烟 S1，门内留 I-BT3 抽样格）。
+
+**集成集现状（实读 2026-10-24）**：`thincoder-cli/test/integration/` **目录不存在、0 个档**；`thincoder-cli/test/run.mjs:3` 两层 glob 已备好（`:38` 拒收集别处的档）。本批新增两档 = 该目录的首批常驻用例（0 → 2 档），距 50–100 窗口仍空；缺口由父侧收口记账。
+
+**上抛项**：
+
+1. 任务书给的权威坐标 `docs/core/requirements/TESTING.md:198` 实为 F28（宿主零 TTY），F34 在 `:199`——本段按实读引 `:199`。
+2. ③ 的集成段落在 `docs/core/design/AGENT-PARAMS.md`（任务书只点了 TOOLS ∥ BROWSER-TOOL 两档）：③ 的业务可见性由任务书自己判为「触及」，而该档 §6.2 原写「宿主 = 批次单测档，收口随批删」——正是 F34 要堵的洞。若父侧不要这一档，删该块即可，另两档不依赖它。
+3. 三个集成档的实现归属未定（本席只写设计）：两档是 `node:http` 假上游 / 假 SSE（零外网），一档要真 Chromium（无则 skip 并打印）。实施轮按设计档落。
+
+**本节更正（同段自校，1 条）**：「集成集现状」一段原写「本批新增两档 = 该目录的首批常驻用例（0 → 2 档）」——与本章落点表的三行不一致（实为三档）。以落点表为准：`0 → 3 档`。
+
+### 回改轮（实施偏离回归——设计档跟实现收正 · 2026-10-24）
+
+**依据**：实施席交付报偏离 7 条（`§5` 偏离项表 D1–D7）。D1–D3 = 设计档写错、实施席按正确做法落地 ⇒ 设计档按**实现**收正；D4–D7 = 设计档补记或按其现实处置。代码零改（57/0 · 35/0 · 17/17 已由父侧独立复跑）。
+
+| # | 设计档原字样 | 实落（本轮实读） | 处置（file:line） |
+|---|---|---|---|
+| D1 | `queue.mjs` 加 `ActionController.extendBy`、`session.mjs:489` 入口计量（Δ ≈+8） | `pauseBudget` / `resumeBudget` 成对（`queue.mjs:71-75` · `:78-83`，经 `extendBy:87-94` 回补；`remaining()` 暂停期读 `_pausedAt:61`）+ 冷启段暂停/恢复接线（`session.mjs:200` · `:205` · `:208`） | §2.4 机制句换 pause/resume，并写明「事后回补不能替代暂停」（`type`/`snapshot` 15s 预算 < 启动窗 25s ⇒ 回补前已到点，旧句 `stuck in launch browser` 仍在）；§5 受影响面 Δ ≈+8 → **+28**、坐标 → `queue.mjs:61-94` / `session.mjs:199-208`（`BROWSER-TOOL.md:140-144` · `:385-387`） |
+| D2 | 子键 set 写嵌套后调 `promoteAgentViews` 重 derive 副本 | 子键写后**只键级同步被写的键**（`settings.mjs:340`）；整段赋值腿仍 promote（`:337-338`） | §2.3 三条腿各写一句并补因：`DEFAULTS.agent.advisor.guard = false`（`config-defaults.mjs:40`）⇒ 整段 re-derive 会静默关掉 `/advisor` 打开的会话级 guard（`SETTINGS-TOOL.md:42-44`） |
+| D3 | §6.23 ⑥/⑦ 未登记 `_TRIP_STATUS_FOR_TEST` | `web-deepseek.mjs:49` `Object.freeze([...TRIP_STATUS])` | 接口契约「实现面（导出）」行 + ⑦ 测试缝段各补一行，明写「只读断言面、不是缝」（`TOOLS.md:1371` · `:1403`） |
+| D4 | §8 U63 只写「首动作 navigate + 假自启 12s」 | 批测档用 `evaluate` + navigate 格预算比例值（45s → 450ms）、墙钟 100× 缩比；真 `navigate` = 集成档 I-BT3 | §8 补「冷启用例的批测落形（登记）」一行，说明机制不随动作类型分叉（`BROWSER-TOOL.md:541`） |
+| D5 | D-ST18 只列两键 + `agent.advisor` 段 | `advisor` 段整段赋值同校验（`settings.mjs:168`） | §2.6 整段赋值腿改「`agent.advisor` ∥ `advisor` 两个段名的对象值」（`SETTINGS-TOOL.md:86`） |
+| D6 | `promoteAgentViews` = `{ ...config.advisor, ...config.agent.advisor }` | 非对象段不展开（`config.mjs:202`） | §2.3 promote 本体句 + `AGENT-PARAMS.md:18` · `:63` 同步补「非对象段不展开」；理由 = 畸形段 spread 产 `0/1/2` 垃圾键，读面本就回退默认（D-P3） |
+| D7 | Δ 估算（settings ≈+12 · queue ≈+8） | 实读：`settings.mjs` **357**（+45/−3）· `queue.mjs` **199**（+28）· `session.mjs` **498**（+4）· `launch.mjs` **200**（+11）· `web-deepseek.mjs` **187**（+15）· `config.mjs` **456**（+19/−1，净 +18，其中 4 行为在跑批次的 `bodyIdleTimeoutMs`） | 两档受影响面表改「改动前 ∥ 本批 Δ ∥ 实施后」三列并落实读（`BROWSER-TOOL.md:381-387` · `SETTINGS-TOOL.md:155-160`）；档位结论：全部 < 500 建议线，`session.mjs` 498 距 500 余 2 行为最紧面、距 800 余 302（触发条件已在档） |
+
+**顺带收正的读数列（一致性面）**：`TOOLS.md` 自读数 1,722 → **1,739**（`:1446` · `:1713`）；`SETTINGS-TOOL.md` 160 → **162**（`TOOLS.md:1448`）；`BROWSER-TOOL.md:378` 的 `TOOLS.md` 读数 1,353 → 1,739；`session.mjs:489` → `:493`（`BROWSER-TOOL.md:223`——本批 +4 行下移）；`AGENT-PARAMS.md` 的 promote 调用点 `config.mjs:354` → `:372`（`:18` · `:24` · `:63` 三处）。
+
+**实施席报告的两处读数修正**：① `settings.mjs` 实读 **357**（报告写 360；`+45` 是新增行，净值 +42）；② `_TRIP_STATUS_FOR_TEST` 在 `web-deepseek.mjs:**49**`（报告写 `:48`——那行是注释）。
+
+**门禁**：`doc_check(mode:"gate")` = **PASS**（`BROWSER-TOOL.md` / `SETTINGS-TOOL.md` / `TOOLS.md` / `AGENT-PARAMS.md` 四档 · 0 命中）。自读三表：`TOOLS.md` 1,739 ∥ `BROWSER-TOOL.md` 583 ∥ `SETTINGS-TOOL.md` 162 ∥ `AGENT-PARAMS.md` 118（本轮实测）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -295,4 +349,67 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（三件落地（404 不熔断 + TTL 10 分钟 · 启动窗 25s + 冷启预算 · advisor 热生效 + D-ST18）；审计 1 轮 + 代码评审 2 轮（轮 1 五条 → 修轮 1 轮 → 轮 2 pass）；终态 clean；设计档漂移 D1–D7 见 §5 偏离项表）
+
+
+
+**实施摘要**：三件按设计档落地（见下交付表）。代码面 6 档 + 批次单测档 1 档（收口随批删）；`advisor/loop.mjs` 零改（读面保留 promoted 语义）。
+
+### 交付表（逐条对三件 + 判据格）
+
+| # | 状态 | 需求点 | 落点（实读坐标） |
+|---|---|---|---|
+| ① | ✅ 完成 | 404 移出熔断 + 熔断限时 10 分钟 | `thincoder-core/tools/web-deepseek.mjs:31`（`TRIP_STATUS = new Set([401, 402, 403])`）· `:32`（`BREAKER_TTL_MS = 600_000`）· `:39-48`（WeakMap + 时钟缝 + `_resetDeepseekTransportForTest` 同复位时钟 · `_TRIP_STATUS_FOR_TEST`）· `:76-89`（`tripped` 到期删条目放行 / `trip` 写 `now + TTL`）· `:125`（熔断日志行携 `ttlMs`） |
+| ② | ✅ 完成 | 浏览器启动窗 25s 可配 | `thincoder-core/browser/launch.mjs:34`（`START_TIMEOUT_MS = 25_000`）· `:35-44`（`browserStartTimeoutMs(env)`：`Number.isFinite(v) && v > 0` 才采纳 → 钳 `[2_000, 30_000]`；非法 ∥ 空 ∥ 0 ∥ 负值 ⇒ 25000）· `:159`（`launchBrowser` 缺省参数改调用） |
+| ② | ✅ 完成 | 自启段不占动作预算（KD-26） | `thincoder-core/browser/queue.mjs:63-66`（`remaining()` 暂停期读暂停点）· `:69-75`（`pauseBudget()`）· `:77-83`（`resumeBudget()`）· `:86-93`（`extendBy`，`ms = 0` 也重挂）· `:15`（navigate 注释改「不含自启」）· `thincoder-core/browser/session.mjs:198-210`（`ensureSession` 冷启段暂停/恢复 + 失败腿恢复） |
+| ③ | ✅ 完成 | advisor `timeoutMs` 热生效 | `thincoder-core/config.mjs:192-204`（`promoteAgentViews`）· `:369`（`loadConfig` 改调）· `thincoder-core/agent-tools/settings.mjs:139-181`（`_promotedAdvisorPath` / `_checkAdvisorTimeout` / `_checkKnownKeyValue` ⓪ 腿）· `:319-345`（null 腿 = 删嵌套 + 删副本、不 re-derive；子键 set = 键级同步；整段赋值 = promote 合并） |
+| ③ | ✅ 完成 | D-ST18 写面拒非法 `timeoutMs` | `thincoder-core/agent-tools/settings.mjs:174-181`（只收 `null` ∥ 有限正数；拒绝句逐字）· `:167-170`（`agent.advisor.timeoutMs` ∥ `advisor.timeoutMs` ∥ 两个段名对象内同键） |
+| — | ✅ 完成 | 批次单测档 | `docs/batches/2026-10-24-tool-timeouts.test.mjs`（17 例：T7×3 / T14 / T18 / T45 / T46 / T47 / T47b / T48 / 热生效三格 / guard 保值 / 整段赋值 / D-ST18；收口随批删） |
+
+### 关键实现点（机制面）
+
+- **熔断**：`WeakMap<agent, expiresAtMs>` 单域（search ∥ fetch 共享）；判活读时钟，到期 `delete` 并放行（改完 key 无需重启）；时钟缝 `_setDeepseekClockForTest(fn)`（缺省 `Date.now`），`_resetDeepseekTransportForTest()` 同时复位传输、时钟与熔断容器（成对，无第三缝）。
+- **启动窗**：显式入参 ＞ env ＞ 缺省 25s；失败句 `Math.round(timeoutMs / 1000)` 回显生效秒数（既有插值点，零改）。
+- **冷启预算**：自启窗口内 `ActionController` 的预算钟**暂停**（清 `_timer` + 记 `_pausedAt`），会话就绪后经 `extendBy(pausedMs)` 把暂停时长还给 deadline 并重挂；排队期照旧自入队起算。
+- **写面**：`null` 腿 = 删嵌套同子键 → 删 promoted 副本同子键 → **不再 re-derive**（re-derive 会把 `config.advisor` 旧值带回）；子键 set = 只同步被写的键；整段赋值 = `promoteAgentViews` 合并语义（只覆盖不删除）；回填对象值 `structuredClone`（DEFAULTS 是共享常量，防别名）。
+
+### 偏离项 / 设计档漂移（逐条给因由）
+
+| # | 设计/任务书字样 | 实落 | 因由 |
+|---|---|---|---|
+| D1 | 「`queue.mjs` 加 `extendBy` + `session.mjs:489` 入口计量」（docs/core/design/BROWSER-TOOL.md §5 受影响面） | `queue.mjs:69-83` 加 `pauseBudget` / `resumeBudget` 一对（`resumeBudget` 经 `extendBy` 回补）；计量点 = `session.mjs:199-208`（`ensureSession` 冷启完成处） | `extendBy` 只在自启**结束后**加回 deadline，不能撤销自启窗口内已触发的中止：`type` / `snapshot` 15s 预算（`queue.mjs:28-29`）< 启动窗 25s ⇒ 慢机首动作仍在 `launch browser` 到点（正是 U62 要消失的旧句）。设计规则「动作时钟自会话就绪后起算」要求自启窗口内预算钟不裁决 ⇒ 暂停/恢复是规则的必要形。设计档坐标需同步（`:489` → `:199-208`；Δ ≈+28 而非 ≈+8） |
+| D2 | 「子键 set：写嵌套后调 `promoteAgentViews(config)` 重 derive 副本」（docs/core/design/SETTINGS-TOOL.md §2.3） | 子键写后**只键级同步被写的键**（`settings.mjs:340`）；整段赋值腿仍调 `promoteAgentViews` | 整段 re-derive 会把嵌套面的同名默认值盖回运行面：`DEFAULTS.agent.advisor.guard = false` 经 `loadConfig` 并入 `agent.advisor` ⇒ 一次 `settings set agent.advisor.timeoutMs` 会静默关掉 `/advisor` 打开的会话级 guard，违反 §2.3「运行面独有的会话级键在合并中保留」 |
+| D3 | 任务书验收 ①-c 要求用例断言 `_TRIP_STATUS_FOR_TEST` 导出 | `web-deepseek.mjs:48` 导出只读快照（`Object.freeze([...TRIP_STATUS])`） | 设计档 §6.23 ⑥/⑦ 未登记该导出（审计 🔵#1）——它是任务书验收要求的只读断言面、非缝；设计档补一行即可 |
+| D4 | 设计 U63「首动作 = `navigate`」；墙钟 12s / 15s / 40s | 批测档 T48 用 `evaluate` + navigate 预算值（450ms 比例值）；墙钟按 100× 缩比 | 机制在控制器与入口计量，**不随动作类型分叉**；真 `navigate` 的真机抽样 = 集成档 I-BT3。已在批测档头 `:13-18` 书面披露 |
+| D5 | docs/core/design/SETTINGS-TOOL.md §2.6 只列 `agent.advisor.timeoutMs` ∥ `advisor.timeoutMs` 两键 + `agent.advisor` 段 | `advisor` 段整段赋值也纳入 D-ST18 校验（`settings.mjs:168`） | 拒绝集 ⊆ 不可消费集（§2.9 判据）；同一类值两个入口两种结果 = 写面假承诺 |
+| D6 | `promoteAgentViews` 公式 `{ ...config.advisor, ...config.agent.advisor }` | 非对象段不展开（`config.mjs:202`） | 手写 config.json 的畸形段（字符串）spread 会产出 `0/1/2` 垃圾键；读面对非法值「一律回退默认」（D-P3），本函数同口径 |
+| D7 | 行数 Δ（设计档估算） | `settings.mjs` 315→360（+45）· `queue.mjs` 171→199（+28）· `session.mjs` 494→498（+4）· `launch.mjs` 189→200（+11）· `web-deepseek.mjs` 172→187（+15）· `config.mjs` 442→456（含另一在跑批次的 `bodyIdleTimeoutMs` 四行） | 设计档 Δ 列为估算；超出的部分 = 两条新机制（暂停/恢复、键级同步）与 why 注释。各档均 < 500 建议线（`session.mjs` 498，距 500 余 2 行，拆分触发条件已在档） |
+
+### 测试读数（本轮实跑）
+
+| 命令 | 读数 |
+|---|---|
+| `node --test docs/batches/2026-10-24-tool-timeouts.test.mjs`（cwd = 仓根） | **17 tests / 17 pass / 0 fail** |
+| `cd thincoder-core && node test/run.mjs` | 6 个常驻档 **49 pass / 0 fail**；第 7 档 `test/unbooked-pen.test.mjs` 属另一在跑批次（未跟踪），其 import 的 `thincoder-core/agent/unbooked-pen.mjs` 当前不在盘 ⇒ `ERR_MODULE_NOT_FOUND`，非本批改动面（本批早段该套 57 pass / 0 fail） |
+| `cd thincoder-cli && npm test` | 两个已跟踪档 **32 pass / 0 fail**；全量套现含另一批次的未跟踪 `test/integration/unbooked-pen.test.mjs` 三例失败（同因：该批次模块未落盘） |
+| `node --check`（7 档） | 全 OK |
+| 404 不熔断读数 | fetch 404 ⇒ transport 恰 1 次（不重试）；同一 agent 紧随 search ⇒ transport 第 2 次（未熔断） |
+| 熔断 TTL 读数 | search 401 ⇒ 熔断；时钟 +599 999ms ⇒ transport 0 次；再 +2ms（越过 600 000）⇒ transport 1 次 |
+| 冷启预算读数 | 自启 120ms + 动作 60ms / 预算 150ms ⇒ 完成（回补型旧形 ⇒ 150ms 到点）；自启 200ms > 预算 150ms ⇒ 完成（旧形 ⇒ `type timed out after 150ms (stuck in launch browser)`） |
+
+### 审计与评审轮次
+
+- **内部偏离审计（explore）**：1 轮 → VERDICT pass（0 🔴 / 0 🟡 / 3 🔵）。3 条 🔵 处置：`_TRIP_STATUS_FOR_TEST` 未登记 → D3；`session.mjs` 坐标 → D1；T48 替换 → D4。
+- **内部 advisor 代码评审**：2 轮。
+  - 轮 1：🔴1（冷启计量为事后回补——自启 > 动作预算仍到点）+ 🟡2（必须修：promote 重 derive 会静默关掉会话级 `advisor.guard`；`advisor` 段绕开 D-ST18）+ 🔵2（非对象段 spread 垃圾键；墙钟型用例脆弱）。
+  - 修轮 1（同轮处置 5 条）：`pauseBudget`/`resumeBudget`（+ T47b 反例格）· 子键写面改键级同步（+ 真实装载形状用例）· `advisor` 段纳入 D-ST18 · `promoteAgentViews` 非对象段不展开 · 红侧断言去墙钟下界。
+  - 轮 2（修复验证）：6 条全部 Fixed/Accepted，无新 🔴 → **VERDICT pass**。
+- **终态**：`clean`（审计 1 轮 + 评审 2 轮 + 修轮 1 轮；无遗留 🔴/🟡）。
+
+### 收口提示（父侧）
+
+- 需求档 `docs/core/requirements/TOOLS.md` W4 与验收方向 ④ 已由主 agent 落（`:234` / `:255` 实读），代码未先于需求档。
+- 设计档需按 D1 / D2 / D3 回改三处（`docs/core/design/BROWSER-TOOL.md` §5 受影响面与 §2.4 实现面坐标 · `docs/core/design/SETTINGS-TOOL.md` §2.3 子键腿口径 · `docs/core/design/TOOLS.md` §6.23 ⑥/⑦ 的 `_TRIP_STATUS_FOR_TEST` 一行）。
+- 批次单测档收口随批删（`docs/batches/2026-10-24-tool-timeouts.test.mjs`，零留存）。
+
 ## §6 验证与收口（父代理）

@@ -31,7 +31,17 @@ export const CANDIDATES = {
 
 /** 全候选落空（N-BT5）——装配期不剔除工具，首用显式报此句（§2.6）。 */
 export const BROWSER_NOT_FOUND = "no Chromium-based browser found (Edge/Chrome) — install one or set BROWSER_PATH"
-export const START_TIMEOUT_MS = 12_000
+export const START_TIMEOUT_MS = 25_000 // 缺省启动窗（重负载 Windows 实测 13–17s，留 ≈8s 余量）
+const START_TIMEOUT_MIN_MS = 2_000 // 下限：防「瞬间判失败」
+const START_TIMEOUT_MAX_MS = 30_000 // 上限：首动作总墙钟 = 启动窗 + 动作预算（§2.9 两段各自有帽——KD-25）
+
+/** env 覆盖 `BROWSER_START_TIMEOUT_MS`（§2.4 取值口径 · KD-25）：`Number.isFinite(v) && v > 0` 才采纳，
+ *  随后夹进 `[2_000, 30_000]`（`"1500"` ⇒ 2000、`"40000"` ⇒ 30000）；非数值 ∥ 空串 ∥ `0` ∥ 负值 ⇒ 回落缺省 25s。 */
+export function browserStartTimeoutMs(env = process.env) {
+  const wanted = Number(env?.BROWSER_START_TIMEOUT_MS)
+  if (!Number.isFinite(wanted) || wanted <= 0) return START_TIMEOUT_MS
+  return Math.min(START_TIMEOUT_MAX_MS, Math.max(START_TIMEOUT_MIN_MS, wanted))
+}
 
 const defaultPathExists = (p) => existsSync(p)
 function defaultWhich(name) {
@@ -141,11 +151,12 @@ export function reclaimProfileOrphans(profile, io = {}) {
 }
 
 /**
- * 启动浏览器（spawn + `DevToolsActivePort` 轮询 ≤12s）。
+ * 启动浏览器（spawn + `DevToolsActivePort` 轮询 ≤ 启动窗）。
+ * 启动窗 = `timeoutMs` 显式入参 ＞ env `BROWSER_START_TIMEOUT_MS` ＞ 缺省 25s（`browserStartTimeoutMs`）。
  * 持久 profile ⇒ 启动前清陈旧端口文件（否则旧值被当本次读数——发现即失效）。
  * @returns {Promise<{child: import("node:child_process").ChildProcess, port: number, profile: string}>}
  */
-export async function launchBrowser({ exe, headless = true, profile, timeoutMs = START_TIMEOUT_MS, sleep = (ms) => new Promise((r) => setTimeout(r, ms)), reclaimIo = undefined } = {}) {
+export async function launchBrowser({ exe, headless = true, profile, timeoutMs = browserStartTimeoutMs(), sleep = (ms) => new Promise((r) => setTimeout(r, ms)), reclaimIo = undefined } = {}) {
   const args = [
     ...(headless ? ["--headless=new"] : []),
     "--disable-gpu", "--no-first-run", "--hide-scrollbars",

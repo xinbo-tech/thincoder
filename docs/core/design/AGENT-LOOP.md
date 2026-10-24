@@ -318,7 +318,7 @@ PreToolUse hooks → 阻断
 顺序（每个 guard 推回一次后 continue，直到通过）：
 
 1. **空响应恢复**：**空白判**（`String(content ?? "").trim() === ""`；机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31.8）→ 注入 `[System reminder: your last response was empty…]` 重试，上限 `MAX_EMPTY_RETRIES = 2`（每次用户消息重置），仍空才抛原错误。
-2. **pending tasks 提醒**：有 pending → 注入任务列表提醒并继续循环；**最多推回一次**（`_taskPushbacks`，task 工具更新列表即重置）——模型第二次坚持收尾则放行。
+2. **pending tasks 提醒**：有 pending **且后台池已空**（`!poolLive(agent)`——与挂起尾巴同判据）→ 注入任务列表提醒并继续循环；**最多推回一次**（`_taskPushbacks`，task 工具更新列表即重置）——模型第二次坚持收尾则放行。池里仍有在飞条目时门不触发：task 一更新就归零 × 有 pending 即推回，会把回合拖到小时级（机制单源 = `docs/core/design/TIMEOUT-DIGEST.md` §2.3）。
 3. **verify guard**（opt-in `verifyGuard: true`，工程模式除外）：改过代码未 verify → 推回调 verify（≤2 次）；verify 失败 → 推回修复（≤3 次）；耗尽 → 诚实声明提醒。
 4. **advisor guard**（opt-in `advisor.guard === true`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 轮）。
    advisor 评审能力**恒启用**（不依赖开关；未配 `advisor.provider` 时继承主 provider）；`advisor.enabled` 字段已废弃。

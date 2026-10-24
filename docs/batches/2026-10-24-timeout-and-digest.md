@@ -52,7 +52,7 @@
 
 ### 受影响文件与测试覆盖
 
-逐档行数与增量 = 设计档 §3（12 个源文件 + 1 个新单元用例，表共 13 行；最大增量 7 行，无文件触发拆分）。测试覆盖：单元 `thincoder-core/test/timeout-digest.test.mjs`（T1–T8，收口即删）；集成套件现存 0 例（≈50–100 窗口），本批不改集成面，缺口由父侧收口记账（口径 = 设计档 §9）。
+逐档行数与增量 = 设计档 §3（逐档表；拆分判词见该节——无文件触发拆分）。测试覆盖：单元 `docs/batches/2026-10-24-timeout-and-digest.test.mjs`（T1–T10，与批档同址，收口即删）；集成套件现存 0 例（≈50–100 窗口），本批不改集成面，缺口由父侧收口记账（口径 = 设计档 §9）。
 
 ### 验收对照
 
@@ -76,6 +76,13 @@ D1 键名 `agent.bodyIdleTimeoutMs` / 默认 `120000` · D2 默认值住 DEFAULT
 - #13 设计档 §2.2：超预算档清单行不再自造文案——复用 `thincoder-core/agent-tools/digest-budget.mjs:71` 的单源整串（含 `Read it with the read tool (offset/limit).`）；注入点保留「超预算 ⇒ `persistOverflowReport` ∥ 否则 `offloadToolResult … { force: true }`」，`offloadToolResult` 只加 `{ force }`——不新增紧凑档参数，避免同一事件两处文案。
 - #14 设计档 §2.2：单轮 inline 正文上限 ≈ ≤128K → ≈ ≤64K（按 `digest-budget.mjs:53` 判式：越预算那条及其后恒走清单行；首条 >64K 也只渲染 ≤64K 预览）。
 - 口径校正（本节早前的机制设计②）：「`digestBudgetOver` 布尔值在本族退役」以设计档 §2.2 为准——`over` 保留为分支选择（超预算 ⇒ 清单行档）；渲染二分、缝与验收不变。
+
+### 点修（第 3 轮 #37：设计档 §2.1 / §3 改当前态）
+
+- **§2.1 消费表**：「现形 → 目标形」双列改为「消费点 → 当前形」单列，八行逐行只写现在读什么（`effectiveBodyIdleMs(provider)` 调用点 / `DEFAULT_BODY_IDLE_MS` 缺省）。坐标按本轮实读：`provider/core.mjs:256`/`:274`/`:413` · `provider/sse.mjs:93` · `provider/google.mjs:134`/`:139`/`:172` · `provider/anthropic.mjs:225` · `provider/responses.mjs:248`/`:267`/`:285` · `proxy.mjs:52` · `proxy-transport.mjs:43`/`:234`。读取链两处坐标收正（`config.mjs:361-363` = fetch、`:366-367` = bodyIdle，原写 `:350-352`）；`effectiveBodyIdleMs` 补 `provider/core.mjs:79-82`。
+- **§3 表**：「现有行」→「当前行数」，本轮实读 100 / 453 / 478 / 300 / 292 / 362 / 307 / 54 / 300 / 500 / 485 / 78 / 159 / 275 / 1228 / 520 / 195；「预期增量」→「本层 Δ」；「改动」列只描述现状（逐条 `文件:行`）。`helpers.mjs` 的档位判词改为现态（500 行，不越档、不拆分，拆点保留为计划）。
+- **§3 尾注**：`thincoder-core/test/` 的「现 5 档」与盘上不符（实读 7 档 `*.test.mjs`，其中 `anthropic-message-adapt` / `unbooked-pen` 两档属并行在途批），改述为目录性质并去掉计数。
+- **未动**：§5 A1–A10 · §6 T1–T10 原样；§2.2 / §2.3 机制句零改；实现代码零改。
 
 ## §3 设计评审（评审子代理）
 
@@ -131,4 +138,72 @@ VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）
+**状态行**：✅ 实施完成
+
+
+### 交付摘要（三件，逐条对设计档 `docs/core/design/TIMEOUT-DIGEST.md` 判据）
+
+| # | 条目 | 实装落点 | 判据（机判） | 状态 |
+|---|---|---|---|---|
+| 1 | body 空闲超时可配 | `config-defaults.mjs:17` 单源常量 `DEFAULT_BODY_IDLE_MS` + `:29` 登记 `DEFAULTS.agent.bodyIdleTimeoutMs`；`config.mjs:353-356` 提升为 `provider.bodyIdleTimeoutMs`；`provider/core.mjs:77-82` `effectiveBodyIdleMs` 唯一解析点；八处消费点原地改读 | A1（默认值/回退/零残留）· A2（0.8s 判死 ∥ 缺省跑完）· A3（list/get/set） | ✅ Done |
+| 2 | 子代理报告无条件落盘 | `agent/helpers.mjs:157-174` `offloadToolResult(…, { force })` + 渲染二分；`agent-tools/subagent-async.mjs:388-389` 两条路都落盘；`agent-tools/digest-budget.mjs:62` 无参缝 | A4 · A5 · A6 · A10 | ✅ Done |
+| 3 | 完成门认池 | `agent/completion.mjs:65` 合取 `!poolLive(agent)`，import 自 `agent/suspension.mjs:64` | A7 · A8 | ✅ Done |
+
+**八处消费点（原地替换，无新增超时层）**：
+
+- `provider/core.mjs:256`（readSSE）· `:274`（重试 readSSE）· `:413`（`_bodyIdleMs`）
+- `provider/sse.mjs:93`（`idleMs` 入参缺省）+ `:210`（文案用实际值）
+- `provider/google.mjs:134`/`:139`/`:172`/`:226` · `provider/anthropic.mjs:225` · `provider/responses.mjs:248`/`:267`/`:285`
+- `proxy.mjs:52` · `proxy-transport.mjs:43`（形参缺省）/`:234`
+
+`FETCH_BODY_IDLE_MS` 与 `READ_IDLE_MS` 已删除（无定义残留）。
+
+### 改动文件（行数为实读 2026-10-24）
+
+| 文件 | 现行 | 改动 |
+|---|---|---|
+| `thincoder-core/config-defaults.mjs` | 100 | +6：单源常量 + `DEFAULTS.agent.bodyIdleTimeoutMs` 登记（含理由注释） |
+| `thincoder-core/config.mjs` | 442 | +5：`:353-356` 提升链（注释 2 行 + 代码 2 行） |
+| `thincoder-core/provider/core.mjs` | 478 | +10 / −1：import + `effectiveBodyIdleMs`（`:77-82`）+ 三处改读；删 `FETCH_BODY_IDLE_MS` |
+| `thincoder-core/provider/sse.mjs` | 300 | +4 / −3：import + `idleMs` 入参缺省；删 `READ_IDLE_MS`；文案/定时器用实际值 |
+| `thincoder-core/provider/google.mjs` | 292 | +4 / −3：`_bodyIdleMs` + 传 `idleMs` + 入参缺省；删 `READ_IDLE_MS` |
+| `thincoder-core/provider/anthropic.mjs` | 362 | +1 / −1：`:225` 代理分支 `_bodyIdleMs` |
+| `thincoder-core/provider/responses.mjs` | 307 | +3 / −3：`:248`/`:267`/`:285` |
+| `thincoder-core/proxy.mjs` | 54 | +2 / −1：import + `:52` 缺省 |
+| `thincoder-core/proxy-transport.mjs` | 300 | +3 / −2：import + `:43` 形参缺省 + `:234`；`:39` 注释收正（原「0 即禁用」与实装相反） |
+| `thincoder-core/agent/helpers.mjs` | 500 | 净 +2（旧 20 行 → 新 22 行）：`{ force }` 开关 + 渲染二分 + 失败两形态；still ≤ 500 咨询档，未触发拆分 |
+| `thincoder-core/agent-tools/digest-budget.mjs` | 78 | +2：`_digestOffloadDirForTest()` 无参读取面 |
+| `thincoder-core/agent-tools/subagent-async.mjs` | 485 | +4 / −1：import + 注入点无条件 `{ force: true }` + 缝取值 |
+| `thincoder-core/agent/completion.mjs` | 159 | +4 / −1：import + `!poolLive(agent)` + 注释 2 行 |
+| `docs/batches/2026-10-24-timeout-and-digest.test.mjs`（新） | 275 | 批内单元用例 T1–T10 + A1 静态零残留 + A3 配置面；与批档同址，收口即删 |
+
+`anthropic.mjs` 的 362 行含**别的在途批**（anthropic-message-adapt）未提交改动；本批在该档只有 `+1/−1`（`:225`）。
+
+### 验证读数（命令 + 结果）
+
+| 命令 | 读数 |
+|---|---|
+| `node --check` × 13 个改动源档 | 全 OK（逐档 Syntax: OK） |
+| `node --test docs/batches/2026-10-24-timeout-and-digest.test.mjs` | **12 tests / 12 pass / 0 fail**（7.4s；T3 0.9s、T4 6.0s 为墙钟窗口） |
+| `cd thincoder-core && node test/run.mjs` | **57 tests / 57 pass / 0 fail**（本会话首跑基线 = 56 pass；第 57 条来自并行在途批刚改写的 `thincoder-core/test/unbooked-pen.test.mjs`，非本批） |
+| `grep 120_000` @ `thincoder-core/provider/*.mjs` + `proxy*.mjs` | **零命中**（A1 已机检于批内用例） |
+
+### 关键决策披露 / 偏离项
+
+1. **T3 的端点为「首帧也等一个间隔」**：`readSSE` 在**已收内容后**遇 idle 走既有 `partial: true + networkError` 分支（`provider/sse.mjs:266-275`，批外既有语义，本批零改），无内容时才抛 idle 错误。因此 T3 的假端点首帧亦延后 1.5s，落的正是「no data for 0.8s」的原文语义；A2 判据（小值按新值超时并报出秒数）达成。
+2. **≤64K 写盘失败的尾注用中性文案**：`[... full text kept inline above (N chars), offload to disk failed]`，不沿用 `truncated: N chars total`（正文其实整段在前，沿用即自我矛盾）；>64K 档尾注逐字保留原文案，`docs/core/design/TOOL-OUTPUT-LIMITS.md` §3 记录的旧文案因此仍成立。
+3. **未新增 `compact` 参数**：超预算档继续走 `persistOverflowReport`（文案单源 = `digest-budget.mjs:73`），注入点形状与设计档 §2.2 逐字同形。
+4. **文档漂移（不在我的笔内，交父侧路由）**：`docs/core/design/TOOL-OUTPUT-LIMITS.md` §3 仍写「`≤ 65536`：原样返回，**不进落盘路径**」——`force` 支使 ≤64K 报告也落盘，该句在「报告族」这一格已成假；该档的失败回退段亦只记双端形态。设计档 §3 文件表未列该档，故本轮零改。
+5. **设计档坐标 as-of 漂移**：§2.1 消费表把 anthropic 的 `_bodyIdleMs` 标在 `provider/anthropic.mjs:105`，实读在 `:225`（`+120` 行来自别的在途批）；`digest-budget.mjs` 单源文案行标 `:71`、实读 `:73`（本批自己加的读取缝）。语义均无偏差。
+
+### 审计与评审轮次（终态 = clean）
+
+| 轮 | 形式 | 结论 | 处置 |
+|---|---|---|---|
+| 1 | 内部审计（只读 explore 子代理，设计档 §5 A1–A10 逐条对） | 🔴 0 · 🟡 1（= 上列偏离项 4，文档面）· 🔵 3；实现面零偏差、零静默简化 | 实现面零返工；文档漂移交父侧路由 |
+| 2 | 独立代码评审（advisor `type:"code"`） | **VERDICT: pass**；🔴 0 · 🟡 2（批档 `:55` 用例路径滞后、§5/§6 空）+ 🔵 3 | 修正轮 1：收两条 🔵（`provider/core.mjs:408` 注释的失效符号名、`provider/responses.mjs:246/:265/:283` 缩进），复跑两套用例仍全绿；两条 🟡 属批档/父侧笔，已入交付报告 |
+| 3 | 复核（同轮内自检） | 修正后 `node --check` + 两套用例复跑全绿，无新增发现 | 收敛，无需再评 |
+
+**修正轮次 = 1**（第 2 轮后一次性收口）；**终态 = clean**。
+
 ## §6 验证与收口（父代理）

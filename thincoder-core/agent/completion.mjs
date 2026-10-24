@@ -8,6 +8,7 @@
 import { hasCodeMutations } from "../advisor/repos.mjs"
 import { pushReal } from "../context.mjs"
 import { advisorReviewPending, effectiveAdvisorRound } from "../agent-tools/advisor-async.mjs"
+import { poolLive } from "./suspension.mjs"
 
 const MAX_VERIFY_PUSHBACKS = 2
 const MAX_VERIFY_RETRIES = 3
@@ -59,7 +60,9 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
   // list state earns one fresh reminder.
   // F10（催更门连带）：工程模式下 task 工具机械停用（装配摘除 + execute 拒）⇒ 不再发指向被拒
   // 工具的提醒（死胡同提醒防线）；列表本体与 `_taskPushbacks` 预算语义零改。
-  if (depth === 0 && !agent.config?.agent?.engineering && agent.tasks.some((t) => t.status === "pending") && (agent._taskPushbacks ?? 0) < 1) {
+  // TIMEOUT-DIGEST.md §2.3（#29）：后台池 live 时不推回——池在飞时回合本就还会被 settle 唤醒，
+  // 此时催 task 只会拖回合；判据复用 `poolLive`（与挂起尾巴同一口径，不立第二处）。
+  if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent) && agent.tasks.some((t) => t.status === "pending") && (agent._taskPushbacks ?? 0) < 1) {
     agent._taskPushbacks = (agent._taskPushbacks ?? 0) + 1
     const pending = agent.tasks.filter((t) => t.status === "pending").map((t) => t.title).join(", ")
     pushReal(agent, { role: "assistant", content: response.content })

@@ -129,6 +129,13 @@ export function engTokenSlotFields(agent) {
  *  残留——一次性语义。镜像若已过期/畸形 → 不迁移（drop——与 Map 过期项同处理，
  *  清盘闭环）。永不写 agent._engDesignToken。 */
 export function restoreEngTokens(agent, data) {
+  // 设计档 §3.2（R2）：整体替换前快照旧 Map 的「未过期 id 集」，落定后求差 = 离开集（非集合大小差）。
+  const before = new Set()
+  if (agent._engDesignTokens instanceof Map) {
+    for (const [id, t] of agent._engDesignTokens) {
+      if (!(typeof t === "string" && tokenExpired(t))) before.add(id)
+    }
+  }
   const map = new Map()
   if (data.engDesignTokens && typeof data.engDesignTokens === "object" && !Array.isArray(data.engDesignTokens)) {
     for (const [id, t] of Object.entries(data.engDesignTokens)) {
@@ -144,6 +151,9 @@ export function restoreEngTokens(agent, data) {
   }
   if (map.size > 0) agent._engDesignTokens = map
   else delete agent._engDesignTokens
+  let droppedDesignTokens = 0
+  for (const id of before) if (!map.has(id)) droppedDesignTokens++
+  return { droppedDesignTokens }
 }
 
 // ── 会话槽权威台账 I/O（DESIGN-TOKEN-SETTLEMENT D1/D2/D3——槽文件 = 权威结算台账） ──

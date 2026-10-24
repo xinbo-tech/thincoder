@@ -169,6 +169,10 @@ The report must contain: what changed / why, the paths of files touched, how you
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
 - **Unit test files are not promoted into integration tests** (integration cases are established from business needs, not graduated from unit files).
+- **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
+  **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
+  **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
+  Why: the urge is right that the spot matters; a file with no scene pays permanent maintenance and guards nothing.
 - **Closeout test line**: each batch closeout reports two halves.
   ① this batch's unit test files named, with one verification reading (what was verified ∥ command ∥ result).
   ② the integration set as it now stands against the ≈50–100 window, plus the cases this batch added ∥ revised, by case name — each case file lands under the project's integration test directory.

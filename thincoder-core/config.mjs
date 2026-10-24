@@ -190,6 +190,20 @@ export function findProvider(providers, name) {
 }
 
 /**
+ * Promote `agent.advisor` into the runtime view `config.advisor`（decoupled copy——`{ ...config.advisor,
+ * ...config.agent.advisor }`）。单一规则：`loadConfig` 装载期与 `settings set` 写面共用（`SETTINGS-TOOL.md` §2.3）。
+ * 只住运行面的会话级键（如 `advisor.guard`——`cmd-advisor.mjs` 只写 promoted）在合并中保留；
+ * promoted 是副本而不自动跟随 nested，所以每个写点都得同步（`AGENT-PARAMS.md` §2 写面不变式）。
+ */
+export function promoteAgentViews(config) {
+  const nested = config.agent?.advisor
+  // 非对象段（手写 config.json 的畸形值）不展开——字符串 spread 会产出 0/1/2 垃圾键；
+  // 读面本身对非法值「一律回退默认」（AGENT-PARAMS.md §2 / D-P3）
+  config.advisor = { ...config.advisor, ...(nested !== null && typeof nested === "object" && !Array.isArray(nested) ? nested : {}) }
+  return config
+}
+
+/**
  * Load configuration.
  * No env-var overrides — config.json is the single source of truth
  * (API keys, baseURL, defaultModel all come from the file).
@@ -350,8 +364,12 @@ export function loadConfig() {
   // fetch 超时可配置（2026-09-01：agent.fetchTimeoutMs——provider/core.mjs effectiveFetchTimeoutMs 消费）
   merged.provider.fetchTimeoutMs = Number.isFinite(merged.agent?.fetchTimeoutMs) && merged.agent.fetchTimeoutMs > 0
     ? merged.agent.fetchTimeoutMs : undefined
+  // body 阶段空闲超时同形提升（TIMEOUT-DIGEST.md §2.1 —— provider/core.mjs effectiveBodyIdleMs 消费）：
+  // 非法 ∥ 缺省 ⇒ undefined ⇒ 回退 DEFAULT_BODY_IDLE_MS（不静默禁用保护）
+  merged.provider.bodyIdleTimeoutMs = Number.isFinite(merged.agent?.bodyIdleTimeoutMs) && merged.agent.bodyIdleTimeoutMs > 0
+    ? merged.agent.bodyIdleTimeoutMs : undefined
   merged.providersList = merged.providers
-  merged.advisor = { ...merged.agent.advisor }  // promote for consistent access (decoupled copy)
+  promoteAgentViews(merged)  // agent.advisor → advisor promote for consistent access (decoupled copy)
 
   return merged
 }

@@ -150,24 +150,26 @@ export async function cleanupOldToolResults(dir) {
   }
 }
 
-/** Offload oversized tool results (>64K chars) to disk, returning a head+tail preview + file path
- *  (2026-09-04 §5 — dual-end preview; the failed-offload fallback uses the same dual-end slice).
- *  Writes trigger write-time self-cleanup of the offload dir first (dir param overridable for tests). */
-export async function offloadToolResult(text, callId, dir = join(configDir, "tool-results")) {
-  if (text.length <= TOOL_RESULT_OFFLOAD_LIMIT) return text
+/** Offload a tool result / report to disk (§2.2): `force` = write regardless of size (async
+ *  subagent reports must survive the parent turn). Rendering splits on the SAME constant as the old
+ *  gate: ≤ TOOL_RESULT_OFFLOAD_LIMIT ⇒ body once + path (never dual-end — a short body would come
+ *  out twice with `middle omitted: 0 chars`); > ⇒ dual-end preview + path. Writes self-clean first. */
+export async function offloadToolResult(text, callId, dir = join(configDir, "tool-results"), { force = false } = {}) {
+  const overLimit = text.length > TOOL_RESULT_OFFLOAD_LIMIT
+  if (!force && !overLimit) return text
   try {
     await cleanupOldToolResults(dir)
     await mkdir(dir, { recursive: true })
     const file = join(dir, `${Date.now()}-${String(callId).replace(/[^a-zA-Z0-9_-]/g, "_")}.log`)
     await writeFile(file, text, "utf8")
-    return (
-      buildDualEndPreview(text) +
-      `\n\n[... output too large (${text.length} chars total), full content saved to: ${file}\n` +
+    if (!overLimit) return `${text}\n\n[... full content saved to: ${file}\nPage through it with the read tool (offset/limit) if you need the full text later.]`
+    return buildDualEndPreview(text) + `\n\n[... output too large (${text.length} chars total), full content saved to: ${file}\n` +
       `Page through it with the read tool (offset/limit) or sed -n 'START,ENDp' — do NOT re-run the tool blindly.]`
-    )
   } catch {
-    // review #3: fallback uses the same dual-end slice (head + omitted note + tail, no path hint)
-    return buildDualEndPreview(text) + `\n\n[... truncated: ${text.length} chars total, offload to disk failed]`
+    // 写盘失败不吞报告：>LIMIT 走双端预览 + 原文案；≤LIMIT 正文整段在前（不谎称 truncated）
+    const body = overLimit ? buildDualEndPreview(text) : text
+    return body + (overLimit ? `\n\n[... truncated: ${text.length} chars total, offload to disk failed]`
+      : `\n\n[... full text kept inline above (${text.length} chars), offload to disk failed]`)
   }
 }
 

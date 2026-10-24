@@ -1,7 +1,7 @@
 # 轻通道（LIGHT-CHANNEL）· 设计
 
 > 板块 = **工程模式机制**——细节面 ∥ 收敛面受控旁路：直改 → 实时走查 → 定版 → 收口 → 核销。
-> 需求档 = `docs/core/requirements/LIGHT-CHANNEL.md`（F-LC1~5 ∥ 边界 ∥ 验收 ①–⑧ ∥ 依赖）；本档 = 机制设计（需求档明示的设计定形项 = 提示词落法 ∥ 台账挂接形 ∥ 量级阈值 ∥「必要测试」判据——§2 逐项定形）。
+> 需求档 = `docs/core/requirements/LIGHT-CHANNEL.md`（F-LC1~6 ∥ 边界 ∥ 验收 ①–⑨ ∥ 依赖）；本档 = 机制设计（需求档明示的设计定形项 = 提示词落法 ∥ 台账挂接形 ∥ 量级阈值 ∥「必要测试」判据——§2 逐项定形）。
 > 验证凭据 = 用户评语「机制是成功的」（美工场景）。
 > 关联面：四步硬流程（`docs/core/requirements/METHODOLOGY.md` §2.1 F2-1）∥ 批档机制（`docs/core/design/BATCH-RECORD.md`——复用零动）∥ 台账机制（`docs/core/design/LEDGER.md`——复用零动）∥ 提示词落地（`docs/core/design/PROMPT-SYSTEM.md` §6.12）。
 
@@ -13,7 +13,7 @@
 - **代价面（闭合）**：每轮次收尾**跑一次全链**（设计形式化 → 独立评审 → 修复（若有）→ 批准 → 收口核销）——旁路 ≠ 取消，收尾全链 = 对四步的补课；**收尾未落 ⇒ 不许核销**；
 - **记账面**：轮次 = 批档一本 + 台账行逐笔——批档 ∥ 台账机制**复用，零新增机制**。
 
-**设计原则**：① 落提示词层（内建机制，非会话级裁定）；② 零机械门（判断面纪律——承「为臆想的失败逐点加限制 = 反模式」）；③ 产品码触及面 = §2.8 一处（本体 = 纯提示词文本 + 设计档面）；④ 两界原则（提示词正文运行时可解析——零文档引用）。
+**设计原则**：① 落提示词层（内建机制，非会话级裁定）；② 零机械门（判断面纪律——承「为臆想的失败逐点加限制 = 反模式」）；③ 产品码触及面 = §2.8（代码笔闸）+ §2.9（落笔通道确认提醒一行——非门、非拦）；④ 两界原则（提示词正文运行时可解析——零文档引用）。
 
 **判据收口定形**：准入 = **三样清单 + 一句边界**（命中即走——定形记录 = §7 K15）；**误准入交收尾全链兜底**——收口时被形式化 ∥ 评审捕获。**核销面 = 机制重心**：挂账 → 收尾全链 → 核销不漏 = 第一优先级（门槛让路给「不漏」）；启动即挂账（账前笔后）照常。
 
@@ -142,6 +142,78 @@
 `If this is a light-channel code pen: the gate looks for the round from the session anchor and its direct subdirectories — book the round first (an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record); code pens pass once that is on disk.`
 **取**（① 拒绝时刻 = 最需修法指引的时刻，承「hint 指名修法」先例；② 条件冠句防全链笔误读；③ 与提示词句互补：提示词 = 事前知会，拒文 = 事发指引）。
 
+### 2.9 落笔通道确认提醒（F-LC6——回执一行，零拦截）
+
+**机制一句话**：每会话**首次**由主 agent 落下**产品源文件**笔时，在**工具回执末尾**追加一行提醒——落笔前确认通道（轻通道 ⇒ 轮次两件先落盘）。只提示：不拦、不放行、不改任何判据。
+
+**与 §2.3 的关系（半句划界）**：§2.3「无账之笔 = 不成立」是**纪律面判据**（该不该这么干）；本件处理的是该判据**已被违反之后**的一次回执提醒（兜底面）——不改判据，也不把违规常态化为允许。
+
+**问题坐标**：规则挂在「决定走轻通道」那一刻（`thincoder-core/prompts/persona-engineering.md:218-222` 启动即挂账 ∥ 账在笔先），实际动作是「看到 bug 就改」——两个时刻之间不经过入口。本件把提示点挪到「手放到笔上」的那一刻：笔落下的同一份回执里出现一行通道确认。
+
+**触发面（四合取 + 一闩，全中才提示）**：
+
+| # | 合取项 | 判据 | 依据 |
+|---|---|---|---|
+| ① | 身份 = 主 agent | `agent._role == null`（`thincoder-core/agent.mjs:52-59` 建 agent 时 `_role: role`；主会话装配 `thincoder-core/agent/assemble.mjs:106` 不传 role，各子代理 spawn 面传角色） | 子代理写有各自 `_batchDoc` 绑定，不属本提醒对象（任务书边界） |
+| ② | 工具 = 笔集 | `PEN_TOOLS` = `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs:86`）**减** `delete`——现存五支 `{write, edit, insert_after, apply_patch, hashline_edit}` | 既有集合单源复用（减式派生——不另起第二份硬编码清单）；`delete` 不入集——删产品源文件需 `force`，是显式动作，本批无场景（K20） |
+| ③ | 执行成功 | 工具结果 `ok === true` | 被拒的笔没有落盘，提醒无对象 |
+| ④ | 目标 = 产品源文件 | 逐目标 `resolve(cwd, p)` → `declarationForTarget(abs)` → `isCodePath(abs, conv)`（分类器单源 `thincoder-core/conventions.mjs:162`；与父侧门 `thincoder-core/agent/dispatch.mjs:111-118` 同式） | 文档 ∥ 批档 ∥ `.thincoder/tmp/` ∥ aux（test/scripts）不触发——这些面本就不需轮账 |
+| 闩 | 每会话一次 | `agent._unbookedPenNotified` 置位后不再判（不按轮、不按文件） | 用户裁定 B（2026-10-24）：每会话首次笔提示一次 |
+| — | **不看在途轮** | 触发面不含「有无在途批档」 | 裁定 B：A（零在途批档才提示）覆盖不到实况——`anyLiveDesignSlot` 让别批次设计槽放行本批笔（`thincoder-core/agent/dispatch.mjs:99-102`）；覆盖不到所述场景的机制不如不做。与需求 §2.6 触发面同口径（`docs/core/requirements/LIGHT-CHANNEL.md` §2.6：会话内首次写产品源文件，不看当时有无在途轮次） |
+
+**新名三问（逐名一行——existing ∥ none found ∥ existing but unusable）**：
+
+- `PEN_TOOLS`：`existing: thincoder-core/agent/helpers.mjs:86` · `name: "FILE_MUTATORS"`（6 支 = 本集 + `delete`）· `consumers: thincoder-core/agent/record-results.mjs:87` ∥ `:162`。取 **existing but unusable（整集）**：`delete` 对本提醒是不该触发的成员（须 `force`、显式动作，本批无场景）⇒ 集形 = `FILE_MUTATORS` 减 `delete`，减式派生而非第二份清单。
+- `_unbookedPenNotified`：**none found**——查过实例面既有闩（`_mutatedThisRun` ∥ `_calledAdvisorThisRun` ∥ `_verifiedThisRun`，`thincoder-core/agent/record-results.mjs:94-97`；`_zeroWriteAlerted`，`thincoder-core/agent-tools/zero-write-watch.mjs:48`）。
+  全部是「本轮 / 单次运行」语义，无「每会话一次提示」闩 ⇒ 新名字沿用同前缀形，住在 agent 实例（`thincoder-core/agent.mjs:59`）。
+- `unbookedPenText()`：**none found**——最近形 = `zeroWriteAlertText` ∥ `advisorAlertText`（`thincoder-core/agent-tools/zero-write-watch.mjs:24` ∥ `:29`，纯函数 + 标量入参）；名字对齐该形，无现成「无账之笔」文案件可引。标签 `[pen check]` 同形对齐 `[zero-write watchdog]`（同档 `:25`）。
+
+**文案（单源 = `unbookedPenText()`，一行）**：
+
+~~~text
+[pen check] first product-source write this session — confirm the channel before it lands: a light-channel pen needs its round booked first (batch record + an in-flight ledger row pointing at the record); a full-chain pen goes to eng-coder. A pen with no account is invisible at closeout, so the ledger settlement misses it.
+~~~
+（不是指控句——轮内合法笔同样会收到提示；末句给后果：收口看不见、核销会漏。）
+
+**落点**：单点挂接 = `thincoder-core/agent/record-results.mjs:87-90`（`pushReal` 之前——`ok` ∧ 工具在场才判），算得后缀拼在 `result` 末尾再入史。
+
+**承载模块 = 新叶 `thincoder-core/agent/unbooked-pen.mjs`**（`PEN_TOOLS` `:19` ∥ `unbookedPenText()` `:22-24` ∥ `unbookedPenNotice()` `:40-62`）：`PEN_TOOLS`（`FILE_MUTATORS` 减 `delete`）∥ `unbookedPenText()`（文案单源）∥ `unbookedPenNotice(agent, toolCall, ok, tool)`（四合取 + 闩判定——命中返后缀行，未中返空串）。
+
+第 4 参 `tool` = 工具对象（`thincoder-core/agent/record-results.mjs:55` 已按名取好），是触发面的**必需项**：
+目标提取走单源谓词 `toolTouchPaths(tool, args)`（`thincoder-core/agent/helpers.mjs:104`），其钩子面 `touchedPaths(args)`（`thincoder-core/agent/helpers.mjs:106`）才是 `apply_patch` 真 diff 解析（`thincoder-core/tools/patch.mjs:183`）与批量 `edit` 多目标（`thincoder-core/tools/file.mjs:252`）的目标来源。
+无钩子工具按单参 `path` 兜底（`thincoder-core/agent/helpers.mjs:109`）；缺 `tool` ⇒ 判定直接返空串（`thincoder-core/agent/unbooked-pen.mjs:42`），`apply_patch` ∥ 批量 `edit` 永不触发。
+
+该叶 import 四条（`thincoder-core/agent/unbooked-pen.mjs:11-14`）：`resolve`（`node:path`）∥ `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs:86`）+ `toolTouchPaths`（`thincoder-core/agent/helpers.mjs:104`）。
+另两条：`declarationForTarget`（`thincoder-core/declaration.mjs:367`）∥ `isCodePath`（`thincoder-core/conventions.mjs:162`，分类两步同表 ④ 行）。
+**只被 `record-results.mjs` import**（叶不向回引——无环）。
+
+不改 `prepared` ∥ 不改 dispatch 门 ∥ 零文件扫描 ∥ 零 DB 访问。
+
+**受影响文件（现量 + Δ · tier 判定；`.md` 档按豁免不列）**：
+
+| 文件 | 现量 | Δ（实现读数） | 形态 | tier |
+|---|---|---|---|---|
+| `thincoder-core/agent/unbooked-pen.mjs` | 62 行 | 新档 | 谓词叶（`PEN_TOOLS` ∥ `unbookedPenText()` ∥ `unbookedPenNotice()`） | 新档——免拆分 |
+| `thincoder-core/agent/record-results.mjs` | 199 行（挂接点 `:29-30` ∥ `:87-90`） | +5 | 结构不变（不拆函数、不增导出） | 低于 300 软线 ∥ 500 硬线（`docs/core/requirements/ENGINEERING-MODE-V2.md:647`）⇒ 不触发拆分评审 |
+| `thincoder-core/test/unbooked-pen.test.mjs` | 112 行 | 新档（8 例） | 单元测试档（收口删除——测试纪律） | 新档——免拆分 |
+| `thincoder-cli/test/integration/unbooked-pen.test.mjs` | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——与上一行是两个对象：单元档随批删、集成档常驻 | 新档——免拆分 |
+
+**不改面**：轻通道准入判据（§2.1）· 代码笔闸（§2.8）· 全链放行 · 提示词面（规则已在 persona-engineering:218-222，本件只装触发点）· 批档 ∥ 台账机制本体 · 无新配置键。
+
+**边界**：
+
+- **B 的代价（如实记）**：同一会话里已经提示过一次后，后续再不挂账地改**不会再提示**——每会话一次就是覆盖上限。
+- 不覆盖「有在途批档但笔不属于该轮」——笔的轮归属仍是判断面（§2.8 边界既有句）。
+- 不判模式位：normal 模式下同样按四合取触发；文案为条件句（「a light-channel pen …」），不主张所有笔都要建批档。
+- 不建账 ∥ 不写台账 ∥ 不劝停笔：只把「先确认通道」在笔落下的同一份回执里说一次。
+- **身份判据的宽松面（如实记）**：`agent._role == null` 判主 agent——主会话装配不传 role（`thincoder-core/agent/assemble.mjs:106`），子代理 spawn 面统一传 role（`thincoder-core/agent-tools/subagent-spawn.mjs:297-304`）⇒ 现装配面之外无实际误判面。若将来某 spawn 路径漏传 role，该子代理也会收到提醒：后果仅多一行回执，不误伤放行面、不改任何判据——本批不为未出现的输入加白名单分支。
+- **相邻洞不在本批**：`anyLiveDesignSlot` 让别的批次的活槽为本批产品码笔放行（`thincoder-core/agent/dispatch.mjs:99-102`）——独立问题，按用户裁定另记台账、不扩本批射程。
+
+**先例行**：`thincoder-core/agent-tools/zero-write-watch.mjs`（同形 = 谓词叶 + 文案函数 + 闩 + 非阻塞；对齐）。偏离 = 送达面：上游 note 通道 → 工具回执——`pushChildUpstream` 只服务子代理，而本提醒的收件人就是刚落笔的主 agent。
+**勘察行**：查了 `docs/core/design/LIGHT-CHANNEL.md`（§2.8 闸）、`thincoder-core/agent/dispatch.mjs:99-132`、`thincoder-core/agent/record-results.mjs:85-184`、`thincoder-core/conventions.mjs:151-164`、`thincoder-core/agent-tools/zero-write-watch.mjs`；`index.publicRepos: []`（无公开源仓），无相关公开文档。
+
+**验收（机检形）**：见 §4 ⑨。
+
 ## 3. 提示词落点清册（段落 → 档 → 节）与咬合处置
 
 **落点（EN × 两模式 = 2 档）**：
@@ -168,7 +240,7 @@
 
 **代码笔通路随动面**：`DESIGN-TOKEN-SETTLEMENT.md`（§4 D3 ∥ §5 ∥ §6.1）∥ `PROMPT-SYSTEM.md`（§6.12 + §6.1 补登 + §8.2 读数——实施轮）∥ 提示词 persona 两档（增句逐字 = 轮次记录 §2）。
 
-## 4. 验收映射（回指需求档 §4 ①–⑧）
+## 4. 验收映射（回指需求档 §4 ①–⑧ + 本批增量 ⑨）
 
 | # | 需求验收 | 可核形态 | 守法（内容测试禁令） |
 |---|---|---|---|
@@ -180,13 +252,22 @@
 | ⑥ | 收正增量（「轮次界 = 收口」——§2.3 新增条 ∥ 提示词新增行）落需求后按 ①–④ 同构核 | 实施轮一次性比对（落地档 ↔ 轮次记录 §2 围栏块）+ 评审对照（续笔两半句逐字） | 一次性比对（沿 ① 守法） |
 | ⑦ | 判据收口增量（「三样清单 + 一句边界」——§2.1 ∥ §3 + 核销不漏面——§2.3 重心句）落需求 ∥ 提示词后按 ①–④ 同构核——**加核：核销不漏面**（挂账 → 收尾全链 → 核销可抽查、0 漏） | 实施轮一次性比对（落地四档 ↔ 轮次记录 §2 围栏块——含三样清单 ∥ 一句边界 ∥ 附则）+ **删面核读**（落地档无残留 ⇔ 轮次记录 §2 删面清单）+ 评审对照（三样逐条 ↔ 落地文本；核销不漏面三件可回溯：挂账 ∥ 收尾 ∥ 核销） | 一次性比对（沿 ① 守法） |
 | ⑧ | 代码笔通路（F-LC5——§2.5 落需求 ∥ 设计 ∥ 实施后按 ①–④ 同构核）——**加核：通路实证两笔**（在盘放行 ∥ 无盘仍拒） | §2.8 实证判据（单元测试档 J1–J5——两笔 + 三反例）+ 实施轮一次性比对（落地四档 ↔ 轮次记录 §2 围栏块） | 单元测试档读数（随轮次记录存——非常驻）；一次性比对（沿 ① 守法） |
+| ⑨ | 落笔通道确认提醒（本批增量；需求出处 = 台账 #1753；回指 `docs/core/requirements/LIGHT-CHANNEL.md` §2.6 判定句 ①–④） | 单元测试档读数 + 门控零变读数（细目见下） | 单元测试档 + diff 读数（随批档存——非常驻） |
 
-**全用例零常驻断言新增**（承测试纪律「不因单次改动而增补」+ 内容锚禁令——② ∥ ③承接面 ∥ ④ = 观察项/样本，不落机检）。
+**⑨ 读数细目（驱动形 + 四项）**：
+
+- **驱动形**：直驱结果入史函数 `recordToolResults(agent, toolByName, results)`（`thincoder-core/agent/record-results.mjs:45`）——构造 `{ toolCall, result, ok }` 结果集 + 最小假 agent（`cwd` ∥ `_role` + `pushReal` 所需历史容器，测试档内自建；既有用例未覆盖该函数），不起 `executeToolCalls` 全链（本件不改门，无需真工具执行）。
+- **① 命中**：主 agent（`_role` 缺省）+ `write` + 产品源文件 + `ok=true` ⇒ 回执含提示行**恰一次**且以之结尾，逐字含 `confirm the channel` ∥ `ledger settlement misses it`。
+- **② 反例逐项零提示**：`_role="eng-coder"` ∥ `read` ∥ `docs/*.md` ∥ `.thincoder/tmp/*` ∥ `test/*` ∥ `ok=false`。
+- **③ 闩两态**：同实例第二笔产品码笔零提示 ∥ 新实例再命中。
+- **④ 放行条件零变（机判）**：门控代码零改 = `git diff --stat <基线 sha>..HEAD -- thincoder-core/agent/dispatch.mjs` 为空 ∧ `grep -n unbooked thincoder-core/agent/dispatch.mjs` 零命中；同一输入下门读数不变 = 上一条的蕴含（门体字节未变 ⇒ 同输入同结论）——不为已蕴含的结论再设夹具。
+
+**零常驻断言**（承测试纪律「不因单次改动而增补」+ 内容锚禁令）：① ∥ ② ∥ ③ = 一次性单元测试档读数，④ = 一次性 diff 读数，四者随批档存、收口即随测试档删除；① 的常驻守卫 = 集成面的业务可观察用例（§8）。
 
 ## 5. 边界（本机制不做）
 
 - 不做：边界外内容走通道 ∥ 免收口 ∥ 以本机制替代全链（机制自身 ∥ 大改仍全链）；**提示词面 ∥ 设计档面 ∥ 需求档面不入轻通道直改，轻通道只作用于代码笔（代码笔 = 产品源文件，不含提示词面）**——三面各有唯一作者（写权矩阵 D1，拥有档 = `DOC-DISCIPLINE.md` §1：提示词 = 产品代码面、内容依据 = 机制文档、落笔 = eng-coder；设计档 = eng-designer；需求档 = 主 agent）。**面界 = 判断面，闸面零分类**——§2.8 谓词为真时闸体整跳、不判笔的归属，三面目标的放行由本判断面拒绝。
-- 机制本面：零机械门（**准入判断面**——代码笔通路件（§2.8）= 机械**开路**〔免拦放行〕，非**设槛**〔不新增准入限制〕）∥ 产品码触及面 = §2.8 一处（谓词件 + 闸条件合取项）∥ 批档 ∥ 台账机制本体零动（纯复用——启动即挂账 = 既有迁移表/写门连步）∥ 子代理零新义务。
+- 机制本面：零机械门（**准入判断面**——代码笔通路件（§2.8）= 机械**开路**〔免拦放行〕，非**设槛**〔不新增准入限制〕）∥ 产品码触及面 = §2.8（谓词件 + 闸条件合取项）+ §2.9（回执提醒一行：零拦截 ∥ 零扫描 ∥ 零判据改动）∥ 批档 ∥ 台账机制本体零动（纯复用——启动即挂账 = 既有迁移表/写门连步）∥ 子代理零新义务。
 - 提示词面：铁律 ∥ 分流表 ∥ 确认与批准门不改写（例外入机制块载明）；工程工具面直改硬约束 = 两条（判据收口定形）；零文档引用（两界原则）。
 
 ## 6. 依赖
@@ -214,3 +295,32 @@
 | K14 | 「轮次界 = 收口」入文 = 需求 §2.3 新增条 ∥ 提示词「派发与收尾纪律」节内新增行（EN） | 续笔归属需明文 |
 | K15 | **判据收口（入口重定）**：准入 = 三样清单 + 一句边界；核销面（挂账 ∥ 收口 ∥ 接手 ∥ 未核销不关轮）= 机制重心（第一优先级）；工程工具面直改硬约束 ② 撤——管辖面并入一句边界 | 用户五裁（bugfix 路由指正 ∥「简单明确」批评 ∥「没必要把门槛设置得那么高」∥ 分流句复核撤 ∥「开始」）；兜底原理 = 收尾全链自然捕获误准入 |
 | K16 | **代码笔通路 = 闸认轻通道在盘（两件双在盘：轮次行 `在途` 携「收尾链待跑」+ 指针指向「进行中」轮档）**；新增只读谓词 `lightRoundOpen`（在盘——`thincoder-core/agent/light-round.mjs`）+ 父侧门条件式末位合取项（§2.8）；候选面 = 会话锚 + 直接子目录一层（候选枚举单源 = `ledgerChildren`） | 信号 = 既有「开轮两件」（零新记账面）；生命周期 = 账生命周期（收口自闭——零撤销动作 ∥ 零漂移面）；轮型标记防全链批误开（§2.3 既有形升格）；读错 fail-closed 照拦 |
+| K17 | 触发面 = **每会话首次产品源文件笔**（不看在途轮）——用户裁定 B | A（零在途批档才提示）在实况里不响：`anyLiveDesignSlot` 让别批次设计槽放行本批笔（`thincoder-core/agent/dispatch.mjs:99-102`）；覆盖不到所述场景的机制不如不做 |
+| K18 | 不拦：只在工具回执末尾加一行 | 正常调试（临时插桩、试一行）本就该直改；拦 ⇒ 被绕过，绕过后连提醒都没有 |
+| K19 | 去噪 = 每会话一次闩（不按轮、不按文件） | 轮内合法笔也会收到提示——重复出现即噪音；用户一句「这只是调试」后不必再提 |
+| K20 | 笔集 = 任务书五支（`delete` 不入集）；不判模式位 | 任务书点名；删产品源文件带 `force` = 显式动作，无场景不设分支；模式位 = 为未出现的输入加分支 |
+| K21 | 提醒落工具回执，不落 System reminder ∥ 上游通道 | 回执与那笔写同一条消息，因果相邻；上一轮才到的 System reminder 到来时笔已落完；上游通道只服务子代理 |
+
+## 8. 集成测试设计（F34）
+
+**判定 = 本批触及业务行为**（两条，均可观察）：
+
+1. **模型面工具回执变了**：提醒行拼进入史的工具回执正文（`thincoder-core/agent/record-results.mjs:89-90` 的 `content: penNotice ? result + penNotice : result`）——脚本化 provider 下一请求里那笔 `tool_result` 的正文多出一行。
+   **会话流正文不含提醒**：会话流的工具块取 `thincoder-core/agent/dispatch-run.mjs:155` 的 `resultForModel`（渲染 = `thincoder-cli/src/tui/tool-events.mjs:280` 的 `block.result = slimToolResultForDisplay(result)`），而该值在 `record-results.mjs:89-90` 拼接之前就已发出 ⇒ 断言面 = **模型面工具回执**，不是会话流工具块。
+2. **模型可见行为**：回执是模型下一步动作的输入——本机制的目的就是让模型在落笔后确认通道。放行条件零变 ≠ 行为零变：模型收到的输入变了。
+
+**场景表（常驻档 = `thincoder-cli/test/integration/unbooked-pen.test.mjs`，收口不删）**：
+
+| # | 入口（业务可观察点） | 判据（断言什么） | 回指 |
+|---|---|---|---|
+| I1 | 从 CLI 入口起一个会话（脚本化 provider：本机 Anthropic Messages/SSE 假端点，同模板 `thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`，零外网），主 agent 对产品源文件 `src/x.mjs` 执行 `write`，看脚本化 provider 记录的请求体里该笔 `tool_result` 正文 | 该笔回执正文以 `[pen check]` 行结尾且恰出现一次，逐字含 `confirm the channel` 与 `ledger settlement misses it`；文件已写入、工具照常成功（零拒绝） | 需求 §2.6 判定句 ① ∥ 设计 §2.9 触发面 ①–④ |
+| I2 | 同一会话紧接第二笔产品源文件 `write` | 第二笔回执正文零 `[pen check]` 行 | 需求 §2.6 判定句 ③ ∥ 设计 §2.9 闩行 |
+| I3 | 另一会话：先写一份文档（`docs/x.md`），紧接着写产品源文件 | 文档笔零提示、且不消耗闩——随后的产品码笔仍有提示 | 需求 §2.6 判定句 ② ∥ 设计 §2.9 触发面 ④ |
+
+**夹具形**：真子进程（承 `docs/core/requirements/TESTING.md` §6.1 F23——不 import 业务模块）；会话级 AUTO 放行工具调用；夹具 workspace 带项目声明（`declarationForTarget` 可解析、`src/` 判为 codePath），否则触发面 ④ 恒不成立。
+
+**模式位**：I1–I3 在 normal 模式会话里跑——工程模式父侧门会先拒无账产品码笔（`thincoder-core/agent/dispatch.mjs:99-132`，`ok=false` ⇒ 触发面 ③ 不成立），那测的是 §2.8 闸、不是本件；本件的可观察结果与模式位无关（§2.9 边界「不判模式位」）。
+
+**身份项不进集成表**：子代理零提示由单元面覆盖（§4 ⑨ ② 的 `_role="eng-coder"` 反例）——集成表入口 = 主 agent 会话；子代理面的可观察差异只是「子块里少一行」的负断言，再驱动一个脚本化子会话不产生新的业务结论。
+
+**窗口读数（实读 2026-10-24）**：`thincoder-cli/test/integration/` 现量 **2 档 6 例**（`anthropic-tool-roundtrip.test.mjs` 3 例 · `unbooked-pen.test.mjs` 3 例）；本表 3 例计入其中，总量落在 50–100 窗口内。复测 = `cd thincoder-cli && node test/run.mjs`（收集面 = `thincoder-cli/test/run.mjs:50` 两层 glob `test/*.test.mjs` + `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。

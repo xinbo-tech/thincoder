@@ -3425,6 +3425,129 @@ B4 的两处计数：现盘 `:106` 节标题 `### Doc structure (design doc 8 it
 - 〔父侧 · 编号〕本节未加 §7 D-PS 行：§6.46 在途未占号，D-PS46 / D-PS47 的归属由父侧收口时定。
 - 〔父侧 · 需求档残留〕`docs/core/requirements/TESTING.md:198` 的「与 F10 的关系」格内仍写「F29 定**必做**」——该行本批已由 F29 改为 F34，这处指代随同失效（同档 `:220` 的 F29 是 RTM 条，不是它）；需求档笔 = 父侧。
 
+### 6.48 常驻守卫的本能 = 集成测试（提示词面指路 · `discipline-engineering` 一处）
+
+**来源**：需求权威 = `docs/core/requirements/TESTING.md:47`（§1.2 技法轴新条——「『这块得留个长期守卫』这条本能 = 集成测试在说话」；无业务场景 ⇒ 守卫尚未成立 ⇒ 记成待办、不造常驻件）。台账 `#1757`。
+
+用户 2026-10-24 18:08 逐字：「你说的所谓『常驻测试』就是『集成测试』」；18:10：「这是个问题，需要进提示词，让模型能理解它本能中的『常驻测试』与『集成测试』之间的联系」。
+
+**缺的那一半（实读 · 2026-10-24 本席）**
+
+| # | 坐标 | 现文（逐字） | 缺的那一半 |
+|---|---|---|---|
+| F1 | `thincoder-core/prompts/discipline-engineering.md:171` | `- **Unit test files are not promoted into integration tests** (integration cases are established from business needs, not graduated from unit files).` | 只有禁止、没有去处：那股「这块得留个长期守卫」的劲儿在提示词里没有落点 |
+| F2 | 同档 `:167` ∥ `:186` | `**Delete on use — an action, not a question**: …` ∥ `**No conversion between the two** — a hard discipline.` | 删与禁各说一遍，仍不说「想留常驻件时该做什么」——禁令两次出现，去处一次也没有 |
+
+**实证（本批的场景 · 用户当场指出）**：2026-10-24 一批交付后，模型照纪律删了批内单测档，紧接着提议「批内单测档留一个精简常驻版守三条」——**被禁止的提升换了个名字**。缺的不是更强的禁令（禁令已在盘两处），是禁令之后的那条路。
+
+**机制（三步，各有出处）**
+
+1. **本能指向的就是集成测试**：写代码时想把某几条断言留下来盯着这个位置，这个冲动是一种测试在说话——本项目的常驻测试面只有集成测试（`docs/core/requirements/TESTING.md:47`）。
+2. **落点是业务场景用例，不是单测档的删减版**：集成用例一律按业务需要单独设立（同档 F8）；从用户可见入口把真实业务走一遍（同档 §1.2 执行轴）。「精简常驻版」= 同一份单测档换个名字 ⇒ 仍是单测档，不因瘦身变成集成测试。
+3. **没有可对应的业务场景 ⇒ 守卫尚未成立**：记成待办、不留件。留一个没有场景的常驻件 = 付永久维护费、守一个没发生过的位置（同档 §1.3 防膨胀：验证投入 ∝ 失败代价）。
+
+**与既有句的分工（不重复的判据 = D2）**
+
+- `:171` 管**禁止**（不提升）；本节新增句管**去处**（要留 ⇒ 集成用例）与**无场景**（记待办）——禁令与新句各自可独立判读，无一句是另一句的改写。
+- `:177` ∥ `:178` ∥ `:181` 已定集成测试的形态、来源、位置 ⇒ 新句不复述，只把本能指过去。
+- `:175` 的 `none` 门槛管**改了业务行为**的批（业务改动必有场景）；新句管**没有业务场景**的冲动——两者正交，不得互相顶替。
+
+**逐字英文文本（实施席照此落笔 · 唯一权威目标形）**
+
+双面形照本档 §6.44：英文块 = 落地目标形；中文复核面 = 同一语义、供人复核、不入提示词。
+写形照本档 §6.45：一条规则一行 · 行首短语点题（题眼加粗）· 条件独立成行 · 理由以 `Why` 起头 · 每行 ≤300 字符——围栏块已按此形写好，**原样落、不折行**。
+围栏块同时是本档 §6.1「批次收尾核对」的比对基线（去折行后的段比对）。
+
+B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipline` 节 · 现盘 `:171` 之后、`:172`（`- **Closeout test line**`）之前，插入一条 bullet（四行）：
+
+```text
+- **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
+  **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
+  **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
+  Why: the urge is right that the spot matters; a file with no scene pays permanent maintenance and guards nothing.
+```
+
+**中文复核面（与英文面同一语义 · 供人复核，不入提示词）**
+
+- **B1 · 常驻守卫的本能**：想给某个位置留一个常驻测试看着，这个念头就是集成测试在说话——这次改动的几条断言值得留下来盯住时，正是设计一条集成用例的时刻。
+  把几条断言从单测档里挑出来、瘦身留成常驻档 = 同一份单测档换个名字——那仍是上面被禁止的提升，不是集成测试。
+  冲动背后没有业务场景 ⇒ 现在还没有东西可留：在报告里记成一行台账、由父侧登记——不要临时造一个常驻件把冲动糊过去。
+  为什么：冲动没说错——这个位置确实重要；但没有场景的文件要付永久维护费，却什么也守不住。
+
+**落点表（实施席逐处执行 · 坐标 = 现盘实读 2026-10-24）**
+
+| # | 文件 | 落点（内容锚） | 动作 | 预期 Δ（估值 · 不作验收条） |
+|---|---|---|---|---|
+| L1 | `thincoder-core/prompts/discipline-engineering.md` | `**Unit test files are not promoted into integration tests**` 行之后 / `- **Closeout test line**` 行之前 | 插入 B1 四行 | +4 行 |
+| L2 | `thincoder-core/prompts/discipline-normal.md` | — | 零改（该面 `:190` 单测档随批档存、`:191` 同款禁令；落与否 = 上抛项，本批不改） | ±0 |
+| L3 | `thincoder-core/prompts/` 其余 15 档 · `thincoder-core/tool-docs/**` · 产品代码 · 需求档 · `docs/core/design/TESTING.md` | — | 零改 | ±0 |
+
+**验收（A1–A7 · 逐条回指需求 `:47` 与工程验收 `:166-171` 现文）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 需求三条各有一句对应（本批验收 ①：落法定死） | B1 四行在盘：点名联系（行 1）· 去处（行 2 的反面判据 + 行 1 `integration case`）· 无场景（行 3）· why（行 4）——逐行对照需求 `:47` 三句 |
+| A2 | 落盘位置正确、顺序可判 | 落地后同档内 `**Unit test files are not promoted into integration tests**` 行首索引 < `The wish to keep a permanent test around` 行索引 < `- **Closeout test line**` 行索引（`node` 一次性读档比对） |
+| A3 | 逐字一致（唯一权威目标形） | 落地后三串各恰 1 次：`The wish to keep a permanent test around is an integration test talking` ∥ `A trimmed copy kept in a permanent file is the same unit test file under a new name` ∥ `name it in the report as a ledger row for the parent to book` |
+| A4 | 零新术语（本批验收 ③） | 新句只用在册现名：`unit test file`（`:171` 在盘）· `integration test`（`:177` 在盘）· `integration case`（`:181` 在盘）· `ledger row`（`:191` 在盘）——不引入 `guard` / `permanent suite` 一类新名（行 4 的 `guards` 是动词、非名词；`trimmed copy` 是描述短语、非术语） |
+| A5 | D2 零复述 | 新句扫 `established from business needs` ∥ `graduated from unit files` ∥ `from a user-visible entry` ∥ `together with the test code` ∥ `business scenarios` —— 五串各 0 命中（命中即复述既有句，判红） |
+| A6 | 写形零回归 | 落地后该档逐行 ≤300 字符、`##` 块计数 10 ⇒ 10、`>300 = 0`（现盘基线 = 338 行 / 42,252 字符 / max 300） |
+| A7 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0 |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 有业务场景 | 改变业务行为的批，模型想留守卫 | 设计一条从用户可见入口走真实业务的集成用例（行 1 指向；形态与位置照 `:177` ∥ `:181`） |
+| C2 | 正常 · 无业务场景 | 纯文档 / 纯重构的批，模型想留守卫 | 报告里记一行台账、父侧登记；集成集零变、零新档（行 3） |
+| C3 | 错误 · 换个名字的提升 | 从单测档挑三条断言留成「精简常驻版」 | 判红：仍是同一份单测档（行 2）；不得以「已瘦身 / 只留三条」为由放行 |
+| C4 | 错误 · 无场景造件 | 没有业务场景却新建一个常驻档「先守着」 | 判红：守卫尚未成立（行 3） |
+| C5 | 边界 · 改了业务行为却报 `none` | 收口测试行 ② 写 `none` | 由 `:175` 判缺（本批新句不接管此判——两条规则正交，防止互相顶替） |
+
+**受影响文件（现行 = 本席 `node` 实读 2026-10-24；行数口径 = `split(/\r?\n/).length - 1`）**
+
+| 文件 | 现行 | Δ → 改后 |
+|---|---|---|
+| `thincoder-core/prompts/discipline-engineering.md` | 338 行 / 42,252 字符 / max 300 / >300 = 0 | L1 +4 ⇒ 342 行；逐行 ≤300 保持 |
+| `docs/core/design/PROMPT-SYSTEM.md` | 3,515 行 / 300,987 字符（本节写入前） | 本节新增（设计档面，非验收对象） |
+| L2 ∥ L3 所列各面 | — | ±0 |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 落 `## Testing discipline` 节内、`:171` 之后，不新增节 | 禁令与其去处必须读在一起：`##` 块计数零连带（10 ⇒ 10）；同节已有 `:172-196` 的收口 ∥ 窗口 ∥ 欠账句，去处紧贴禁令即「禁完之后怎么办」 |
+| K2 | 只落工程纪律层，不落公共层（`thincoder-core/prompts/common.md`） | 四问判据：这是「该模式下怎么干活」⇒ 纪律层；公共层只装两模式共建的合作基础。先例同轴：测试层级知识落两模式纪律档、未落公共层（§6.10 ∥ D-PS11 ∥ D-PS13） |
+| K3 | 只落一行、不重写 `:171` | `:171` 的禁止句与新句各管一面（禁止 ⟂ 去处），改写会让禁令与去向挤成一句、判读面消失；D8 只要求删失效表达——`:171` 未失效 |
+| K4 | 记待办的动词用「在报告里记一行台账、父侧登记」 | 工程纪律层的读者含 eng-coder（无台账写权）；写成「记成待办」会让子代理执行一个它没有的动作。`ledger row` 是 `:191` 的在册说法，父侧登记 = 既有分工 |
+| K5 | 不写「guard」类新名词，题眼直译用户原话（常驻测试 ⇒ integration test） | 本批验收 ③ 零新术语；用户 18:08 的裁定本身就是一个「同一个东西两个名字」的纠正，再引入英文新名只会把映射再拆一次 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.46 ∥ §6.47 形制（双面形 §6.44 + 写形 §6.45 + 落点表 + 验收 + 用例表 + 关键决策 + 勘察证据行）。
+**对齐** = 双面形逐字照 §6.44；写形照 §6.45；落点给内容锚；验收给读法。
+**偏离** = ① 落笔动作 = **纯增一条**：§6.47 是先例里唯一以「删规则」为动作的（旧句与新规正面相反）；本节无可删的相反旧句（`:171` 与新句同向），故不设删除项。② 首次在验收里给「顺序判据」（A2 行首索引比较）——因为本条的正确位置本身就是判据的一部分（须紧贴 `:171`）。
+
+**既有件三问（新增标签「常驻守卫的本能」）**：`existing but unusable: `:171` 不提升句`（禁止面在盘，去处面缺——见 F1）⇒ 新增句成立；标签 `none found`——同节 `:184` 有 `permanent tests` 但那是成本句（永久测试每次相关改动都要缴税）、`:191` 有集欠账句；无一句把「想留守卫」这个冲动指向集成测试（`instinct` ∥ `urge` 全档 0 命中，实读）。
+**落笔位置判定**：不进 `## Engineering judgment`（该节判「判断与尺寸」，不是测试纪律）；不进 `## Doc discipline`（该节管文档归属与命名，本条的落点是测试件不是文档）。
+
+**勘察证据行（本席实读 · 2026-10-24）**
+
+- `docs/core/requirements/TESTING.md:47`：§1.2 技法轴新条全文（点名联系 ∥ 无场景 ⇒ 待办 ∥ 不造常驻件）——需求依据；同档 `:22`（F8 永不互转）· `:80`（F8 表格行）· `:31-36`（用毕即删 why 与批档读数）· `:34`（按事故史买）· `:62-64`（防膨胀两闸）。
+- `thincoder-core/prompts/discipline-engineering.md`：338 行 / 42,252 字符 / max 300 / >300 = 0——`## Testing discipline` 是 10 个 `##` 块之一。
+- 同档节内逐行实读：`:166` 单元测试定义 · `:167` 用毕即删 + Why · `:171` 不提升句（B1 上锚）· `:172` 收口测试行（B1 下锚）· `:175` `none` 门槛 · `:177` 集成测试定义 · `:178` 项目资产 · `:181` 用例位置 · `:184` 常驻税句 · `:186` 永不互转 · `:191-194` 欠账 + `ledger row`。
+- `thincoder-core/prompts/discipline-normal.md:189-191`：普通侧同款禁令在盘（`:190` 单测档随批档存 ∥ `:191` 不提升）——L2 零改的依据，也是上抛项的坐标。
+- `docs/core/design/TESTING.md` §3.1 ∥ §3.2（`:105-116`）：三层来源与寿命表、两层界线永不互转——设计面机制在案，本批零改（本条的落点是提示词，不是测试机制）。
+- 本档 §6.44（`:2746-2903`）∥ §6.45（`:2905-3113`）∥ §6.46（`:3115-3261`）∥ §6.47（`:3264-3426`）：形制与写形先例。
+- `node scripts/prompt-refs-check.mjs` 基线 = §6.47 勘察行所记命中 0（本批落地后由实施席复跑，A7）。
+- 公共源勘察：工作目录内公共源文档已查（`docs/**` 需求 ∥ 设计两树 + `thincoder-core/prompts/**`）——相关 = 上述三档；独立公共源文档仓：无（`PROJECT-MANIFEST.json` `index.publicRepos` = []，本席实读）。
+
+**UI / 交互决策**：无界面面——本条只改模型可见提示词文本与设计档。
+
+**上抛项（待裁）**
+
+- 〔父侧 · 普通侧面〕`thincoder-core/prompts/discipline-normal.md:191` 有同款禁令、同样没有去处（`:190` 单测档随批档存、不删，欲望的去处因此更隐）。本批按任务书只落工程面，未夹带——是否补普通面一句、措辞是否随该面的寿命口径改写 = 父侧裁（补则另起一笔，不并入本批）。
+- 〔父侧 · 既有重复〕同档 `:171` ∥ `:186` 是同一禁令的两处成文（D2 既有重复，先于本批在盘）。本批新句不引用、不改写任何一处；是否合并 = 父侧裁，不在本批射程。
+- 〔父侧 · 编号〕本节未加 §7 D-PS 行（D-PS46 / D-PS47 的归属仍待父侧收口时定，承 §6.47 上抛项）。
+
 ## 7. 关键决策记录
 
 | # | 决策 | 理由 |

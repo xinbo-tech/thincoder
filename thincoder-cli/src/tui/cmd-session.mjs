@@ -119,7 +119,7 @@ export async function handleSessionCommand(ctx) {
   if (occ.occupied) {
     pushLine(`⚠ Slot ${e.slot} is being used by another live process (${occ.owner}) — continuing here will create a new copy on the next save`, C.warn)
   }
-  applySession(agent, data, occ.occupied ? {} : { slot: e.slot })
+  const applied = applySession(agent, data, occ.occupied ? {} : { slot: e.slot })
   // #41 准翻列：附着动作 = 翻转面自己赋值（`agent.manifest` ← 判据结果——相位行当回合起活；
   // 工作区放行 ⇒ 显式置 `null` = 零附着）。
   if (targetEng) agent.manifest = manifestAfterSwitch
@@ -135,5 +135,9 @@ export async function handleSessionCommand(ctx) {
     state.tasks = []
   }
   pushLabel(`── Switched to slot ${e.slot} (${desc.total} messages) ──`, C.warn)
+  // 设计档 §3.2（R2）：取值在 :122（局部量），打印必须晚于 `state.lines = []` / `restoreLines`——否则行被清掉。
+  if (applied.droppedDesignTokens > 0) {
+    pushLine(`⚠ ${applied.droppedDesignTokens} 个已批准设计凭证在本槽不再生效（切回原槽可恢复）`, C.warn)
+  }
   render()
 }
