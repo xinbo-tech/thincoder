@@ -30,7 +30,10 @@ export function segmentCJK(text) {
  * 无 token ⇒ 返回空串（消费侧据此退化——SESSION.md §6.19 边界情形表）。
  */
 export function buildFtsQuery(query) {
-  const terms = query
+  // 模型偶尔把 query 传成数组 / 对象（schema 声明是 string）：先按文本归一。
+  // 不归一的话 query.split 直接抛 TypeError，整个回合崩掉（GitHub #30）。
+  const text = Array.isArray(query) ? query.join(" ") : query == null ? "" : String(query)
+  const terms = text
     .split(/[\s,，。、;；!！?？()（）"`]+/)
     .map((t) => t.trim())
     .filter(Boolean)
