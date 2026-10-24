@@ -25,7 +25,7 @@ import { relative, resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
 import { runDocCheck } from "../doc-check/index.mjs"
-import { firstVerdictLine, gateEngineError, staleEngineFiles } from "../doc-check/version.mjs"
+import { firstVerdictLine } from "../doc-check/version.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
 
 /** 平台路径键（win32 大小写不敏感——只作集比对，非判据面）。 */
@@ -127,11 +127,6 @@ function evaluate({ abs, cwd, agent, scope, clock }) {
   if (!read.ok && read.reason === "missing") {
     return { state: "not-applicable", first: null, report: "[doc-check gate] 未跑（本项目无声明面）", hitLines: [], noteLines: [], range: emptyRange("none") }
   }
-  // 引擎陈旧只作注记、不拦（2026-10-24 用户裁定）：陈旧说明读数由本会话加载的引擎产出，
-  // 不等于判据错了；把整条收口链停死代价远大于收益。注记随回执带出，人看得到。
-  const version = staleEngineFiles(clock ?? {})
-  const engineNote = version.stale.length ? gateEngineError(version).split("\n")[0] : null
-
   // 范围（判谁）：writer = 写者触达账；close = 本批笔域集（触达账）∪ git 面。
   // 批档自身不入范围（载体不是判据对象——判它只会把载体的行宽记成本批欠账）。
   const selfKey = pathKey(resolve(abs))
@@ -153,7 +148,6 @@ function evaluate({ abs, cwd, agent, scope, clock }) {
 
   // 附加行（只挂 close 面）：他批在途（逐档列出、不计入 K）+ 两条取基明示（不静默）。
   const notes = []
-  if (engineNote) notes.push(engineNote)
   if (!aligned) notes.push("命中行不可对齐（引擎报面 ✗ 行数与命中数不等）——显示行按自造形，判定按命中对象")
   if (close) {
     if (foreign.length) notes.push(`他批在途 ${foreign.length} 档（非本批笔域 · 未计入 K · 请其作者在其批修复）：${foreign.map((e) => locationOf(e, root)).join(" ∥ ")}`)

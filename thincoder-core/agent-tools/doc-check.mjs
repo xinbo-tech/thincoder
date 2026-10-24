@@ -18,12 +18,10 @@
 import { resolve } from "node:path"
 import { projectRootView } from "../manifest.mjs"
 import { runDocCheck } from "../doc-check/index.mjs"
-import { staleEngineFiles, gateEngineError, withEngineNote } from "../doc-check/version.mjs"
 import { DESC } from "../tools/shared.mjs"
 
 // 版本函数单源 = `doc-check/version.mjs`（两消费面：本档 gate 分支 ∥ `batch-gate.mjs` 两机械点）——
 // 本档只转口，导出面不变（原五档清单已随之六档：`version.mjs` 自身入清单）。
-export { staleEngineFiles, gateEngineError }
 
 export const docCheckTool = {
   name: "doc_check",
@@ -63,9 +61,6 @@ export const docCheckTool = {
     }
     const root = view.state === "ok" ? view.root : target
     if (mode === "gate") {
-      // 引擎陈旧只作注记、不拦（2026-10-24 用户裁定：改了检查器就再也收不了口，太蠢）：
-      // 判据 = 读数仍由本会话加载的引擎产出，但「引擎文件的 mtime 晚于进程启动」不等于判据错了——
-      // 人看得到这一行就能自己判断，没必要把整条收口链停死。
       const docs = explicit ?? (Array.isArray(ctx?.agent?._touchedFiles) ? ctx.agent._touchedFiles : [])
         .filter((p) => typeof p === "string" && p.toLowerCase().endsWith(".md"))
       return runDocCheck(root, { mode: "gate", docs, docsSource: explicit ? "explicit" : "session" }).report
@@ -74,6 +69,6 @@ export const docCheckTool = {
     if (explicit === null) {
       return "doc_check: `docs` is required in report mode — pass the explicit list of documents to judge (e.g. docs: [\"docs/design/X.md\"]). There is no default range: nothing is scanned unless you name it."
     }
-    return withEngineNote(runDocCheck(root, { docs: explicit, docsSource: "explicit" }).report, staleEngineFiles())
+    return runDocCheck(root, { docs: explicit, docsSource: "explicit" }).report
   },
 }

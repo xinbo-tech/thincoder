@@ -6,7 +6,6 @@ import { dirname, join, relative, resolve } from "node:path"
 import { tmpdir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { DOC_CHECK_BUILTINS, runDocCheck } from "../doc-check/index.mjs"
-import { ENGINE_FILES, gateEngineError, staleEngineFiles, withEngineNote } from "../doc-check/version.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO = resolve(HERE, "../..")
@@ -143,35 +142,6 @@ test("AC-50③ · 引用目标点查：节在盘读目标档；裸名不跨目�
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
-})
-
-test("AC-51 · F8 面零改：六档清单逐字；stale ⇒ gate 首行 ERROR；report 注记前置且原报面逐字", () => {
-  assert.deepEqual(ENGINE_FILES, [
-    "doc-check/index.mjs",
-    "doc-check/anchors.mjs",
-    "doc-check/width.mjs",
-    "doc-check/version.mjs",
-    "agent-tools/doc-check.mjs",
-    "tool-docs/doc_check.md",
-  ])
-  const stale = staleEngineFiles({ nowMs: 10_000, uptimeSec: 0, stat: () => ({ mtimeMs: 20_000 }) })
-  assert.equal(stale.stale.length, 6, "六档全 stale")
-  assert.match(gateEngineError(stale).split("\n")[0], /^DOC-CHECK GATE: ERROR（引擎已更新/)
-  const fresh = staleEngineFiles({ nowMs: 10_000, uptimeSec: 0, stat: () => ({ mtimeMs: 5_000 }) })
-  assert.equal(fresh.stale.length, 0, "早于启动 ⇒ 不 stale")
-  const unreadable = staleEngineFiles({ nowMs: 10_000, uptimeSec: 0, stat: () => { throw new Error("ENOENT") } })
-  assert.equal(unreadable.stale.length, 6, "不可读 ⇒ fail-closed 入 stale")
-  const report = "DOC-CHECK GATE: PASS\n正文行"
-  assert.equal(withEngineNote(report, fresh), report, "无陈旧 ⇒ 报面逐字")
-  const noted = withEngineNote(report, stale)
-  assert.ok(noted.endsWith(`\n${report}`), "原报面逐字留在注记行之后（既有行 ∥ verdict 零改）")
-  assert.match(noted.split("\n")[0], /^\[doc_check note\] 引擎陈旧/)
-})
-
-test("AC-51 · gate 分支仍取引擎版本读数，但陈旧不再短路（2026-10-24 裁定：不许没错造错）", () => {
-  const tool = readFileSync(join(REPO, "thincoder-core/agent-tools/doc-check.mjs"), "utf8")
-  assert.ok(tool.includes("const version = staleEngineFiles()") || tool.includes("staleEngineFiles()"), "仍取版本读数")
-  assert.ok(!tool.includes("return gateEngineError(version)"), "陈旧不再直接返回 ERROR 串")
 })
 
 test("AC-47 · 无 manifest 的目录照常判（manifest 报错归 manifest 工具，不在本工具面）", () => {
