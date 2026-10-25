@@ -43,7 +43,7 @@
   - 「本笔 **A) 轻通道**（改：__｜射程：__｜回退 = 可 revert）∥ **B) 全链**（触：__｜设计 → 评审 → 批准）——走哪个？」
   - **可附建议与理由**（主 agent 倾向 A 或 B 及原因）——**建议不是默认**；两条路平等摆出，不预设常态。
 - **未选定 ⇒ 不动**——不是「默认回全链」，是等挑选；用户选定哪条就走哪条。
-- **中途越界 ⇒ 停笔重提请**（禁偷渡）——重新给选择题、重新等选定。
+- **中途越界 ⇒ 停笔重提请**（禁偷渡）——重新给选择题、重新等选定；**落到提示词面 ∥ 设计档面 = 例外**：这两面只有全链一条路，不出 A/B 题、只报全链去向（§2.10 面界）。
 - **零链面（诊断 / 探针）不产笔 ∥ 免提请**——只读 + 临时区、产品面零改（经产品面改动 ⇒ 回到选择题）。
 - 本机制无 UI 组件面；交互面 = 选择题句（已定形，见上）。
 
@@ -278,7 +278,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 ### 2.10 路由选择题落提示词面（F-LC2）
 
-**落点两档**：`thincoder-core/prompts/persona-engineering.md`（轻通道块整段 = 第 211–217 行 + 两处指代）∥ `thincoder-core/prompts/discipline-engineering.md`（五处句内改：首句 ∥ 走查点名归类 ∥ 附则指代 ∥ 轮次形指代 ∥ 行使线）。提示词面 = 产品代码面（D1）⇒ **落笔 = 实施轮 eng-coder**；本段给逐字锚，实施席照此落笔、不另行改写。
+**落点两档**：`thincoder-core/prompts/persona-engineering.md`（轻通道块整段 = 第 211–217 行 + 两处指代）∥ `thincoder-core/prompts/discipline-engineering.md`（六处句内改：首句 + 同行收尾句 ∥ 缺陷类分类义 ∥ 走查点名归类 ∥ 附则指代 ∥ 轮次形指代 ∥ 行使线）。提示词面 = 产品代码面（D1）⇒ **落笔 = 实施轮 eng-coder**；本段给逐字锚，实施席照此落笔、不另行改写。
 
 提示词面 ∥ 设计档面笔不入轻通道（同档 `:224` 既有句）⇒ 提请句限定 **code pen**：这两面只有全链一条路，不出一条无 A 项可选的选择题（需求 §2.1 面界）。
 
@@ -290,7 +290,7 @@ The same marker is also the settlement gate credential: settling the row (close 
   A **recommendation and its reason** may ride along (which route you lean to and why) — **a recommendation is not a default**, and neither route is the normal case.
   The question carries the criterion half-sentence — which of the three items ①②③ was hit ∥ annotation item · performance observation.
   **No pick ⇒ nothing moves** — not "default back to the full chain": wait for the choice.
-  **Crossing the boundary mid-pen ⇒ stop, report, and re-ask** — no smuggling: a pen that outgrows the picked route goes back to the choice question.
+  **Crossing the boundary mid-pen ⇒ stop, report, and re-ask** — no smuggling: a pen that outgrows the picked route goes back to the choice question (a pen that has landed on the prompt face ∥ the design docs takes the full chain instead: stop, report the destination, and put up no question).
   **Diagnostics / probes (zero-chain) produce no pen and need no question** — read-only + temp area, product face unchanged (touching the product face ⇒ back to the choice question).
 ```
 
@@ -299,9 +299,10 @@ The same marker is also the settlement gate credential: settling the row (close 
 - `:223` —— `swap out the disclosure's "this pen = light channel"` ⇒ `swap out the pick's "A) light channel"`；
 - `:227` —— `(disclosure · change · walkthrough · freeze;` ⇒ `(the choice question and the pick · change · walkthrough · freeze;`。
 
-**逐字 EN（`thincoder-core/prompts/discipline-engineering.md`，五处句内改、行数 ±0）**：
+**逐字 EN（`thincoder-core/prompts/discipline-engineering.md`，六处句内改、行数 ±0）**：
 
-- `:97` 轻通道块首句 —— `hit one of the three ⇒ walk; bypass ≠ cancellation` ⇒ `hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation`；
+- `:97` 轻通道块首句 + 同行收尾句（整行改写）—— 首句 `hit one of the three ⇒ walk; bypass ≠ cancellation` ⇒ `hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation`；行末 `— walks this channel.` ⇒ `— is put up as a choice question; it moves only after the pick.`；
+- `:102` 缺陷类分类义 —— `**a defect ⇒ walk**` ⇒ `**a defect ⇒ goes up as item 2**`；括号内定义半句原样保留（`(the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics)`）—— 路由语改分类语，与 `:104` 新句 `whether to walk is still the user's pick` 同向；A2 以 `⇒ walk` = 0 捕获；
 - `:104` 走查点名归类 —— `routed by the first two (detail class straight through by default; behavior class = defect fix)` ⇒ `routed by the first two (detail class goes up as item 1; behavior class goes up as item 2 — either way it only settles which item it is routed to; whether to walk is still the user's pick)`；
 - `:110` 附则指代 —— `(the disclosure carries "revertable"` ⇒ `(the choice question carries "revertable"`；
 - `:112` 轮次形指代 —— `(per-pen entries: disclosure · change · walkthrough · freeze)` ⇒ `(per-pen entries: the choice question and the pick · change · walkthrough · freeze)`；
@@ -314,16 +315,16 @@ The same marker is also the settlement gate credential: settling the row (close 
 | 文件 | 现量 | Δ | 形态 |
 |---|---|---|---|
 | `thincoder-core/prompts/persona-engineering.md` | 458 行 | 轻通道块 7 行 → 7 行（第 211–217 行整段改写）+ 两处句内改 ⇒ ±0 行 | 提示词面——实施轮 eng-coder 落笔 |
-| `thincoder-core/prompts/discipline-engineering.md` | 348 行 | 五处句内改（首句 ∥ `:104` 归类 ∥ 附则 ∥ 轮次形 ∥ 行使线）⇒ ±0 行 | 提示词面——实施轮 eng-coder 落笔 |
-| `docs/core/design/LIGHT-CHANNEL.md` | 471 行（含本批落笔） | §1 定位 / §2.1 / §2.2 / §2.10 / §3 两处 / §4 ② / §7 K4 / §8 | 设计档——本席笔（本批） |
+| `thincoder-core/prompts/discipline-engineering.md` | 348 行 | 六处句内改（首句 + 同行收尾句 ∥ `:102` 归类 ∥ `:104` 归类 ∥ 附则 ∥ 轮次形 ∥ 行使线）⇒ ±0 行 | 提示词面——实施轮 eng-coder 落笔 |
+| `docs/core/design/LIGHT-CHANNEL.md` | 472 行（含本批落笔） | §1 定位 / §2.1 / §2.2 / §2.10 / §3 两处 / §4 ② / §7 K4 / §8 | 设计档——本席笔（本批） |
 | `docs/core/design/PROMPT-SYSTEM.md` | 4,402 行 | §6.12 分层归属一句（改为选择题形） | 设计档——本席笔（本批） |
 
 **验收（本批 AC · 回指需求）**：
 
 | # | 回指 | 判法 / 读数 |
 |---|---|---|
-| A1 | 需求 §4 ②、§2.2 判定句 | 实施后两档逐档 `grep -c "disclose-then-go"` = 0、`grep -c "hit one of the three ⇒ walk"` = 0；`persona-engineering.md` 含 `both routes on the same line` 恰 1、`choice question` = 3（落笔块内三处）、`No pick ⇒ nothing moves` 恰 1、`a recommendation is not a default` 恰 1；四处旧指代串各 = 0（persona：`the disclosure's "this pen = light channel"` ∥ `per-pen entries in §1 (disclosure`；discipline：`(the disclosure carries "revertable"` ∥ `(per-pen entries: disclosure`）；`discipline-engineering.md` 的 `disclos` 全档 = 0；`persona-engineering.md` 的 `disclos` 余 2 行 3 处（`:44` 交付缩减面 ∥ `:346` 文件域声明面——轻通道块内 = 0） |
-| A2 | 需求 §2.1 边界句 | `grep -c "the user can overrule" thincoder-core/prompts/discipline-engineering.md` = 0；同档 `straight through` = 0、含 `nothing moves before the pick` 恰 1、含 `put it up as a choice` 恰 1 |
+| A1 | 需求 §4 ②、§2.2 判定句 | 实施后两档逐档 `grep -c "disclose-then-go"` = 0、`grep -c "hit one of the three ⇒ walk"` = 0；`persona-engineering.md` 含 `both routes on the same line` 恰 1、`choice question` = 4（落笔块内三处 + `:227` 指代句一处）、`No pick ⇒ nothing moves` 恰 1、`a recommendation is not a default` 恰 1；四处旧指代串各 = 0（persona：`the disclosure's "this pen = light channel"` ∥ `per-pen entries in §1 (disclosure`；discipline：`(the disclosure carries "revertable"` ∥ `(per-pen entries: disclosure`）；`discipline-engineering.md` 的 `disclos` 全档 = 0；`persona-engineering.md` 的 `disclos` 余 2 行 3 处（`:44` 交付缩减面 ∥ `:346` 文件域声明面——轻通道块内 = 0） |
+| A2 | 需求 §2.1 边界句 | `grep -c "the user can overrule" thincoder-core/prompts/discipline-engineering.md` = 0；同档 `straight through` = 0、`⇒ walk` = 0（同捕 `:97` 首句与 `:102` 路由语）、`walks this channel` = 0、含 `nothing moves before the pick` 恰 1、含 `put it up as a choice` 恰 1、含 `a defect ⇒ goes up as item 2` 恰 1 |
 | A3 | 需求 §1 模块目标 | `grep -n -e "交底即行" -e "用户可改判" docs/core/design/LIGHT-CHANNEL.md` 的命中行集 = 仅本行（两串 = 本行的扫描字面）；其余任何一行命中 ⇒ 红。另一维：§2.1 行使面 ∥ §2.2 皆述「未选定即不动」（实读核对） |
 
 **用例表（正常 / 边界 / 错误）**：本批零可执行面（提示词正文 + 设计档）⇒ 无单元测试档；读数形 = 上表三条 grep（收口行报读数）。
@@ -333,13 +334,13 @@ The same marker is also the settlement gate credential: settling the row (close 
 | C1 | 正常 · 细节面笔 | 主 agent 拟出选择题 + 建议 A | 用户回「A」⇒ 开工；建议不被当成默认 |
 | C2 | 边界 · 用户不选 | 选择题已出，用户未回 | 不动（不自行开工、也不静默转全链） |
 | C3 | 错误 · 先在轻通道开工后补问 | 未出选择题就落笔 | 违规（需求 §4 ②）；该笔按全链重跑（触界内容不经轻通道） |
-| C4 | 边界 · 中途越界 | 轻通道笔做到一半发现改的是提示词面 | 停笔、报、重给选择题 |
+| C4 | 边界 · 中途越界 | 轻通道笔做到一半发现改的是提示词面 | 停笔、报；该面只有全链一条路 ⇒ **不出 A/B 题**、只报全链去向，按全链处置（§2.10 面界 ∥ §2.2 越界限定） |
 
 **边界（本段不做）**：不改三样清单本体（准入判据仍 = §2.1）· 不改收尾全链（§2.4）· 不改核销机械门（§2.5）· 不改代码笔通路（§2.8）· 不改 `scope` 等参数面 · 不加机械门 / 不加配置键 · 不改判据半句成分（命中三样①②③ ∥ 附则）。
 
 **先例行**：同机制同落点 = 本档 §3 落点表（`thincoder-core/prompts/persona-engineering.md` 「派发与收尾纪律」节内——同一清单行，本批只换句法：交底句 → 选择题句）；逐字锚交实施席落笔之形 = 本档 §2.8「提示词面」条。**对齐**。**偏离 = 无**。
 
-**勘察行**：查过 `docs/core/requirements/LIGHT-CHANNEL.md`（§1 / §2.1 边界句 / §2.2 / §4 ②——本席本轮实读）∥ `thincoder-core/prompts/persona-engineering.md:211-224` ∥ `thincoder-core/prompts/discipline-engineering.md:97-118` ∥ `docs/core/design/PROMPT-SYSTEM.md:361`；`index.publicRepos: []`（无公开源仓）⇒ 无相关公开文档。
+**勘察行**：查过 `docs/core/requirements/LIGHT-CHANNEL.md`（§1 / §2.1 边界句 / §2.2 / §4 ②——本席本轮实读）∥ `thincoder-core/prompts/persona-engineering.md:211-227` ∥ `thincoder-core/prompts/discipline-engineering.md:97-118` ∥ `docs/core/design/PROMPT-SYSTEM.md:361`；`index.publicRepos: []`（无公开源仓）⇒ 无相关公开文档。
 
 **UI / 交互决策**：无界面面——本批只改模型可见提示词文本与设计档。
 
@@ -350,7 +351,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 | 段落 | 档 | 节 | 形态 |
 |---|---|---|---|
 | 准入三样清单 ∥ 一句边界 ∥ 附则 ∥ 轮次形（含启动即挂账）∥ 收尾形 ∥ 行使面 ∥ 边界 | `thincoder-core/prompts/discipline-engineering.md`（EN） | 「基本流程」节内（步 4 后） | 既有节内增列 |
-| 路由选择题句（两条路由 ∥ 判据半句 ∥ 建议非默认）∥ 未选定即不动 ∥ 零链免提请 ∥ 越界停笔重提请 ∥ 记账（含启动即挂账）∥ 代码笔通路句（开轮挂账 ⇒ 直改放行；含轮次行标记半句）∥ **轮次界 = 收口** ∥ 收口触发（提醒时点）∥ 跨会话接手 ∥ 核销对接 | `thincoder-core/prompts/persona-engineering.md`（EN） | 「派发与收尾纪律」节内（实施轮角色路由 后） | 既有节内增列 |
+| 路由选择题句（两条路由 ∥ 判据半句 ∥ 建议非默认）∥ 未选定即不动 ∥ 零链免提请 ∥ 越界停笔重提请（面界例外 = 回全链、不出题）∥ 记账（含启动即挂账）∥ 代码笔通路句（开轮挂账 ⇒ 直改放行；含轮次行标记半句）∥ **轮次界 = 收口** ∥ 收口触发（提醒时点）∥ 跨会话接手 ∥ 核销对接 | `thincoder-core/prompts/persona-engineering.md`（EN） | 「派发与收尾纪律」节内（实施轮角色路由 后） | 既有节内增列 |
 
 **咬合处置（既有条款 → 处置）**：
 

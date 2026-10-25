@@ -27,8 +27,39 @@
 
 **为什么这个形更准**：点头是二元确认，它默认采纳被提议的那条——被问的人要拒绝得先想到拒绝。而「轻通道还是全链」里没有哪条是天然预设，两条路一起摆在台面上，选的才是真选。我上一版写「交底 → 等点头」，等于把轻通道设成了默认值，只是把否决权给了您——形似而神不是。
 
+**修正要求（父侧核 · 2026-10-25 19:42 · 来源 = 设计评审轮次 2 的三条 New）**——三件，逐件给坐标与依据：
+
+**① 🔴 增量表漏一处：`thincoder-core/prompts/discipline-engineering.md:102`**
+
+设计档 §2.10 的 discipline 增量列了五处（`docs/core/design/LIGHT-CHANNEL.md:303`–`:307`：`:97` 首句 ∥ `:104` 走查点名归类 ∥ `:110` 附则指代 ∥ `:112` 轮次形指代 ∥ `:117` 行使线），**没有 `:102`**。
+
+实读 `thincoder-core/prompts/discipline-engineering.md:102` 现文：
+
+```
+2. **Defect fix** — **a defect ⇒ walk** (the implementation contradicts an existing source: ...)
+```
+
+`a defect ⇒ walk` 是**路由语**（自动放行），与需求 §2.1 第 2 条的「**是缺陷即归此类**」（分类语）相抵；也与同清单已改的 `:104` 新文「whether to walk is still the user&apos;s pick」正面冲突——同一张清单里两条相邻项写相反的规则。
+
+落地后缺陷修复笔（轻通道最常见的一类）仍会被自动放行，本批要治的正是这个。
+
+**要求**：把 `:102` 补进增量表并改写成分类义（如 `a defect ⇒ goes up as item 2`，保留其括号内的定义半句），同步在 A2 增一条能捕获它的 grep（现 A2 的 `straight through` = 0 抓不到 `a defect ⇒ walk`）。
+
+**② 🟡 `docs/core/design/LIGHT-CHANNEL.md:336` 与 `:283` 相抵**
+
+`:336`（C4 行）：「轻通道笔做到一半发现改的是提示词面 ⇒ 停笔、报、**重给选择题**」
+`:283`：「提示词面 ∥ 设计档面笔不入轻通道 ⇒ 提请句限定 **code pen**：这两面只有全链一条路，**不出一条无 A 项可选的选择题**」
+
+同一情形（中途发现是提示词面），两条期望相反。**要求**：C4 的期望改成与该面一致形（只报全链去向、不出 A/B 题），或 `:283` 说明例外——二选一，档内一致。
+
+**③ 🔵 `docs/core/design/LIGHT-CHANNEL.md:342` 勘察行读数**
+
+勘察行写 `thincoder-core/prompts/persona-engineering.md:211-224`，而增量改到 `:227`（`:300` 的指代句）。**要求**：读数改 `:211-227`，覆盖所改末行。
+
+**范围**：只改设计档 `docs/core/design/LIGHT-CHANNEL.md`（增量表 + C4 行 + 勘察行 + A2 断言）。**不动提示词档**（那是实施轮 eng-coder 的笔，逐字锚在 §2.10）。
+
 ## §2 批次任务与设计（eng-designer）
-**状态行**：设计完成（评审轮次 1 的 9 条已逐条落（修正轮 4）· 待复审）
+**状态行**：设计完成（评审轮次 1 的 9 条已逐条落（修正轮 4）· 交付前自检订正 1 条（修正轮 5：A1 的 choice question 计数 3 → 4）· 待复审（轮次 2））
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试覆盖 / 验收对照 / 关键决策 / 上抛项>
 
 **本批条目（覆盖）**：台账 `#1792`（LIGHT-CHANNEL · 归批）——一件：轻通道准入的**放行票归用户**。路由由主 agent 拟成**选择题**（A 轻通道 ∥ B 全链，两条平等摆出，可附建议与理由但**建议不是默认**），**用户选定才开工**；**未选定 ⇒ 不动**（不是默认回全链，是等挑选）；中途越界 ⇒ 停笔重新给选择题。
@@ -136,6 +167,38 @@
 
 **未覆盖 · 上抛父侧**：批次档自身的 doc_check gate 命中（24 条 = 既有、落于 §1 ∥ §2 前轮 ∥ §3 段：悬空裸档名如 `LIGHT-CHANNEL.md` ∥ `common.md`，超长段 `:76` ∥ `:94` ∥ `:122`）——非本席本轮改动引入；§3 段属评审笔、§1 属父侧笔 ⇒ 本席未动。设计档一档 gate = PASS。
 
+**§2 修正轮 5（交付前自检 · 一条 count 订正）**：A1 的 `choice question` 计数原写 3，与落笔后实读不符——系数修正轮 4 两笔叠加所致（#2 把 `thincoder-core/prompts/persona-engineering.md:227` 的指代改为 `(the choice question and the pick · …)`；#3 把该计数由 1 改 3）⇒ 落笔块内三处 + `:227` 一处 = **4 行 4 处**。设计档 A1 行已改为 4（补落点注 `:227`），行数 ±0。只改验收读数；判据、条目、判定句皆不变。
+
+- **A1 实跑读数（模拟落笔：按逐字锚替换两档后计数；`grep -c` 语义 = 命中行数）**：`disclose-then-go` 0 ∥ `hit one of the three ⇒ walk` 0 ∥ `both routes on the same line` 1 ∥ `choice question` **4** ∥ `No pick ⇒ nothing moves` 1 ∥ `a recommendation is not a default` 1。
+- **A1 续（旧串与 `disclos`）**：四处旧指代串各 0；`disclos` = `thincoder-core/prompts/persona-engineering.md` 2 行 3 处（`:44` ∥ `:346`）· `thincoder-core/prompts/discipline-engineering.md` 0。
+- **A2 实跑读数（同法）**：`the user can overrule` 0 ∥ `straight through` 0 ∥ `nothing moves before the pick` 1 ∥ `put it up as a choice` 1。
+- **落笔后行数**：两档各 458 ∥ 348（±0，与设计档 §2.10 表一致）；落笔前现量同值——`thincoder-core/prompts/` 实读旧串仍在（提示词面尚未落笔，§5 待 eng-coder）。
+- **§8 读数复核（实读）**：集成集 = `test/integration/` 7 档 22 例（`advisor-timeout-hot` 3 ∥ `anthropic-tool-roundtrip` 3 ∥ `batch-close-gate` 3 ∥ `browser-start-window` 3 ∥ `review-doc-scope` 4 ∥ `unbooked-pen` 3 ∥ `web-backend-404` 3）；`test/RTM.md` = CLI 端 7 个故事节 + 22 行，另 VS Code ∥ Desktop ∥ 异常与更正 ∥ 签署面四节 ⇒ 设计档 §8 的 7 档 22 例 ∥ 7 故事节成立。
+- **同步面复核**：`docs/core/design/PROMPT-SYSTEM.md` 的 `### 6.12` 在 `:353`、分层归属句 `:361` 已为选择题形 ⇒ 修正轮 4 #4 落点成立。
+- **上抛项 1 关闭**：`docs/core/requirements/METHODOLOGY.md:67` ∥ `:71` 已为选择题形（父侧已落需求档）。
+
+**§2 修正轮 6（设计评审 §3 轮次 2 · 三条 New 逐条落 · 父侧 §1「修正要求」19:42）**：只改设计档 `docs/core/design/LIGHT-CHANNEL.md`，现量 **472 行**（内容行数；`split(/\r?\n/).length` = 473）。本批条目、判定句、A1 读数皆不变；A1 的 `choice question` = 4 仍成立（本轮未动 persona 逐字块的可数串）。
+
+| # | 落点（落笔后行号） | 改动 |
+|---|---|---|
+| ①🔴 | `:281` ∥ `:302` ∥ `:318` | discipline 增量「五处」→「**六处**」（三处口径同改） |
+| ①🔴 | `:305` | 新增第六处：`:102` `**a defect ⇒ walk**` ⇒ `**a defect ⇒ goes up as item 2**`——括号内定义半句原样保留；路由语改分类语，与 `:104` 的 `whether to walk is still the user's pick` 同向 |
+| ①🔴 | `:304` | `:97` 增量由「首句」扩为**整行**改写：除首句外补行末 `— walks this channel.` ⇒ `— is put up as a choice question; it moves only after the pick.`（同一行的另一条无条件放行句，评审 #10 明列「:97 后半亦为无条件句」） |
+| ①🔴 | `:327`（A2 行） | 增三条读数：`⇒ walk` = 0（一条即同捕 `:97` 首句 ∥ `:102` 路由语，正是父侧点名「`straight through` 抓不到」的那串）∥ `walks this channel` = 0 ∥ 含 `a defect ⇒ goes up as item 2` 恰 1 |
+| ②🟡 | `:337`（C4 行） | 期望改为面界一致形：停笔、报；**不出 A/B 题**、只报全链去向，按全链处置（§2.10 面界 ∥ §2.2 越界限定）——取「改 C4」这一支 |
+| ②🟡 | `:46`（§2.2 越界行） | 补同一例外：落到提示词面 ∥ 设计档面 ⇒ 不出 A/B 题、只报全链去向。**不加则同一情形在档内仍有两条相反期望**（`:46` 说重给选择题、`:283` 说不出题）——C4 只是它的用例行 |
+| ②🟡 | `:293`（EN 逐字块越界行） | 同一情形的**落笔位**补半句例外：落到提示词面 ∥ 设计档面 ⇒ 回全链、不出题。**不加则落笔后提示词仍写 re-ask**，`acceptance-subset` 那类笔照旧会被自动放行——本批要治的就是这个 |
+| ③🔵 | `:343`（勘察行） | `persona-engineering.md:211-224` ⇒ `:211-227`，覆盖所改末行（`:227` 指代句） |
+| 附 | `:354`（§3 落点表 persona 行） | 内容清册补「面界例外 = 回全链、不出题」——否则清册与逐字块内容不符 |
+| 附 | `:319`（受影响文件表自身行） | 设计档现量 471 → 472 行 |
+
+**预期读数（本轮实跑 · 模拟落笔：按逐字锚在内存替换两档后计数，未改提示词档）**：persona = `disclose-then-go` 0 ∥ `hit one of the three ⇒ walk` 0 ∥ `both routes on the same line` 1 ∥ `choice question` 4（落于 `:211` ∥ `:216` ∥ `:217` ∥ `:227`）∥ `No pick ⇒ nothing moves` 1 ∥ `a recommendation is not a default` 1 ∥ 两处旧指代串各 0 ∥ `disclos` 2 行 3 处（`:44` ∥ `:346`）；discipline = `the user can overrule` 0 ∥ `straight through` 0 ∥ **`⇒ walk` 0** ∥ **`walks this channel` 0** ∥ `nothing moves before the pick` 1 ∥ `put it up as a choice` 1 ∥ **`a defect ⇒ goes up as item 2` 1** ∥ `disclos` 0；两档行数 ±0（458 ∥ 348 内容行）。
+**复扫读数（设计档自身）**：`五处` = 0 ∥ `211-224` = 0 ∥ `六处` = 3（`:281` ∥ `:302` ∥ `:318`，与增量表 6 条 bullet 逐条相容）。doc_check gate（设计档）= **PASS（0 命中）**。
+
+**两处附加改动的依据**：`:97` 行末 ∥ `:293` 半句均非新语义——前者是评审 #10 逐字点名却未进父侧 ① 清单的同句半截，后者是 ② 的同一冲突落实施逐字块后的同一形；两处都只是把已裁定的「未选定即不动 ∥ 无 A 项可选的选择题不成立」写到它必须出现的位。不加则本轮修完，档内（∥ 落笔后的提示词）仍自相矛盾。
+
+**上抛父侧 · 需求档笔（一条，未改）**：`docs/core/requirements/LIGHT-CHANNEL.md:42`「**中途越界 ⇒ 停笔重提请**：干到一半发现超出所选路线的边界 ⇒ 立刻停、报、重新给选择题」无面界例外，而同档 `:33`「轻通道只作用于**代码笔**——提示词面 ∥ 设计档面 ∥ 需求档面不入直改」已定面界。设计档本轮按 `:33` 定形（`:46` ∥ C4 ∥ 逐字块 `:293`）；需求档 `:42` 是否补同一半句 = 父侧笔。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -156,6 +219,31 @@
 
 **已核通过面**：§8 路由选择题批判定 `none`（`:455-461`）起步于 `test/RTM.md` 的逐节对账，理由 = 组件交互零改 ∧ 既有用例断言的业务可观察结果零改（唯一成立形）；实读 `thincoder/test/RTM.md` = 7 个 CLI 故事 + VS Code ∥ Desktop ∥ 异常与更正 ∥ 签署面，无一行断言路由问句或提示词正文 ⇒ 对账成立。先例行（`:330`）∥ 勘察行（`:332`，含 `index.publicRepos: []`）在场。文档归属：`thincoder/docs/README.md:79` 确认 `LIGHT-CHANNEL.md` 为拥有档、`:51` 确认 `PROMPT-SYSTEM.md` 拥有提示词系统面 ⇒ 无新档、无主题碎片化。（评审上下文报「无文档地图」——地图实存于 AGENTS.md 指定的 `thincoder/docs/README.md`。）
 **计数**：🔴 1 ∥ 🟡 6 ∥ 🔵 2（共 9）
+
+VERDICT: changes-required
+
+### 轮次 2（评审子代理）
+
+**设计评审 · 轻通道准入改「选择题 + 用户选定」（F-LC2）**｜对象 = 需求档 §1/§2.1/§2.2/§4② + 设计档 §2.2/§2.10/§3/§4②/§7 K4/§8｜对象状态 = 待评审
+
+**第 2 轮复核**：上轮 9 条（🔴1 / 🟡6 / 🔵2）逐条对现文核过 —— **全部 Fixed**（依据 = 设计档现文 471 行实读 ∥ 两档提示词在盘实读 ∥ `test/integration/` 7 档实读）。本轮新增 3 条（🔴1 / 🟡1 / 🔵1）。
+
+| # | Orig# | File | Severity | Status | Notes |
+|---|-------|------|----------|--------|-------|
+| 1 | 1 | docs/core/design/LIGHT-CHANNEL.md | 🔴 | Fixed | `:104` 归类句已入增量（设计档 :305 逐字给出 ⇒ 新文「detail class goes up as item 1 … whether to walk is still the user's pick」）；文件表 :317 记「五处」；A2（:326）加 `straight through` = 0。与需求 :24 ∥ 设计 :28 一致 |
+| 2 | 2 | docs/core/design/LIGHT-CHANNEL.md | 🟡 | Fixed | 旧步骤名清扫成篇：persona `:223` ∥ `:227`（:299-300）与 discipline `:110` ∥ `:112`（:306-307）；A1（:325）四处旧串各 = 0。实读核：`disclos` 在 persona 现 8 行（44/211/214/216/217/223/227/346），落入增量的 6 行全清 ⇒ 余 `:44` ∥ `:346` = 2 行 3 处，与 A1 数值逐字相符；discipline 三行（110/112/117）全在增量内 ⇒ 全档 = 0 |
+| 3 | 3 | docs/core/design/LIGHT-CHANNEL.md | 🟡 | Fixed | A1 改为 `choice question` = 4（落笔块三处 + `:227` 一处）——实读验证：块内 :288 ∥ :293 ∥ :294 各一次 + `:227` 一次 = 4，可满足 |
+| 4 | 4 | docs/core/design/LIGHT-CHANNEL.md | 🟡 | Fixed | A3 改为「命中行集 = 仅本行」；grep 实读：`交底即行`／`用户可改判` 全档仅命中 :327 本行 ⇒ 断言可满足（原 :309 的该字样已删） |
+| 5 | 5 | docs/core/design/LIGHT-CHANNEL.md | 🟡 | Fixed | 替换域改写为「第 211 行整行起至第 217 行末」+「旧头随整行删除，不叠新头」（:285）；A1 加 `hit one of the three ⇒ walk` = 0 ⇒ 旧头再留存即红 |
+| 6 | 6 | docs/core/design/LIGHT-CHANNEL.md | 🟡 | Fixed | 提请句限定 code pen：:283 出半句（提示词面 ∥ 设计档面「不出一条无 A 项可选的选择题」），逐字块 :288 落为「before each **code** pen」 |
+| 7 | 7 | docs/core/requirements/LIGHT-CHANNEL.md | 🟡 | Fixed | 需求 :7 该则原话后补「该则随之改形……现行 = §2.2」；设计 K4（:416）补「本裁取代需求档来源行……的直通义」⇒ 两条规则不再并列在线 |
+| 8 | 8 | docs/core/design/LIGHT-CHANNEL.md | 🔵 | Fixed | 窗口读数刷为 7 档 22 例（:457，3+3+3+3+3+4+3 = 22）；`test/integration/` 实读 7 档（含 `review-doc-scope` ∥ `batch-close-gate`）相符；:461 的 RTM 索引同步为「7 个故事节 22 例」 |
+| 9 | 9 | docs/core/design/LIGHT-CHANNEL.md | 🔵 | Fixed | :312 写明口径「内容行数，不含末尾空行」+ 另一读数（split = 459 ∥ 349）；读档工具总行数 459 ∥ 349 相符，458 ∥ 348 为内容行数 |
+| 10 | (new) | thincoder-core/prompts/discipline-engineering.md | 🔴 | New: 自动路由语只清了一半 | `:102`「**a defect ⇒ walk** (the implementation contradicts an existing source」仍在，而 :104 已改为「whether to walk is still the user's pick」——同一张清单相邻两条互斥；`**Light channel …**: any one of the three named cases … walks this channel.`（:97 后半）亦为无条件句。设计档增量只列五处（:302-308），A2（:326）无一条 grep 能捕获「a defect ⇒ walk」⇒ 落地后提示词面仍预放行缺陷修复笔（最常见的一类） |
+| 11 | (new) | docs/core/design/LIGHT-CHANNEL.md | 🟡 | New: 代码笔限定与 C4 相抵 | C4（:336）期望「停笔、报、重给选择题」，而 :283 规定提示词面笔「不出一条无 A 项可选的选择题」——同一情形两条规则：重给选择题（无 A 项）vs 不出题 |
+| 12 | (new) | docs/core/design/LIGHT-CHANNEL.md | 🔵 | New: 勘察行读数未随增量更新 | :342 记实读 `persona-engineering.md:211-224`，而增量改到 `:227`（:300）——读面读数应覆盖所改末行 |
+
+**计数**：本轮 🔴 1 ∥ 🟡 1 ∥ 🔵 1（新增）；上轮 9 条 = 9 Fixed ∥ 0 Accepted ∥ 0 Unfixed。
 
 VERDICT: changes-required
 
