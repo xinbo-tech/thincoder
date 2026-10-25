@@ -208,23 +208,24 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
   - **doc face** (design docs) → eng-designer; requirement docs → you.
   - **engineering-tools face** (`scripts/**` · test dirs `test/**` / `tests/**` · `.thincoder/tmp/**` · CI) → parent direct edit (no spawn).
 - **Judgment lines**: dispatching the design doc to eng-coder = violation (the design doc goes to eng-designer); the requirement docs stay with you; a dispatch that reflex-maps "design passed → implementation" to eng-coder without judging the face = violation.
-- **Light channel (detail-face ∥ convergence-face pens — hit one of the three ⇒ walk)**: before each pen, a one-line disclosure — **disclose-then-go** (minute-level direct edits — a user re-route takes effect immediately); fixed forms:
-  - Light pen: "**This pen = light channel** (detail face ∥ convergence face · defect fix ∥ convergence face · performance observation) | change: __ | reach: __ | rollback = revertable"
-  - Full-chain pen: "**This pen = full chain** (touching: __) | design → review → approval"
-  The disclosure carries the criterion half-sentence — which of the three items ①②③ was hit ∥ annotation item · performance observation.
-  **The user re-routes with one word** (light or full chain, either direction).
-  **Crossing the boundary mid-pen ⇒ stop and re-disclose** — no smuggling.
-  **Diagnostics / probes (zero-chain) produce no pen and need no disclosure** — read-only + temp area, product face unchanged (touching the product face ⇒ judged by the three-item list + the one-sentence boundary).
+- **Light channel (detail-face ∥ convergence-face pens — hit one of the three ⇒ put it up as a choice)**: before each **code** pen, put the route to the user as a **choice question** — both routes on the same line, nothing preset:
+  - "**This pen — A) light channel** (change: __ | reach: __ | rollback = revertable) **∥ B) full chain** (touching: __ | design → review → approval) — which one?"
+  A **recommendation and its reason** may ride along (which route you lean to and why) — **a recommendation is not a default**, and neither route is the normal case.
+  The question carries the criterion half-sentence — which of the three items ①②③ was hit ∥ annotation item · performance observation.
+  **No pick ⇒ nothing moves** — not "default back to the full chain": wait for the choice.
+  **Crossing the boundary mid-pen ⇒ stop, report, and re-ask** — no smuggling: a pen that outgrows the picked route goes back to the choice question
+  (a pen that has landed on the prompt face ∥ the design docs ∥ the requirement docs takes the full chain instead: stop, report the destination, and put up no question).
+  **Diagnostics / probes (zero-chain) produce no pen and need no question** — read-only + temp area, product face unchanged (touching the product face ⇒ back to the choice question).
   **Start-up booking**: at round open (before the first pen) create the round batch record + the round ledger row.
   The batch record comes first, then the row — the pointer must target an on-disk record; the row walks to 在途, and settlement stays blocked until the closeout, which is the hook.
   **The account precedes the pen**: a pen without an account = not established.
 **Light-channel code pens**: with the round booked (batch record + 在途 row) on disk ⇒ direct edits pass.
 **No round on disk ⇒ book first, then pen**; refused ⇒ stop and report.
-  - **Why**: silently switching to the full chain would swap out the disclosure's "this pen = light channel" without a word.
+  - **Why**: silently switching to the full chain would swap out the pick's "A) light channel" without a word.
 **Prompt faces and design docs are not light-channel direct edits**: dispatch the English runtime face to eng-coder as an exact translation of the Chinese final text, and the design docs to eng-designer — the light channel applies to code pens only.
 The round ledger row's title carries 「收尾链待跑」 — that marker is the code-pen gate credential (missing marker ⇒ code pens stay blocked).
   The same marker is also the settlement gate credential: settling the row (close or migration to 已核销) is mechanically refused while the title still carries 「收尾链待跑」 — clear the marker only after the closeout chain has run.
-  The round = one batch record: per-pen entries in §1 (disclosure · change · walkthrough · freeze; convergence-face pens also record the source and the red/green pair); ledger rows per pen as usual.
+  The round = one batch record: per-pen entries in §1 (the choice question and the pick · change · walkthrough · freeze; convergence-face pens also record the source and the red/green pair); ledger rows per pen as usual.
   **§5 = not applicable**: no eng-coder implementation segment — the implementation face = parent direct edits, recorded in §1.
 **Round boundary = closeout**: new pens before the closeout stay in the round; after the closeout, new pens start a new round and a new record.
   **Closeout trigger** = the user says "close out" ∥ one of the reminder points you raise:

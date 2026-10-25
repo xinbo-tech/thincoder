@@ -6,8 +6,9 @@
  * 靠 DDL（AC-M2-2），不靠应用层 if。归档 = 软删除（状态值，无物理 DELETE——KD-M2-4）。
  * 本档静态 import node:sqlite ⇒ 消费侧一律动态 import 本模块链（W8 契约②——KD-M2-3）。
  *
- * 项目根推导单源（`resolveLedgerRoot`）+ 同级枚举（`ledgerChildren`）居本档——键 / 库位 / 根同源
- * （设计档 `LEDGER.md` §2.1「根解析面」/ §3.8）：读写同一判据（档在盘 ∨ 以目录自身路径为键的库在盘）。
+ * 项目根推导单源（`resolveLedgerRoot` = 判据本体 `owningProject` 的 `basis` 形状包装）+ 同级枚举
+ * （`ledgerChildren`）居本档——键 / 库位 / 根同源（设计档 `LEDGER.md` §2.1「根解析面」/ §3.8）：
+ * 读写同一判据（档在盘——项目 = 带 manifest 的目录；库在盘不算项目，台账无第二定义）。
  *
  * 落点（2026-09-17 用户裁定收正）：台账库**不在项目目录**——住用户数据目录
  * `~/.thincoder/ledger/<sha1(normalizeCwd(项目根绝对路径))[:16]>.db`（工作树外、天然不进 git；
@@ -17,11 +18,11 @@
  */
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, opendirSync } from "node:fs"
-import { dirname, join, resolve, sep } from "node:path"
+import { join, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 
 import { configDir } from "./config-io.mjs"
-import { MANIFEST_REL, projectRootView } from "./manifest.mjs"
+import { MANIFEST_REL, owningProject, projectRootView } from "./manifest.mjs"
 // 归一步单源（KD-LN1——直引，不抽新 util：先例 = peer-domains.mjs / traces/trace-store.mjs）。
 import { normalizeCwd } from "./session-slots.mjs"
 
@@ -45,8 +46,8 @@ export function ledgerKey(root) {
   return createHash("sha1").update(normalizeCwd(root)).digest("hex").slice(0, 16)
 }
 
-/** 键控库文件路径（根 → 库位）——**内部形**：根推导内部判「库在盘」时用它，**不得经 `ledgerDbPath`**
- *  （互指即环，设计档 §3.8「无自指」）。库目录 = `ledgerDir`（`_setLedgerDirForTest` 覆盖 ⇒ 夹具根外零写）。 */
+/** 键控库文件路径（根 → 库位）——**内部形**：族枚举 / 库路径解析内部构造库位时用它，**不得经
+ *  `ledgerDbPath`**（互指即环，设计档 §3.8「无自指」）。库目录 = `ledgerDir`（`_setLedgerDirForTest` 覆盖 ⇒ 夹具根外零写）。 */
 const keyedDbFile = (root) => join(ledgerDir, `${ledgerKey(root)}.db`)
 
 /** 「已注册」判据（**唯一**事实）：该目录带项目声明档 `PROJECT-MANIFEST.json`。
@@ -57,12 +58,12 @@ function isRegistered(dir) {
 }
 
 /** 同级枚举上限（成本有界：父目录超此规模 = 缓存 / 临时等非仓族形态 → 退化空集）。
- *  2026-10-16 批 ledger-root-derivation 自 `ledger.mjs` 随迁（根推导收敛序 ∥ 族发现同级枚举同源）。 */
+ *  2026-10-16 批 ledger-root-derivation 自 `ledger.mjs` 随迁（同级枚举：族发现 ∥ 轻通道闸候选枚举同源）。 */
 export const MAX_SIBLING_SCAN = 100
 
-/** 目录下**已注册**（档 ∨ 库——§2.1 单谓词）的直接子目录（目录名升序；不可读 ∥ 超限 ⇒ 空集；
- *  **惰性枚举 + 上限**——大目录零全量扫描）。消费面 = 根推导收敛序 ∥ 族发现 ∥ 轻通道闸候选枚举。
- *  `ledger` = 该子目录根的键控库路径（谓词含档臂 ⇒ 可能尚未在盘）。2026-10-16 批自 `ledger.mjs` 随迁。 */
+/** 目录下**已注册**（档在盘——§2.1 单谓词）的直接子目录（目录名升序；不可读 ∥ 超限 ⇒ 空集；
+ *  **惰性枚举 + 上限**——大目录零全量扫描）。消费面 = 族发现 ∥ 轻通道闸候选枚举。
+ *  `ledger` = 该子目录根的键控库路径（推算值 ⇒ 可能尚未在盘）。2026-10-16 批自 `ledger.mjs` 随迁。 */
 export function ledgerChildren(dir) {
   const out = []
   let handle
@@ -83,34 +84,30 @@ export function ledgerChildren(dir) {
   return out.sort((a, b) => (a.root < b.root ? -1 : a.root > b.root ? 1 : 0))
 }
 
-/** 项目根推导**单源**（设计档 §2.1「根解析面」/ §3.8——读写同一判据、同一实现）：
- *  自 `target`（动作目标路径：目录 = 自身，文件 = 其所在目录）沿**祖先链**上溯，取最近一个
- *  「已注册」目录（= 带 `PROJECT-MANIFEST.json`——项目 = 带 manifest 的目录，台账无第二定义）。
- *  **上溯以会话锚为界，越界即停**：到锚仍未命中 ⇒ `null`（无根）——不越出工作目录去挂外层项目，
- *  也不向下找、不猜。「项目根报明 / 建档」由用点决定。
- *  **无自指**：内部判据只用 `ledgerKey` + 档在盘（不经 `ledgerDbPath`）。
+/** 项目根推导**单源**（设计档 §2.1「根解析面」/ §3.8——读写同一判据、同一实现）：**判据本体的形状包装**
+ *  = `owningProject(target, boundary)`（祖先链上溯的唯一实现——本档零自持上溯）+ `basis`。
+ *  起点 = `target`（动作目标路径：目录 = 自身，文件 = 其所在目录）；界 = **会话锚**（越界即停——
+ *  不越出工作目录去挂外层项目，也不向下找、不猜）；`basis` = `self`（目标自身即带档目录）∥
+ *  `ancestor`（最近带档祖先）。「项目根报明 / 建档」由用点决定。
+ *  **无自指**：本档不判库在盘（台账无第二定义——库在盘不算项目）。
  *  @param {string} [target] 动作目标路径（目录 | 文件则取其所在目录）
  *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`）
  *  @returns {{root: string, basis: 'self'|'ancestor'}|null} 项目根 + 判据来源 / 无根（`null`） */
 export function resolveLedgerRoot(target, boundary) {
   const start = resolve(target ?? ".")
   const edge = resolve(boundary ?? process.cwd())
-  const inside = start === edge || start.startsWith(edge + sep) || edge.startsWith(start + sep)
-  if (!inside) return null
-  let dir = start
-  for (;;) {
-    if (isRegistered(dir)) return { root: dir, basis: dir === start ? "self" : "ancestor" }
-    if (dir === edge) break
-    const parent = dirname(dir)
-    if (parent === dir) break
-    dir = parent
-  }
-  return null
+  const root = owningProject(start, edge)
+  return root ? { root, basis: root === start ? "self" : "ancestor" } : null
 }
 
-/** 无根文案（单源——设计档 §3.8「无根契约」逐字；`openLedger` 写面 ∥ `ledgerDbPath` 共用同一句）。 */
-const noRootMessage = (start) =>
-  `台账：自 ${start} 未能推导项目根——该目录与本级子目录均无已注册项目（带 PROJECT-MANIFEST.json 或已有键控台账库）`
+/** 无根文案（单源——设计档 §3.8「无根契约」逐字；`openLedger` 写面 ∥ `ledgerDbPath` 共用同一句）：
+ *  起点恒报；锚态 = 工作区时追报下辖候选（报明面读数 = `projectRootView` 的 `workspace` 态——
+ *  **只供报明，不参与取根**：取根仍以会话锚为界）。 */
+const noRootMessage = (start) => {
+  const view = projectRootView(start)
+  const tail = view.state === "workspace" ? `；下辖候选项目：${view.candidates.join(" ∥ ")}` : ""
+  return `台账：自 ${start} 未能推导项目根——祖先链无已注册项目（带 PROJECT-MANIFEST.json）${tail}`
+}
 
 /** 项目根 → 库路径（稳定键 = `ledgerKey` 前 16 位——路径唯一标识，不含分隔符）。
  *  **归单源**（2026-10-16 批 ledger-root-derivation）：根 = `resolveLedgerRoot(cwd)`——与读面 / 写面
@@ -225,7 +222,7 @@ function markSchemaVersion(db) {
 
 /** 开库（cwd = 「动作目标路径」）→ DatabaseSync 句柄 + 幂等建表 + 老库幂等迁移（executor 列）。
  *  **根推导**（设计档 §2.1 / §3.8）：项目根 = `resolveLedgerRoot(cwd)`——读写同一判据；嵌套取近者、
- *  容器锚向下收敛。**无根（`null`）**：写面（`create:true`）抛（fail-loud、零落盘零建库）；读面空账
+ *  容器锚不向下取根（无根 ⇒ 报明）。**无根（`null`）**：写面（`create:true`）抛（fail-loud、零落盘零建库）；读面空账
  *  （`null`——与「库不在 = 空账」同形）。
  *  读面（create=false）：库文件不存在 → 返回 null（读面不建库、无副作用）。
  *  写面（create=true）：库文件不存在自动建（台账目录随之创建）。

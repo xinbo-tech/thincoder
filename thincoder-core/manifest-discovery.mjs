@@ -2,7 +2,7 @@
  * manifest-discovery.mjs — **发现 ∕ 归属族**出档（2026-09-29 structure-split-2 · 台账 #620）：自 `manifest.mjs`
  * 全量迁出——`MANIFEST_REL` · 测试注入位（`_setProjectRootForTest` / `_resetProjectRootForTest`）·
  * `scanChildren`（两条梯表共用 walk 内核）· `discoverProjects`（项目梯）· `discoverRepos`（仓梯）·
- * `owningProject`（归属形）· `resolveProjectRoot`（归属 ∨ 发现）；**结构拆分零语义**（面不变 ∕ 判据不变，
+ * `owningProject`（归属形 = 判据本体）· `resolveProjectRoot`（归属形薄委托）；**结构拆分零语义**（面不变 ∕ 判据不变，
  * 只换宿主档；切点 ∕ 缝单源 = 批档 `docs/batches/2026-09-29-structure-split-2.md` §2.2-C）。
  *
  * 缝 = 同名再出口：宿主 `manifest.mjs` 转口本档七名既有导出（消费者 import 面零改）；宿主自用四名
@@ -10,7 +10,7 @@
  * 零环：本档不引宿主（方向单行）；档外依赖 = `node:fs` ∥ `node:path`；机制详述 = `docs/core/design/MANIFEST.md` §2.2 / §2.9。
  */
 import { existsSync, readdirSync, statSync } from "node:fs"
-import { dirname, join, resolve, sep } from "node:path"
+import { dirname, join, parse, resolve } from "node:path"
 
 /** 数据档文件名（**每个项目一份**——项目根 = 带档目录；**git 非前提**。2026-09-17 / 2026-09-21 用户裁定）。 */
 export const MANIFEST_REL = "PROJECT-MANIFEST.json"
@@ -88,21 +88,27 @@ export function discoverRepos(cwd) {
 }
 
 /**
- * **归属形单点**（KD-M1-30 · 2026-10-23 用户裁定）：自 `target`（目录 = 自身；文件 = 其所在目录）
- * 沿**祖先链**上溯，取最近带 `MANIFEST_REL` 的目录 ⇒ 该目录；无 ⇒ `null`（交发现兜底）。
+ * **归属形单点 = 判据本体**（KD-M1-30 · 2026-10-23 用户裁定 · 2026-10-25「判据本体真单源」）：
+ * 自 `target`（目录 = 自身；文件 = 其所在目录）沿**祖先链**上溯，取最近带 `MANIFEST_REL` 的目录
+ * ⇒ 该目录；无 ⇒ `null`（不向下、不猜——发现梯是另问，交调用方处置）。
  * 会话落在项目内层子目录时，这一路上溯正是它归到自己项目根的通路（用户 2026-10-23 23:24
  * 「本来就该爬到项目根啊」）；**发现梯（`discoverProjects`）仍纯向下**——从工作区容器只找直接
  * 子目录，不把容器挂到外层项目上。**纯 fs** · **不跨兄弟** · **无全局优先级**。
+ * **界（`boundary`）由调用方定——两面两界**：取根面（`projectRootView`）传**目标所在盘根**（向上
+ * 无界——目标由调用方指名）；台账面（`resolveLedgerRoot`）传**会话锚**（越界即停——用户
+ * 2026-10-25 19:09「不能跑到工作目录以外去」）。界比较按**段归一**（`isInsideOrEqual`：盘根形带
+ * 尾分隔符，`edge + sep` 直比会假阴）。
  * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性）。
  * @param {string} [target] 目标路径（目录 / 文件）
+ * @param {string} [boundary] 上溯上界（缺省 → 进程 cwd）
  * @returns {string|null} 带档目录绝对路径 / null
  */
 export function owningProject(target, boundary) {
   if (_projectRootOverride) return resolve(_projectRootOverride)
   let dir = resolve(target ?? ".")
   const edge = resolve(boundary ?? process.cwd())
-  // 界 = 会话锚：target 不在锚内（含等于锚）⇒ 无归属。**不许跑到工作目录以外去**。
-  if (dir !== edge && !dir.startsWith(edge + sep)) return null
+  // 界：target 在界外（含「target 是界的祖先」）⇒ 无归属——界由调用方定，越界不猜。
+  if (!isInsideOrEqual(dir, edge)) return null
   const st = statSync(dir, { throwIfNoEntry: false })
   if (st && !st.isDirectory()) dir = dirname(dir)
   for (;;) {
@@ -123,24 +129,28 @@ function isInsideOrEqual(dir, bound) {
 }
 
 /** **项目根解析的直读形**（判定单点——设计 `MANIFEST.md` §2.2 `projectRootView` 契约行 / §2.5
- *  「单项目解析律与四处会话级缺省收口」条）：`ok`（唯一解析：归属命中 ∥ 发现 `self` / `unique`）/
- *  `workspace`（锚自身无档 ∧ 下辖 **≥2** 项目 ⇒ `root` null + 下辖项目全列**按名排序**——工作区
- *  常态，非错误态）/ `none`（无项目 ⇒ 双空）；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）。
- *  **非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数（行为逐字零变）。
+ *  「单项目解析律与四处会话级缺省收口」条）：`ok`（**仅归属命中**——判据本体 = `owningProject`，
+ *  界 = **目标所在盘根** ⇒ 向上无界；函数体唯一 `ok` 出口）/ `workspace`（归属无命中 ∧
+ *  `discoverProjects` 报工作区：下辖带档者 ≥2 ∥ 零带档时裸仓 ≥2 ⇒ `root` null + 下辖项目全列
+ *  **按名排序**——工作区常态，非错误态）/ `none`（其余，含下辖带档子目录恰一 ∥ 裸仓恰一——
+ *  **不向下取根** ⇒ 双空）；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）。
+ *  **发现读数只供 `workspace` 报明**：`discoverProjects` 的 `self` / `unique` **不进 `root`**
+ *  （判据单源 = `owningProject`）。**非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数。
  *  @returns {{state:'ok'|'workspace'|'none', root:string|null, candidates:string[]}} */
 export function projectRootView(cwd) {
-  const owning = owningProject(cwd)
+  const target = resolve(cwd ?? ".")
+  const owning = owningProject(target, parse(target).root)
   if (owning) return { state: "ok", root: owning, candidates: [] }
-  const d = discoverProjects(cwd)
-  if (d.root) return { state: "ok", root: d.root, candidates: [] }
+  const d = discoverProjects(target)
   if (d.kind === "workspace") return { state: "workspace", root: null, candidates: d.candidates }
   return { state: "none", root: null, candidates: [] }
 }
 
-/** 项目根解析（**归属 ∨ 发现**——KD-M1-30 / M1-24）：**薄委托** `projectRootView(cwd).root`（判定
- *  单点见上——#828）。带档路径与批前**逐字同**；变更面两条（设计 §2.2 同条）：① 项目树内路径
- *  （祖先带档）⇒ 该项目根；② 裸仓恰一 ⇒ 该仓根（零档降级 = 建档机会）。`none` / `workspace` ⇒
- *  `null`。调用方零改（行为随语义变更——设计 §2.5 键面条 / 错层条）。
+/** 项目根解析（**归属形**——KD-M1-30 / M1-24）：**薄委托** `projectRootView(cwd).root`（判定
+ *  单点见上——#828）。带档路径与批前**逐字同**；变更面（设计 §2.2 同条）：① 项目树内路径
+ *  （祖先带档）⇒ 该项目根（子目录归到自己的项目根 = 正常通路）；② 祖链无档 ⇒ `null`——
+ *  **不向下取根**（下辖带档子目录恰一 ∥ 裸仓恰一均 `null`，发现读数不进 `root`）。
+ *  `none` / `workspace` ⇒ `null`。调用方零改（行为随语义变更——设计 §2.5 键面条 / 错层条）。
  *  @returns {string|null} 项目根绝对路径 / null */
 export function resolveProjectRoot(cwd) {
   return projectRootView(cwd).root

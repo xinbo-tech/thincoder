@@ -1,5 +1,5 @@
 /**
- * review-doc-scope.test.mjs —— 集成用例 6-1 … 6-4（RTM CLI 端故事 6「设计评审的文档范围按项目根受理」；
+ * review-doc-scope.test.mjs —— 集成用例 6-1 … 6-5（RTM CLI 端故事 6「设计评审的文档范围按项目根受理」；
  * 设计 = `docs/core/design/ADVISOR-GUARDS.md` §12「用例设计（实现面）」）。
  *
  * 业务入口 = 真 `advisor` 工具（`agent-tools/advisor.mjs`）的同步设计评审轨；判据落在工具回执文本与
@@ -15,7 +15,7 @@ import assert from "node:assert/strict"
 import { createServer } from "node:http"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join, parse, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
@@ -161,4 +161,26 @@ test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（no-project-root�
   assert.doesNotMatch(counter, /no-project-root/, `基面存在 ⇒ 不再报锚态，实际：${counter}`)
   assert.match(counter, /reason=not-doc-file/)
   assert.equal(s.endpoint.requests.length, 0, "反证格同样零 LLM")
+})
+
+test('6-5 容器锚（根无档 ∧ 下辖恰一项目）⇒ 当场拒发（no-project-root），不把唯一下辖项目当根', { timeout: 60_000 }, async (t) => {
+  const box = mkdtempSync(join(tmpdir(), "tc-int-box-"))
+  t.after(() => rmSync(box, { recursive: true, force: true }))
+  mkdirSync(join(box, "only"), { recursive: true })
+  writeFileSync(join(box, "only", "PROJECT-MANIFEST.json"), MANIFEST)
+  assert.equal(owningProject(box, parse(box).root), null, "夹具前置：容器根及其祖先无项目档（none 态的前提）")
+
+  const s = await scene(t, box)
+  const receipt = String(await review(s.agent, ["docs/a.md"], "t5"))
+
+  assert.match(receipt, /criterion=scope-not-doc/)
+  assert.match(receipt, /reason=no-project-root/, `实际：${receipt}`)
+  assert.match(receipt, /→ \(no base\) ∥ reason=no-project-root/, "无基面：不拿唯一下辖项目当根")
+  assert.match(receipt, /Session anchor is none \(/, `文案报锚态 = none，实际：${receipt}`)
+  assert.ok(!receipt.includes(resolve(join(box, "only"))), `文案不把下辖项目当根，实际：${receipt}`)
+  assert.match(receipt, /Expected form 1 — project-root-relative:/, "期望形第 1 句")
+  assert.match(receipt, /Expected form 2 — absolute:/, "期望形第 2 句")
+  assert.equal(s.agent._advisorRefusals.has("t5"), true, "拒发登记")
+  assert.equal((s.agent._advisorRuns?.size ?? 0), 0, "零评审实例")
+  assert.equal(s.endpoint.requests.length, 0, "零 token / 零 LLM")
 })

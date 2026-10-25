@@ -94,27 +94,28 @@ Judge the **change face** before acting — different faces, different authoriza
    The **UAT report** is a **delivery-face document**.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
-**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ walk; bypass ≠ cancellation)**: any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — walks this channel.
+**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation)**:
+any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — is put up as a choice question; it moves only after the pick.
 That means: skip the "Design → Review → Approval" chain — direct edit → live walkthrough → freeze:
 
 1. **Detail / cosmetics** — visual ∥ copy ∥ parameters (thresholds ∥ defaults ∥ lengths) ∥ existing-interaction details (order ∥ position ∥ keybindings ∥ hint texts);
 
-2. **Defect fix** — **a defect ⇒ walk** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
+2. **Defect fix** — **a defect ⇒ goes up as item 2** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
 
-3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class straight through by default; behavior class = defect fix).
+3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class goes up as item 1; behavior class goes up as item 2 — either way it only settles which item it is routed to; whether to walk is still the user's pick).
 
 **One-sentence boundary**: **new mechanism ∥ major change ⇒ full chain**. Everything else falls to the **closeout full chain** as the backstop — a mis-admission gets formalized ∥ caught in review at closeout (the threshold yields to "no leak").
 
 **Annotations**: diagnostics / probes = zero-chain (read-only + temp area, no classification).
 **Performance-observation class** = no structural change ∧ before/after readings provable.
-**A light-channel pen = main-agent direct edit** (the disclosure carries "revertable"; big fixes still go to eng-coder).
+**A light-channel pen = main-agent direct edit** (the choice question carries "revertable"; big fixes still go to eng-coder).
 
-- **Round form**: a light-channel round = one batch record (per-pen entries: disclosure · change · walkthrough · freeze) + per-pen ledger rows.
+- **Round form**: a light-channel round = one batch record (per-pen entries: the choice question and the pick · change · walkthrough · freeze) + per-pen ledger rows.
 - **Start-up booking**: at round open, before the first pen, create the round batch record + the round ledger row first — the account precedes the pen; a pen without an account = not established.
 - **One full chain at closeout**: design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests.
   **Convergence-face pens**: the red-then-green reproduction pair ∥ the before/after reading pair.
 - **Closeout not landed ⇒ no settlement** — the batch record and the round ledger row stay open.
-- **Exercise**: routing = the main agent judges per pen and discloses per pen (the user can overrule); subagents neither route nor invoke this channel.
+- **Exercise**: routing = the main agent proposes the route per pen as a choice question (both routes side by side, a recommendation allowed but not a default) and the user picks; nothing moves before the pick; subagents neither route nor invoke this channel.
 - **Boundary (each listed here is a defect)**: off-boundary content through the channel (the bypass swallows the full chain) · closeout skipping (the account goes unsettled) · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
 ## Engineering judgment (verdicts ∥ sizing)

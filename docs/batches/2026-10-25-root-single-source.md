@@ -222,6 +222,54 @@ import 面 = `./manifest.mjs` 既有具名出口（`owningProject` 在转口七�
 
 **上抛项**：无新增（原两条 [上抛·知会] 仍有效：本批坐标取 147 / 263 行实测；建档流两格落点随动）。
 
+### §2 第四轮修正（父侧 19:45 裁决 = 评审轮次 1 全 10 条 · 逐条落点）
+
+**① 🔴 评审 #1 —— `projectRootView` 的界 ∥ 兜底可否绕过界（按父侧实测改写后的判据）**
+
+- **落点**：`docs/core/design/LEDGER.md` §3.8「界（单源 · 两面两界）」（`:518`–`:527`）∥「发现兜底不受界，且结构上不再可能给出根」（`:529`）∥ 入口表（`:544`–`:547`）∥ `docs/core/design/MANIFEST.md` §2.2 `projectRootView` 契约行（`:95`–`:100`）+ `owningProject`（`:104`）∥ AC-24（§3.1）。
+- **答 ①（传什么 boundary）**：`projectRootView` 传给 `owningProject` 的 `boundary` = **目标所在盘根**（`parse(resolve(target)).root`）——**不是 `cwd` 自身、不是会话锚**。台账面 `resolveLedgerRoot` 的界仍是**会话锚**：两界两问（取根面答「这条路径归哪个项目」；台账面还答「库落在哪」）。
+- **答 ②（兜底是否受界）**：`discoverProjects` **不受界，也不需要受界**——它只扫直接子目录（`manifest-discovery.mjs:58`–`:64`）；收窄后它的 `self` / `unique` 读数**无法进 `root`**（`state: "ok"` 在函数体恰 1 处出口），绕过面由出口形状排除。机判锚已写入档（§3.8 同条）。
+- **依据（三条，档内同载）**：`manifest-discovery.mjs:132` 现为 `owningProject(cwd)` 单参 ⇒ 界落 `:103` 的 `process.cwd()` 缺省；`test/integration/review-doc-scope.test.mjs:160` 反证格（锚 = `ws/p1`，tmp 夹具在 `process.cwd()` 之外）⇒ 界取 `process.cwd()` 时必落 `none`、该格必红；需求 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:74`「上溯 = 子目录归到自己的项目根（正常通路）」——锚自身即目标时仍须上溯。
+- **实施面随动**：`manifest-discovery.mjs` 预期 147 → ≈152（界比较复用 `:118` `isInsideOrEqual`，盘根带尾分隔符 `edge + sep` 直比假阴）。
+
+**② 🔴 #2 —— 「已注册」两写 + JSDoc**
+
+- `LEDGER §7.2 范围推导`：`项目根自身带档 / 带库` → `项目根自身带档`；`已注册（档 ∨ 库）` → `已注册（档在盘）`；`库臂排除` → `「已注册」＝档在盘，无库臂`。
+- `LEDGER §9 同级枚举上限`：`已注册（档 ∨ 库）` → `已注册（档在盘）`。
+- `LEDGER §9 项目根推导`：`ledgerChildren` 句改为「函数体 = `isRegistered`（档在盘，`:78`）——**无库臂**，JSDoc 同改（`:63` 的「档 ∨ 库」删除）」；`工作区命中排除 = 库臂排除` → `键控库在盘不算项目`。
+- **代码面（实施轮）**：`ledger-db.mjs:63` JSDoc `（档 ∨ 库——§2.1 单谓词）` → `（档在盘——§2.1 单谓词）`；`:64` 消费面删「根推导收敛序」。已入 §3.8 受影响面改动面列。
+
+**③ 🔴 #3 —— T65② 与 AC-35 相抵**
+
+- `MANIFEST §3.2 T65②`：落点 `裸仓` → **`target（容器）自身`**（与 §2.10 `none ⇒ init 落 target 自身` 同一条规则；改判「拒」会为单格加一支无场景分支）。
+- `MANIFEST §2.10` 新增「同一 target 两面答案相反（有意）」段：`read` 经 `projectView` 读到子项目（`state=ok`），`init` / `write` 经 `projectRootView` = `none` ⇒ `init` 就地使容器成为项目（`write` 拒）；分野 = 读面问「有没有档可读」、写 / 建面问「这条路径归谁」。
+- `§2.10 ∥ T65 ∥ T67` 已入 LEDGER §3.8 受影响面 MANIFEST 行；T67 逐格复核 = 不变（④ workspace 拒 / ⑤ none 拒 两支判据不受收窄影响）。
+
+**④ 🟡 #4 / #5 / #6**
+
+- **#4** `LEDGER §6.1 口径 2`：保留 `?? resolve(cwd ?? ".")` 并改判为**读面基准回退**（判据仍 = 解析出的档在盘）；写面 / 工具面起点推导仍抛；悬空指针 `§3.8「协调项」` → `§3.8「无根契约」`；「工作区抛退役」半句改为「两处不共用兜底」。
+- **#5** `LEDGER §3.8 集成测试设计`：交互面拆两面——① 评审文档范围（落 RTM）；② 台账面（`test/RTM.md` 全档「台账 ∥ ledger」**0 命中**，本批实读 ⇒ 不新增 RTM 行，替代验收 = PR-7 / PR-8 / PR-11）。缺失数射程写明 = Story 6 行集，**数仍 1**（6-5）。
+- **#6** `LEDGER §3.5` 回填实测：`ledger-db.mjs` 265→**263**、`ledger.mjs` 159→**158**、`ledger-migrate.mjs` 305→**306**；§3.8 受影响面 `现行` 列同步（LEDGER **1084** / MANIFEST **1205** / RTM **119**）并加「两表关系」句；RTM 行改「6-5 已落（编号先行 `test/RTM.md:77`）」。
+
+**⑤ 🔵 #7–#10**
+
+- **#7** 贴线判：改按本批受影响面（最高 `ledger-db.mjs` 263 ⇒ 实施后 ≈252）——`ledger-cmd.mjs` 移出本判。
+- **#8** `§7.1` 坐标 `ledger-db.mjs:100` → **`:95`**。
+- **#9** 三态表：条件**单源 = `MANIFEST §2.2`**；LEDGER 表只留台账侧后果 + 「条件详略 = MANIFEST §2.2」。
+- **#10** 读面抛分支补复现路径（`LEDGER §3.8 无根契约 · 工具面`）：无档目录跑 `node thincoder-core/ledger-cmd.mjs query`；接线 = `ledger-tools.mjs:296`（`cwd: rest.cwd ?? cwdOf(ctx, rest.task_book)`，无指针 ⇒ 会话锚）；文案单源 = `ledger-db.mjs:112` `noRootMessage`。
+
+**验收对照增补（回指）**：
+
+| # | 判据（可机判） | 回指 |
+|---|---|---|
+| A10 | `thincoder-core/manifest-discovery.mjs`：`projectRootView` 体内 `owningProject(` 带**第二实参**（目标所在盘根）∧ 该函数体 `state: "ok"` 恰 1 处 | LEDGER §3.8「界（单源）」/「发现兜底不受界」 |
+| A11 | 夹具「容器 + 恰一裸仓」：`manifest init` 落点 = **容器自身**（`容器/PROJECT-MANIFEST.json` 在盘、裸仓档零变） | MANIFEST §3.2 T65② · §2.10 |
+| A12 | `thincoder-core/ledger-db.mjs`：`isRegistered` 一处定义、消费面只余 `ledgerChildren`；`:63` JSDoc 不含「档 ∨ 库」 | LEDGER §2.1「台账无第二定义」· §7.2 |
+
+**自检读数（本轮实测）**：引证 §2.1 / §2.2 / §3.5 / §3.8 / §6.1 / §7.1 / §8 / §9 / §2.10 / AC-24 / AC-35 / T65 / T67 逐项实读在位 · 行数 = `split('\n').length - 1` 实测（LEDGER **1084** / MANIFEST **1205** / `test/RTM.md` **119** / `ledger-db.mjs` **263** / `manifest-discovery.mjs` **147** / `ledger.mjs` **158** / `ledger-migrate.mjs` **306** / `agent-tools/manifest.mjs` **231** / `batch-paths.mjs` **206**）· 行数断言与受影响面表逐格比对相等 · `doc_check` gate = **PASS（2 档）**（首跑 REFUSED 4 条（段 >300 字符，全部本轮新增），同轮拆分后复跑 PASS）· 正文改动零代码（实施轮）。
+
+**上抛项**：无新增。既有两条 [上抛·知会] 仍有效：本批坐标取实测值（`manifest-discovery.mjs` 147 / `ledger-db.mjs` 263）；`manifest init` 在「带档子目录恰一 ∥ 裸仓恰一」两格落点随动为 `target`（MANIFEST §2.10 明写）。
+
 ## §3 设计评审（评审子代理）
 
 ### 轮次 1（评审子代理）
@@ -247,6 +295,32 @@ import 面 = `./manifest.mjs` 既有具名出口（`owningProject` 在转口七�
 
 VERDICT: changes-required
 （🔴 3 · 🟡 3 · 🔵 4）
+
+### 轮次 2（评审子代理）
+
+轮次 2 复核（上轮 3🔴/3🟡/4🔵）
+
+| # | 上轮# | 档 | 严重度 | 状态 | 依据（本轮实读） |
+|---|------|----|--------|------|------------------|
+| 1 | 1 | LEDGER.md / MANIFEST.md | 🔴 | Fixed | 界逐入口钉死：`owningProject(target, 目标所在盘根)`（MANIFEST.md:95「**界**：传给 `owningProject` 的 `boundary` = **目标所在盘根**…「不是 `process.cwd()`、不是会话锚」」）+ 两面两界单源（LEDGER.md:518-527）＋ PR-5 括注改「上溯到盘根停」与取根面一致 |
+| 2 | 2 | LEDGER.md / ledger-db.mjs | 🔴 | Fixed | 「档 ∨ 库」活副本清零：`LEDGER.md:848/849` 改「档在盘…无库臂」，`:1069` 明写「JSDoc 同改」，`:585` 受影响面点名 `:63` 删臂；grep「档 ∨ 库」仅剩删除指令处 |
+| 3 | 3 | MANIFEST.md | 🔴 | Fixed | T65② 改「`target（容器）自身`」（MANIFEST.md:1196）＋ §2.10 两面答案相反明写（`:634-636`）＋ 设计受影响面加 §2.10/T65/T67（LEDGER.md:592） |
+| 4 | 4 | LEDGER.md:725 | 🟡 | Fixed | 口径 2 补「写面…一律抛——两处不共用兜底」；悬空「§3.8「协调项」」清零（grep 零命中） |
+| 5 | 5 | LEDGER.md:626-630 | 🟡 | Accepted | 有理由的非修：台账面「RTM 零既有故事」经本轮 grep 实证（`台账\|ledger` 在 test/RTM.md 零命中）⇒ 不新增行 + 替代验收面（PR-7/8/11＋批档§6）；缺失数射程同步限定 |
+| 6 | 6 | LEDGER.md:355/594、:590 | 🟡 | Fixed | §3.5 回填 263/158/306，:594 给复核式；RTM 行改「已落（编号先行——test/RTM.md:77）…实施轮零插行」 |
+| 7 | 7 | LEDGER.md:599 | 🔵 | Fixed | 贴线判改按本批受面重算，并明写「ledger-cmd.mjs 不在本批改动面」 |
+| 8 | 8 | LEDGER.md:807 | 🔵 | Fixed | 坐标统一 `ledger-db.mjs:95` |
+| 9 | 9 | LEDGER.md:529 | 🔵 | Fixed | 三态表标注「条件单源 = MANIFEST.md §2.2 … 本表只留台账侧后果」 |
+| 10 | 10 | LEDGER.md:572 | 🔵 | Fixed | 读面抛分支补复现路径与文案单源（`noRootMessage`） |
+| N1 | (new) | MANIFEST.md:637 | 🟡 | New | 「`resolveProjectRoot` …塌缩 `null`、再回落 cwd」与 §2.2:105 薄委托等价 / AC-24「`none`／`workspace` ⇒ `null`」相抵；真实回落住 `writeRoot`（`:317`） |
+| N2 | (new) | LEDGER.md:87 | 🔵 | New | 「写面无根 ⇒ 报明」与 §3.8「写面…抛」用词不一 |
+| N3 | (new) | MANIFEST.md:633 | 🔵 | New | 取根面界 = 盘根对 `manifest init/write` 的后果未在工具面交叉引用（意图见 §2.2:98） |
+
+裁定（两面两界）：成立——取根面目标由调用方指名＋依据② 的红格（`review-doc-scope.test.mjs:160`）＋需求 §⑥:74；19:09「不能跑到工作目录以外去」由台账面以会话锚为界承接（AC-M2-17 已双界在册，PR-16 钉台账面）。
+
+计数：上轮 10 项＝9 Fixed + 1 Accepted；新增 3 项＝1🟡 + 2🔵（皆不阻签）。
+
+VERDICT: pass
 
 ## §4 用户批准（主 agent）
 ## §5 实施记录（eng-coder）

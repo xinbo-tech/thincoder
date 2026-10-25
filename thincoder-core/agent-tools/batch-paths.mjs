@@ -35,8 +35,9 @@ function samePath(a, b) {
   return process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b
 }
 
-/** 「项目根」取根单源（§4.15 条 1——归属 ∨ 发现，无 manifest ⇒ `resolve(cwd ?? ".")` 兜底且**单值**）：
- *  同式 = 台账库键 / 写门指针基准的同一子表达式（`design/LEDGER.md` §6.1 口径 2）。 */
+/** 「项目根」取根单源（§4.15 条 1——**归属形 + 起点兜底**：判据单源 = `resolveProjectRoot` → `owningProject`；
+ *  无项目 ⇒ `resolve(cwd ?? ".")` 兜底且**单值**）：同式 = 台账库键 / 写门指针基准的同一子表达式
+ *  （`design/LEDGER.md` §6.1 口径 2）。 */
 export function batchProjectRoot(cwd) {
   return resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")
 }
