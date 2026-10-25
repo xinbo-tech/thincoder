@@ -10,7 +10,7 @@
  * 零环：本档不引宿主（方向单行）；档外依赖 = `node:fs` ∥ `node:path`；机制详述 = `docs/core/design/MANIFEST.md` §2.2 / §2.9。
  */
 import { existsSync, readdirSync, statSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join, resolve, sep } from "node:path"
 
 /** 数据档文件名（**每个项目一份**——项目根 = 带档目录；**git 非前提**。2026-09-17 / 2026-09-21 用户裁定）。 */
 export const MANIFEST_REL = "PROJECT-MANIFEST.json"
@@ -97,13 +97,17 @@ export function discoverRepos(cwd) {
  * @param {string} [target] 目标路径（目录 / 文件）
  * @returns {string|null} 带档目录绝对路径 / null
  */
-export function owningProject(target) {
+export function owningProject(target, boundary) {
   if (_projectRootOverride) return resolve(_projectRootOverride)
   let dir = resolve(target ?? ".")
+  const edge = resolve(boundary ?? process.cwd())
+  // 界 = 会话锚：target 不在锚内（含等于锚）⇒ 无归属。**不许跑到工作目录以外去**。
+  if (dir !== edge && !dir.startsWith(edge + sep)) return null
   const st = statSync(dir, { throwIfNoEntry: false })
   if (st && !st.isDirectory()) dir = dirname(dir)
   for (;;) {
     if (existsSync(join(dir, MANIFEST_REL))) return dir
+    if (dir === edge) return null
     const parent = dirname(dir)
     if (parent === dir) return null
     dir = parent

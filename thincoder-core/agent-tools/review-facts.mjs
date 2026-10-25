@@ -87,7 +87,7 @@ export function resolveReviewDocPaths(documents, cwd) {
     if (!abs && view.state !== "ok") { invalid.push({ doc, resolved: null, reason: "no-project-root" }); continue }
     const p = abs ? doc : resolve(view.root, doc)
     if (!abs && !isInside(p, view.root)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
-    if (abs && !owningProject(p)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
+    if (abs && !owningProject(p, cwd)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
     if (!isDocFile(p)) { invalid.push({ doc, resolved: p, reason: "not-doc-file" }); continue }
     resolved.set(doc, p)
   }
