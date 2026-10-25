@@ -8,6 +8,7 @@
 ## 1. 总体定位
 
 供应商与模型 = 调用核心（`thincoder-core/provider/core.mjs` + `index.mjs` ↔ VSC `provider.mjs`）**+** 传输（`anthropic` / `google` / `responses`）**+** 基础件（`sse` / `retry` / `normalize` / `errors` / `abort-provenance`）**+** 限流（`rate.mjs`）**+** 模型清单（`list-models.mjs`）**+** 模型规格（`model-specs.mjs`）。
+
 本板块对本子系统的要求 = 该面归一为**核内单一调用核心**，可见面变更**保留兼容并登记**。
 
 > 面清单与逐面裁决（分类 / 端差处置 / 前提校验 / 归属段）→ `docs/core/design/PROVIDER.md` §1–§2（不复制）。
@@ -98,6 +99,7 @@
 
 **总体需求**：qwen-plan 渠道（provider `qwenplan`、baseURL `https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`）上的 DeepSeek
 V4.1-Flash 模型名为 `deepseek-v4.1-flash`——该名不命中核内 MODEL_SPECS 任何前缀
+
 （`.1` ≠ `-`）→ 前缀查表 miss（`specForModel` 回落）→ 未知模型警告 + 回落 128K 默认 spec，1M 上下文用不上。在核内 MODEL_SPECS **增加该行为独立行**，
 能力位**逐字段对齐 `deepseek-flash`**（含 `multimodal: true`），使 qwen-plan 渠道的该模型获得真实能力规格。
 
@@ -107,6 +109,7 @@ V4.1-Flash 模型名为 `deepseek-v4.1-flash`——该名不命中核内 MODEL_S
 
 **非功能**：N10 1M 上下文命中（specForModel 返回 context = 1_000_000——压缩阈值 / 续写协议 / 规格显示跟随真实能力）·
 N11 零前缀回归（既有 deepseek 前缀命中行为不变：`deepseek-v4-flash` / `deepseek-v4-flash-0731` 仍命中退役行、`deepseek-v4-pro` 仍保守行——新行与退役行
+
 前缀不相交（第 12 位 `.` 与 `-` 互不为前缀）⇒ **互不 shadow**）·
 N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自持副本不动）。
 
@@ -129,6 +132,7 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 **注**：F-IDG-1 的「有视觉渠道」判定源重定在途；现行为 = 恒走 F-IDG-2 径（可读报错——不静默丢图）。
 
 **非功能**：N-IDG-1 视觉模型路径零回归（read_image 注入不变）· N-IDG-2 引擎级 spawn 通道零新建（降级 = extension 内 runAgent 一次性直跑）· **N-IDG-3 VSC 贴图临时件有界**：贴图落盘写时对 `<cwd>/.thincoder/tmp` 执行 mtime 扫除（窗 = 3 天；核 `cleanupOldToolResults` 单源，与 CLI 同形）。
+
   判定句：置超龄件（mtime > 3 天）后经一次贴图落盘 ⇒ 超龄件被回收 ∧ 未超龄件保留 ∧ 落盘出口 `{paths, dropped}` 零变。
 **范围边界（不做 / 移出）**：UI 前置（模型下拉 vision 标记 + 贴图前提示）= UX 增强后批（F-4 移出）；`depth>0` 子代理回合非视觉贴图沿用现报错（不降级）；非 raster（svg / heic）现 toast 不变；retry 不回带 images（另行登记）；`maxTurns` 固定 10（观察登记——候选按图数伸缩）。
 
@@ -214,3 +218,16 @@ N12 零 VSC 触碰（`thincoder-vscode/**` 一字不改——VSC 未迁移，自
 **范围边界（不做）**：不引入别名映射表 ∥ 不按列表值反写静态表 ∥ 不改 maxOutput 来源（仍是表/兜底）∥ 不改 /models 展示面文案 ∥ 不处理服务端（team）侧模型元数据 ∥ 不处理 anthropic / google 两端 ormat 的列表形态（本轮零实测，无判据）。
 
 **待设计定（非需求位）**：列表在何时拉取 · 缓存键与失效条件 · 拉取失败是否告警及告警形态。
+
+### 4.9 工具历史回放
+
+**来源**：RTM 故事 1 登记（`docs/batches/2026-10-24-rtm-index.md`）——RTM 该节原回指设计档 §6.28，因需求档无对应条目；本条补上需求层锚。
+
+| # | 需求 | 判定句（验收口径——摘要） |
+|---|---|---|
+| R33 | 会话用了工具，结果必须回到模型：同一客户端会话里调用一次工具、工具结果进入会话历史、模型继续对话——**重开同一会话后历史回放不丢工具调用与结果**（含多工具并行与重开两形态） | ① 集成用例三态：一次工具调用后继续 ∥ 一轮多工具后继续 ∥ 重开会话回放历史后继续（`thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs` G1–G3）；② 业务可观察点 = 用户在配了 Anthropic 原生通道的会话里用过工具后还能继续对话；③ 判据 = 不出现 `400 Unexpected role "tool"` |
+
+**非功能**：不改 OpenAI 面（适配层只在 Anthropic 径）· 不改历史写入面（回放读既有 `session/` 存储）。
+
+**范围边界（不做）**：不动 OpenAI 兼容面 · 不动 VSC/桌面适配（核内单源——`docs/core/design/PROVIDER.md` §6.28）。
+

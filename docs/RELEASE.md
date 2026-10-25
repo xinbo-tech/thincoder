@@ -2,17 +2,20 @@
 
 > **落点裁定（2026-09-20 用户）**：本档 = **核（先行发布单元）+ CLI / VSC / 桌面三端发布流程的统一发布计划**（桌面 2026-10-01 入主线——单源 = §5.6）⇒ 落 `docs/` 根；**三端合一 · 单档承载 · 单主线**（用户 23:42「为什么还有 cli/vsc 发布链？」+ 23:45「为啥核发布面还在？」⇒ **全文只有 §5 一条主线** ✗ 无并列的「发布链」章 ✗ 无单独的「核发布面」章 ✗）。
 > **本档覆盖**：端到端发布流程（§5——唯一主线）· 版本号规则（§4）· **官网更新方案**（§6——数据面：版本面口径 / changelog 呈现 / 追平与自动化）—— 核 + 三端同在主线内 ✗ 各阶段就地给足上下文 ✗。
-> **机制面外链（仅两处）**：核发布机制 / S2 期口径 = `CORE-UNIFICATION.md` §2.6.1；一致性断言 A/B/C/D 全文 = D-C11。
+> **机制面外链（仅两处）**：核发布机制 / S2 期口径 = `docs/core/design/CORE-UNIFICATION.md` §2.6.1；一致性断言 A/B/C/D 全文 = D-C11。
 > 建档：2026-09-15（B 式迁移轮）· 2026-09-20 核发布并入 + 迁根 + 三端合一 + 主线重构。
 
 ## 1. 总体需求
 
 发布动作必须是**唯一门禁**：一次触发即执行完整校验链，不过即中止。
 对外版本号规则 = **CalVer**（§4——各单元同制）。
-**发布顺序恒为：核 → CLI → VSC → 桌面**（产品发布恒以核已发布为前提——`CORE-UNIFICATION.md` §2.6 发布顺序硬约束；**桌面 = 三端之一**（发布轮含桌面——2026-10-13 用户裁定）——其核内嵌源自源树、发布窗按 §5.6 走）。
+**发布顺序恒为：核 → CLI → VSC → 桌面**（产品发布恒以核已发布为前提——`docs/core/design/CORE-UNIFICATION.md` §2.6 发布顺序硬约束；**桌面 = 三端之一**（发布轮含桌面——2026-10-13 用户裁定）——其核内嵌源自源树、发布窗按 §5.6 走）。
+
 **顺序 = 版本面 + 内容面双关**：下游引用核的**新面**（判例 = CLI `src/cli/team-command.mjs` 消费核 `team.mjs`——唯一写者）⇒ 核须随**含该面**的版本**先发 ∥ 同拍发**；核源树内容变而未换号 ⇒ registry 面滞留旧内容 ⇒ 装后即缺档失效
+
 （同类实证 = 0.10.5 核包缺 `browser/`——台账 #1362）。机检 = §5.0 P2 核行闭包断言 + §5.0 P4 ④ registry 复验（工具 = `scripts/check-pack.mjs`——台账 #1363 ∥ #1222）。
 **发布序硬门（核内容变更 ⇒ 依赖面同批抬版）**：核内算式 / 机制变更 ⇒ 核先发；下游（服务端 ∥ 三端）对核依赖写**精确版本**（不携 `^` ∥ `~`），并在同一发布轮抬到本次核发行版；发前人工校一次核 tag 内算式常量与源树一致（一次性动作，非运行时判据）。
+
 **文案键新增的发布归属**：判据 = 该键是否落核字典（`thincoder-core/i18n.mjs` 的键族边界）——落 ⇒ 按上一句发布序走；不落 ⇒ 端侧字典随端发布。键族边界与端侧载体见 `docs/render-core/design/RENDER-CORE.md` §5 条 6。
 **发布 = 按 §5 一条主线走**（从上到下执行即可，无需参考其他章）。
 
@@ -73,7 +76,7 @@
 
 ### 4.4 版本一致性断言（发版同步面）
 
-三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `"@thincoder/core": "^0.10.8"`（= 核当前版本；caret 兼容，声明面与实发对齐——核发新号后同步收正）；断言 A/B/C/D 全文 = `CORE-UNIFICATION.md` D-C11（此处不重述）。
+三产品（CLI ∕ VSC ∕ 桌面）`dependencies` 现声明 `"@thincoder/core": "^0.10.8"`（= 核当前版本；caret 兼容，声明面与实发对齐——核发新号后同步收正）；断言 A/B/C/D 全文 = `docs/core/design/CORE-UNIFICATION.md` D-C11（此处不重述）。
 
 ## 5. 发布流程（**唯一主线** · 一步步走）
 
@@ -97,7 +100,7 @@
 
 | 端 | 干跑命令 | 通过判据（读数形） |
 |---|---|---|
-| 核 | `cd thincoder-core && npm publish --access public --dry-run` | 窗口内（bump 后）exit 0——输出含 `prepublishOnly → npm test` 段 + `Tarball Details`（`total files` ∕ `package size`）。bump 前 ⇒ 止于 `You cannot publish over the previously published versions: <现号>` exit 1 = **版本占用守卫在位**（非缺陷） |
+| 核 | `cd thincoder-core && npm publish --access public --dry-run` | 窗口内（bump 后）exit 0——输出含 `prepublishOnly → check-syntax`（语法门）段 + `Tarball Details`（`total files` ∕ `package size`）。bump 前 ⇒ 止于 `You cannot publish over the previously published versions: <现号>` exit 1 = **版本占用守卫在位**（非缺陷） |
 | 核（tarball 内容） | `node scripts/check-pack.mjs thincoder-core`（在仓根跑；脚本 = `scripts/check-pack.mjs`）∥ 原读数式 `cd thincoder-core && npm pack --dry-run --json` | exit 0 + 读数行「pack 件数 ∥ 根 `.mjs` 集 = 源树（实读 100——含 `think-off.mjs`——#470 判据）∥ 闭包缺口 0」——**闭包断言** = `files[]` ⊇ 运行时 import 闭包（台账 #1363；判例 = 0.10.5 缺 `browser/`）；`prompts/` 16 档 + `tool-docs/` 54 档（实读 2026-10-22）；排除面 = 根非 `.mjs` 档（`CHANGELOG.md` ∥ `LICENSE` ∥ `package.json` ∥ `README.md`）；**发布后复验形 = `node scripts/check-pack.mjs thincoder-core --registry <号>`**（registry 面与源树同口径：路径集 + integrity 相等——防核内容滞留；台账 #1222） |
 | CLI | `node scripts/check-pack.mjs thincoder-cli`（在仓根跑——CLI 打包面闭包，口径同 #1363）∥ `cd thincoder-cli && node scripts/release-check.mjs` | 前者 = exit 0 + 闭包缺口 0；后者 = exit 0 + 尾行 `✅ release-check 全绿——可发版`；读面 = `⓪ ✔ registry 上存在 @thincoder/core@<号>` + `✔ lint OK` + test 摘要行。⓪ 不过 = 核先发守卫（设计如此） |
 | VSC | `cd thincoder-vscode && node scripts/publish-all.mjs --dry-run` | 段 0（核版本预检）+ 段 1 `vsce package`（`vscode:prepublish` = lint + test）+ 段 1.5 vsix 含核断言（B ∕ D ∕ E ∕ F 全过——E = 撞帽检查点接线 ∥ F = 渲染核版本逐字；定义 = `thincoder-vscode/scripts/check-vsix.mjs` 断言 E ∕ F 段）+ 段 2 🧪 跳过；exit 0 |
@@ -120,7 +123,9 @@
 ① 盘点 + 干跑（P1 + P2——零副作用，可重跑）
 ② ✋ 定号（§4.2）→ CHANGELOG ∕ bump ∕ 依赖核对（§5.2 步骤 1–4）
 ③ ✋ 发核（§5.3——npm publish；先发核再物化）
+
 ④ 核可见性复核（性质 = 下游发布前置守卫——⑤ 发 CLI ∕ VSC 前核须 registry 可见；非核发布完成判定，完成判定 = F4）：npm view @thincoder/core version = 本次号；node scripts/check-pack.mjs thincoder-core --registry <本次号> exit 0（registry 面 vs 源树同口径——路径集 + integrity 相等；think-off.mjs 成员判定已含于路径集比对——#470 判据；台账 #1222 ∥ #1363）
+
 ⑤ ✋ 发 CLI（§5.4）· ✋ 发 VSC（§5.5——物化 → publish:all）
 ⑥ 收窗：P3 guard 恢复 dev 链 → dev-link --check = 0
 ⑦ 阶段 3b（§5.6——桌面 · 发布轮必含；轮内次序 = 收在 ⑤ 之后）→ 阶段 4 ∕ 5（§5.7 ∕ §5.8）照旧
@@ -157,6 +162,7 @@
 [阶段 2 · 发 CLI]  smoke（人工·花真钱）→ npm publish（CLI thincoder）
       ↓
 [阶段 3 · 发 VSC]  verify-pat → npm run publish:all（VSC thincoder-vscode · 双市场）
+
       ↓
 [阶段 3b · 发桌面]  物化 → package（check-dist 闸）→ 签名（hook）→ 上传（Windows 三件：exe ∥ blockmap ∥ latest.yml）→ 官网挂载（Windows）——Linux 面暂缓
       ↓
@@ -171,6 +177,7 @@
 2. **CHANGELOG**：**各端各自**（核 `thincoder-core/CHANGELOG.md` ✗ CLI ✗ VSC ✗ **桌面 `thincoder-desktop/CHANGELOG.md`**（首版已建——§5.6 步 1）——**核不豁免**：首发漏建 ✗ 2026-09-21 补建 ✗ 0.9.1 段已补 ✗ 后续发布随阶段 0 一起更新）
    ——开发批记录挂 `[Unreleased]` 段，发布时段头改新号（Keep a Changelog 格式，中文，Added / Changed / Fixed / Removed 分节；VSC 侧 = 市场页 Changelog 标签内容来源）；**无档先建**（首发端 = 建 + 写首发段）。
    **CHANGELOG 条目 = 发布轮回填（取材 = 批档 §5 提交集 + 提交标题），开发批不逐条追写**（2026-10-15 定案——维持回填 + 明示书面化；0.10.5 ∥ 0.10.6 ∥ 0.10.7 三次发布实测均回填形）。
+
    **附带**：CLI README 的 Changelog 摘要节（面向 npm 用户的英文精要 ✗ 非 CHANGELOG 全量镜像）同步补新版本段——首发漏更过一次（0.12.12→0.12.63 空窗 ✗ 2026-09-21 补 0.12.63/0.12.62 两段 ✗ 此后每发布必更 ✓）。
 3. **version bump**：`package.json` 改到期望号（**JSON.parse → 改字段 → JSON.stringify**——禁 PowerShell `Set-Content -Encoding UTF8`：会写 BOM `EF BB BF`，JSON 解析失败、发布门崩）。
 4. **依赖核对**：三产品（CLI ∕ VSC ∕ 桌面）`@thincoder/core` 声明与本次核版本对齐（§4.4——现 `^0.10.8`；核发新号后同步收正）。
@@ -180,7 +187,7 @@
 
 > **为什么先发核**：两产品 `dependencies` 依赖 `@thincoder/core`（生产装机按 registry 解析）——核版本未上 registry 时，CLI/VSC 装机即坏（消费者 E404；首发前实证 = E404 实测 2026-09-20）；VSC vsix 更是直接**内嵌**核（marketplace 无依赖解析）。开发期两产品靠 `npm link` 本地链接解析（`CORE-UNIFICATION.md` §2.6.1），生产期只能靠 registry。
 
-**首发一次性前置**：`npm whoami` + `@thincoder` scope 归属确认；核包 `prepublishOnly` 门禁**已在位**（`npm test`——`npm publish` 自动先跑；0.9.4 发布实测 575/575）。
+**首发一次性前置**：`npm whoami` + `@thincoder` scope 归属确认；核包 `prepublishOnly` 门禁**已在位**（语法门 `check-syntax`——`npm publish` 自动先跑；核仓无集成测试集，测试职责在前端包）。
 
 ```bash
 cd thincoder-core
@@ -211,6 +218,7 @@ npm publish                    # prepublishOnly 自动跑 release:check（lint �
 ```
 
 **门禁链细节**（`scripts/release-check.mjs`）：两步 = lint（`check-syntax.mjs`）→ 测试（`thincoder-cli/test/run.mjs`——单元测试 + 集成测试 + slow 全跑）；输出只打摘要行，失败时自动提取失败详情（每块 ≤24 行、最多 12 块；无汇总段回退输出尾 40 行）。
+
 **顺序守卫**：release-check 首查核版本存在性（registry 查无 = 中止——防止发出发坏包）；核**内容**面守卫 = §5.0 P2 核行闭包断言 + §5.0 P4 ④ registry 复验（台账 #1222——顺序 = 版本面 + 内容面双关）。
 
 **失败处置**：修复 → **局部重跑**（`node --test --test-name-pattern "<失败名>" <失败文件>`——秒级）确认 → **再 `npm publish` 终跑一次**收口（禁每次失败全链重跑）。
@@ -252,6 +260,7 @@ npm run publish:all
 
 **门禁与守卫细节**（`scripts/publish-all.mjs`）：`vscode:prepublish` 自动跑 `lint && test`（发布门不挂仓级文档债——doc-check 走仓根域）；
   段 0 = 核版本存在性预检（registry 查无 = 中止）· 段 1.5 = vsix 含核断言（解包校验——断言 B）；
+
   **双市场同发**（Microsoft Marketplace + Open VSX——Cursor/VSCodium/Windsurf 连 Open VSX，缺一即未完成——2026-08-29 漏发事故）· `--skip-marketplace` / `--skip-openvsx` 显式单源。
 
 **坑**：`vsce publish` 报 `already exists` 但 `vsce show` 仍旧版 = 市场索引缓存延迟（发布通常已成功——先 `vsce show ... --json` 核对 versions 列表；真失败报 `Invalid access token` 或明确错误）。
@@ -341,12 +350,14 @@ ALIYUN_KEY=… ALIYUN_SECRET=… node scripts/deploy-oss.mjs    # 实传（凭�
 
 **对外端（三） = CLI（npm 包 `thincoder`）· VS Code 扩展（市场 `thincoder-vscode`）· 桌面（安装包——`thincoder-desktop/package.json` `version`）**——与站点现行形态一致（about 页「当前版本」行 · download 页系统要求各行）。
 **核不入版本面**：核 = 三产品的共享依赖（CLI 经依赖解析；vsix ∥ 桌面产物内嵌），用户不直接安装 ⇒ 站点对外版本面不展示核；核的对外可见性由三产品条目承载（CLI 条目内的核依赖升级句）。
+
 **取值 = registry / 市场最新已发号（桌面 = 源树）**：CLI = `npm view thincoder version`；VS Code 扩展 = 市场 `versions` 首项；**桌面 = `thincoder-desktop/package.json` 的 `version`**（与产物名 ∥ 站点卡片同刻比对）。**三处同值**：同一端在 about / download / changelog 页头的表述逐字一致（含 `v` 前缀形态与端名写法）。
 
 ### 6.2 changelog 页（呈现形态）
 
 **分节**：按端分节——**CLI 节在前 · VS Code 扩展节在后 · 桌面节随其后**，各节内部版本倒序（新在前）；节标题 = `<h2 class="section-title">`（站点既有类——**零 CSS 改动**，只加标签行）。
 **条目形态**（沿用现状）：`<h2>v<号> <span class="version-date">日期</span></h2>` + `<ul>` 要点列表。
+
 **粒度 = 逐版骨架 + 要点摘要**：每个**已发布**版本必有一条（骨架 = 号 + 日期 ⇒ 可机检）；要点 = 用户可感者优先（内部结构 / 机制类择一概括或省），旧版可仅 1 条——密度不强制统一。
 **不上页**：① **未发布号**（源档有段而 registry 无号——如 CLI 0.12.55 / 0.12.56 / 0.12.57）⇒ 不出现（页面只反映真实发布）；② **作废号**（越月预占——如 VSC 0.8.11 未发）⇒ 不出现。
 
@@ -369,6 +380,7 @@ ALIYUN_KEY=… ALIYUN_SECRET=… node scripts/deploy-oss.mjs    # 实传（凭�
 + 核 `thincoder-core/CHANGELOG.md`（**取材面**——核不入页（§6.1）：仅当本次含核依赖升级时，供 CLI 条目内「核依赖升级句」取材）；
 输出 = changelog 条目片段（**stdout，不写页面**）；人工完成择要 + 号 / 日期核对 + 插页。
 **归属 = 站点仓 `scripts/`**（与部署脚本同域）：生成物 = 站点 HTML（格式 / 转义 / 缩进属站点面）⇒ 工具随其产物归站点仓；**本仓零新增工具**（对外面改动全部落站点仓轮）。
+
 **人工门不可省**：生成物 = 骨架 + 原文要点草稿——**未经人读的生成物不得部署**（内部机制 / 行话面须择除）。
 **被否候选**：① **全自动（生成即部署）**——内部面会漏到对外页，且无法保证用户可读（现行页面 = 人工择要形态）；② **纯手工**——本次 70 条追平 + 逐版手抄格式易漂移，且防再次滞后全靠人记性。
 

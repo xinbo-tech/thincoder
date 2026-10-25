@@ -1,6 +1,6 @@
 /**
  * release-check.mjs — 发版前一键检查（RELEASE.md §1 合并项——2026-09-05）。
- * 顺序：⓪ 核版本存在性预检（registry——RELEASE.md §5.4；对位 VSC publish-all 段 0）→ lint（check-syntax）→ 全量测试（test/run.mjs——单元 + 集成 + slow 全跑）。
+ * 顺序：⓪ 核版本存在性预检（registry——RELEASE.md §5.4；对位 VSC publish-all 段 0）→ lint（check-syntax）→ 集成测试（test/run.mjs——cli 只收集成层）。
  * 痛点修复（0.12.59 发版实测——失败详情被管道过滤吞掉，为看错误跑 3 次全量）：
  * 测试步骤输出巨大（200K+）不全透传——只打印摘要行；失败时**自动提取并打印
  * failing tests 详情段**（✖ 行 + 每个失败错误块 ≤20 行）——迭代不再靠手工重定向。
@@ -89,8 +89,8 @@ if (lint.status !== 0) {
 }
 console.log("✔ lint OK\n")
 
-// ── 2. 全量测试（单元 + 集成 + slow 全跑——M10 单一 `npm test` 门禁）──
-const testStatus = runTestStep("test", "test/run.mjs", "（单元 + 集成 + slow 全量输出捕获中——完成后打印摘要 + 失败详情）")
+// ── 2. 集成测试（cli runner 只收集成层——核包门禁 = 语法门，不在此跑）──
+const testStatus = runTestStep("test", "test/run.mjs", "（集成测试输出捕获中——完成后打印摘要 + 失败详情）")
 if (testStatus !== 0) process.exit(testStatus)
 
 console.log("\n✅ release-check 全绿——可发版（bump → tag → push 双远端 → npm publish——RELEASE.md §2）")

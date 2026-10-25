@@ -76,5 +76,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
       # 单引擎（声明面驱动——设计档 DOC-DISCIPLINE.md §7；2026-09-18 判据面批收正：旧三档 doc-anchors / check-doc-width / check-ledger 已随 v2 收敛撤除）
-      # 停用（2026-10-16 · 父侧直改 · 可 revert）：用户 2026-10-15 12:10 令禁调 doc-check——一切轮次、一切角色，不再跑、不再引其读数、不再以其红 / 绿作任何判据；本步（非零退出即构建判据）在禁令射程内。恢复条件 = 该令撤销。
+      # 停用（2026-10-16 · 父侧直改 · 可 revert）：用户 2026-10-15 12:10 令禁调 doc-check；**该令已于 2026-10-18 被更晚裁定取代**（doc_check 必跑——需求 `docs/core/requirements/DOC-CHECK.md`）。本步（非零退出即构建判据）在禁令射程内。恢复条件 = 该令撤销。
       # - run: node scripts/doc-check.mjs --root .
