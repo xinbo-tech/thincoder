@@ -3757,14 +3757,14 @@ B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipl
 B1 — `thincoder-core/prompts/discipline-engineering.md` · `## Testing discipline` 节 · `**Integration tests = the release gate, not a work rhythm**` 行之后 ∥ `**A missing integration suite is a debt, not a steady state**` 行之前，插入两行：
 
 ```text
-- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists, never a full-suite run**: the full suite is the parent-side closeout gate — the integration half is reported in the closeout line, not run here.
+- **An acceptance criterion names the changed-face unit test file or files (`node --test <file> [<file> ...]`), or a one-off reading when no runnable face exists, never a full-suite run**: the full suite is the parent-side closeout gate — the integration half is reported in the closeout line, not run here.
   Why: written into a batch, the suite runs every round — a release gate turned into a round cost, and nothing new is proven by running it again.
 ```
 
 B2 — `thincoder-core/prompts/persona-eng-designer.md` · `- **Acceptance** — each criterion machine-checkable;` 行之后 ∥ `- **Dependencies** — upstream/downstream dependencies.` 行之前，插入两行：
 
 ```text
-   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
+   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
 
    Why: a suite run per batch is a round cost, not a release gate.
 ```
@@ -3772,7 +3772,7 @@ B2 — `thincoder-core/prompts/persona-eng-designer.md` · `- **Acceptance** —
 B3 — `thincoder-core/prompts/advisor-design.md` · 第 12 条末 · `**Why**: integration tests are the only acceptance run` 行之后 ∥ `## Output Format` 标题之前，插入两行（B3 判断句 + 它自己的 `Why` 行——理由紧随其规则，承本档 §6.45 写形；第 12 条 `:54`↔`:55` 的「规则 → Why」对因此不被拆）：
 
 ```text
-    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file (`node --test <file>`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
+    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or a one-off reading when no runnable face exists; the integration half is reported in the closeout line, not run here.
 
     Why: acceptance is what the implementing round runs — a suite there turns the release gate into a round cost, and a repeat run proves nothing new.
 ```
@@ -3914,7 +3914,7 @@ existing but unusable = `thincoder-core/prompts/persona-engineering.md:345`—�
 | J11 | 同档 `:191` | `— integration cases are established from business needs, not graduated from unit files.` | 与 J3 同句（父侧清单未列；同机制同区域——只改工程面即造两面差异） | 删括号（B12） |
 | J12 | 同档 `:193` | `**The pre-release acceptance loop**: walk through the real business from a user-visible entry.` | 入口已单列成句，不在定义位 | 不改 |
 | J13 | 同档 `:197` | `Integration suites live in the front-end entry points only — front-end scenarios cover the core transitively …` | 放置决策（N20），不是定义位；与 `thincoder-core/prompts/discipline-engineering.md:186` 同文，单改一面即造两面差异 | 不改 |
-| J14 | `thincoder-core/prompts/persona-eng-designer.md:115` ∥ `thincoder-core/prompts/advisor-design.md:56` | the criterion is the changed-face unit test file (`node --test <file>`) | `#59` 🟡①：只认单档，未覆盖需求 F1 允许的「相关子集」；第三面 `thincoder-core/prompts/discipline-engineering.md:195` 在本批冻结区（`:193-197`）⇒ 三面不能只改两面 | 上抛（见上抛项 1） |
+| J14 | `thincoder-core/prompts/persona-eng-designer.md:115` ∥ `thincoder-core/prompts/advisor-design.md:56` | the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`) | `#59` 🟡①：只认单档，未覆盖需求 F1 允许的「相关子集」；第三面 `thincoder-core/prompts/discipline-engineering.md:195` 在本批冻结区（`:193-197`）⇒ 三面不能只改两面 | 上抛（见上抛项 1） |
 
 **机制**
 
@@ -4157,7 +4157,7 @@ B12 — `thincoder-core/prompts/discipline-normal.md:191` 整行替换：
 B1a — `thincoder-core/prompts/advisor-design.md:56` 整行替换为两行：
 
 ```text
-    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result;
+    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result;
 
     the integration half is reported in the closeout line, not run here.
 ```
@@ -4165,14 +4165,14 @@ B1a — `thincoder-core/prompts/advisor-design.md:56` 整行替换为两行：
 B1b — `thincoder-core/prompts/discipline-engineering.md:195` 整行替换为两行：
 
 ```text
-- **An acceptance criterion names the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result, never a full-suite run**: the full suite is the parent-side closeout gate —
+- **An acceptance criterion names the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result, never a full-suite run**: the full suite is the parent-side closeout gate —
   the integration half is reported in the closeout line, not run here.
 ```
 
 B1c — `thincoder-core/prompts/persona-eng-designer.md:115` 整行替换为两行：
 
 ```text
-   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result;
+   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result;
 
    the integration half is reported in the closeout line, not run here.
 ```

@@ -112,7 +112,7 @@ Architecture-level mechanism docs may substitute mechanism goals & constraints f
 - **Feature points** — each verifiable;
 - **Boundary** — explicitly what it does NOT do;
 - **Acceptance** — each criterion machine-checkable;
-   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result;
+   **A full-suite acceptance is not a batch criterion**: it names the parent-side closeout gate — the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result;
    the integration half is reported in the closeout line, not run here.
    Why: a suite run per batch is a round cost, not a release gate.
 - **Dependencies** — upstream/downstream dependencies.

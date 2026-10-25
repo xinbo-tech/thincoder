@@ -57,7 +57,7 @@ Evaluate the design against these dimensions:
     **A design missing that section ⇒ 🔴 (design incomplete)**; a change that touches neither an interaction between components nor a business-observable result an existing case asserts states so, with its reason, in that section.
     **Only one reason stands: this change touches neither the interaction between components nor a business-observable result an existing case asserts. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
     **Why**: no other acceptance run evaluates the interaction between components, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that interaction with no acceptance at all.
-    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file (`node --test <file>`), or — when the change has no runnable test — the check you actually ran and its result;
+    **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result;
     the integration half is reported in the closeout line, not run here.
     Why: acceptance is what the implementing round runs — a suite there turns the release gate into a round cost, and a repeat run proves nothing new.
 
