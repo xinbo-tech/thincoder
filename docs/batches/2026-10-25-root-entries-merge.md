@@ -23,6 +23,22 @@
 
 **范围边界（不做）**：不动 `isRegistered`（已单臂）∥ 不动台账侧 `resolveLedgerRoot`（前批已定）∥ 不动 `discoverProjects` / `discoverRepos` 的发现算法 ∥ 不动建档流 ∥ 不加配置键。
 
+**更正（19:16 · 父侧实读调用面后推翻上文立项理由）**：上文「本批对象」四行里有两行判错。
+
+| 原判 | 实情 |
+|---|---|
+| `owningProject` 无界 = 问题 | **无界是对的**——它答「这个路径属于哪个项目」，评审面靠它把项目外文档判成 `outside-project`（`review-facts.mjs:90`）；加界会误杀项目外判断 |
+| `resolveProjectRoot` 薄委托 | 无问题，保留 |
+| `projectRootView` 两问同函数 | 是**设计选择**（归属 ⇒ 发现兜底），非缺陷；`project_root` 有界与它无界**不冲突**——台账写面要界，归属判定不要 |
+| advisor `findProjectRoot` 取名撞车 | **真问题，唯一真问题** |
+
+**根因**：我把「同一个问题六个答案」当成事实，实际是**一个归属判定 + 两种语义不同的用途**（写面有界 / 判定无界）+ 一个另一问的撞名。归并对象不是六个函数，是那一处撞名。
+
+**已落（本批唯一改动）**：`findProjectRoot` → `findGuideRoot`
+- `thincoder-core/advisor/project-context.mjs:54`（定义）+ `:91`（调用）
+- `thincoder-core/advisor/messages.mjs:15`（re-export）
+- 集成 22/22 绿；`node --check` 两档过
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：（eng-designer 写入时更新）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试覆盖 / 验收对照 / 关键决策 / 上抛项>

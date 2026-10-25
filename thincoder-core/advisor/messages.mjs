@@ -12,7 +12,7 @@ import { loadAdvisorMd, extractConversationBackground, extractAgentResponseTable
 import { injectProjectGuide, injectDocumentMap, injectProjectStandards, NO_GIT_NOTICE } from "./project-context.mjs"
 
 // Structural split (not an authority migration): the moved helpers stay reachable here.
-export { findProjectRoot, injectProjectGuide } from "./project-context.mjs"
+export { findGuideRoot, injectProjectGuide } from "./project-context.mjs"
 
 /**
  * Build the mechanical review-object declaration block (AGENT-LOOP-ASYNC-POOL.md §6.18

@@ -51,7 +51,7 @@ export const NO_GIT_NOTICE = "(No git repository detected — change-set context
  * @param {string[]} scopeFiles — cwd-relative review-scope paths (may be empty)
  * @returns {string|null} absolute project root with an AGENTS.md, or null
  */
-export function findProjectRoot(cwd, scopeFiles) {
+export function findGuideRoot(cwd, scopeFiles) {
   // Normalize separators before comparing: input paths may use either
   // convention (join() → "\\" on Windows; tool args / tests → "/"). Mixed
   // styles made isInside(cwd + sep) miss legitimately nested paths.
@@ -88,7 +88,7 @@ export function findProjectRoot(cwd, scopeFiles) {
  */
 export function injectProjectGuide(agent, parts, scopeFiles = []) {
   parts.push("## Project Guide (AGENTS.md)")
-  const root = findProjectRoot(agent.cwd, scopeFiles)
+  const root = findGuideRoot(agent.cwd, scopeFiles)
   const path = root ? join(root, "AGENTS.md") : null
   let text
   if (!path) {
