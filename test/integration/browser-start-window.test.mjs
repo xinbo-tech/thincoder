@@ -32,8 +32,8 @@ const SAVED = {
 process.env.HOME = HOME
 process.env.USERPROFILE = HOME
 
-const { browserTool } = await import("@thincoder/core/tools/browser.mjs")
-const { resolveBrowser } = await import("@thincoder/core/browser/launch.mjs")
+const { browserTool } = await import("../../thincoder-core/tools/browser.mjs")
+const { resolveBrowser } = await import("../../thincoder-core/browser/launch.mjs")
 
 after(() => {
   for (const [key, value] of Object.entries(SAVED)) {

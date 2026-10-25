@@ -15,8 +15,8 @@
  */
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { fetchTool, websearchTool } from "@thincoder/core/tools/web.mjs"
-import { _resetDeepseekTransportForTest, _setDeepseekTransportForTest } from "@thincoder/core/tools/web-deepseek.mjs"
+import { fetchTool, websearchTool } from "../../thincoder-core/tools/web.mjs"
+import { _resetDeepseekTransportForTest, _setDeepseekTransportForTest } from "../../thincoder-core/tools/web-deepseek.mjs"
 
 /** 本地直取的 fixture 页（I-WB1 ∥ I-WB2 的「回落成功」读数）。 */
 const FIXTURE_HTML = "<!doctype html><html><head><title>fixture page</title></head><body><p>PINEAPPLE-LOCAL-FIXTURE</p></body></html>"

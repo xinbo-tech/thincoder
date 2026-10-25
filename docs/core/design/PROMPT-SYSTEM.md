@@ -201,7 +201,7 @@
 
 **判据线（三条件全中 = 文档引用）**：① 指向对象 = 文档（档名 / 节号 / 指路句）；② 删后句义自足（引用不承担行为语义）；③ 位置 = 模型可见面（提示词装配文本 · 工具说明 / schema 文本 · 回给模型的串 · 注入提醒）或同因人读串（日志 / 告警）。
 
-**判保留面（操作数族 · 规范豁免串 · 三面逐字一致）**：`AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · `thincoder-cli/test/RTM.md`
+**判保留面（操作数族 · 规范豁免串 · 三面逐字一致）**：`AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md`
 
 ——四类逐处给理由：行为操作数（`AGENTS.md` / `SKILL.md` / `.thincoder/advisor.md` / `project_rules.md`）· 路径操作数（`docs/README.md` 地图探测址 · `docs/batches/<batch>-<topic>.md` 路径形 · `design/<board>.md` 落点 · 槽 loader key）。
 
@@ -3588,7 +3588,7 @@ B4 的两处计数：现盘 `:106` 节标题 `### Doc structure (design doc 8 it
 - `thincoder-core/prompts/advisor-design.md:21-47`：11 条评审维度；无「8 项」计数引用 ⇒ 零改。
 - `docs/core/design/PROMPT-SYSTEM.md:2746-2903`（§6.44 双面形）· `:3115-3261`（§6.46 形制）——形制先例。
 - 现盘宽度实读（`node` 一次性脚本 · 本修正轮）：discipline 331 行 / 41,270 字符 / max 300 / >300 = 0；persona 146 行 / 18,815 字符 / max 298 / >300 = 0；advisor-design 131 行 / 13,954 字符 / max 290 / >300 = 0。
-- 三端集成集现状（`fs` 实读，2026-10-23）：`thincoder-cli/test/integration/` 不存在；`thincoder-vscode/test/integration/files.mjs` = `export default []`；`thincoder-desktop/test/files.mjs` = `[]`。
+- 三端集成集现状（`fs` 实读，2026-10-23）：cli 无集成目录；vsc ∥ desktop 集成清单为空。
 - `PROJECT-MANIFEST.json` `index.publicRepos` = 空（本席 2026-10-23 实读）——已查，无相关公共源。
 
 **UI / 交互决策**：无界面面——本批只改模型可见提示词文本与设计档。
@@ -4319,7 +4319,7 @@ B5 — `thincoder-core/prompts/persona-eng-designer.md:136` 整行替换（同�
 | D-PS3 | 重复条款处置 = **源侧删除**（非指针） | common 恒第二位注入——指针无导航价值；D2 单一权威源 |
 | D-PS4 | byte-identical 取消 → **设计锚机制** | 字节硬一致形成互相依赖（并发处理不利）；各面独立语义锚守（多实现面纪律） |
 | D-PS5 | **破坏性命令红线 = `thincoder-core/prompts/common.md` §10 尾部增列**（既有节内；不新增节、不改述既有句） | 落点与「节数不变」已由需求定（`docs/core/requirements/PROMPT-SYSTEM.md` §2.3 行 10 + 增补注②）；红线是既有「有专用工具就不 hand-roll」句（`thincoder-core/prompts/common.md:69`）的同节主题延伸 ⇒ 既有文本零改述 |
-| D-PS6 | **提示词面禁带文档引用 = 删引用（非改址）+ 三道机判锁（J1/J2/J3 · §6.6）**；保留面 = 操作数族规范豁免串（`AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · `thincoder-cli/test/RTM.md`）+ 路径操作数 + 扩展名字面量 + 协议自名；纪律句落 `thincoder-core/prompts/common.md`「文档写作纪律」节 | 用户裁定 |
+| D-PS6 | **提示词面禁带文档引用 = 删引用（非改址）+ 三道机判锁（J1/J2/J3 · §6.6）**；保留面 = 操作数族规范豁免串（`AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md`）+ 路径操作数 + 扩展名字面量 + 协议自名；纪律句落 `thincoder-core/prompts/common.md`「文档写作纪律」节 | 用户裁定 |
 | D-PS7 | **「不可裁决」自止点 = 落 `thincoder-core/prompts/common.md` 上行通道节（既有节内增列）+ 人格档逐处同点限定（eng-designer 两处 + 同族四档）**；判据 = 发现两处要求互斥 ⇒ 即「不可裁决」⇒ 立即 `ask`（不设重读 / 权衡前置） | 判据本体在公共层 ⇒ 操作化落同节（D2；恒第二位 = 全角色覆盖）；人格档各处 = 本地出口（降级交付 / 歧义进报告 / 计划注明）的边界——就近落各档，**本地只加出口边界句 + 最短动作锚**（承编写纪律 #10「关键锚点重复」） |
 | D-PS8 | **漂移防线 = 流程步（批次收尾一次性比对）**——零常驻锁 | 零常驻 = 守当批一致性而不冻结演进 |
 | D-PS9 | **台账治理纪律 = 落 `thincoder-core/prompts/persona-engineering.md`「派发与收尾纪律」节内 `欠账入清单` 邻位**（既有节内增列 · 零块计数连带） | 属主 agent 处置纪律（「做还是记」判断）——与同节 *Debts go on the list* / 父侧不代笔并列 |

@@ -14,7 +14,7 @@ What it checks — exactly two criteria, both built into the engine:
   the prompt face (`thincoder-core/prompts/**`) they are stripped from a line before extraction. On other faces four of the seven are
 
   exempt as file-name classes — `AGENTS.md`, `SKILL.md`, `.thincoder/advisor.md`, `project_rules.md` — while `README.md` and
-  `MANIFEST.md` are still judged as pointers. `RTM.md` is stripped on the prompt face; on other faces it is judged as a pointer — write it path-qualified (e.g. `thincoder-cli/test/RTM.md`) so it resolves. The seven:
+  `MANIFEST.md` are still judged as pointers. `RTM.md` is stripped on the prompt face; on other faces it is judged as a pointer — write it path-qualified (e.g. `test/RTM.md`) so it resolves. The seven:
 
   ```text
   AGENTS.md  SKILL.md  README.md  MANIFEST.md  .thincoder/advisor.md  project_rules.md  RTM.md

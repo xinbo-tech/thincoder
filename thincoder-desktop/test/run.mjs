@@ -1,7 +1,7 @@
 /**
  * run.mjs — 单测试入口（`docs/desktop/design/PROJECT.md` §4.1）：清单 ↔ 盘上**两向自检** + `node --test` 派发。
  * 显式清单而非通配：盘上未登记的 `*.test.mjs` 永不执行 ⇒ 反查即失败（蓝本 = `thincoder-vscode/test/run.mjs`）。
- * 清单 = 单元域 + 集成域（`test/integration/` 真进程用例）同册；软链目录（junction）遍历穿不过 ⇒ 出错即判红（不静默漏收集）。
+ * 清单 = 单元域（集成测试集已归仓根 `test/integration/`，仓根单入口 `node test/run.mjs`——§12）；软链目录（junction）遍历穿不过 ⇒ 出错即判红（不静默漏收集）。
  * 命名 `.mjs` 而非 `.test.mjs`——runner 只收集 `*.test.mjs`，本档是启动器。
  * **R3b**：`--import test/rc-resolve.mjs`（`/rc/` 渲染取核路径的平 node 解析钩子 —— 渲染档在测试与生产下走
  *  同一份核件；不预载 ⇒ 引入核件的渲染档 import 即 `ERR_MODULE_NOT_FOUND`）。

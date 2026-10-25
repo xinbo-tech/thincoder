@@ -536,11 +536,11 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.1 方案与理由
 
-**目标状态一句话**：每个有集成用例的发布单元（端 = cli ∥ vsc ∥ desktop）在同测试目录下持有一份 Markdown 总表（`<包>/test/RTM.md`）——**按业务故事分节**，**一节一表、一行 = 一个集成用例**；行前段写「怎么做」（步骤），后段写「怎么算通过」（验收标准）；表尾 = 签署面。
+**目标状态一句话**：全仓持有一份 Markdown 总表（仓根 `test/RTM.md`——**H2 按端分节**、节内**按业务故事分节**），**一节一表、一行 = 一个集成用例**；行前段写「怎么做」（步骤），后段写「怎么算通过」（验收标准）；表尾 = 签署面。
 
 **理由三条**：
 
-1. **交付物须耐久，批档可整体清理**（机械事实）⇒ RTM 住包内 `test/`、随代码进 git（**不引用批档**与引用方向 = §11.6 行 1）。
+1. **交付物须耐久，批档可整体清理**（机械事实）⇒ RTM 住仓根 `test/`、随代码进 git（**不引用批档**与引用方向 = §11.6 行 1）。
 2. **锚在集成用例上**，不另造证据面：行「证据」列指向 `test/integration/<场景名>.test.mjs`（沿用 §4.3 既有命名），可复跑、可重现。
 3. **报告要素照公开标准收敛**，不自创字段（条款见 §11.7）。
 
@@ -552,9 +552,9 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 | 项 | 取值 |
 |---|---|
-| 落点 | `<仓根>/test/RTM.md`（仓内一份，按端分节；需求 §7 F29 ∕ N22——建档前散文面用占位形，见 §12.1 指针形注） |
-| 命名 | 住仓根 `test/` 下，即 `<仓根>/test/RTM.md`；文档标题 = 「UAT 验收总表（RTM）」 |
-| 份数 | **仓内一份**（`<仓根>/test/RTM.md`，H2 = 端节、节内 H3 = 业务故事）——签署面一份（文档尾部，产品标识列三端——§12 KD-U6） |
+| 落点 | `test/RTM.md`（仓根，仓内一份，按端分节；需求 §7 F29 ∕ N22） |
+| 命名 | 住仓根 `test/` 下，即 `test/RTM.md`；文档标题 = 「UAT 验收总表（RTM）」 |
+| 份数 | **仓内一份**（`test/RTM.md`，H2 = 端节、节内 H3 = 业务故事）——签署面一份（文档尾部，产品标识列三端——§12 KD-U6） |
 
 - 落点 `test/` 不触收集面自检：自检域 = `test/` 下 `*.test.mjs`（§10.2 判据 4 命名约定），`.md` 天然不入域。
 - RTM 是给人读的文档 ⇒ 遵守行宽纪律（无单行 > 300 字符）；是否入各包 doc-check 域 = 实施轮核实（§11.12 O-6）。
@@ -601,8 +601,8 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - **行 → 用例**：行「证据」列写 `test/integration/<场景名>.test.mjs`（§4.3 的目录 ∕ 命名契约不变）。
 - **用例 → 行**：集成用例档内的用例标题以 RTM 编号开头（如 `test('1-1 …')`）——用例标识符与报告标识符同字，标准 §6.4.1.3 a) 的「测试用例的标识符」由此机判。**次序：先定 RTM 编号 → 再落用例标题**（编号先行）；**实施轮随用例设立**（本设计不写 `test/**`）。
 - **覆盖判据**：故事下每个用例一行；一个用例不出现在两张表（不重复登记）。
-- **设计轮 → 表**：设计的第一动作 = 读 `<仓根>/test/RTM.md` 的本端节出 delta（改坏 ∥ 冗余 ∥ 缺失三问）——机制与判据 = §11.15。
-- **现状**：仓内一份（`<仓根>/test/RTM.md`）——CLI 节 5 故事 15 行（性质 = **既有 15 例回填索引**，不是 §5.1 的起步批量；§5.1 起步批量 = 场景① × 三前端、例数窗 3–9，仍待落——CLI 缺的 3 行编号见 §11.16「D-3 缺失答案」）；vsc ∥ desktop 节 = 骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
+- **设计轮 → 表**：设计的第一动作 = 读 `test/RTM.md` 的本端节出 delta（改坏 ∥ 冗余 ∥ 缺失三问）——机制与判据 = §11.15。
+- **现状**：仓内一份（`test/RTM.md`）——CLI 节 5 故事 15 行（性质 = **既有 15 例回填索引**，不是 §5.1 的起步批量；§5.1 起步批量 = 场景① × 三前端、例数窗 3–9，仍待落——CLI 缺的 3 行编号见 §11.16「D-3 缺失答案」）；vsc ∥ desktop 节 = 骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
 
 ### 11.5 签署面
 
@@ -667,12 +667,12 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | 文件 | 现（行） | Δ | 本批 |
 |---|---|---|---|
 | `docs/core/design/TESTING.md`（本档自身） | —（行数随本节改笔变化，不落固定读数） | +§11.15–§11.17 三节；§11.1 ∕ §11.2 ∥ §11.4 ∥ §11.8 ∥ §11.10–§11.12 ∥ §11.14 改笔 | 设计轮落 |
-| `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死；N22 去「待裁 O-1」⇒ 已裁 = 每端一份 | 父侧落 |
+| `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死；N22 去「待裁 O-1」⇒ 已裁 = 每端一份（**2026-10-25 已推翻 ⇒ 仓内一份——见 §12 ∥ N22 现文**） | 父侧落 |
 | `thincoder-core/prompts/persona-eng-designer.md` | 152 | 第 9 项（现 137–138 行）替换开篇口径、`#87` 字段句与注解逐字保留 ⇒ 2 行 → 5 行（+3） | 实施轮落 |
 | `thincoder-core/prompts/advisor-design.md` | 140 | 第 12 条（现 52–59 行）首句替换 + 一条 🔴 + 一句编号先行 ⇒ 2 行 → 5 行（+3） | 实施轮落 |
 | `thincoder-core/prompts/discipline-engineering.md` | 346 | 集成段（现 181 行后）新增一条 ⇒ +3 行 | 实施轮落 |
 | CLI 包 `<包>/test/RTM.md` | 0（不存在） | ≈45 行：5 故事节（节标题 + 节注 + 表头 + 3 行）+「异常与更正」节 + 签署面（§11.16 建表结构） | 实施轮建 |
-| CLI 包 `test/integration/*.test.mjs`（5 档） | 345 ∥ 245 ∥ 99 ∥ 108 ∥ 132 | 15 处标题改号（旧代号离场） | 实施轮落 |
+| CLI 包 `test/integration/*.test.mjs`（5 档） | 345 ∥ 245 ∥ 99 ∥ 108 ∥ 132（落笔时快照——现量以 §12.3 实读为准） | 15 处标题改号（旧代号离场） | 实施轮落 |
 | `docs/batches/2026-10-24-rtm-index.check.mjs`（机判脚本） | 0（不存在） | 新建 ≈30 行；**一次性读数用毕即删**（与批档同寿命；住批档目录 ⇒ 不进包根、不入 `check-syntax` 语法门） | 实施轮落 · 收口删 |
 | vsc ∥ desktop 包 `<包>/test/RTM.md` | 0（不存在） | 骨架 + 「尚无集成用例」注；故事节随首个用例设立（≈10 行） | 实施轮建 |
 | `docs/core/design/PROMPT-SYSTEM.md` §6.6（操作数族判据源） | 4219 | 六名 → 七名：`:186`–`:187` 名单 ∥ 理由类 · `:193` J1 白名单 · `:195` ∥ `:200` 计数词 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
@@ -722,7 +722,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 | AC-RTM-6 | 三处相抵各有正面解——§11.6 | RTM-6 |
 | AC-RTM-7 | 裁定项与落点单列（O-1…O-6 逐项带落点）——§11.12 | RTM-7 |
 | AC-RTM-8 | 边界与禁止范围在位（§11.14）· 术语表用带定义名词、无自造词（§11.13） | RTM-8 |
-| AC-RTM-9 | 名称 ∥ 路径定死：§11 全文无「拟」（**判据行自身除外**——该字仅由本行引述，写法同 A-TS19），落点唯一 = `<包>/test/RTM.md`（§11.1 · §11.2 · §11.12 O-2） | RTM-1 |
+| AC-RTM-9 | 名称 ∥ 路径定死：§11 全文无「拟」（**判据行自身除外**——该字仅由本行引述，写法同 A-TS19），落点唯一 = `test/RTM.md`（§11.1 · §11.2 · §11.12 O-2） | RTM-1 |
 | AC-RTM-10 | 设计轮起点 = RTM delta 三问（§11.15）＋三处提示词逐字文案在位（§11.17） | RTM-2 |
 | AC-RTM-11 | CLI 15 例逐条给出「故事节 → 编号 → 8 列」取值（§11.16），且编号 ∥ 标题机判双向对齐（§11.16 判据） | RTM-3 |
 | AC-RTM-12 | 改号机判可执行：编号集 ↔ 标题集双向零差、零重复、证据档对位（§11.16 脚本） | RTM-4 |
@@ -742,8 +742,8 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 | # | 事项 | 裁定 + 落点 |
 |---|---|---|
-| O-1 | 份数 | **每端一份**（cli ∥ vsc ∥ desktop）——签署按交付物签 ∕ 零跨包引用。落点 = §11.2 份数行 · §11.5 · §11.6 行 3 · §11.8 表 |
-| O-2 | 文件名 | **`<包>/test/RTM.md`（已定）**。落点 = §11.2 命名行 · §11.8 表 |
+| O-1 | 份数 | **现裁 = 仓内一份**（2026-10-25 用户推翻原裁——见 `docs/core/requirements/TESTING.md` N22 现文 ∥ 本档 §12）。原裁（历史记录）= 每端一份（cli ∥ vsc ∥ desktop）——签署按交付物签 ∕ 零跨包引用。 |
+| O-2 | 文件名 | **仓根 `test/RTM.md`（2026-10-25 随 O-1 推翻改裁——原裁 `<包>/test/RTM.md` 不存）**。落点 = §11.2 命名行 · §11.8 表 · §12 |
 | O-3 | 签署形态 | **纸质 ∕ PDF 签字 + 冻结提交**（git tag = 签后基线）。落点 = §11.5 时序 ⑤ ∕ ⑥ |
 | O-4 | 「质量特性」列（标准 §6.4.1.3 g) 为「可陈述」） | **不纳入**（甲方读不懂；本项目质量特性未在需求档逐条编号）；甲方要求再补。落点 = §11.3 列定义 |
 | O-5 | 多语言面 | **不纳入本轮**——现设计 = 中文单语（甲方可读）；双语需求另开条目。**父侧处置 · 用户可另裁**。落点 = §11.9 行 6 · §11.14 |
@@ -772,7 +772,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.15 设计轮的起点 = RTM delta
 
-> 目的：设计席不再从空白问「这次要哪些场景」——先读 `<仓根>/test/RTM.md` 的本端节，对既有行出 delta。
+> 目的：设计席不再从空白问「这次要哪些场景」——先读 `test/RTM.md` 的本端节，对既有行出 delta。
 
 **三问（逐条落到设计档的集成测试设计段）**：
 
@@ -809,7 +809,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 - **三态判读口径**（RTM 8 列固定、无态列——F29）：主路径 = 正常；环境 ∥ 次数 ∥ 顺序变体 = 边界；故障输入（坏后端 ∥ 非法值）= 错误。节注写本节的态归属，集级三态判据（A-TS3）从表可读出。本表读数 = 正常 5（1-1 ∥ 2-1 ∥ 4-1 ∥ 4-2 ∥ 5-1）· 边界 7（1-2 ∥ 1-3 ∥ 2-2 ∥ 2-3 ∥ 3-3 ∥ 4-3 ∥ 5-2）· 错误 3（3-1 ∥ 3-2 ∥ 5-3）。
 
-**建表结构（实施轮照此建 `<仓根>/test/RTM.md` 的 CLI 端节）**：文档标题（「UAT 验收总表（RTM）」）→ H2 端节「CLI」→ 5 个故事节（各节 = H3 标题 + 节注〔回指需求条目 + 本节三行态归属〕+ 表头 + 3 行）→ **「异常与更正」节**（签后唯一可写面：异常号 ∥ 说明 ∥ 严重程度 ∥ 纠正日期 ∥ 纠正者 ∥ 再测结果——§11.5）→ 签署面（§11.5——仓内一份后 = 文档尾部一个签署面）。CLI 节规模 ≈45 行；vsc ∥ desktop 端节 = 骨架。
+**建表结构（实施轮照此建 `test/RTM.md` 的 CLI 端节）**：文档标题（「UAT 验收总表（RTM）」）→ H2 端节「CLI」→ 5 个故事节（各节 = H3 标题 + 节注〔回指需求条目 + 本节三行态归属〕+ 表头 + 3 行）→ **「异常与更正」节**（签后唯一可写面：异常号 ∥ 说明 ∥ 严重程度 ∥ 纠正日期 ∥ 纠正者 ∥ 再测结果——§11.5）→ 签署面（§11.5——仓内一份后 = 文档尾部一个签署面）。CLI 节规模 ≈45 行；vsc ∥ desktop 端节 = 骨架。
 
 **15 行（8 列取值）**：
 
@@ -951,9 +951,8 @@ console.log('bad-column-rows', badColumnRows);
 
 ### 12.1 方案与理由
 
-**决策**：集成用例与 RTM 从三端包目录迁仓根——仓根 `test/integration/`（单层）＋ `<仓根>/test/RTM.md`（一份、按端分节）＋ 仓根单 runner `test/run.mjs`。
+**决策**：集成用例与 RTM 从三端包目录迁仓根——仓根 `test/integration/`（单层）＋ `test/RTM.md`（仓根，一份、按端分节）＋ 仓根单 runner `test/run.mjs`。
 
-**指针形注**：RTM 总表实施轮才建档；机检门判「档不在盘 = 档缺」⇒ 本档散文面暂以 `<仓根>/test/RTM.md` 代指（先例 = §11.8 的 `<包>/test/RTM.md` 形），建档后归一裸路径（修正轮一笔）。
 **理由（用户原话）**：「集成测试本来就是要测集成场景，只测包内的是单元测试」——跨包引用是集成测试的本职，「零跨包引用」约束生产码、不约束测试码。
 
 - **最近先例**：§10.3 cli runner 单层 glob + SC-1 ∕ SC-5 自检形（仓根 runner 逐段同构克隆）· §10.3 核仓空集说明器口径（cli runner 归位后的归宿同此形）。偏离：无（克隆两形，未新造机制）。
@@ -970,8 +969,8 @@ console.log('bad-column-rows', badColumnRows);
 | 包级 runner | cli = 空集说明器（零目标集合 + `test/` 反查 + exit 1 + 仓根指引——同核仓口径）；vsc = 摘除集成清单面（删 `test/integration/files.mjs`、检查②的集成分支、检查③；单元清单面不动）；desktop = 头注随正（集成域本空） | 核仓先例（§10.3 核仓口径） |
 | CI | `.github/workflows/test.yml` cli job 测试步（`:18`，wd = `thincoder-cli` `:9`）改为仓根 `node test/run.mjs`；vsc job（`:34`）不变；核两 job 已走 prepublishOnly（不动） | 本席实读 CI 档 |
 | 发布门 | `thincoder-cli/scripts/release-check.mjs` 集成步改调仓根 `node test/run.mjs`（失败详情自动提取面不变） | §4.3 发布门接线行 |
-| RTM | 三份合一 = `<仓根>/test/RTM.md`；H2 = 端节（CLI ∥ VSC ∥ Desktop），节内 H3 = 业务故事；CLI 节 = 现 `thincoder-cli/test/RTM.md` 5 节 15 行原样迁入；vsc ∥ desktop 节 = 骨架「尚无集成用例」；证据列 `test/integration/<场景名>.test.mjs` 文本不变（同址解析） | 需求 §7 F29 ∕ N22 |
-| 空目录 | cli ∥ vsc 的 `test/integration/` 删除（vsc 含 `files.mjs` 一并删）；desktop 本无该目录 | KD-U5 |
+| RTM | 三份合一 = `test/RTM.md`（仓根）；H2 = 端节（CLI ∥ VSC ∥ Desktop），节内 H3 = 业务故事；CLI 节 = 原 cli 包内 RTM 总表 5 节 15 行已原样迁入；vsc ∥ desktop 节 = 骨架「尚无集成用例」；证据列 `test/integration/<场景名>.test.mjs` 文本不变（同址解析） | 需求 §7 F29 ∕ N22 |
+| 空目录 | 三端空 `test/integration/` 目录删除（vsc 含 `files.mjs` 一并删；desktop 空目录先于本批在盘，同由本批删——§5 审计修正轮 1） | KD-U5 |
 
 ### 12.3 受影响文件
 
@@ -979,14 +978,15 @@ console.log('bad-column-rows', badColumnRows);
 
 | 文件 | 现（行） | Δ | 判据 |
 |---|---|---|---|
-| `test/integration/` 5 档（自 `thincoder-cli/test/integration/` 移入） | 365 ∥ 264 ∥ 109 ∥ 119 ∥ 142 | 移动 + import 改写（2 档 5 处 `@thincoder/core/` specifier ⇒ 相对路径）+ HERE 锚重锚（2 档） | AC-IU1 ∥ AC-IU9 |
+| `test/integration/` 5 档（自 `thincoder-cli/test/integration/` 移入） | 365 ∥ 264 ∥ 109 ∥ 119 ∥ 142 | 移动 + import 改写（3 档 7 处 `@thincoder/core/` specifier ⇒ 相对路径——实测：advisor-timeout-hot 3 ∥ browser-start-window 2 ∥ web-backend-404 2））+ HERE 锚重锚（2 档） | AC-IU1 ∥ AC-IU9 |
 | `test/run.mjs`（仓根，新建） | 0 | +≈51（逐段同构 cli 版；反查域 = 仓根 `test/` 树） | AC-IU1–IU3 |
-| `<仓根>/test/RTM.md`（新建） | 0 | +≈105（cli 79 + vsc 29 + desktop 29 合并、表头与签署面各一份；实数以落盘为准） | AC-IU6 |
+| `test/RTM.md`（仓根，新建） | 0 | +≈105（cli 79 + vsc 29 + desktop 29 合并、表头与签署面各一份；实数以落盘为准） | AC-IU6 |
 | `thincoder-cli/test/run.mjs` | 51 | 改写为空集说明器（同构核版 49 行形，说明文案 = 仓根指引） | AC-IU4 |
 | `thincoder-cli/package.json` | 44 | 0 | `test` script 零改（仍 `node test/run.mjs`，语义随 runner 变） |
 | `thincoder-vscode/test/run.mjs` | 69 | ≈ −14（摘集成清单 import ∕ 检查②集成分支 ∕ 检查③ ∕ spawn 拼接） | AC-IU5 |
 | `thincoder-vscode/test/integration/files.mjs` | 2 | 删（目录同删） | — |
 | `thincoder-desktop/test/run.mjs` | 49 | ±1（头注集成域句随正） | — |
+| `thincoder-desktop/test/integration/`（空目录，先于本批在盘） | — | 删（空壳会被读者当现役位——KD-U5 同理由） | — |
 | `.github/workflows/test.yml` | 80 | 2 行（cli job 测试步改仓根 runner） | AC-IU8 |
 | `thincoder-cli/scripts/release-check.mjs` | — | 集成步改指仓根（`:57-63` 区域） | AC-IU1 |
 | 提示词三档（`thincoder-core/prompts/persona-eng-designer.md` 第 9 项 ∥ `thincoder-core/prompts/advisor-design.md` 第 12 条 ∥ `thincoder-core/prompts/discipline-engineering.md` 集成条） | — | `<package>/test/RTM.md` ⇒ 仓根 RTM 裸路径（各 1 处；目标串 = §11.17 三节围栏内文字） | AC-IU7 |
@@ -1012,7 +1012,7 @@ console.log('bad-column-rows', badColumnRows);
 | AC-IU4 | `cd thincoder-cli && npm test` ⇒ exit 1 ∧ 说明含仓根指引 ∧ 无 `zero tests = green` | N20 ∥ 核仓口径 |
 | AC-IU5 | vsc ∥ desktop `npm test` 单元清单面行为不变（vsc 现 5 个注册档照跑；exit 码语义不变） | 面差②边界 |
 | AC-IU6 | RTM 对账（§11.16 机判同法、批档一次性脚本、用毕即删）：`rows 15 titles 15` ∧ 四列表皆 `[]` ∧ `bad-column-rows 0`；证据列可解析到仓根 `test/integration/**` | F29 ∥ F30 |
-| AC-IU7 | 提示词三档 `test/RTM.md` 0 命中 ∧ `test/RTM.md` 各 1 处；`node scripts/prompt-refs-check.mjs` 绿 | F29 |
+| AC-IU7 | 提示词三档 `<package>/test/RTM.md` 0 命中 ∧ 仓根裸路径 `test/RTM.md` 各 1 处；`node scripts/prompt-refs-check.mjs` 绿 | F29 |
 | AC-IU8 | CI 档 cli job 测试步 = 仓根 `node test/run.mjs`（该 job 内 `npm test` 0 次） | F12 |
 | AC-IU9 | 全部改动 `.mjs` `node --check` 绿；`node --test test/integration/<单档>` 直达绿（F5 零回归） | F5 |
 
@@ -1033,7 +1033,7 @@ console.log('bad-column-rows', badColumnRows);
 ### 12.8 设计档指针随正清单（一致性面，同批落）
 
 - 本档：§1 头行 ∥ §4.2 ∥ §4.3 ∥ §5.1 ∥ §10.3 ∥ §11.2–§11.6 ∥ §11.15 ∥ §11.16 建表结构句 ∥ §11.17（已随正——本批设计笔）。
-- 他档（设计席笔）：`docs/core/design/AGENT-PARAMS.md:89` ∥ `BROWSER-TOOL.md:582` ∥ `PROVIDER.md:1175` ∥ `LIGHT-CHANNEL.md:95` `:256` `:372` `:386` `:388` `:390` ∥ `PROMPT-SYSTEM.md:204` `:4322`（操作数族串 `thincoder-cli/test/RTM.md` ⇒ 仓根裸路径）。
+- 他档（设计席笔，2026-10-25 修正轮全落）：`docs/core/design/AGENT-PARAMS.md:89` ∥ `BROWSER-TOOL.md:582` ∥ `PROVIDER.md:1175` ∥ `LIGHT-CHANNEL.md:95` `:256` `:372` `:376` `:386` `:388` `:390` ∥ `PROMPT-SYSTEM.md:204` `:3591` `:4322` ∥ `API-CONTRACT.md:4467`（`thincoder-cli/test/…` ⇒ 仓根位；vsc 已删 `test/integration/files.mjs` 的死指针清除；操作数族旧串（cli 包内 RTM 路径形）删除——提示词面实无此串，豁免由 `thincoder-core/prompts/common.md:132` 的 path forms 泛形承载）。
 - 父侧路由：`docs/RELEASE.md:110` ∕ `:220`。
 
 ### 12.9 集成测试设计（RTM delta——§11.15 三问）

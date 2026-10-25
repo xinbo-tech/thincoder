@@ -86,7 +86,7 @@ const maxTurns = overrideTurns ?? agent.config?.agent?.maxTurns ?? DEFAULT_MAX_T
 
 - **为什么入发布门**：本项业务承诺 = 「改了就生效、不用重启」——只在用户真跑一次评审时才可见；上面那一格的单测判的是内存两视图同值，判不到「下一次评审真的按新值跑」，收口删掉单测档后这一半就没人守。
 - **假端点先例**：同形 = `docs/core/design/TIMEOUT-DIGEST.md` §9 I1（本机假 SSE 端点当 provider）；chat provider 的 baseURL 可配，故本格不需要任何测试缝。
-- **落点**：`thincoder-cli/test/integration/advisor-timeout-hot.test.mjs`（常驻——随 `npm test` 走、不随批删）。假端点为 `node:http` 本机 SSE（零外网、零付费——N15）。
+- **落点**：`test/integration/advisor-timeout-hot.test.mjs`（仓根——常驻、不随批删；随仓根 `node test/run.mjs` 走）。假端点为 `node:http` 本机 SSE（零外网、零付费——N15）。
 - **墙钟**：I-AP1 ≈3s ∥ I-AP2 ≈5s（假端点定速），两格合计 ≈8s，在单用例硬超时内。
 - `maxTurns`：DEFAULTS 合并后 `maxTurns === 200`（单一来源 = `thincoder-core/config-defaults.mjs:18`）。
 

@@ -134,7 +134,7 @@ Requirements finalize after confirmation — must be complete before design star
 6. **Case table** (normal / boundary / error + input / expected output)
 7. **Boundary** (what it does NOT do)
 8. **UI/interaction decisions all landed** — undecided parts marked `open`: a silently invented decision lands looking like an approved one
-9. **Integration test design — start from the index**: `<package>/test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns).
+9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns).
    Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows) —
    with each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
    A new row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.

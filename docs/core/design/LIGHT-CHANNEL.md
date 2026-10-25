@@ -92,7 +92,7 @@
 
 **新名三问**：`ROUND_MARKER`——`existing: thincoder-core/agent/light-round.mjs:25 · name: "ROUND_MARKER" · consumers: lightRoundOpen（同档谓词）` ⇒ 沿用（单源迁址 `ledger-db.mjs`，消费面不变名）。
 
-测试档名 `ledger-close-marker-gate.test.mjs`——`existing: thincoder-cli/test/integration/unbooked-pen.test.mjs`（命名形 = 机制名 kebab；同名单元档已随其批收口删除——测试纪律）⇒ 对齐。
+测试档名 `ledger-close-marker-gate.test.mjs`——`existing: test/integration/unbooked-pen.test.mjs`（仓根；命名形 = 机制名 kebab；同名单元档已随其批收口删除——测试纪律）⇒ 对齐。
 
 **先例行**：台账写门 `assertTaskBookGate`（同档同层判据新增——判位与迁移表判同层，`ledger-cmd.mjs:149-160`）∥ 源态拒（`applyRowClose` 既有门，`:259`）；偏离 = 判据读标题字面（非指针存在性）。
 
@@ -253,7 +253,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 | `thincoder-core/agent/unbooked-pen.mjs` | 62 行 | 新档 | 谓词叶（`PEN_TOOLS` ∥ `unbookedPenText()` ∥ `unbookedPenNotice()`） | 新档——免拆分 |
 | `thincoder-core/agent/record-results.mjs` | 199 行（挂接点 `:29-30` ∥ `:87-90`） | +5 | 结构不变（不拆函数、不增导出） | 低于 300 软线 ∥ 500 硬线（`docs/core/requirements/ENGINEERING-MODE-V2.md:647`）⇒ 不触发拆分评审 |
 | `thincoder-core/test/unbooked-pen.test.mjs` | 112 行 | 新档（8 例） | 单元测试档（收口删除——测试纪律） | 新档——免拆分 |
-| `thincoder-cli/test/integration/unbooked-pen.test.mjs` | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——与上一行是两个对象：单元档随批删、集成档常驻 | 新档——免拆分 |
+| `test/integration/unbooked-pen.test.mjs`（仓根） | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——与上一行是两个对象：单元档随批删、集成档常驻 | 新档——免拆分 |
 
 **不改面**：轻通道准入判据（§2.1）· 代码笔闸（§2.8）· 全链放行 · 提示词面（规则已在 persona-engineering:218-222，本件只装触发点）· 批档 ∥ 台账机制本体 · 无新配置键。
 
@@ -369,11 +369,11 @@ The same marker is also the settlement gate credential: settling the row (close 
    **会话流正文不含提醒**：会话流的工具块取 `thincoder-core/agent/dispatch-run.mjs:155` 的 `resultForModel`（渲染 = `thincoder-cli/src/tui/tool-events.mjs:280` 的 `block.result = slimToolResultForDisplay(result)`），而该值在 `record-results.mjs:89-90` 拼接之前就已发出 ⇒ 断言面 = **模型面工具回执**，不是会话流工具块。
 2. **模型可见行为**：回执是模型下一步动作的输入——本机制的目的就是让模型在落笔后确认通道。放行条件零变 ≠ 行为零变：模型收到的输入变了。
 
-**场景表（常驻档 = `thincoder-cli/test/integration/unbooked-pen.test.mjs`，收口不删）**：
+**场景表（常驻档 = `test/integration/unbooked-pen.test.mjs`（仓根），收口不删）**：
 
 | # | 入口（业务可观察点） | 判据（断言什么） | 回指 |
 |---|---|---|---|
-| I1 | 从 CLI 入口起一个会话（脚本化 provider：本机 Anthropic Messages/SSE 假端点，同模板 `thincoder-cli/test/integration/anthropic-tool-roundtrip.test.mjs`，零外网），主 agent 对产品源文件 `src/x.mjs` 执行 `write`，看脚本化 provider 记录的请求体里该笔 `tool_result` 正文 | 该笔回执正文以 `[pen check]` 行结尾且恰出现一次，逐字含 `confirm the channel` 与 `ledger settlement misses it`；文件已写入、工具照常成功（零拒绝） | 需求 §2.6 判定句 ① ∥ 设计 §2.9 触发面 ①–④ |
+| I1 | 从 CLI 入口起一个会话（脚本化 provider：本机 Anthropic Messages/SSE 假端点，同模板 `test/integration/anthropic-tool-roundtrip.test.mjs`，零外网），主 agent 对产品源文件 `src/x.mjs` 执行 `write`，看脚本化 provider 记录的请求体里该笔 `tool_result` 正文 | 该笔回执正文以 `[pen check]` 行结尾且恰出现一次，逐字含 `confirm the channel` 与 `ledger settlement misses it`；文件已写入、工具照常成功（零拒绝） | 需求 §2.6 判定句 ① ∥ 设计 §2.9 触发面 ①–④ |
 | I2 | 同一会话紧接第二笔产品源文件 `write` | 第二笔回执正文零 `[pen check]` 行 | 需求 §2.6 判定句 ③ ∥ 设计 §2.9 闩行 |
 | I3 | 另一会话：先写一份文档（`docs/x.md`），紧接着写产品源文件 | 文档笔零提示、且不消耗闩——随后的产品码笔仍有提示 | 需求 §2.6 判定句 ② ∥ 设计 §2.9 触发面 ④ |
 
@@ -383,10 +383,10 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 **身份项不进集成表**：子代理零提示由单元面覆盖（§4 ⑨ ② 的 `_role="eng-coder"` 反例）——集成表入口 = 主 agent 会话；子代理面的可观察差异只是「子块里少一行」的负断言，再驱动一个脚本化子会话不产生新的业务结论。
 
-**窗口读数（实读 2026-10-24）**：`thincoder-cli/test/integration/` 现量 **5 档 15 例**（`anthropic-tool-roundtrip` 3 ∥ `browser-start-window` 3 ∥ `unbooked-pen` 3 ∥ `web-backend-404` 3 ∥ `advisor-timeout-hot` 3）。
+**窗口读数（实读 2026-10-24）**：集成集现量 **5 档 15 例**（`anthropic-tool-roundtrip` 3 ∥ `browser-start-window` 3 ∥ `unbooked-pen` 3 ∥ `web-backend-404` 3 ∥ `advisor-timeout-hot` 3）——现住仓根 `test/integration/`。
 
-复测 = `cd thincoder-cli && node test/run.mjs`（收集面 = `thincoder-cli/test/run.mjs` 的集成层单层 `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。
+复测 = 仓根 `node test/run.mjs`（收集面 = 仓根 `test/run.mjs` 的单层 glob `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。
 
-**核销标记门批（2026-10-25）判定 = `none`**：RTM 索引 = `thincoder-cli/test/RTM.md`（在盘——本席实读 2026-10-25：5 节 15 例）。逐行对账：无行断言本批改动对象（15 例断言面 = 工具结果回放 ∥ [pen check] 提醒 ∥ fetch 回落 ∥ 浏览器窗口 ∥ 评审超时——无一台账核销面断言）⇒ 破行 0 ∥ 冗余行 0 ∥ 新增 0。
+**核销标记门批（2026-10-25）判定 = `none`**：RTM 索引 = `test/RTM.md`（仓根，在盘——CLI 节 5 节 15 例）。逐行对账：无行断言本批改动对象（15 例断言面 = 工具结果回放 ∥ [pen check] 提醒 ∥ fetch 回落 ∥ 浏览器窗口 ∥ 评审超时——无一台账核销面断言）⇒ 破行 0 ∥ 冗余行 0 ∥ 新增 0。
 
 理由：组件之间的交互零改（改动面 = `ledger-cmd.mjs` 判据新增一条 + 常量迁址；装配面 ∥ 工具层参数管道 ∥ 接线零改），拒放行走路径 = 既有工具拒文通道（故事 1 回放面已覆盖）；核销拒放由 §4 ⑩ 单元档直驱核函数覆盖（承台账写门族先例）。

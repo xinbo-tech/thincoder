@@ -29,7 +29,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
-const CLI_ENTRY = join(HERE, "..", "..", "bin", "thincoder.mjs")
+const CLI_ENTRY = join(HERE, "..", "..", "thincoder-cli", "bin", "thincoder.mjs")
 /** 单个场景的上限（一次真进程装配 + 两回合；须覆盖下面两个回合上限之和，否则卡死时报的是裸测试超时）。 */
 const SCENE_TIMEOUT_MS = 240_000
 /** 一句对话的上限（进程已起好，只等回合走完；本地假端点，不需要长窗）。 */

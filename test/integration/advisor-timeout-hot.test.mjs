@@ -19,9 +19,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 
-import { settingsTool } from "@thincoder/core/agent-tools/settings.mjs"
-import { advisorTool } from "@thincoder/core/agent-tools/advisor.mjs"
-import { REVIEW_TIMEOUT_MS } from "@thincoder/core/advisor/compaction.mjs"
+import { settingsTool } from "../../thincoder-core/agent-tools/settings.mjs"
+import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
+import { REVIEW_TIMEOUT_MS } from "../../thincoder-core/advisor/compaction.mjs"
 
 /** 假 OpenAI SSE 端点：收到请求后静默 `delayMs`，再发一个完整文本回合（超时预算短的时候由调用方 abort）。 */
 function fakeSlowProvider(delayMs) {

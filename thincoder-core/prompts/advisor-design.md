@@ -49,7 +49,7 @@ Evaluate the design against these dimensions:
     **The answer takes one of three forms**: `existing: …` · `none found: …` · `existing but unusable: …`.
     **Unused existing piece**: an existing piece left unused with no reason it is unusable ⇒ 🔴.
     **A missing line** stays 🟡.
-12. **Integration-test design**: the design document must contain an integration-test design section that starts from `<package>/test/RTM.md` — the RTM: one section per business story, one row per integration case.
+12. **Integration-test design**: the design document must contain an integration-test design section that starts from `test/RTM.md` — the RTM: one section per business story, one row per integration case.
     The section answers as a delta against it — which rows this change breaks, which are redundant, which are missing;
     each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
     **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**

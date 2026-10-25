@@ -22,18 +22,22 @@
 thincoder-core/browser/cdp.mjs             CDP 传输客户端（connect / call / on / close；WebSocket 注入缝）
 thincoder-core/browser/launch.mjs          浏览器发现（候选表 + BROWSER_PATH）∥ profile 锁 ∥ 启动 ∥ DevToolsActivePort ∥ 杀树
 thincoder-core/browser/snapshot.mjs        页侧表达式面：快照脚本 ∥ 几何 ∥ 点 / 聚焦表达式 ∥ 归一 ∥ 引用表 ∥ 渲染 ∥ 页摘
+
 thincoder-core/browser/session.mjs         会话单例：惰性开启 ∥ 串行队列 ∥ 生命周期 ∥ 页原语 ∥ 安全助手 ∥ 分发表
 thincoder-core/browser/actions.mjs         基线八动作实现（navigate/snapshot/click/type/evaluate/wait/screenshot/close）
 thincoder-core/browser/input.mjs           输入引擎（纯函数）：键表 ∥ 修饰 / 移位解析 ∥ 序列构造器（键 ∥ 鼠标 ∥ 滚轮 ∥ 拖拽 ∥ 触屏）
+
 thincoder-core/browser/input-actions.mjs   输入动作实现（press/hover/wheel/mouse/drag/touch/insert）+ 目标解析（ref / 坐标）
 thincoder-core/browser/clipboard.mjs       剪贴板动作实现（read/write/copy/paste）∥ Browser 域授权 ∥ 页侧表达式
 thincoder-core/browser/queue.mjs           串行队列 ∥ 动作预算表 ∥ 动作控制器（超时 / 取消单点）∥ 步名跟踪
+
 thincoder-core/tools/browser.mjs           工具面：schema ∥ 参数校验 ∥ isReadonlyAction ∥ 回执组装 / 错误形
 thincoder-core/agent-tools/browser-async.mjs 后台动作任务桥（池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点——复用 bg 族）
 thincoder-core/tool-docs/browser.md        模型面描述（六要素——TOOLS.md §6.9）
 ```
 
 依赖方向（单向 DAG）：`tools/browser.mjs`（工具面）→ `session.mjs`（会话单例／句柄）→ {`actions`（基线动作） / `input-actions`（新动作） / `clipboard`} → {`input`（输入引擎） / `snapshot.mjs` / `cdp.mjs`}；`session.mjs` → `queue.mjs`（调度策略：预算 / 控制器 / 步名）；
+
 异步桥 `agent-tools/browser-async.mjs`（动态入径——`tools/browser.mjs` ∥ `tools/ops.mjs`）→ `session.mjs` 入队面。
 动作模块经会话句柄取能力（`call` / `evalRaw` / `takeSnapshot` / `resolveRef` 等），**不 import** `session.mjs`——无环（§5 拆分决定）。
 
@@ -48,31 +52,38 @@ browser {
   url?: string          // navigate ∥ wait
   ref?: string          // click / type / press / hover / wheel / mouse / touch / insert —— 形 = /^e\d+$/（snapshot 回执里的引用）
   text?: string         // type（写入输入框）∥ insert（插入页内焦点）∥ clipboard write（写入剪贴板）∥ wait（等待文本）
+
   expression?: string   // evaluate —— 页面上下文 JS 表达式
   selector?: string     // snapshot（作用域 CSS 选择器）∥ wait（等待出现的 CSS 选择器）
   clear?: boolean       // type —— 先清空既有内容（默认 false）
   max?: number          // snapshot —— 元素条数上限（默认 100 · 硬上限 200）
   networkIdle?: boolean // wait
+
   timeoutMs?: number    // 预算 override：wait = 谓词超时（默认 30000 · 上限 120000）；其余动作 = 整调用预算（默认按动作表 · 上限 120000——§2.9）
   fullPage?: boolean    // screenshot —— 默认 false（视口）；true = 整页
   headless?: boolean    // 会话开启参数（任动作可携）——默认 true；见 §2.4
   key?: string          // press —— 键名（§2.8 键面）∥ 单可打印字符
+
   modifiers?: string[]  // press —— ["Control" | "Alt" | "Shift" | "Meta"]（可组合）
   phase?: string        // press —— "press"（默认）| "down" | "up"；mouse —— "click"（默认）| "down" | "up"
   repeat?: number       // press —— 长按自动重复次数（0–100，默认 0）
+
   x?: number            // hover / wheel / mouse / touch —— 视口 CSS 像素 X（配 y）
   y?: number            // 同上 Y
   button?: string       // mouse —— "left"（默认）| "middle" | "right" | "back" | "forward"
   double?: boolean      // mouse —— 双击（默认 false）
   deltaX?: number       // wheel —— 横向滚动量（CSS 像素）
+
   deltaY?: number       // wheel —— 纵向滚动量（CSS 像素；正 = 向下）
   from?: string         // drag / touch swipe —— 起点：元素引用 `e<N>` ∥ "x,y"（视口 CSS 像素）
   to?: string           // drag / touch swipe —— 终点：同上两形
   steps?: number        // drag / touch swipe —— 中间移动步数（默认 10 · 2–50）
+
   html5?: boolean       // drag —— HTML5 原生拖放分支（默认 false——实验，§6 KD-16）
   gesture?: string      // touch —— "tap"（默认）| "doubleTap" | "swipe" | "pinch"
   scale?: number        // touch pinch —— 缩放因子（>1 放大 ∥ <1 缩小）
   ime?: string          // insert —— IME 组合候选文本（组合阶段；text = 提交文本——§6 KD-17）
+
   op?: string           // clipboard —— "read" | "write" | "copy" | "paste"
   async?: boolean       // 后台执行（默认 false；depth-0 专项）——ack 即返 + 结算摘要可达（§2.11）
 }
@@ -81,6 +92,7 @@ browser {
 ### 2.2 动作契约（逐动作——参数 / 成功回执 / 失败形；每条可机检）
 
 公共：成功回执 = 首行 `[<action>] …` 标记行 + 正文；失败回执 = `Error: <因由>` 首行 +（动作带页面的）页摘 + 紧凑清单（≤30 行）。
+
 失败回执**返回**（不 throw）——首行 `Error:` = **模型面失败形**（字符串结果的 `ok` 恒真——`thincoder-core/agent/dispatch-run.mjs:158`；`Error:` 前缀仅驱动三处记账跳过（`:77` ∥ `:129` ∥ `:135`）；`ok:false` 仅由 throw 产生（`:182`））。**超时 ∥ 取消**亦走本失败形（§2.9——`Error: <action> timed out after <ms>ms (stuck in <步名>)`）。
 
 | 动作 | 参数（必填加粗） | 成功回执 | 判据（可机检） |
@@ -103,7 +115,9 @@ browser {
 | **clipboard** | **op**（read∥write∥copy∥paste）· **text**（write 必填）· ref?（copy/paste 聚焦目标）· headless? | `[clipboard] write ← <n> chars` ∥ `read (<n> chars)` + 正文（≤8000 字符 · 截断标记）∥ `copy ∥ paste [→ <ref> "<name>"]` | 首行 `[clipboard]`；真达 = 端到端（写 ⇒ 系统读回 ∥ 系统写 ⇒ 读回——冒烟 S15/S16） |
 
 参数校验（每动作）：缺必填 / 互斥项冲突 ⇒ `Error: <action> requires <param>`（或 `exactly one of selector|text|url|networkIdle`）——不执行。
+
 扩展动作同式：`press requires key` ∥ `hover requires ref or x,y` ∥ `wheel requires deltaX or deltaY`（至少一非零——全零同拒）∥ `mouse requires ref or x,y` ∥ `drag requires from and to` ∥ `insert requires text` ∥ `clipboard requires op` ∥ `clipboard write requires text`；
+
 `touch` 手势条件式（tap / doubleTap ⇒ `requires ref or x,y`；swipe ⇒ `requires from and to`；pinch ⇒ `requires ref or x,y and scale`）；`from`/`to` 形不符 ⇒ `Error: <action> <param> must be an element ref (e<N>) or "x,y"`。
 
 **wait 语义定点**：selector = `document.querySelector` 命中；text = 可见文本（`body.innerText`）含子串；url = `location.href` 含子串；networkIdle = 会话期 `Network.*` 事件在飞计数归零后静默 **500ms**（事件面 = `Network.requestWillBeSent` / `loadingFinished` / `loadingFailed` 计数——`Network.enable` 会话开启时已开）。轮询间隔 150ms；超时不悬挂（到点即回执）。
@@ -125,12 +139,15 @@ browser {
 
 **寻址**：click / type 的 `ref` → 表查 → 当前 DOM 按 `selector` 重找（`querySelector`）→ 命中且 tag 一致 ⇒ 执行；`disabled` ⇒ 拒（`Error: ref <ref> is disabled ("<name>")`）。
 **失效**：找不中 / tag 不一致 ⇒ `Error: ref <ref> is stale (was "<name>") — run snapshot again` + 页摘 + 清单（模型据以纠错——F-BT5）。
+
 **失效「显式标注」口径（F-BT4）**：取**使用时报错**读法——stale 回执即「显式标注」的实现面（含原 `<name>` 与纠错指引；T3 的 stale 格 = 回执面）；快照清单**不**对「上轮有、本轮无」的 ref 加消失标记（「消失 ∥ 移位 ∥ 动态重渲」不可机械区分——标记噪声大于信息，复用面已由稳定键保证微变不换号）。
+
 **上限**（N-BT3）：默认 100 条 · `max` 硬上限 200；超限行尾截断标记 `[truncated: showing <max> of <N> — pass selector to narrow]`；总文本 20,000 字符上界（`truncate` 同款标记）。
 
 ### 2.4 会话模型
 
 **设计前置两行（本批）**：先例行 = walkthrough 启动超时形（`scripts/console-walkthrough.mjs:124-127`——deadline + 50ms 轮询 `DevToolsActivePort`）——**对齐**；偏离 = 新增 env 覆盖 + 钳位（walkthrough 为硬编码窗口，无逃生口）。
+
 公开源核查行：查过 本仓 `docs/` 树（本档 §2.9 ∥ `docs/core/requirements/BROWSER-TOOL.md` F-BT16 / N-BT5）+ 代码 `thincoder-core/browser/launch.mjs:34`、`:148`；登记公共源仓 = 无（`PROJECT-MANIFEST.json` `index.publicRepos` 实读 `[]`）；结论 = 无外部权威可对，先例即 walkthrough 脚本与 `BROWSER_PATH` 逃生口（`:47`）。
 
 - **单会话/进程**：模块级单例（`session.mjs`）——同进程所有 agent（主 ∥ 子代）共一份浏览器；动作**串行队列**（promise 链——批并行工具调用天然排队）。
@@ -139,8 +156,10 @@ browser {
   下限 2s 防「瞬间判失败」；上限 30s 把首动作的总墙钟压在「启动窗 + 动作预算」两段各自有帽的范围内（`navigate` 45s **不含**自启——KD-26）；要更长的时间窗走动作级 `timeoutMs`（硬上限 120s——§2.9），它与启动窗各算各的。
 - **冷启预算（本批定死）**：会话自启段受自身帽界定（启动窗 ≤30s ∥ 三域 enable 各 10s），**不占动作预算**——动作时钟自会话就绪后起算（排队期仍计入，U22）。
   实现面 = `thincoder-core/browser/queue.mjs` 的 `pauseBudget` / `resumeBudget` **成对**（`:61` `_pausedAt` · `:65-67` `remaining()` 暂停期读暂停点 · `:71-75` · `:78-83`），`resumeBudget` 经 `extendBy`（`:87-94`）把暂停时长还给 deadline 并重挂定时器；
+
   接线点 = `thincoder-core/browser/session.mjs:199-208`（`:200` 开段暂停 · `:205` 失败腿恢复 · `:208` 就绪恢复）。
   **事后回补不能替代暂停**：`type` / `snapshot` 的 15s 预算短于启动窗 25s，只在自启结束后 `extendBy` 的形态挡不住「自启窗口内预算钟先裁决」——旧句 `stuck in launch browser` 仍在（U62 要消灭的正是它）。
+
   判据 = 无会话时首动作 `type`（15s 预算）配 12s 假自启 ⇒ 不超时、拿满 15s（§8 U62）；首动作 `navigate` 同判——45s 预算自就绪起算（§8 U63）；自启超启动窗 ⇒ `browser failed to start … within <生效秒数>s`。
   → `PUT /json/new?about:blank`（GET 兜底，walkthrough `:131-132`）→ WebSocket（`:133-141`）→ `Page.enable` + `Runtime.enable` + `Network.enable`。
 - **无头 ∥ 有头**（F-BT2）：`headless` 参数 = **会话开启参数**——默认 true；开启后传同值 = 忽略；传异值 = `Error: session is already running (headless=<现态>) — close it first to switch mode`。切换 = close → 下轮以新参数重开（同 profile ⇒ 登录态保留，F-BT6）。
@@ -168,6 +187,7 @@ browser {
 | VSC | `thincoder-vscode/src/tools/index.mjs`（自持清单 `:172-186`——import 核工具 + 入列） | 一处登记（+1 import +1 列项） |
 
 **无浏览器降级**（F-BT8 / N-BT5）：不做装配期剔除（与 `read_image` 门控不同——浏览器是环境事实，不是模型能力）；**首用显式报错**：`Error: no Chromium-based browser found (Edge/Chrome) — install one or set BROWSER_PATH`
+
   ；启动失败 ⇒ `Error: browser failed to start: DevToolsActivePort not written within <秒>(<exe>)`（秒数 = 实际生效的启动窗：缺省 25s，随 `BROWSER_START_TIMEOUT_MS` 变化）。
 
 **子代理面**（自动成立，零新增）：read-only 角色的子代按既有过滤（`thincoder-vscode/src/agent/tool-table.mjs:171` 同式；核 family-tools 同族）拿不到本工具；写角色子代携本工具，过门项（click / evaluate + §3.1 扩展表）的审批经父链上抛（既有 relay——`thincoder-core/agent-tools/subagent-actions.mjs:193-205` 同款）。
@@ -221,6 +241,7 @@ Error: <action> timed out after <ms>ms (stuck in <步名>) — retry the action,
 **开启段中止**：动作被取消 ∥ 自启段帽到点落于会话自启序列中途（半开态——连接 / 进程已置而 `enable` 序列未完）⇒ 按 §2.10 同式处置：复位会话态 + 释放 profile 锁（子进程仍活 ⇒ 杀树兜底）+ 置重开注记——下一次动作干净重开（不中毒；判据同 §8 U52）。
 
 **取消接线（一条机制两个因由：`process` kill ∥ 回合收尾 discard）**：动作控制器（超时 / 取消单点，KD-19）的取消路径接线 = `thincoder-core/browser/queue.mjs:157` `enqueue(action, args, run, signal = null)` ∥
+
  `thincoder-core/browser/session.mjs:493` `runAction(action, args, ctx, { signal = null } = {})`（透传）；信号入队 ⇒ 控制器 `cancel()`（queued 丢队 ∥ running abort 即时展开）。
 
 **开启段句面（登记）**：开启段内层帽命中（`Page.enable` / `Runtime.enable` / `Network.enable` 各 10s）⇒ 回执为 CDP 层超时句 `<method> did not respond within <ms>ms`（`browser/cdp.mjs:80`）——方法名属本节步名词表（CDP 方法名）成员，句面合规（非动作面 `(stuck in …)` 形）；开启段内 WS 断连 ⇒ 走 §2.10 会话健康路径（F-BT17 面）。**到期条件 = 动作面失败句面下次触碰统一时一并收编**（不动）。
@@ -315,8 +336,11 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 ### 3.5 剪贴板面（F-BT15 ∥ N-BT9——保真读写）
 
 **授权路径（设计定）**：动作时按当前页 origin 惰性授予——`Browser.setPermission({permission:{name:"clipboard-read"}, setting:"granted", origin})` + `clipboard-write`（两次调用）；会话内按 origin 缓存（close / 换 origin 重授、随会话状态清）。
+
 描述符名 = web 平台名——实测（本机 Edge）：`clipboardReadWrite` 作描述符名被拒（`Invalid PermissionDescriptor name`——协议 `PermissionType` 枚举名 ≠ 本方法的描述符名）、`clipboard-read` / `clipboard-write` 通过。
+
 `setPermission` 不可用（方法缺失 ∥ 调用被拒）⇒ 回落 `Browser.grantPermissions({permissions:["clipboardReadWrite","clipboardSanitizedWrite"], origin})`（deprecated 但协议在册——`PermissionType` 枚举形、实测可用——版本漂移护栏）；两者皆败 ⇒ 明示错（不静默降级）。
+
 **为什么走页面 API**：CDP 无剪贴板直控方法（Chromium 议题「Expose clipboard APIs in DevTools Protocol」未决——实读）——`navigator.clipboard` 是真达系统剪贴板的唯一受支持路径。
 
 **四操作**（动作形 `clipboard op=…`——§2.2 表）：
@@ -392,9 +416,13 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 **拆分决定**：**拆出新档 `thincoder-core/browser/queue.mjs`**（现读 199；`session.mjs` 现读 498）——域界 = 「调度策略（排队 ∥ 预算 ∥ 控制器 ∥ 步名）」∥「会话机制（生命周期 ∥ 页原语 ∥ 安全助手 ∥ 健康）」。
 
 **档位处置（有 Δ 者与新档——不拆；触发条件 = 下次实质改动时核 ∥ 越 800 即拆）**：`tools/ops.mjs`（346，余 454 行）∥ `helpers.mjs`（490，余 310 行）∥ `suspension.mjs`（351，余 449 行）∥ `async-settle.mjs`（327，余 473 行）∥
+
 `subagent-scheduler.mjs`（450，余 350 行）∥ `subagent-async.mjs`（477，余 323 行）∥ `session.mjs`（**498——距 500 建议线余 2 行、距 800 硬限余 302 行；最紧面**——下批任何实质改动先做拆分评审，不等越线）∥ `queue.mjs`（199——新档，本批 +28，两线均远）∥ `agent-tools/browser-async.mjs`（198——新档）∥ 单元测试档两档（A 334 ∥ B 386；不拆）。余量 = 距 800 硬限（实读）。
+
 **域界（增行）**：异步桥 = `agent-tools/browser-async.mjs`（族名对齐 bash-async / subagent-async / advisor-async——池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点）；入径 = `tools/browser.mjs` ∥ `tools/ops.mjs` **动态 import**（W8 契约②——agent-tools 静态链达 node:sqlite；端壳静态闭包零命中）。
+
 **依赖单向无环**：`tools/browser.mjs` → `session.mjs` → {`actions` / `input-actions` / `clipboard`} → {`input` / `snapshot` / `cdp`}；`session → queue`；`queue → actions`（wait 帽常量——`thincoder-core/browser/queue.mjs:11`）；`browser-async → session`（入队面）+ agent-tools 族单点——无环。
+
 **click / type 不拆不迁**（裁决项②——§6 KD-10）。
 
 **零触面（如实登记）**：`thincoder-core/tools/index.mjs`（注册面——工具已在册）∥ `thincoder-core/permission.mjs` ∥ `thincoder-core/agent/dispatch-gates.mjs`（分类不随 `async` 变）∥ `thincoder-core/config.mjs`（零新配置键）∥ `thincoder-vscode/**`（越批登记：VSC 自持 `async-discard.mjs` 未随 bg 并入——按 bg 先例核心收编，VSC 侧一致性另行）。
@@ -536,8 +564,10 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 
 **单元测试档用例**：单元测试（T1–T15——假传输 + 打桩，零真实浏览器/文件系统）与冒烟（S1–S7——真 Edge/Chrome 无头 + 进程内 fixture 服务）＝ §7 表逐格引用面（**落点列** = U 条执行档；无编号者 = 单元测试组内，格内归属以 §7 判据列为准）；先红后绿。
 扩展轮件 = 批次本地单元测试档 ∥ 批次本地冒烟档——T16–T26 ∥ S8–S18（剪贴板端到端 = 本机 OS 面——Windows 以 PowerShell `Get-Clipboard` / `Set-Clipboard` 为对照）。
+
 异步化单元测试档 = 批次本地单元测试档（A 组 ∥ B 组）∥ 同族冒烟档——单元测试 T27–T44（含 T27b）∥ 冒烟 S19–S22（走查 W1 = 真关窗——用户复核）。
 旧件复跑 = 零回归（T1 枚举断言随动 8⇒16 为唯一例外——§7 N-BT8 行）。
+
 **冷启用例的批测落形（登记）**：墙钟按 100× 缩比（设计档 12s / 15s / 40s → 120ms / 150ms / 400ms）；T48 的动作取 `evaluate` + navigate 格预算的比例值（45s → 450ms）——机制在控制器与入口计量上、不随动作类型分叉；真 `navigate` 的真机抽样 = 集成档 I-BT3（§11）。单测判的是红 / 绿两条同一机制的读数，真机墙钟不入门（§11 末两条）。
 - T27b 开启段中止（U52 开启段一格）——批次本地单元测试档 `:168`。
 
@@ -579,5 +609,5 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 - **窗到点的时长半不入发布门**：要判「这个值真当期限用」得有常驻不退出、又不写 `DevToolsActivePort` 的替身可执行档；`launchBrowser` 的 spawn 不带 shell（`thincoder-core/browser/launch.mjs:160`）⇒ Windows 上 `.cmd` / `.js` 不能当 exe 起，造这种档等于往仓里加包装器。该半由单测 T45（取值）∥ `launch.mjs:163` 的 `deadline = Date.now() + timeoutMs`（同一值即期限）判。
 - **冷启首动作的墙钟半同理不入门**：真机自启耗时可复现但不可控；判据住单测 T47 / T48（假传输，两格红/绿），真机面 = 冒烟 S1（首动作 `navigate` 成功）。I-BT3 是门内那一格的真机抽样：宿主无 Chromium ⇒ skip 并打印 `no Chromium-based browser — I-BT3 skipped`（沿 §7 S7 先例），跳过不算绿。
 - **慢机（启动 13–17s）不再 12s 早夭不设门内格**：要一台真慢机或人工降速；证据面 = Gitee IKP6ZI 现场 + 用户机走查。设计侧不为此造假慢分支。
-- **落点**：`thincoder-cli/test/integration/browser-start-window.test.mjs`（常驻——随 `npm test` 走、不随批删）。收集面 = `thincoder-cli/test/run.mjs` 的集成层单层（`test/integration/*.test.mjs`）；`test/integration/` 之外的档被启动前反查拒收集。本批单测档（T45–T48）仍随批删，与集成档是两个对象。
+- **落点**：`test/integration/browser-start-window.test.mjs`（仓根——常驻、不随批删；随仓根 `node test/run.mjs` 走）。收集面 = 仓根 `test/run.mjs` 的单层 glob（`test/integration/*.test.mjs`）；`test/integration/` 之外的档被启动前反查拒收集。本批单测档（T45–T48）仍随批删，与集成档是两个对象。
 

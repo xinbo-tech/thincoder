@@ -4464,7 +4464,6 @@
 | `resolvePath` | `thincoder-vscode/src/tools/shared.mjs:86` | `fn` |
 | `bashTool` | `thincoder-vscode/src/tools/shell.mjs:163` | `const` |
 | `default` | `thincoder-vscode/test/files.mjs:8` | `default` |
-| `default` | `thincoder-vscode/test/integration/files.mjs:2` | `default` |
 | `test as slow` | `thincoder-vscode/test/slow.mjs:6` | `named` |
 | `*` | `thincoder-vscode/webview/tool-card-restore.mjs:2` | `star` |
 <!-- END GENERATED -->

@@ -15,7 +15,8 @@ jobs:
       - run: cd ../thincoder-core && npm link
       - run: npm link @thincoder/core
       - run: npm install
-      - run: npm test
+      # 集成测试集已归仓根 test/integration/（TESTING.md §12）——跑仓根单 runner
+      - run: cd .. && node test/run.mjs
       - run: npm run lint
   vscode:
     name: thincoder-vscode (extension)
