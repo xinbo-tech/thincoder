@@ -89,8 +89,7 @@ const MODEL_SPECS = [
   ["glm-5.3-flashx",    { context: 1_000_000, maxOutput: 131_072, thinking: true,  thinkAlwaysOn: true, multimodal: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5.2",           { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
   ["glm-5",             { context: 1_000_000, maxOutput: 128_000, thinking: true,  thinkApi: "type", reasoningEcho: "optional", reasoningEffortEnum: ["max", "xhigh", "high", "medium", "low", "minimal", "none"], tempRange: [0, 1], noUsageStream: true }],
-  ["glm-4",             { context: 128_000,   maxOutput: 32_000,  thinking: true,  thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
-  // glm-4.5-air（智谱轻档 · 2026-09-24 bench 名单批）：temperature 0 受理 = **实测**（roster-expand §2.2）；其余 = **族沿用 glm-4 行**
+  // glm-4.5-air（智谱轻档 · 2026-09-24 bench 名单批）：temperature 0 受理 = **实测**（roster-expand §2.2）；取值以本行**显式声明**为准
   // （逐名官方口径未取证）；枚举 / 视觉面 = **未探**（不声明）。medium 直发实测受理（batch-params-judge §1.5）。
   ["glm-4.5-air", { context: 128_000, maxOutput: 32_000, thinking: true, thinkApi: "type", reasoningEcho: "optional", tempRange: [0, 1], noUsageStream: true }],
   // GPT series
@@ -99,11 +98,10 @@ const MODEL_SPECS = [
   ["gpt-4.1",           { context: 1_000_000, maxOutput: 128_000, thinking: false }],
   ["gpt-4o",            { context: 128_000,   maxOutput: 16_000,  thinking: false, multimodal: true }],
   // Qwen series
-  // qwen-flash / qwen-vl-max（2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧实测）：**尺寸行**——maxOutput 32_768 = **实测**
+  // qwen-flash（2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧实测）：**尺寸行**——maxOutput 32_768 = **实测**
   // （服务端直报「Range of max_tokens should be [1, 32768]」；131072 / 262144 均 400）。context 未取到 ⇒ 零口径——取兜底值
   // 128_000（与建行前生效值同值，§14.3 兜底语义续效）；thinking / 视觉有读数（默认关可开 / 不支持）但不落字段（§14.3 五名口径）。
   ["qwen-flash",        { context: 128_000, maxOutput: 32_768 }],
-  ["qwen-vl-max",       { context: 128_000, maxOutput: 32_768 }],
   // qwen3.7-max：**实测拒图像**（DashScope 400 "Unexpected item type in content"——真值彩图探针，2026-09-20）
   // ⇒ 无视觉 = **不声明**（T-7 语义单一：multimodal 仅 true / undefined；补探已毕，无需再探）
   ["qwen3.7-max",       { context: 1_000_000, maxOutput: 131_072, thinking: true, partialMode: true,  thinkApi: "effort", reasoningEffortEnum: ["xhigh", "high"], tempRange: [0, 2] }],
@@ -145,8 +143,6 @@ const MODEL_SPECS = [
   ["qwen3.6-flash",     { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.6-plus：同形行（共享证据块见 flash 行上）——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位。
   ["qwen3.6-plus",      { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
-  // qwen3.6-max-preview：同形行——校验级 maxOutput / 六档枚举、官方口径 context、族沿用机制位；视觉通道实测 ✓ 但纯红图答「黑色」（抽样波动，如实记）。
-  ["qwen3.6-max-preview", { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.6-27b：同形行——校验级 maxOutput / 六档枚举、官方口径 context（未探边）、族沿用机制位。
   ["qwen3.6-27b",        { context: 1_000_000, maxOutput: 65_536, thinking: true, partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh"], tempRange: [0, 2] }],
   // qwen3.5-27b（2026-09-24 bench 名单批）：context 262_144 = **官方口径（定价页分档佐证——[128K, 256K) 档在售；规格页未逐名核）**；
@@ -163,8 +159,6 @@ const MODEL_SPECS = [
   // always echo); 2026-09-22 re-probe: value / missing field / empty string all 200 — the
   // 2026-09-20 "must be passed back" 400 was NOT reproduced. v2.5 rows aligned 2026-09-22:
   // maxOutput 131_072 = **校验级**.
-  ["mimo-v2.5-pro",     { context: 1_000_000, maxOutput: 131_072, thinking: true,  thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
-  ["mimo-v2.5",         { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true,  thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
   // MiMo V2.6 series (2026-09-22 launch — three independent rows, each probed individually).
   // maxOutput 131_072 / tempRange [0, 1.5] = **校验级** (400 "at most 131072 completion tokens" /
   // "temperature must be within [0, 1.5]", per model); thinking = **实测** (bare request carries
@@ -183,10 +177,9 @@ const MODEL_SPECS = [
   // minimax-m3（小写前缀行——与上方 MiniMax-M3 行同值，同族两写法）：effort 同按**无生效面**处置
   // （**实测**：effort 被忽略；off 路径 = `thinking:{type:"disabled"}` ✓ rc=0——batch-params-judge §1.2 / KD-32④）。
   ["minimax-m3",        { context: 1_000_000, maxOutput: 128_000, thinking: true,  multimodal: true,  thinkApi: "type", thinkEnabledValue: "adaptive", tempRange: [0, 2], noUsageStream: true }],
-  ["minimax-m1",        { context: 256_000,   maxOutput: 128_000, thinking: false, noUsageStream: true }],
   // MiniMax-M2.7（前缀行——覆盖标准档与 -highspeed · 2026-09-24 bench 名单批）：thinking = **实测**（裸请求 rc 在场）；off 路径 **未找到**
   // （`thinking:{type:"disabled"}` 不生效——如实，不声明 thinkApi）；effort 被忽略 ⇒ **无生效面**（枚举不声明；medium 照发仅口径统一）；
-  // 尺寸 / noUsageStream = **族沿用 minimax-m1 行**；视觉面 = **未探**（不声明）。
+  // 尺寸 / noUsageStream = 本行**显式声明**（逐名官方口径未取证）；视觉面 = **未探**（不声明）。
   ["MiniMax-M2.7", { context: 256_000, maxOutput: 128_000, thinking: true, noUsageStream: true }],
   // Grok series (xAI — OpenAI-compatible)
   // grok-4.x: 500K context per xAI Grok 4.6 spec (corrected 2026-08; earlier entries said 1M)
@@ -228,9 +221,6 @@ const MODEL_SPECS = [
   // 答 "Unknown"（对照组明说不识图）⇒ 实测无视觉。尺寸位两级逐条标（AC-2）：maxOutput 128_000 =
   // **参考实配**（网关对 max_tokens 不硬拒 ⇒ 上限未证）；context 256_000 = **网络口径**（他仓/文档 256K，未本渠道实测）。
   ["hy3",               { context: 256_000, maxOutput: 128_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
-  // hy3-preview（在场实测：/models + 401 前验活；能力位**未探针**）——**尺寸行**：仅登记尺寸位，取值 =
-  // hy3 **同族沿用**（maxOutput 参考实配 / context 网络口径）。D-11（2026-09-25 收窄现口径）：能力位**无族据**一律不声明 ⇒ 该名无族据 ⇒ thinking / 枚举 / 视觉全不声明。
-  ["hy3-preview",       { context: 256_000, maxOutput: 128_000 }],
   // hy4-preview（在场实测：/models + 401；能力位**未探针**）——尺寸行：取值 = hy3 族**同族沿用**
   // （maxOutput 参考实配级取值 / context 网络口径；批次档 §1.2 未给该名尺寸行 ⇒ 上报清单 2，行注即标级）。
   ["hy4-preview",       { context: 256_000, maxOutput: 128_000 }],
