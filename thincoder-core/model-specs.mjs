@@ -44,6 +44,14 @@ const MODEL_SPECS = [
   ["deepseek-v4-flash-vision-exp", { context: 1_000_000, maxOutput: 384_000, thinking: true,  prefixMode: true,  thinkApi: "type", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"], tempRange: [0, 2], multimodal: true }],
   // Kimi series
   ["kimi-k3",           { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
+  // kimi-k3.1-pro / kimi-k3.1-pro-highspeed（2026-10-23 发布；官方 quickstart 实读 2026-10-25）：
+  // context = 1_048_576（官方 1M）；maxOutput = 131_072（官方 max_completion_tokens 默认档，上限 1_048_576 不取）；
+  // **思考始终开启**（官方原文「K3.1 Pro 始终开启思考模式」· FAQ「目前关不了」）⇒ thinkAlwaysOn；推理强度走顶层
+  // reasoning_effort low/high/max（默认 max）⇒ thinkApi "effort"；多轮 / 工具调用须原样回传完整 assistant message
+  // ⇒ reasoningEcho "required"；partialMode ✓；视觉 ✓（content 必须是对象数组，图走 base64 ∥ ms://，**不接受公网 URL**）。
+  // Highspeed = 同规格、输出约 2~3 倍速（官方「同等智能」）—— 分值分行，靠前缀长度降序先命中。
+  ["kimi-k3.1-pro",           { context: 1_048_576, maxOutput: 131_072, thinking: true, thinkAlwaysOn: true, partialMode: true, multimodal: true, thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
+  ["kimi-k3.1-pro-highspeed", { context: 1_048_576, maxOutput: 131_072, thinking: true, thinkAlwaysOn: true, partialMode: true, multimodal: true, thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // Kimi For Coding endpoint uses the short model ID "k3" (same specs as kimi-k3) — IK5VGJ
   ["k3",                { context: 1_000_000, maxOutput: 131_072, thinking: true,  partialMode: true, multimodal: true,  thinkApi: "effort", reasoningEcho: "required", reasoningEffortEnum: ["low", "high", "max"] }],
   // kimi-for-coding / k3-256k / kimi-for-coding-highspeed（Kimi For Coding 端点三名 · 2026-09-25 批 §14.2 #7-9 · 活测 = §1.4 服务端 200 /models）：

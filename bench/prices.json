@@ -177,6 +177,24 @@
       "note": "缓存写入另计（TTL 5min 20 / 1h 40 元/百万 tokens）——成本式无该计费项（本档成本按下限计）"
     },
     {
+      "match": "kimi:kimi-k3.1-pro",
+      "cachedInput": 1.3,
+      "input": 13,
+      "output": 68,
+      "asOf": "2026-10-24",
+      "source": "Kimi K3.1 Pro 定价页（kimi.com/resources/kimi-k3-1-pro-pricing；国内 API 页签）",
+      "note": "缓存写入 = 输入价 ¥13（TTL 5min）——成本式无该计费项（按下限计）；较 k3 输入 -35% / 输出 -32% / 缓存命中 -35%"
+    },
+    {
+      "match": "kimi:kimi-k3.1-pro-highspeed",
+      "cachedInput": 1.3,
+      "input": 26,
+      "output": 136,
+      "asOf": "2026-10-24",
+      "source": "Kimi K3.1 Pro 定价页（kimi.com/resources/kimi-k3-1-pro-pricing；国内 API 页签）",
+      "note": "缓存写入 = 输入价 ¥26；缓存命中与标准版同为 ¥1.30——大缓存前缀场景不吃亏，贵在输入/输出"
+    },
+    {
       "match": "kimi:kimi-k2.6",
       "cachedInput": 1.1,
       "input": 6.5,
