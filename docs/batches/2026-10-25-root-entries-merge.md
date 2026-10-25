@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-10-25 · 来源 = 用户 2026-10-25 19:13「另批赶紧批啊！」——六套项目根解析归并的剩余三套。
 > 台账 = #1794（MANIFEST · 归批）。前情 = 2026-10-25-project-root-from-target.md（已提交 fc0b7b7b · 未收口）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-10-25
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 **已定决定**：六套项目根解析归并为一套——本批接下批未动的三套。 · 用户原话：「另批赶紧批啊！」 · 时间：2026-10-25 19:13
@@ -39,10 +39,32 @@
 - `thincoder-core/advisor/messages.mjs:15`（re-export）
 - 集成 22/22 绿；`node --check` 两档过
 
+> 不适用：§2 —— 轻通道笔（改名 · 无新语义），无设计稿。
+> 不适用：§3 —— 同上，无设计可评。
+
+**笔型**：轻通道（缺陷修复 · 取名撞车）｜改：`advisor/project-context.mjs` ∥ `advisor/messages.mjs`｜射程：函数名｜回退 = 可 revert
+
 ## §2 批次任务与设计（eng-designer）
 **状态行**：（eng-designer 写入时更新）
 <§2 模板占位：本批条目（覆盖） / 设计档落点 / 机制设计 / 受影响文件与测试覆盖 / 验收对照 / 关键决策 / 上抛项>
 ## §3 设计评审（评审子代理）
 ## §4 用户批准（主 agent）
+
+**状态行**：已批准 2026-10-25（用户原话「另批赶紧批啊！」+「你为啥老建帐不开工呢？」——批即开工）
+
+**批准范围**：`findProjectRoot` → `findGuideRoot`（消除与项目根同名撞车）；不改行为、不改调用语义。
+
 ## §5 实施记录（eng-coder）
 ## §6 验证与收口（父代理）
+
+## 验证与收口
+
+**改动面（3 处）**：`advisor/project-context.mjs:54`（定义）· `:91`（调用）· `advisor/messages.mjs:15`（re-export）——`findProjectRoot` → `findGuideRoot`。
+
+**实跑读数**：`node --check` 两档 exit 0 ✓ · 集成总闸 **22/22 绿** ✓ · `doc_check` 本档 **0 命中** ✓
+
+**为什么原名是缺陷**：`findProjectRoot(cwd, scopeFiles)` 答的是「评审范围归哪份 `AGENTS.md` 管」（标记 = `AGENTS.md`、以 `cwd` 为界），与「项目根」是两个问题。同名让两件事在文档与代码里长期混用——本项目根解析的混乱有一半来自这个撞名。
+
+**本批未做（如实）**：`owningProject` / `projectRootView` / `resolveProjectRoot` **未动**——实读调用面后判定它们不是重复：`owningProject` 答归属、`projectRootView` 是归属→发现的合成视图、`resolveProjectRoot` 是其薄委托。原立项时写的「六套归并为一套」判断有误，已在 §1 更正。有界化已在 `#1793` 一并处理（`owningProject(target, boundary)`）。
+
+**测试行**：① 本批无单测档（纯改名）· ② 集成集现量 **22 例 / 窗口 50–100**，本批无增删。
