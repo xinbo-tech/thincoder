@@ -151,7 +151,7 @@ export function detailScans(scans, current) {
 // ── re-export（拆分件接口——命令面接线 = 动态 import 本档，KD-M2-3；`AGING_DAYS` 常量单源 = `ledger-db.mjs`
 //    ——2026-10-07 批 ledger-tool 自本档迁入，公共面零变；`ledgerChildren` / `MAX_SIBLING_SCAN` / `resolveLedgerRoot`
 //    ——2026-10-16 批 ledger-root-derivation 随迁 / 新增，公共面形零改） ──
-export { AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_SOFT_LIMIT, MAX_SIBLING_SCAN, ledgerChildren, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, resolveLedgerRoot, _setLedgerDirForTest, _resetLedgerDirForTest, ensureColumn, ensureExecutorColumn } from "./ledger-db.mjs"
+export { AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_SOFT_LIMIT, MAX_SIBLING_SCAN, ledgerChildren, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER, _setLedgerDirForTest, _resetLedgerDirForTest, ensureColumn, ensureExecutorColumn } from "./ledger-db.mjs"
 export { ledgerAdd, ledgerBatchRows, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerEvidenceOversize, ledgerQuery, ledgerReanchorBatch, ledgerUpdate, ledgerUpdateBatch, overdueOf } from "./ledger-cmd.mjs"
 export { ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"

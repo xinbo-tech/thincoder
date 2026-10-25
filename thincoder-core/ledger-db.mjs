@@ -134,6 +134,11 @@ export function ledgerDbPath(cwd) {
 /** 未决四态（「活条目」口径 = 计数单源 WHERE 集；已核销 / 已废弃 = 归档态）。 */
 export const PENDING_STATUSES = ["待讨论", "待设计", "在途", "待核销"]
 
+/** 轻通道轮次行标记（单源——LIGHT-CHANNEL.md §2.3 开轮挂账 ∥ §2.8 闸凭据 ∥ §2.5 核销标记门
+ *  判据三面同一字面；消费面 = `agent/light-round.mjs`（经 `ledger.mjs` re-export 动态解构——
+ *  W8 契约②零新静态边）∥ `ledger-cmd.mjs` 核销标记门）。 */
+export const ROUND_MARKER = "收尾链待跑"
+
 /** 老化阈值（天——口径 = 需求档；消费面 = `buildScan`（展示，`days` 可覆盖）+ `ledgerQuery` 逐行
  *  `aged`（查询面，`now` 可注入））。2026-10-07 批 ledger-tool：自 `ledger.mjs` 迁入（枚举常量档单源
  *  ——`ledgerQuery` 计算面直引本档，消 `ledger-cmd ↔ ledger.mjs` 新环；`ledger.mjs` 同名 re-export

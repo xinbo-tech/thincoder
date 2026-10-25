@@ -21,9 +21,6 @@ import { projectRootView, resolveProjectRoot } from "../manifest.mjs"
 import { resolveDeclaredRef } from "../declaration.mjs"
 import { readBatchStatusLine } from "../agent-tools/batch-skeleton.mjs"
 
-/** 轮型标记（§2.3 开轮形升格为闸凭据；全链批行无此标记 ⇒ 不构成信号）。 */
-const ROUND_MARKER = "收尾链待跑"
-
 /** 轻通道轮在盘谓词（异步 · 只读 · fail-closed）。契约见头注。
  * @param {object} agent — 会话 agent（读 `cwd`）
  * @returns {Promise<boolean>} true = 放行（在盘轮次）；读错 ∥ 不可判 ⇒ false（照拦）
@@ -33,7 +30,7 @@ export async function lightRoundOpen(agent) {
     const cwd = agent?.cwd
     if (typeof cwd !== "string" || cwd.trim() === "") return false
     // W8 契约②：node:sqlite 链只经动态 import 进入（勿升静态）——候选枚举与逐候选查行同取本档公共面。
-    const { ledgerChildren, ledgerQuery } = await import("../ledger.mjs")
+    const { ledgerChildren, ledgerQuery, ROUND_MARKER } = await import("../ledger.mjs")
     const anchor = resolve(cwd)
     // 候选面 = 锚自身 + 直接子目录一层（纯向下；子项枚举单源 = `ledgerChildren`）。
     const candidates = [anchor, ...ledgerChildren(anchor).map((p) => p.root)]

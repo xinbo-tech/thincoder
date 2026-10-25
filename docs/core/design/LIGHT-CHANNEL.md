@@ -13,7 +13,7 @@
 - **代价面（闭合）**：每轮次收尾**跑一次全链**（设计形式化 → 独立评审 → 修复（若有）→ 批准 → 收口核销）——旁路 ≠ 取消，收尾全链 = 对四步的补课；**收尾未落 ⇒ 不许核销**；
 - **记账面**：轮次 = 批档一本 + 台账行逐笔——批档 ∥ 台账机制**复用，零新增机制**。
 
-**设计原则**：① 落提示词层（内建机制，非会话级裁定）；② 零机械门（判断面纪律——承「为臆想的失败逐点加限制 = 反模式」）；③ 产品码触及面 = §2.8（代码笔闸）+ §2.9（落笔通道确认提醒一行——非门、非拦）；④ 两界原则（提示词正文运行时可解析——零文档引用）。
+**设计原则**：① 落提示词层（内建机制，非会话级裁定）；② 零机械门 = **准入判断面**纪律（承「为臆想的失败逐点加限制 = 反模式」）——**核销面例外**：§2.5 标记门（实证驱动——纪律句被钻空三轮）；③ 产品码触及面 = §2.5（核销标记门——`ledger-cmd.mjs` 判据新增）+ §2.8（代码笔闸）+ §2.9（落笔通道确认提醒一行——非门、非拦）；④ 两界原则（提示词正文运行时可解析——零文档引用）。
 
 **判据收口定形**：准入 = **三样清单 + 一句边界**（命中即走——定形记录 = §7 K15）；**误准入交收尾全链兜底**——收口时被形式化 ∥ 评审捕获。**核销面 = 机制重心**：挂账 → 收尾全链 → 核销不漏 = 第一优先级（门槛让路给「不漏」）；启动即挂账（账前笔后）照常。
 
@@ -76,11 +76,58 @@
 
 **收敛面笔逐笔形式化模板（收尾轮 §2 设计面）**：逐笔一行——类 ∥ 出处（目标行为坐标：`file:line` ∥ 用户原话）∥ 相抵/读数（红态 ∥ 绿态；性能笔 = 前读数 ∥ 后读数）∥ 落地（改动 `file:line`）∥ 文档一致化去向（出处 = 需求/设计档 ⇒ 实现向档对齐、**逐笔期档面零改**〔坐标随动除外〕；出处 = 当场的话/记录 ⇒ 收口落档；无文档面 ⇒ 记「无需」）。
 
-### 2.5 核销挂接（核销前置）
+### 2.5 核销挂接（核销前置 = 机械门）
 
-- 轮次行：在途 → **收尾全链 pass** → 待核销 → 已核销（两步迁移照常——**机制本体零动**；前置 = 纪律句，非机械门）；
-- **收尾未落 ⇒ 不许核销**（批档 ∥ 轮次行挂住——防「文档滞后永久化」）；判定句 = 「收尾未落而核销」= 0 例（台账查询可核）。
-- **行自开轮在盘**（启动即挂账——§2.3）：轮次行自开轮在途；未核销轮级行 = 跨会话接手扫描对象（与批档状态行同源）；收口链 pass ⇒ 两步迁移照常。
+- 轮次行：在途 → **收尾全链 pass** → 待核销 → 已核销（两步迁移照常——迁移表零动；前置 = **机械门**，见下）。
+- **收尾未落 ⇒ 不许核销**（批档 ∥ 轮次行挂住——防「文档滞后永久化」）的**机械牙**：凡把行写入 `已核销` 的台账动作，**结果行标题携「收尾链待跑」⇒ 拒**，报错说明为什么并给修法。
+- **判据 = 标记在不在，别无其他**：不查批档内容、不查评审是否真跑——父侧清标记 = 收尾跑完的声明，声明的责任在父侧（标记 = 该声明的机械代理）。
+- **门径 = 写入 `已核销` 的全部三径**（只门 close 会把 update 迁移留成同类旁路）：
+  - `ledgerClose` 单行（勾销 ∥ 追认同判）∥ `ledgerCloseBatch`（批量径拒 = 该行落 `skipped` 逐行点名，`why` = 拒文原文）——落点 = 逐行共函数 `applyRowClose`（`thincoder-core/ledger-cmd.mjs`），判序 = 源态判之后、值计算之前；
+  - `ledgerUpdate` 迁移（含 `ledgerUpdateBatch` 携 status 径）——落点 = 逐行共函数 `applyRowUpdate`，判序 = 迁移表判之后、executor / evidence 值计算之前；判**结果标题**（`patch.title ?? row.title`——一笔 update 同携清标记 `title` + `status=已核销` ⇒ 放行）。
+- **撤回（→ 已废弃）不拦**——撤回不是核销。
+- **标记单源**：`ROUND_MARKER` 自 `agent/light-round.mjs:25` 迁 `ledger-db.mjs` 常量区（与 `PENDING_STATUSES` 同栏）；`light-round.mjs` 经既有动态 `import("../ledger.mjs")` 解构消费（W8 契约②零新静态边）；`ledger.mjs` re-export 增名保公共面。
+- **拒文（逐字——机检断言面）**：`ledgerClose：行标题仍携「收尾链待跑」——收尾链未跑完，不许核销（先跑收尾全链，再由父侧清标记）`；update 径前缀 `ledgerUpdate：`、余同（承同档既有门拒文案形 `ledgerClose：…（现态 X）`）。
+- 判定句 = 「收尾未落而核销」= 0 例——机械门在场后，拒记本身可核（工具报错 ∥ 批量 `skipped` 名单）。
+- **行自开轮在盘**（启动即挂账——§2.3）：轮次行自开轮在途；未核销轮级行 = 跨会话接手扫描对象（与批档状态行同源）；收口链 pass ⇒ **先清标记**、两步迁移照常。
+
+**新名三问**：`ROUND_MARKER`——`existing: thincoder-core/agent/light-round.mjs:25 · name: "ROUND_MARKER" · consumers: lightRoundOpen（同档谓词）` ⇒ 沿用（单源迁址 `ledger-db.mjs`，消费面不变名）。
+
+测试档名 `ledger-close-marker-gate.test.mjs`——`existing: thincoder-cli/test/integration/unbooked-pen.test.mjs`（命名形 = 机制名 kebab；同名单元档已随其批收口删除——测试纪律）⇒ 对齐。
+
+**先例行**：台账写门 `assertTaskBookGate`（同档同层判据新增——判位与迁移表判同层，`ledger-cmd.mjs:149-160`）∥ 源态拒（`applyRowClose` 既有门，`:259`）；偏离 = 判据读标题字面（非指针存在性）。
+
+**勘察行**：查过 `thincoder-core/ledger-cmd.mjs`（close / update / 批量三径）∥ `agent/light-round.mjs` ∥ `ledger.mjs` re-export 面 ∥ `docs/core/design/LEDGER.md` §3 / §3.1；公共源 = §2.9 勘察行结论（`index.publicRepos: []`——无公开源仓，无相关）。
+
+**受影响文件（本件 · 现量 = 本席实读 2026-10-25）**：
+
+| 文件 | 现量 | Δ（估值） | 形态 / tier |
+|---|---|---|---|
+| `thincoder-core/ledger-cmd.mjs` | 431 行 | +~12（两共函数各一判 + import + 头注句）→ ~443 | 判据新增（结构零改）；低于 500 硬线（`docs/core/requirements/ENGINEERING-MODE-V2.md:647`）⇒ 不触发拆分评审；超 300 软线 = 既有存量，非本批新增 |
+| `thincoder-core/ledger-db.mjs` | 266 行 | +3（`ROUND_MARKER` 常量 + 注释）→ ~269 | 常量区增员 |
+| `thincoder-core/ledger.mjs` | 159 行 | ±0（re-export 行内增名） | 公共面形零改 |
+| `thincoder-core/agent/light-round.mjs` | 67 行 | −3 / +1（删本地常量、动态 import 解构增名）→ ~65 | 消费面改源 |
+| `thincoder-core/tool-docs/ledger.md` | — | close 条 +1 句 ∥ update 条 +半句（拒面登记） | 工具描述同步（提示词面——实施轮 eng-coder 落笔） |
+| `thincoder-core/prompts/persona-engineering.md` | — | 轻通道块 +1 行（逐字 EN 见下） | 提示词面（实施轮 eng-coder 落笔） |
+| `docs/batches/2026-10-25-closeout-marker-gate.test.mjs` | 新档 | ~110 行（M1–M7） | 单元测试档（随批档住、收口删除——测试纪律；落点经父裁收正——`thincoder-core/test/` 被 runner SC-1 判错位） |
+
+**提示词面逐字 EN**（`thincoder-core/prompts/persona-engineering.md` 轻通道块「The round ledger row's title carries …」行后 +1 行——实施席照此落笔）：
+
+```text
+The same marker is also the settlement gate credential: settling the row (close or migration to 已核销) is mechanically refused while the title still carries 「收尾链待跑」 — clear the marker only after the closeout chain has run.
+```
+
+**用例表（正常 / 边界 / 错误——驱动形 = 直驱核函数；夹具 = 临时项目根〔`PROJECT-MANIFEST.json` + 在盘批档充 `task_book` 所指〕+ `_setLedgerDirForTest` 库目录隔离〔既有注入面〕）**：
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| M1 | 错误 · 携标记核销（需求验收正例） | 行标题携「收尾链待跑」、现态 `待核销` ⇒ `ledgerClose → 已核销` | 拒；报错含「收尾链待跑」；行状态不变 |
+| M2 | 正常 · 清标记后核销（需求验收对称例） | 同行先 update 清标题标记，再 close | 通过（`已核销`） |
+| M3 | 错误 · 迁移径旁路 | 携标记行 `update status=已核销`；另笔同携清标记 `title` + `status=已核销` | 前者拒（报错含标记）；后者放行（判结果标题） |
+| M4 | 边界 · 撤回 | 携标记行 `close → 已废弃` | 通过（撤回不拦） |
+| M5 | 边界 · 批量径 | 批内一携标记行 + 一无标记行 ⇒ `ledgerCloseBatch` | 携标记行落 `skipped`（`why` 含标记）；无标记行 `applied` |
+| M6 | 正常 · 无标记回归 | 无标记行 close → 已核销 | 通过（不带标记的行照常） |
+
+**边界（本件不做）**：不查批档内容 ∥ 不查评审是否真跑（判据只认标题标记）；不门 `已废弃`；团队台账（`team-ledger.mjs`）不入本门（标记语义属本机台账轻通道机制）；不改迁移表 ∥ 写门 ∥ 六态 CHECK；零配置键。
 
 ### 2.6 轮次记录 §段复用形（收尾全链）
 
@@ -111,11 +158,14 @@
 | ② | 轮次批档 | §1 状态行含「进行中」（`readBatchStatusLine === "open"`——与批档机制「在飞」判定同源） | ①行 `task_book` **以各候选为基**按台账写门同式解析（基式 = `resolveProjectRoot(候选) ?? resolve(候选 ?? ".")`；`resolveDeclaredRef`——`thincoder-core/declaration.mjs`）⇒ 读该档（判定器 `thincoder-core/agent-tools/batch-skeleton.mjs:122`） |
 
 **闸读点**：只读谓词 `lightRoundOpen(agent)`（在盘——`thincoder-core/agent/light-round.mjs`）；读法 = **候选面**（会话锚 + 直接子目录一层——候选枚举单源 = `ledgerChildren`）。
+
 逐候选查行 ∥ 以各候选为基解析指针；工作区候选（`projectRootView` 判 `workspace`——如工作区锚自身）⇒ 跳过、照查其余；候选读错 ∥ 不可判 ⇒ 停本候选（净效果只减命中面——开路凭据仍是「两件校验全过」）；外层异常（枚举 ∥ import）⇒ `false`（照拦——fail-closed；被拦时文案不因读错而变）。
+
 调用点 = `thincoder-core/agent/dispatch.mjs:99-102` 条件式**末位合取项** `&& !(await lightRoundOpen(agent))`（短路序在 `anyLiveDesignSlot` ∥ `FILE_MUTATORS` 之后——有活槽会话无新增 I/O）。
 
 **防伪最小锚**：两件**双在盘**才算——轮档独在（全链批 ∥ 随手档）不放行；行独在（无标记 ∥ 无指针 ∥ 指针失据）不放行；档已收口 ∥ 行离在途 ⇒ 信号消失（收口自闭 ∥ 核销自闭）。
 **语义**：开门动作 ≡ 开轮两件落盘（「启动即挂账」本体）——不存在独立于账的开门面（无裸口可开）；开门 = 上账，两件即收尾机器（§2.3 ∥ §2.4 ∥ §2.5）盯住的同一对象——机械面造不出脱离收尾链的开口。
+
 **轮型判别**：标记「收尾链待跑」= 闸凭据（§2.3 既有开轮形升格）——全链批的行无此标记 ⇒ 不构成信号（全链笔语义零变）；缺标记的在盘轮 = 照拦 + 拒文半句给修法（见下）。
 
 **咬合面**：
@@ -139,7 +189,9 @@
 
 **提示词面**：persona 双档增两句——父侧定句（开轮挂账 ⇒ 直改放行 ∥ 无盘 ⇒ 先挂账再笔 ∥ 被拒 ⇒ 停笔报告、禁静默转全链）+ 轮次行标记半句；逐字 = 轮次记录 §2 围栏块（落笔 = 实施轮 · eng-coder；内容依据 = 机制文档）。
 **闸拒文**：`thincoder-core/agent/dispatch.mjs:128` hint 轻通道句（现文逐字）：
+
 `If this is a light-channel code pen: the gate looks for the round from the session anchor and its direct subdirectories — book the round first (an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record); code pens pass once that is on disk.`
+
 **取**（① 拒绝时刻 = 最需修法指引的时刻，承「hint 指名修法」先例；② 条件冠句防全链笔误读；③ 与提示词句互补：提示词 = 事前知会，拒文 = 事发指引）。
 
 ### 2.9 落笔通道确认提醒（F-LC6——回执一行，零拦截）
@@ -171,7 +223,9 @@
 **文案（单源 = `unbookedPenText()`，一行）**：
 
 ~~~text
+
 [pen check] first product-source write this session — confirm the channel before it lands: a light-channel pen needs its round booked first (batch record + an in-flight ledger row pointing at the record); a full-chain pen goes to eng-coder. A pen with no account is invisible at closeout, so the ledger settlement misses it.
+
 ~~~
 （不是指控句——轮内合法笔同样会收到提示；末句给后果：收口看不见、核销会漏。）
 
@@ -180,10 +234,13 @@
 **承载模块 = 新叶 `thincoder-core/agent/unbooked-pen.mjs`**（`PEN_TOOLS` `:19` ∥ `unbookedPenText()` `:22-24` ∥ `unbookedPenNotice()` `:40-62`）：`PEN_TOOLS`（`FILE_MUTATORS` 减 `delete`）∥ `unbookedPenText()`（文案单源）∥ `unbookedPenNotice(agent, toolCall, ok, tool)`（四合取 + 闩判定——命中返后缀行，未中返空串）。
 
 第 4 参 `tool` = 工具对象（`thincoder-core/agent/record-results.mjs:55` 已按名取好），是触发面的**必需项**：
+
 目标提取走单源谓词 `toolTouchPaths(tool, args)`（`thincoder-core/agent/helpers.mjs:104`），其钩子面 `touchedPaths(args)`（`thincoder-core/agent/helpers.mjs:106`）才是 `apply_patch` 真 diff 解析（`thincoder-core/tools/patch.mjs:183`）与批量 `edit` 多目标（`thincoder-core/tools/file.mjs:252`）的目标来源。
+
 无钩子工具按单参 `path` 兜底（`thincoder-core/agent/helpers.mjs:109`）；缺 `tool` ⇒ 判定直接返空串（`thincoder-core/agent/unbooked-pen.mjs:42`），`apply_patch` ∥ 批量 `edit` 永不触发。
 
 该叶 import 四条（`thincoder-core/agent/unbooked-pen.mjs:11-14`）：`resolve`（`node:path`）∥ `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs:86`）+ `toolTouchPaths`（`thincoder-core/agent/helpers.mjs:104`）。
+
 另两条：`declarationForTarget`（`thincoder-core/declaration.mjs:367`）∥ `isCodePath`（`thincoder-core/conventions.mjs:162`，分类两步同表 ④ 行）。
 **只被 `record-results.mjs` import**（叶不向回引——无环）。
 
@@ -210,6 +267,7 @@
 - **相邻洞不在本批**：`anyLiveDesignSlot` 让别的批次的活槽为本批产品码笔放行（`thincoder-core/agent/dispatch.mjs:99-102`）——独立问题，按用户裁定另记台账、不扩本批射程。
 
 **先例行**：`thincoder-core/agent-tools/zero-write-watch.mjs`（同形 = 谓词叶 + 文案函数 + 闩 + 非阻塞；对齐）。偏离 = 送达面：上游 note 通道 → 工具回执——`pushChildUpstream` 只服务子代理，而本提醒的收件人就是刚落笔的主 agent。
+
 **勘察行**：查了 `docs/core/design/LIGHT-CHANNEL.md`（§2.8 闸）、`thincoder-core/agent/dispatch.mjs:99-132`、`thincoder-core/agent/record-results.mjs:85-184`、`thincoder-core/conventions.mjs:151-164`、`thincoder-core/agent-tools/zero-write-watch.mjs`；`index.publicRepos: []`（无公开源仓），无相关公开文档。
 
 **验收（机检形）**：见 §4 ⑨。
@@ -233,14 +291,14 @@
 | 确认与批准门（写文件前先确认） | **不改写**——轻通道笔免例行「复述 + 等确认」步（交底即行——分钟级目标 + 用户改判权为对价） |
 | 「父侧不代笔」（三类例外 + 打标义务） | **不改写**——轻通道笔执行形态 = 父侧直改：**明示为新例外——由机制块承载（条件 = 三样清单 + 一句边界 + 交底 + 走查/读数 + 收尾全链闭合）**；三类例外本体零动。**打标义务即满足**——交底句「回退 = 可 revert」+ 轮次记录 §1「父侧笔」逐笔收录（「父侧直接执行」随逐笔交底与 §1 留痕明示，不另加注） |
 | 批次档生命周期（五条） | **不改写**——轮次 = 批档一本（§2.6 复用形）；轮次界 = 收口 |
-| 台账生命周期（事件 → 动作） | **不改写**——核销前置为纪律句（§2.5）；启动即挂账 = 既有迁移表连步（待讨论 → 待设计 → 在途）+ 在途不可跳核销（既有源态判）；机制本体零动 |
+| 台账生命周期（事件 → 动作） | **不改写**——核销前置 = 机械门（§2.5——`ledger-cmd.mjs` 判据新增；迁移表 ∥ 写门 ∥ 六态零动）；启动即挂账 = 既有迁移表连步（待讨论 → 待设计 → 在途）+ 在途不可跳核销（既有源态判） |
 | 测试纪律（收口测试行 ∥ 单元测试档） | **不改写**——「必要测试」判据按同轴定形（§2.4） |
 | 「暂缓批先复核」 | **不改写**——轻通道接手 = 同拍扫描（会话启动一次、对象各异：暂缓批 = 带「暂缓 · 复核条件」标记者；未收口轮次 = 轮级行未核销 ∥ 批档状态行非「已收口」）；两查互不替代、不并句 |
 | 「改判据语义 ⇒ 仍走设计」（工程工具面直改硬约束） | **撤**——管辖面并入一句边界（新机制 ∥ 大改 ⇒ 全链）；改判据语义笔按三样清单归口；直改硬约束 = **2 条** |
 
 **代码笔通路随动面**：`DESIGN-TOKEN-SETTLEMENT.md`（§4 D3 ∥ §5 ∥ §6.1）∥ `PROMPT-SYSTEM.md`（§6.12 + §6.1 补登 + §8.2 读数——实施轮）∥ 提示词 persona 两档（增句逐字 = 轮次记录 §2）。
 
-## 4. 验收映射（回指需求档 §4 ①–⑧ + 本批增量 ⑨）
+## 4. 验收映射（回指需求档 §4 ①–⑨ + 核销标记门增量 ⑩）
 
 | # | 需求验收 | 可核形态 | 守法（内容测试禁令） |
 |---|---|---|---|
@@ -253,6 +311,7 @@
 | ⑦ | 判据收口增量（「三样清单 + 一句边界」——§2.1 ∥ §3 + 核销不漏面——§2.3 重心句）落需求 ∥ 提示词后按 ①–④ 同构核——**加核：核销不漏面**（挂账 → 收尾全链 → 核销可抽查、0 漏） | 实施轮一次性比对（落地四档 ↔ 轮次记录 §2 围栏块——含三样清单 ∥ 一句边界 ∥ 附则）+ **删面核读**（落地档无残留 ⇔ 轮次记录 §2 删面清单）+ 评审对照（三样逐条 ↔ 落地文本；核销不漏面三件可回溯：挂账 ∥ 收尾 ∥ 核销） | 一次性比对（沿 ① 守法） |
 | ⑧ | 代码笔通路（F-LC5——§2.5 落需求 ∥ 设计 ∥ 实施后按 ①–④ 同构核）——**加核：通路实证两笔**（在盘放行 ∥ 无盘仍拒） | §2.8 实证判据（单元测试档 J1–J5——两笔 + 三反例）+ 实施轮一次性比对（落地四档 ↔ 轮次记录 §2 围栏块） | 单元测试档读数（随轮次记录存——非常驻）；一次性比对（沿 ① 守法） |
 | ⑨ | 落笔通道确认提醒（本批增量；需求出处 = 台账 #1753；回指 `docs/core/requirements/LIGHT-CHANNEL.md` §2.6 判定句 ①–④） | 单元测试档读数 + 门控零变读数（细目见下） | 单元测试档 + diff 读数（随批档存——非常驻） |
+| ⑩ | 核销标记门（核销前置升格机械门——§2.5；需求出处 = 台账 #1780；需求档判定句补登 = 父侧笔） | 单元测试档 M1–M6 读数（用例表 = §2.5） | 单元测试档（随批档存——收口即删；零常驻断言） |
 
 **⑨ 读数细目（驱动形 + 四项）**：
 
@@ -267,7 +326,7 @@
 ## 5. 边界（本机制不做）
 
 - 不做：边界外内容走通道 ∥ 免收口 ∥ 以本机制替代全链（机制自身 ∥ 大改仍全链）；**提示词面 ∥ 设计档面 ∥ 需求档面不入轻通道直改，轻通道只作用于代码笔（代码笔 = 产品源文件，不含提示词面）**——三面各有唯一作者（写权矩阵 D1，拥有档 = `DOC-DISCIPLINE.md` §1：提示词 = 产品代码面、内容依据 = 机制文档、落笔 = eng-coder；设计档 = eng-designer；需求档 = 主 agent）。**面界 = 判断面，闸面零分类**——§2.8 谓词为真时闸体整跳、不判笔的归属，三面目标的放行由本判断面拒绝。
-- 机制本面：零机械门（**准入判断面**——代码笔通路件（§2.8）= 机械**开路**〔免拦放行〕，非**设槛**〔不新增准入限制〕）∥ 产品码触及面 = §2.8（谓词件 + 闸条件合取项）+ §2.9（回执提醒一行：零拦截 ∥ 零扫描 ∥ 零判据改动）∥ 批档 ∥ 台账机制本体零动（纯复用——启动即挂账 = 既有迁移表/写门连步）∥ 子代理零新义务。
+- 机制本面：准入判断面零机械门（代码笔通路件（§2.8）= 机械**开路**〔免拦放行〕，非**设槛**〔不新增准入限制〕）；**核销面例外** = §2.5 标记门（设槛——实证驱动）∥ 产品码触及面 = §2.5（`ledger-cmd.mjs` 两共函数判据新增）+ §2.8（谓词件 + 闸条件合取项）+ §2.9（回执提醒一行：零拦截 ∥ 零扫描 ∥ 零判据改动）∥ 批档机制本体零动；台账机制 = 判据新增一条（迁移表 ∥ 写门 ∥ 六态 CHECK 零动）∥ 子代理零新义务。
 - 提示词面：铁律 ∥ 分流表 ∥ 确认与批准门不改写（例外入机制块载明）；工程工具面直改硬约束 = 两条（判据收口定形）；零文档引用（两界原则）。
 
 ## 6. 依赖
@@ -300,6 +359,7 @@
 | K19 | 去噪 = 每会话一次闩（不按轮、不按文件） | 轮内合法笔也会收到提示——重复出现即噪音；用户一句「这只是调试」后不必再提 |
 | K20 | 笔集 = 任务书五支（`delete` 不入集）；不判模式位 | 任务书点名；删产品源文件带 `force` = 显式动作，无场景不设分支；模式位 = 为未出现的输入加分支 |
 | K21 | 提醒落工具回执，不落 System reminder ∥ 上游通道 | 回执与那笔写同一条消息，因果相邻；上一轮才到的 System reminder 到来时笔已落完；上游通道只服务子代理 |
+| K22 | **核销前置升格 = 机械门**：写入 `已核销` 的全部三径（close 单行 ∥ close --batch ∥ update 迁移）同判——结果行标题携「收尾链待跑」⇒ 拒；判据只认标题标记；标记单源迁 `ledger-db.mjs` | 纪律句被钻空的实证（同日三轮收尾评审未跑即核销——用户裁「看来还不得不做这一步」）；只门 close 会把 update 迁移留成同类旁路；标记 = 父侧「收尾已跑」声明的机械代理，声明责任在父侧 |
 
 ## 8. 集成测试设计（F34）
 
@@ -323,4 +383,10 @@
 
 **身份项不进集成表**：子代理零提示由单元面覆盖（§4 ⑨ ② 的 `_role="eng-coder"` 反例）——集成表入口 = 主 agent 会话；子代理面的可观察差异只是「子块里少一行」的负断言，再驱动一个脚本化子会话不产生新的业务结论。
 
-**窗口读数（实读 2026-10-24）**：`thincoder-cli/test/integration/` 现量 **5 档 15 例**（`anthropic-tool-roundtrip` 3 ∥ `browser-start-window` 3 ∥ `unbooked-pen` 3 ∥ `web-backend-404` 3 ∥ `advisor-timeout-hot` 3）；复测 = `cd thincoder-cli && node test/run.mjs`（收集面 = `thincoder-cli/test/run.mjs` 的集成层单层 `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。
+**窗口读数（实读 2026-10-24）**：`thincoder-cli/test/integration/` 现量 **5 档 15 例**（`anthropic-tool-roundtrip` 3 ∥ `browser-start-window` 3 ∥ `unbooked-pen` 3 ∥ `web-backend-404` 3 ∥ `advisor-timeout-hot` 3）。
+
+复测 = `cd thincoder-cli && node test/run.mjs`（收集面 = `thincoder-cli/test/run.mjs` 的集成层单层 `test/integration/*.test.mjs`）；窗口读数由父侧收口行报表（`docs/core/requirements/TESTING.md` F9 ②）。
+
+**核销标记门批（2026-10-25）判定 = `none`**：RTM 索引 = `thincoder-cli/test/RTM.md`（在盘——本席实读 2026-10-25：5 节 15 例）。逐行对账：无行断言本批改动对象（15 例断言面 = 工具结果回放 ∥ [pen check] 提醒 ∥ fetch 回落 ∥ 浏览器窗口 ∥ 评审超时——无一台账核销面断言）⇒ 破行 0 ∥ 冗余行 0 ∥ 新增 0。
+
+理由：组件之间的交互零改（改动面 = `ledger-cmd.mjs` 判据新增一条 + 常量迁址；装配面 ∥ 工具层参数管道 ∥ 接线零改），拒放行走路径 = 既有工具拒文通道（故事 1 回放面已覆盖）；核销拒放由 §4 ⑩ 单元档直驱核函数覆盖（承台账写门族先例）。
