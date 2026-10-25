@@ -17,7 +17,7 @@
  */
 import { createHash } from "node:crypto"
 import { existsSync, mkdirSync, opendirSync } from "node:fs"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join, resolve, sep } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 
 import { configDir } from "./config-io.mjs"
@@ -49,14 +49,11 @@ export function ledgerKey(root) {
  *  （互指即环，设计档 §3.8「无自指」）。库目录 = `ledgerDir`（`_setLedgerDirForTest` 覆盖 ⇒ 夹具根外零写）。 */
 const keyedDbFile = (root) => join(ledgerDir, `${ledgerKey(root)}.db`)
 
-/** 「已注册」判据（设计档 §2.1——**唯一**事实，两臂取一即成立）：
- *  档臂 = 该目录带项目声明档 `PROJECT-MANIFEST.json`（档在盘）；
- *  库臂 = 以该目录自身路径为键的键控库在盘 ∧ 该目录**非工作区态**（键控库存在 ≠ 可作项目）；
- *  工作区判据只在库在盘时才查（`projectRootView` 含 fs 扫描——档臂已中即短路）。 */
+/** 「已注册」判据（**唯一**事实）：该目录带项目声明档 `PROJECT-MANIFEST.json`。
+ *  项目 = 带 manifest 的目录（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:68`）——
+ *  台账没有自己的「项目」定义：台账根 = 项目根，一个判据。 */
 function isRegistered(dir) {
-  if (existsSync(join(dir, MANIFEST_REL))) return true
-  if (!existsSync(keyedDbFile(dir))) return false
-  return projectRootView(dir).state !== "workspace"
+  return existsSync(join(dir, MANIFEST_REL))
 }
 
 /** 同级枚举上限（成本有界：父目录超此规模 = 缓存 / 临时等非仓族形态 → 退化空集）。
@@ -87,32 +84,28 @@ export function ledgerChildren(dir) {
 }
 
 /** 项目根推导**单源**（设计档 §2.1「根解析面」/ §3.8——读写同一判据、同一实现）：
- *  自 `target` 沿**祖先链**上溯取最近「已注册」目录——**以会话锚（`process.cwd()`）为界，越界即停**：
- *  界内上溯 = 子目录归到自己的项目根（应该）；越过锚 = 挂到无关外层项目上（禁止）。
- *  命中 ⇒ `{ root, basis: 'self' | 'ancestor' }`（自身 vs 界内祖先）；
- *  界内无命中 ∧ `descend: true` ⇒ **向下收敛**锚的直接子目录（`ledgerChildren` 同款惰性枚举 +
- *  上限、名序升序）：恰一 ⇒ 取之；≥2 ⇒ ① 先取**有键控库**者（账已在盘 = 事实）② 该集名序首者 ⇒
- *  `{ root, basis: 'descendant' }`（向下发现——**须报明**）；零已注册子目录 ⇒ `null`（无根）。
- *  `descend: false` ⇒ 只问界内上溯支（族发现 ∥ 标记面——容器 ∥ 工作区锚 ⇒ `null` ⇒ 族求和）。
- *  **无自指**：内部「库在盘」判据只用 `ledgerKey` + `keyedDbFile`（不经 `ledgerDbPath`）。
- *  @param {string} [target] 动作目标路径（目录）
- *  @param {{descend?: boolean}} [opts] `descend` 缺省 `true`（动作面——`openLedger` / `ledgerDbPath` / 单范围读）
- *  @returns {{root: string, basis: 'self'|'ancestor'|'descendant'}|null} 项目根 + 判据来源 / 无根（`null`） */
-export function resolveLedgerRoot(target, { descend = true } = {}) {
+ *  自 `target`（动作目标路径：目录 = 自身，文件 = 其所在目录）沿**祖先链**上溯，取最近一个
+ *  「已注册」目录（= 带 `PROJECT-MANIFEST.json`——项目 = 带 manifest 的目录，台账无第二定义）。
+ *  **上溯以会话锚为界，越界即停**：到锚仍未命中 ⇒ `null`（无根）——不越出工作目录去挂外层项目，
+ *  也不向下找、不猜。「项目根报明 / 建档」由用点决定。
+ *  **无自指**：内部判据只用 `ledgerKey` + 档在盘（不经 `ledgerDbPath`）。
+ *  @param {string} [target] 动作目标路径（目录 | 文件则取其所在目录）
+ *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`）
+ *  @returns {{root: string, basis: 'self'|'ancestor'}|null} 项目根 + 判据来源 / 无根（`null`） */
+export function resolveLedgerRoot(target, boundary) {
   const start = resolve(target ?? ".")
+  const edge = resolve(boundary ?? process.cwd())
+  const inside = start === edge || start.startsWith(edge + sep) || edge.startsWith(start + sep)
+  if (!inside) return null
   let dir = start
   for (;;) {
     if (isRegistered(dir)) return { root: dir, basis: dir === start ? "self" : "ancestor" }
+    if (dir === edge) break
     const parent = dirname(dir)
     if (parent === dir) break
     dir = parent
   }
-  if (!descend) return null
-  const children = ledgerChildren(start)
-  if (children.length === 0) return null
-  if (children.length === 1) return { root: children[0].root, basis: "descendant" }
-  const withDb = children.filter((c) => existsSync(c.ledger))
-  return { root: (withDb.length > 0 ? withDb : children)[0].root, basis: "descendant" }
+  return null
 }
 
 /** 无根文案（单源——设计档 §3.8「无根契约」逐字；`openLedger` 写面 ∥ `ledgerDbPath` 共用同一句）。 */

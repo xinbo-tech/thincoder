@@ -10,12 +10,31 @@
  * 接线：族出口 = `ledger.mjs`（re-export——消费面 agent/family-tools.mjs；旧读二装配面已清零）；
  * 消费侧一律动态 import（`ledger-db.mjs` 静态 import node:sqlite ⇒ W8 契约②）。
  */
+import { isAbsolute, dirname, join } from "node:path"
 import { ledgerAdd, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerQuery, ledgerUpdate, ledgerUpdateBatch } from "./ledger-cmd.mjs"
 import { resolveLedgerRoot } from "./ledger-db.mjs"
 import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger.md（DESC 单解析面）
 
-/** 工具 cwd 供值面（缺省 → 当前会话锚——「动作目标路径」；项目根由核 `resolveLedgerRoot` 推导）。 */
-const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+/** 指针值 → 文件路径（剥 `§N` 段号；空值跳过）。 */
+const ptrPath = (v) => {
+  if (typeof v !== "string") return null
+  const p = v.split("§")[0].trim()
+  return p || null
+}
+
+/** 工具 cwd 供值面：**起点 = 动作目标路径**（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:72`
+ *  「参数按用点解析——动作作用于哪个项目的路径，就取那个项目的档」）。
+ *  指针（`task_book` ∥ `req_doc` ∥ `batch`）在场 ⇒ 取该文件所在目录为起点（文件 = 其所在目录）；
+ *  无指针的动作（`query` ∥ `count` ∥ 首次建行）才回退会话锚。项目根由核 `resolveLedgerRoot` 推导。 */
+const cwdOf = (ctx, ...ptrs) => {
+  for (const raw of ptrs) {
+    const p = ptrPath(raw)
+    if (!p) continue
+    const anchor = ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+    return dirname(isAbsolute(p) ? p : join(anchor, p))
+  }
+  return ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+}
 
 /** 根推导**报明面**（设计档 §3.8「报明形态」）：向下发现（`basis === 'descendant'`——容器锚收敛序）⇒
  *  对象形回执增 `root` 键；祖先支（自明路径）⇒ `null`（展开零键——回执逐字零改）。供值面 = 核同一
@@ -258,13 +277,13 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
       switch (action) {
         case "add": {
           const { cwd, ...row } = rest
-          const target = cwd ?? cwdOf(ctx)
+          const target = cwd ?? cwdOf(ctx, row.task_book, row.req_doc)
           const id = ledgerAdd({ cwd: target, row })
           return JSON.stringify({ id, status: "待讨论", ...reportedRoot(target) })
         }
         case "update": {
           const { cwd, id, batch, ...patch } = rest
-          const target = cwd ?? cwdOf(ctx)
+          const target = cwd ?? cwdOf(ctx, batch, patch.task_book, patch.req_doc)
           let executorSessionId
           if (patch.executor == null) {
             // 显式 `null` ≡ 略去（§3.1 `null` 口径 · #474——与缺省同分支）；动态 import——零新静态边（K-LX1）
@@ -276,15 +295,15 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
           return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId }), ...reportedRoot(target) })
         }
         case "close": {
-          const target = rest.cwd ?? cwdOf(ctx)
+          const target = rest.cwd ?? cwdOf(ctx, rest.batch, rest.task_book)
           // 批级批量结算（§3.3——勾销径）
           if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }), ...reportedRoot(target) })
           return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }), ...reportedRoot(target) })
         }
         case "query":
-          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
+          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx, rest.task_book), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
         case "count": {
-          const target = rest.cwd ?? cwdOf(ctx)
+          const target = rest.cwd ?? cwdOf(ctx, rest.task_book)
           return JSON.stringify({ ...ledgerCount({ cwd: target, task_book: rest.task_book }), ...reportedRoot(target) })
         }
         default:
