@@ -44,10 +44,10 @@ export function entryTitle(text) {
 }
 
 /** 向上（含自身）最近的**已注册**项目根 → {root, ledger} / null（F4——CLI 锚 = cwd）。
- *  薄委托 `resolveLedgerRoot(anchor, { descend: false })`（设计档 §3.8——**取祖先支**）：`root` = 推导所
- *  得项目根（非锚）；容器 ∥ 工作区锚 ⇒ `null` ⇒ 族发现按容器形（族求和——§7.2 / AC-M2-18 / AC-M2-19）。 */
+ *  薄委托 `resolveLedgerRoot(anchor)`（设计档 §3.8——上溯以会话锚为界）：`root` = 推导所得项目根（非锚）；
+ *  容器 ∥ 工作区锚 ⇒ `null` ⇒ 族发现按容器形（族求和——§7.2 / AC-M2-18 / AC-M2-19）。 */
 export function findProject(anchor) {
-  const derived = resolveLedgerRoot(anchor, { descend: false })
+  const derived = resolveLedgerRoot(anchor)
   return derived ? { root: derived.root, ledger: ledgerDbPath(derived.root) } : null
 }
 

@@ -36,14 +36,6 @@ const cwdOf = (ctx, ...ptrs) => {
   return ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
 }
 
-/** 根推导**报明面**（设计档 §3.8「报明形态」）：向下发现（`basis === 'descendant'`——容器锚收敛序）⇒
- *  对象形回执增 `root` 键；祖先支（自明路径）⇒ `null`（展开零键——回执逐字零改）。供值面 = 核同一
- *  单源 `resolveLedgerRoot`（工具层零自算根；单实现、多调用点）。 */
-const reportedRoot = (cwd) => {
-  const derived = resolveLedgerRoot(cwd)
-  return derived && derived.basis === "descendant" ? { root: derived.root } : null
-}
-
 // ── 工具层参数守卫（设计档 §3.2 · 2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472） ──
 
 /** 值预览（P1–P5 文案的 `<预览>`——设计档 §3.2）：`JSON.stringify`，超 80 字符截断加 `…`
@@ -279,7 +271,7 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
           const { cwd, ...row } = rest
           const target = cwd ?? cwdOf(ctx, row.task_book, row.req_doc)
           const id = ledgerAdd({ cwd: target, row })
-          return JSON.stringify({ id, status: "待讨论", ...reportedRoot(target) })
+          return JSON.stringify({ id, status: "待讨论" })
         }
         case "update": {
           const { cwd, id, batch, ...patch } = rest
@@ -291,20 +283,20 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
             executorSessionId = getSessionId()
           }
           // 批级批量（§3.3）——`batch` 与 `id` 恰携其一（守卫 P7 已先裁）
-          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId }), ...reportedRoot(target) })
-          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId }), ...reportedRoot(target) })
+          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId }) })
+          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId }) })
         }
         case "close": {
           const target = rest.cwd ?? cwdOf(ctx, rest.batch, rest.task_book)
           // 批级批量结算（§3.3——勾销径）
-          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }), ...reportedRoot(target) })
-          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }), ...reportedRoot(target) })
+          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }) })
+          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }) })
         }
         case "query":
           return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx, rest.task_book), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
         case "count": {
           const target = rest.cwd ?? cwdOf(ctx, rest.task_book)
-          return JSON.stringify({ ...ledgerCount({ cwd: target, task_book: rest.task_book }), ...reportedRoot(target) })
+          return JSON.stringify({ ...ledgerCount({ cwd: target, task_book: rest.task_book }) })
         }
         default:
           // 不可达（② 枚举守门已先拒）——fail-loud 兜底（防未来变体增量 drift）
