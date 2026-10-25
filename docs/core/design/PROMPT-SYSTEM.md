@@ -210,14 +210,14 @@
 **人读面外沿**：日志 / 告警（同因串）在内；CLI usage/help 等其余用户可见文案 = **界外**（非模型面 · 非同因串面）。
 
 - **域** = `thincoder-core/prompts/**` + `thincoder-core/tool-docs/**` （提示词面 + 工具描述）与三包生产码字符串 / 模板字面量（排除 `test/**` · `_archive/**` · `docs/**` · `scripts/**` · `.thincoder/**`；注释按行剥离）。
-- **J1**：`[A-Z][A-Z0-9-]{2,}\.md` 零命中；白名单 = 判保留面操作数族规范豁免串（`AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · `RTM.md`——后二名小写形，J1 天然不命中，列全以保三面逐字一致；`MANIFEST.md` = manifest schema `$anchor` 数据锚，非模型面）；后二名对 J3 同构豁免（逐行先删 CANON 子串再扫——见 J3 条）。
+- **J1**：`[A-Z][A-Z0-9-]{2,}\.md` 零命中；白名单 = 判保留面操作数族规范豁免串（`AGENTS.md` · `SKILL.md` · `README.md` · `MANIFEST.md` · `.thincoder/advisor.md` · `project_rules.md` · `RTM.md`——`.thincoder/advisor.md` 与 `project_rules.md` 为小写形，J1 天然不命中；`RTM.md` 为大写名、J1 必命中，入白名单是功能必需；`MANIFEST.md` = manifest schema `$anchor` 数据锚，非模型面）；小写两名对 J3 同构豁免（逐行先删 CANON 子串再扫——见 J3 条）。
 - **J2**：`§` + 子节号 / 两位数号零命中；**批次档段号 `§1`–`§6`（及其下级两段形）为合法正例**（判据 = 指称本协议自身对象）；转义点形（`§19\.6`——正则字面量专属）由 `(?![\d\\.])` 守卫天然不命中——非独立豁免条目。
 - **J3**：提示词面小写档名（`[a-z][a-z0-9-]*\.md`）零命中——**豁免 = 逐行先整串删除七名 CANON 操作数子串（判保留面规范豁免串 · 与 J1 白名单同构）再扫剥离后行文**；路径形（`<…>` / `*` 紧邻）与全大写形天然不命中。豁免依据 = 判保留面·操作数族的显式化（非新语义）；豁免面外同形 token（非 CANON 小写档名引证）照报。
 
 **边界（机器不可分面 · 覆盖缺口登记）**：
 - **裸档名**（无 `.md`，与代码标识符同形）不锁——靠逐处处置表 + 评审守。
 - **J3 代码面（机检式与本席读数）**：J3 的域已含三包生产码的字符串 / 模板字面量（见上行「域」行），实现只扫提示词面（`scripts/prompt-refs-check.mjs` 的 `lineHits` 对 `face === "code"` 不跑 J3）⇒ 代码串内的小写档名不落任何一式。
-  - **判据句**：代码面命中 = 剥注释后、引号 ∥ 模板字面量内、whole-token 小写档名（左界不接字母数字与 `_ . - /`），先删六名 CANON 操作数子串再扫；判保留面（槽 loader key · 文件表 · 路径操作数）不处置，只登记。
+  - **判据句**：代码面命中 = 剥注释后、引号 ∥ 模板字面量内、whole-token 小写档名（左界不接字母数字与 `_ . - /`），先删七名 CANON 操作数子串再扫；判保留面（槽 loader key · 文件表 · 路径操作数）不处置，只登记。
   - **本席读数**（新进程 · 三包 459 档）：命中 **69 处，全在 `thincoder-core`**；`thincoder-cli/src` 0 · `thincoder-vscode/src` 0。逐类 = 槽 loader key 59 · 实现表 9（`doc-check/anchors.mjs` 类名表八名 + `agent-tools/spawn-gates.mjs:135` 一名）· 模型可见路径串 1（`agent/setup.mjs:262` 报缺文件名）。处置 = 69/69 **保留**（操作数面），删 0 · 改形 0。
   - **机检式的落点**：同一条判据、同一个工具——把 `lineHits` 的 J3 分支放到代码面（该工具已逐档扫代码，J1/J2 已在代码面跑）。不另立第二套 J3 实现（D2）。
 - **面级指路句**（无档名 / 无节号，如 `→ see the engineering-mode prompts`）：三式均不命中；存量 2 处已裁 = **删**（用户「这种话都不应该出现在提示词里」）——域内现余 0。
@@ -4230,11 +4230,9 @@ B5 — `thincoder-core/prompts/persona-eng-designer.md:136` 整行替换（同�
 - 本节 B2 取代 §6.50 B8 的目标形与该节 A1 的 `the project's entry` 读数：同一元素、名字不变，B2 补同一句注解 ⇒ A1 的「评审档恰 1」改按两档计（本节 A2）。
 - §6.50 J13 的判（`thincoder-core/prompts/discipline-normal.md:197` ∥ `thincoder-core/prompts/discipline-engineering.md:186` = 放置决策、不是定义位）成立，本节不推翻：`entry` 的解释来自 B2 ∥ B5 的就地注解，不来自 `:186`。
 
-**本批不收（记明延后）**
+**延后项已落（#1772，2026-10-25）**
 
-`#59` 🟡① —— 替换形 `the changed-face unit test file` 只认单档，需求 F1 允许「单档 ∕ 相关子集」（`docs/core/requirements/TESTING.md:73`）。改复数要连带改命令形（`node --test <file>` ⇒ 多档形）并三面同改，属判据面改写，不在本批笔的范围。
-
-接笔条件：`thincoder-core/prompts/advisor-design.md:56` ∥ `thincoder-core/prompts/discipline-engineering.md:195` ∥ `thincoder-core/prompts/persona-eng-designer.md:115` 三面同改、另起一笔；台账由父侧登记。
+`#59` 🟡① 的复数化已随 #1772 轮落盘：三面提示词（`advisor-design.md:60` ∥ `discipline-engineering.md:198` ∥ `persona-eng-designer.md:115`）与本节 B1a/B1b/B1c 均改「`file or files (`node --test <file> [<file> ...]`)`」，与需求 F1「单档 ∕ 相关子集」（`docs/core/requirements/TESTING.md:73`）对齐。
 
 **验收（A1–A7 · 逐条回指本批条目 ①–④）**
 
@@ -4312,7 +4310,6 @@ B5 — `thincoder-core/prompts/persona-eng-designer.md:136` 整行替换（同�
 
 1. 〔父侧 · 编号〕本节未加 §7 D-PS 行（编号待父侧收口时定，承 §6.47–§6.50 同条）。
 2. 〔父侧 · 冻结区边界对账〕§6.50 K5 曾把 `thincoder-core/prompts/discipline-engineering.md:193-197` 标为冻结区（上一批的边界）；本批任务书明列 `:195` ⇒ B1b 按本批落。两者不冲突，此处记明以免收口对账时被读成越界。
-3. 〔父侧 · 台账登记〕「本批不收」的 `#59` 🟡① 延后项请父侧登记一行（子代理不写台账）：标题 = 替换形单档 ⇒ 多档 ∥ 子集；接笔条件见本节「本批不收」。
 
 ## 7. 关键决策记录
 

@@ -3,7 +3,7 @@
  * 顺序：⓪ 核版本存在性预检（registry——RELEASE.md §5.4；对位 VSC publish-all 段 0）→ lint（check-syntax）→ 集成测试（test/run.mjs——cli 只收集成层）。
  * 痛点修复（0.12.59 发版实测——失败详情被管道过滤吞掉，为看错误跑 3 次全量）：
  * 测试步骤输出巨大（200K+）不全透传——只打印摘要行；失败时**自动提取并打印
- * failing tests 详情段**（✖ 行 + 每个失败错误块 ≤20 行）——迭代不再靠手工重定向。
+ * failing tests 详情段**（✖ 行 + 每个失败错误块 ≤24 行）——迭代不再靠手工重定向。
  * exit code = 最后的失败状态（0 = 全绿可发版）。
  */
 import { execSync, spawnSync } from "node:child_process"
@@ -93,4 +93,4 @@ console.log("✔ lint OK\n")
 const testStatus = runTestStep("test", "test/run.mjs", "（集成测试输出捕获中——完成后打印摘要 + 失败详情）")
 if (testStatus !== 0) process.exit(testStatus)
 
-console.log("\n✅ release-check 全绿——可发版（bump → tag → push 双远端 → npm publish——RELEASE.md §2）")
+console.log("\n✅ release-check 全绿——可发版（bump → tag → push 双远端 → npm publish——RELEASE.md §5）")

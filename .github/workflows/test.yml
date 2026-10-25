@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/design/CORE-UNIFICATION.md §2.6.1
+      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/core/design/CORE-UNIFICATION.md §2.6.1
       - run: cd ../thincoder-core && npm link
       - run: npm link @thincoder/core
       - run: npm install
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
-      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/design/CORE-UNIFICATION.md §2.6.1
+      # S2 期间（核发布前）：核依赖经本地链接解析——见 docs/core/design/CORE-UNIFICATION.md §2.6.1
       - run: cd ../thincoder-core && npm link
       - run: npm link @thincoder/core
       - run: npm install
@@ -76,5 +76,5 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
       # 单引擎（声明面驱动——设计档 DOC-DISCIPLINE.md §7；2026-09-18 判据面批收正：旧三档 doc-anchors / check-doc-width / check-ledger 已随 v2 收敛撤除）
-      # 停用（2026-10-16 · 父侧直改 · 可 revert）：用户 2026-10-15 12:10 令禁调 doc-check；**该令已于 2026-10-18 被更晚裁定取代**（doc_check 必跑——需求 `docs/core/requirements/DOC-CHECK.md`）。本步（非零退出即构建判据）在禁令射程内。恢复条件 = 该令撤销。
+      # 停用（2026-10-16 · 父侧直改 · 可 revert）：用户 2026-10-15 12:10 令禁调 doc-check 作为 CI 构建判据；2026-10-18 更晚裁定要求 doc_check 作为交付门必跑（工具面），但未明令恢复 CI 步。恢复条件 = 用户明令把 doc-check 接回 CI。
       # - run: node scripts/doc-check.mjs --root .

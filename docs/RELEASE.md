@@ -107,7 +107,7 @@
 
 > **干跑注（时点与预期红）**：① CLI 干跑全绿时点 = 核已发布后（或 bump 前的现行号面）；bump 后—核发布前区间 ⓪ 必红（守卫，非缺陷）。
 > ② VSC 段 1.5 全过 = 物化后（未物化 ⇒ 断言 B red——fail-closed，预期）；物化时点 = 核已发布后（§5.3 先发核再物化）。
-> ③ as-of 2026-10-01 实读：三端 `test/` 树零用例（2026-09-28 全清既有态——空清单守卫即绿；测试体系重建另轮在册）⇒ 干跑的 test 步当前为空清单绿；断言不受影响。
+> ③ as-of 2026-10-01 实读：三端 `test/` 树零用例（2026-09-28 全清既有态）⇒ 该读数对应旧守卫形态；现行守卫 = fail-closed（空集 = 红——零用例证明不了任何事，`thincoder-cli/test/run.mjs` SC-5）；测试体系已重建（集成集在 `test/integration/`）。
 > ④ 核干跑的版本占用守卫 = 本设计轮实测；bump 后 exit 0 面随窗口实读。
 
 **P3 · 物化防破 guard（junction 覆盖的检查点 ∕ 恢复 ∕ 终态判据）**
@@ -217,7 +217,7 @@ node test/smoke-qwen-thinking.mjs --smoke <provider>:<model>   # 显式选路（
 npm publish                    # prepublishOnly 自动跑 release:check（lint → 测试 → 集成测试集）
 ```
 
-**门禁链细节**（`scripts/release-check.mjs`）：两步 = lint（`check-syntax.mjs`）→ 测试（`thincoder-cli/test/run.mjs`——单元测试 + 集成测试 + slow 全跑）；输出只打摘要行，失败时自动提取失败详情（每块 ≤24 行、最多 12 块；无汇总段回退输出尾 40 行）。
+**门禁链细节**（`scripts/release-check.mjs`）：两步 = lint（`check-syntax.mjs`）→ 集成测试（`thincoder-cli/test/run.mjs`——只收集成层；单元测试档不进任何门）；输出只打摘要行，失败时自动提取失败详情（每块 ≤24 行、最多 12 块；无汇总段回退输出尾 40 行）。
 
 **顺序守卫**：release-check 首查核版本存在性（registry 查无 = 中止——防止发出发坏包）；核**内容**面守卫 = §5.0 P2 核行闭包断言 + §5.0 P4 ④ registry 复验（台账 #1222——顺序 = 版本面 + 内容面双关）。
 
