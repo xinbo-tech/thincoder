@@ -1,9 +1,10 @@
 # Advisor 评审链边缘守卫（ADVISOR-GUARDS）· 设计
 
 > 板块：advisor 评审链——**边缘守卫族**：不完整判定族 · 凭证链启动/全程守卫 · 类型门（顶层 `type` 必填 + 声明一致性）· 对象标识行（文案单源）· 引文解析候选链 · 预算硬墙与提示 · 冻结窗口 · 同步面记账 · 失败结算结论 · 预算跟随模型窗口 · 估算加权。
-> 收敛协议本体（轮次 / 会话隔离 / prior / citations / guard / 响应表 / 需求契合 / 行数核查）= `design/ADVISOR-CONVERGENCE.md`——本档不重述（D2 单一权威源）。
+> 收敛协议本体（轮次 / 会话隔离 / prior / citations / guard / 响应表 / 需求契合 / 行数核查）= `docs/core/design/ADVISOR-CONVERGENCE.md`——本档不重述（D2 单一权威源）。
 > 需求层指针 = `docs/core/requirements/ADVISOR-CONVERGENCE.md`（该板块需求档——现状绝对路径）。
 > 判据指针：归属与命名 = `docs/core/design/DOC-SYSTEM.md` §5.1 / §6。
+> 行号口径：档内代码行号一律 **as-of 参考**（D4）——落点以函数 / 符号名为准，实施轮按盘复读。
 
 ## 1. 不完整判定族（A 族——单谓词）
 
@@ -62,10 +63,11 @@ Advisor: design review launch refused — {reason: no design token was minted | 
    边界：重复压缩允许重复挂回（幂等可读，不做存在性判定）；`pinned` 不含项目指南 / 方法论 / 文档地图（重内容可弃）；压缩触发阈值与 abort 阈值零改。
 
 **4. 类型门（F30——顶层 `type` 必填 + 声明一致性校验 · fail-closed）**：点火参数顶层 `type` **必须逐字 ∈ {`"code"`, `"design"`}**——缺失 / `null` / 空串 / 非法值 / 非字符串（`args.type ∉ {"code","design"}`）⇒ **拒绝启动 + 指引**。
-**冲突分支（判定句 ②）**：顶层 `type` 显式合法 ∧ `object.type`（调用方自述的评审类型——工具 schema `thincoder-core/agent-tools/advisor.mjs:69`）声明为**另一合法值** ⇒ **同拒**（判据名 `type-object-conflict`；指引两路：改顶层 `type` / 改 `object.type` 声明）——闭合「声明面与实际轨不一致」这最后一孔。
+
+**冲突分支（判定句 ②）**：顶层 `type` 显式合法 ∧ `object.type`（调用方自述的评审类型——工具 schema `thincoder-core/agent-tools/advisor.mjs:49`）声明为**另一合法值** ⇒ **同拒**（判据名 `type-object-conflict`；指引两路：改顶层 `type` / 改 `object.type` 声明）——闭合「声明面与实际轨不一致」这最后一孔。
 `object.type === "design"` 而顶层缺/非法的形 = 本条**自然子集**（同一判定，不另立第二条规则）。
 
-- **判定点** = 工具层**最早**（`thincoder-core/agent-tools/advisor.mjs:110`——类型门；先于范围判定 / 实例解析）——类型诊断优先于范围诊断（真因不被次要报错掩盖）；拒发登记 = `_advisorRefusals`（不置 called / 不耗轮次 / **零实例** / **零 token** / **零 LLM**）。
+- **判定点** = 工具层**最早**（`thincoder-core/agent-tools/advisor.mjs:90`——`typeGateCriterion` 调用，拒发返回 `:93`；先于范围判定 / 实例解析）——类型诊断优先于范围诊断（真因不被次要报错掩盖）；拒发登记 = `_advisorRefusals`（不置 called / 不耗轮次 / **零实例** / **零 token** / **零 LLM**）。
 - **声明面双保险**：工具 schema 同轮增 `required: ["type"]`（同档 `parameters`）——模型侧的第一道提示；**强制仍只在判定面**（provider 不保证执行 `required`，而旧缺省路径已撤——声明与判定不互相依赖）。
 - **前缀（新设——与启动断言前缀分列）**：`Advisor: launch refused`。本条拒绝**与轨无关**（缺 `type` 的 code 调用同拒）⇒ **不复用**设计专用的 `ADVISOR_LAUNCH_REFUSAL_PREFIX`
   （`Advisor: design review launch refused`，`thincoder-core/advisor/run.mjs:23`——其面 = 设计评审缺 token / 缺 Approval Signal，语义仍为设计专用）。
@@ -75,7 +77,9 @@ Advisor: design review launch refused — {reason: no design token was minted | 
 ```text
 Advisor: launch refused — the tool call must carry an explicit type at the top level, one of the two legal values below. [type={code|design|absent|invalid} · scope={范围摘要|none} · round=— · criterion={type-missing|type-invalid|type-object-conflict}]
 Why: {第二行分叉——逐字四形态见下（三判据名分支 + 对象声明追加行）}
+
   • type="code"   — code review: reviews the code you changed; pass paths=[...] to scope files/directories (documents=[...] adds acceptance-criteria context).
+
   • type="design" — design review: reviews design / requirement documents; pass documents=[...] (the explicit list) — plus batchDoc when a batch record is in flight.
 Nothing was sent: no review instance, no round consumed, no design token minted, no LLM call.
 ```
@@ -91,9 +95,10 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 - **边界（勿越）**：显式 `type="code"` / `type="design"` ∧ `object.type` 未声明 / 与顶层一致 / 非枚举值 ⇒ **照常受理**（`object` 只描述评审对象，**不选轨**）；只认逐字枚举值（不做 trim / 大小写 / 近似推断）。
   **一致性校验 ≠ 让 `object` 声明块选轨**——冲突判定**不改用** `object.type` 定轨、不推断「调用方大概想要哪一轨」，只在两声明对不上时拒绝（拒因 = 声明面自相矛盾）；可比对的域 = 两个**合法轨值**，非法声明值不构成轨矛盾。
   **窄读法**：冲突域 = 两个合法轨值之间；`object.type` 为**非合法值**（`"foo"` / 数字 / 非字符串）⇒ **不构成矛盾、照常受理**（`object` 非选轨面）——本文档判定枚举与需求档括注**同射程**（无并存读法）。
+
   **不设内防线**（`runAdvisorReview(agent, reviewType, …)` 的位置参不属本判定面——其两条内部调用者均在工具层判定**之后**，直接调用方一律显式传值，实测零缺省；登记见 §11）。
-- **调用面（F30 判定句 ③——盘点零残留 · 口径可复核）**：全仓 advisor 发起点盘点（口径命令 + 命中清单逐条 + 落笔级 + 零残留判据）；受影响表 / AC 收正版同源。实测：提示词 / 纪律档文本**零旧缺省依赖**（advisor 调用形命中 2 处，均为槽位头注自述，非调用指令）；代码内调用点与用例 / 夹具**逐处显式 `type`**（`advisorTool.execute(` 12 处零缺省）。
-- **冲突分支静态面零破坏（实测）**：三树 `*.mjs` 内 advisor 调用点**零 `object` 声明**——`object` 仅见于工具 schema `thincoder-core/agent-tools/advisor.mjs:66` 与描述 `:47`（`object.type` 的消费面 = 评审消息注入 `thincoder-core/advisor/messages.mjs:34`——只描述评审对象、不选轨）；夹具 `object: null` = 池条目字段而非调用声明 ⇒ 冲突判定只可能命中运行期自造的声明对。
+- **调用面（F30 判定句 ③——盘点零残留 · 口径可复核）**：全仓 advisor 发起点盘点（口径命令 + 命中清单逐条 + 落笔级 + 零残留判据）。实测：提示词 / 纪律档文本**零旧缺省依赖**（advisor 调用形命中 2 处，均为槽位头注自述，非调用指令）；代码内调用点与用例 / 夹具**逐处显式 `type`**（`advisorTool.execute(` 12 处零缺省）。
+- **冲突分支静态面零破坏（实测）**：三树 `*.mjs` 内 advisor 调用点**零 `object` 声明**——`object` 仅见于工具 schema `thincoder-core/agent-tools/advisor.mjs:46` 与描述 `:55`（`object.type` 的消费面 = 评审消息注入 `thincoder-core/advisor/messages.mjs:34`——只描述评审对象、不选轨）；夹具 `object: null` = 池条目字段而非调用声明 ⇒ 冲突判定只可能命中运行期自造的声明对。
 
 **5. 对象标识行（F31——三类文案单源）**：失败结论 / 范围拒回 / 类型门拒回三类文案的**首行**载对象标识四项（承 F29）：`[type={code|design|absent|invalid} · scope={范围摘要|none} · round={N}/uncapped|— · criterion={判据名}]`。
 
@@ -102,11 +107,10 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
   - `type` = 实际评审轨（`code` / `design`）；拒回面**未定轨**记 `absent`（缺失 / `null` / 空串）或 `invalid`（非法值）；**冲突拒回**记**顶层实收值**（`code` / `design`——与 `criterion=type-object-conflict` 配对读，未定轨）；**失败结论族**记**实际评审轨**（两轨共用——§7 契约二）。
   - `scope` = 范围摘要（首路径 + `+N more`；无范围记 `none`）。
   - `round` = 拒回族记**本次发起将使用的轮次号**（**恒记 `{N}/uncapped`**——机制真相；判定先于实例解析时记 `—`）；**失败结论族记本次已结算尝试号**（与尝试表 `#` 同值——§7 契约二）。
-  - `criterion` = 触发判据名（拒回族：`type-missing` / `type-invalid` / `type-object-conflict` / `scope-missing` / `scope-not-doc` / `scope-doc-ambiguous` / `scope-in-flight`；失败族：§7 判据名表）。
-- **载面（枚举闭合——五项）**：① 范围缺失（`thincoder-core/agent-tools/advisor.mjs`）
-  ② 范围非法（同档——design documents 非文档；`criterion=scope-not-doc` 判据本体零改——拒文案追加解析诊断尾：逐文档载「解析后绝对路径 ← 基面 = 会话 cwd」+ 候选项目根提示 + 重试指引）
-  ③ **范围歧义**（同档——documents 相对形命中多个候选项目且可读命中 ≥2 ⇒ fail-closed 拒，列全部可读命中路径——`criterion=scope-doc-ambiguous`；**不静默挑一**，工作区锚同哲学（同行 = `MANIFEST.md` §2.5 单项目解析律））
-  ④ 同 scope 在跑（`thincoder-core/agent-tools/advisor-async.mjs`）⑤ **类型门拒回**（§2.4——缺 `type` / 非法值 / 与 `object` 声明冲突）。
+  - `criterion` = 触发判据名（拒回族：`type-missing` / `type-invalid` / `type-object-conflict` / `scope-missing` / `scope-not-doc` / `scope-in-flight`；失败族：§7 判据名表）。
+- **载面（枚举闭合——四项）**：① 范围缺失（`thincoder-core/agent-tools/advisor.mjs`）
+  ② 范围非法（同档——`criterion=scope-not-doc`：文档不受理 ⇒ 拒发；判据 / 文案 / 拒因三值 = §12——逐文档载「解析后绝对路径 ∥ 拒因」+ 期望形两句）
+  ③ 同 scope 在跑（`thincoder-core/agent-tools/advisor-async.mjs`）④ **类型门拒回**（§2.4——缺 `type` / 非法值 / 与 `object` 声明冲突）。
 - **cap 文案**：机制不产生该文案。
 - **不载面（登记）**：async 误用拒回（depth>0 + `async:true`）· 启动断言拒回（无 token / 无 Approval Signal——其前缀已是稳定契约面）· 池队列 ack（非拒回）。
 - **边界**：不改判定语义；不把文案扩为长报告（标识行恰一行）。
@@ -124,6 +128,7 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 
 **失败原因四类（报告可判）**：无任何候选文件存在 ⇒ `file unreadable`；存在但内容不符 ⇒ `content mismatch @ {解析到的相对路径}`；越围栏 ⇒ `path traversal`（不变）；
 **非连续引文**（引文内容含省略号 `…` / `...` 且**全部候选未中**——缩略形，非所引行的连续子串）⇒ `not a contiguous citation (ellipsis) @ {相对路径} — quote one contiguous excerpt`——**形状不符与内容造假分列**
+
 （省略号禁用于承担判断面）。**判定优先级：含省略号且全部候选未中 ⇒ 非连续引文类——先于 `content mismatch` 判定**（候选命中先于本分类；两表述同时成立时以此为准；判据同 A-AG16 ∥ A-AG18 ∥ F34 判定句①）。
 报告头行 `[host-verified] N/M citations match current file state.` 零改；命中判据 = **装饰剥离候选集**（c1–c4——所引行**连续子串** `includes`；零模糊匹配、零内容级归一）；判定面 = 失败分类与候选构成。
 
@@ -141,7 +146,7 @@ CN: 引证内禁用省略号（`…` / `...`）——引证必须是所引行的
 run.mjs:180: timeoutId = setTimeout(...)  ⇒  run.mjs:180: timeoutId = setTimeout(() => {
 ```
 
-**归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
+**归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`docs/core/design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
 
 **取舍**：只按“声明范围 + 内容判据”扩充候选根——命中内容仍须**逐字连续子串**（候选仅剥外层装饰 / 取引号内文——**零模糊、零内容级归一**；不会因同名文件误命中：内容必须逐字包含）；残余如实报告：引用声明范围外、且其仓根不在声明范围时仍判 unreadable。
 
@@ -184,6 +189,7 @@ Advisor: review timeout after {S}s. Review incomplete — the wall-clock budget 
 
 **规则面选型**：取「定义落本档 + D5 行与提示词镜像登记待同步」（定义即时可落；同步面不撞在途链）；否决「直改机制档双档 + 提示词四镜像」（撞在途文件 + 提示词非本档写域）与「只保留父侧即时纪律、不落档」（下界仍不落机制权威面）。
 **机制面选型**：取「**写前拦截** × 点火回执冻结句」（唯一预防级：在途写被拒 → 档不改 → 不 stale；判据与陈旧判定**同源** → 零误杀；与既有拒绝通道同形；逃生门 = cancel → 改 → 重发）。
+
 否决：写后提示（写已落地 = 本轮必 stale；预防为零）· 仅回执冻结句（靠父侧临场兜）· 拦截 + 自动取消/自动重发（发起权在父/用户）。
 **批次档是否从快照面豁免**：**不豁免**（事故保护对象恰是批次档——父侧最常写；评审员确实读批次档任务书）。否决档级豁免与节级豁免（变更记账为文件级，节级判定需引入解析/节快照新机制——成本高、易假阳）。
 
@@ -230,6 +236,7 @@ Wait for the report, or cancel the review first (subagent action:'cancel' id:'{i
 **参与者边界（写面一致性）**：拦集 = 预闸可见的父侧自身写面；判陈旧集另含预闸不可达的**子代理合入**写入——「致陈旧却没拦」只可出自不可达面；bash / 文件操作类盲区不记账不判陈旧。
 
 **旧子 id 映射（引文相容——代码注释按「本节 E-x」引；子标源自归档 `thincoder-cli/docs/_archive/design/ADVISOR-CONVERGENCE.md` §14 的 E 族）**：E-1 问题陈述 → 本节「归因与实证」∕「机制复核」· E-2 方案选型 → 「规则面选型」∕「机制面选型」段 · E-3 契约五（逐字）→ 本节「契约（逐字）」（子标字母同对应：**E-3c** = (c) 拦截与回执文案 · **E-3d** = (d) 实现要点）·
+
 E-5 关键决策记录 → 本节选型段（否决句）· E-6 后续登记项 → §11 边界 + 本节「参与者边界」尾注 · E-8 验收标准 → §10。
 
 ## 6. 同步面记账（F16——消费同谓词）
@@ -302,7 +309,7 @@ Options: 1. proceed as-is (no usable conclusion — design: no token, implementa
 | `no_credential` | **设计专属**（凭证面——代码轨不可达） | the token could not be written to the session ledger |
 | `no_report` | 两轨 | the review settled without a report |
 
-不设任何按计数拒发的预检；失败路径的出口 = 结论块（§7 契约二）+ 父侧纪律（`design/ADVISOR-CONVERGENCE.md` §3.3）。
+不设任何按计数拒发的预检；失败路径的出口 = 结论块（§7 契约二）+ 父侧纪律（`docs/core/design/ADVISOR-CONVERGENCE.md` §3.3）。
 
 ## 8. 预算跟随模型窗口
 
@@ -398,10 +405,13 @@ export function outputReserve(provider, spec) {
 | A-AG16 | 引证形状分类：省略号引文（**候选全未中**——A-AG18）⇒ 非连续引文类（含改法），不再报 content mismatch；非省略号不匹配 ⇒ mismatch 照旧；报告头行零改（命中判据 = A-AG18 增量）；四面禁则 + 示例替形在位（`setTimeout(...)` 示例零残留） | 引文解析 |
 | A-AG17 | 归宿面：未验证引用不支撑打回（既有断言零改）；「不得静默丢条目」收尾句在位；不完整 ⇒ 失败结论块（A-AG9 覆盖） | 引文解析 / 失败结论 |
 | A-AG18 | 引文**装饰剥离候选集**：包裹引号 ∥ 行内注记装饰的引文 ⇒ 候选（c1 原捕获 ∥ c2 反复剥引号族 + 空白 ∥ c3 首个引号字符后段 ∥ c4 首个成对引号段内层文本；派生候选下限 2 字符）任一为所引行连续子串即 matched（零模糊、零内容级归一）；候选命中先于省略号分类（引号外语义省略形 ⇒ matched；引号内省略形 ⇒ 非连续引文类照判）；失败四类 / 报告头行 / 围栏零改 | 引文解析 |
+| A-AG19 | 文档路径解析单一规则（§12）：相对形按会话项目根解析（子目录锚同判）；绝对形照用；锚为 `workspace` / `none` 且传相对形 ⇒ 拒（`criterion=scope-not-doc` ∥ `reason=no-project-root`）；相对形 `..` 越根 ⇒ 拒（同 criterion ∥ `reason=outside-project`） | 路径解析 |
+| A-AG20 | 受理面 = 项目内现存 `.md`：仓根级文档与 `docRoot` 树外仓内文档均受理；项目外 / 非 `.md` / 不存在 ⇒ 拒（`criterion=scope-not-doc` ∥ `reason=outside-project` ∥ `not-doc-file`），文案载「解析后路径 ∥ 拒因」+ 期望形两句，零实例 / 零 token / 零 LLM | 收面放宽 |
+| A-AG21 | 零试探残留：`thincoder-core/**` 源内 `candidateRoots` / `sessionReviewRoots` / `scope-doc-ambiguous` 零命中；返回形属性访问 `\.attempted\b` 零命中（口径命令见 §12「消费点与编辑点」）；返回形无 `ambiguous` / `candidates` 键；冻结窗 `docAbs` 仍取 `resolved`（放宽受理的文档在冻结面内） | 路径解析 |
 
 ## 11. 边界
 
-- 不改评审轮次语义（**无机械上限**——轮次衰减 / 会话隔离 / prior 注入 / 响应表按 `design/ADVISOR-CONVERGENCE.md` 权威）。
+- 不改评审轮次语义（**无机械上限**——轮次衰减 / 会话隔离 / prior 注入 / 响应表按 `docs/core/design/ADVISOR-CONVERGENCE.md` 权威）。
 - **不设会话级计数载体、不按计数拒发**（N20 / F28）；不改异步池上限（资源保护归调度域）。
 - 不改陈旧判定 / 变更记账 / 结算语义本体；不引入节级快照、自动取消 / 自动重发。
 - 不拦截代码评审的在途写（仅设计评审）；不覆盖 bash / 文件操作类写入面（登记）。
@@ -410,3 +420,93 @@ export function outputReserve(provider, spec) {
 - **类型门登记（非发起点，判据见 §2.4 / §10 A-AG13）**：核记账面 `thincoder-core/agent/record-results.mjs`（判定后恒为枚举值）· CLI 显示面 `thincoder-core/tool-args.mjs:49`（`a.type ?? "review"` 渲染兜底——不参与发轨判定，被拒调用照原样渲染）。
   **对象声明面** `thincoder-core/agent-tools/advisor.mjs:66`（`object` schema——自述为调用方声明的评审类型，只描述评审对象、**不选轨**；一致性校验 = §2.4 冲突分支）。
 - 不写实现代码（工具 / 守卫 / 检查点 = eng-coder 写域）。
+
+## 12. 评审文档路径解析与受理面（范围门）
+
+**单条规则（唯一）**——`resolveReviewDocPaths(documents, cwd)`（宿主 `thincoder-core/agent-tools/review-facts.mjs`）逐文档按下表判定（分支依据列 = 该分支为何存在）。
+
+**最相近先例**：同一函数前身 = 四分支解析器 `thincoder-core/agent-tools/review-facts.mjs:72` ∥ 候选底座 `:148`；先例批 = #921（`thincoder-core/agent-tools/review-facts.mjs:6` 头注）。对齐 = 同一函数、同一返回形的 `resolved` / `invalid` 两段。
+
+偏差 = 分支③候选试探 ∥ 分支④歧义归一 ∥ `scope-doc-ambiguous` 判据整条删除——用户 2026-10-25 11:41「为啥要试探？不能要求写对吗？」：路径要求写对，试探面无存在理由。
+
+**公开源核查**：项目声明 `PROJECT-MANIFEST.json:35` 的 `index.publicRepos` = `[]` ⇒ 无公开源档可查；已查无。
+
+| # | 分支 | 判据 | 依据 |
+|---|---|---|---|
+| 1 | 相对形 | 基面 = **会话项目根** `projectRootView(cwd).root`（`thincoder-core/manifest-discovery.mjs:127`，归属 ∨ 发现）；`p = resolve(根, doc)`；`p` 越出根（`..` 逃逸）⇒ 拒（`outside-project`） | 用户 2026-10-25 11:41「不能要求写对吗？」——相对形只有唯一含义 = 项目根相对；根是基面不是起点，跨项目文档走绝对形 |
+| 2 | 相对形 ∧ 项目根解析不出 | `projectRootView` = `workspace` / `none` ⇒ 拒（`no-project-root`，文案报锚态 + 期望形） | 实景：本工作区锚 `D:\teamcode` 下辖两项目（`manifest read` 读数 `state=workspace`）——无唯一项目根，相对形确实无解，只能要求写对 |
+| 3 | 绝对形 | 照用（零根试探、零拼接） | `docs/core/requirements/ADVISOR-CONVERGENCE.md:48` F18「绝对形照用」+ 范围边界「不放宽到跨项目（跨项目走绝对形）」——绝对形自带基面，是跨项目文档的唯一写法 |
+| 4 | 受理判据 | ① 现存普通文件；② 扩展名 `.md`（大小写不敏感）；③ 绝对形：`owningProject(p)` 非空（住在一个项目里）；相对形：分支 1 已限定在会话项目根内 | `criterion=scope-not-doc` 的指义 =「评审对象必须是文档」；本批放宽的是**位置**（`docRoot` 树内 → 项目内任意位置）——F18 边界句「不放开文件种类（非 `.md` 不受理——`scope-not-doc` 仍可达）」 |
+| 5 | 不受理 | fail-closed 拒发：`criterion=scope-not-doc`，逐文档列「解析后绝对路径 ∥ 拒因」+ 期望形（项目根相对例 ∥ 绝对路径）；零实例 / 零 token / 零 LLM | F18 判定句「解析不出即拒并说清期望形」+ 同族既有拒发语义（§2.5 载面 ②） |
+
+**拒因三值**（标识行恒 `criterion=scope-not-doc`——三值只作 `reason=`，不进 criterion 枚举）：`no-project-root`（相对形 ∧ 项目根解析不出）· `outside-project`（相对形越根 ∥ 绝对形不住在任何项目里）· `not-doc-file`（非现存普通文件 ∥ 非 `.md`）。
+
+**拒因命名三问**：`no-project-root` vs 既有失败码 `'no-project'`（`docs/core/design/MANIFEST.md:121` 入口决策树）= **有意区分**——`no-project` 说「决策树无项目可落」（写 / 建档面），`no-project-root` 说「相对形的基面 = 会话项目根解析不出」（评审读面）；场景与处置不同，合并会让两种拒因共用一个出口。
+
+`outside-project` / `not-doc-file`：查过 `thincoder-core/**` 与 `MANIFEST.md` 失败码表，**none found**（无同义既有名可复用）。
+
+**返回形**：`{ resolved: Map<输入原样, 绝对路径>, invalid: Array<{doc, resolved, reason}> }`——零 `ambiguous` / 零 `candidates`：候选试探与歧义归一退场，`criterion=scope-doc-ambiguous` 随之退场（判据不再可达）。
+
+**消费点与编辑点**（唯一调用方 = `thincoder-core/agent-tools/advisor.mjs:114-146` design 拒发块；编辑点一次列全）：
+
+| # | 编辑点 | 动作 |
+|---|---|---|
+| 1 | `thincoder-core/agent-tools/advisor.mjs:62-66` | `documents` schema 描述改单一规则（相对形按会话项目根 / 绝对形照用 / 受理 = 项目内现存 `.md`）——删「会话 cwd 试探 + 候选项目根」半句 |
+| 2 | `thincoder-core/agent-tools/advisor.mjs:114-119` | 注释块按 §12 单规则重写——删四分支描述与 `scope-doc-ambiguous` 字样（纯注释，零逻辑） |
+| 3 | `thincoder-core/agent-tools/advisor.mjs:121` | 解构删 `ambiguous` / `candidates` |
+| 4 | `thincoder-core/agent-tools/advisor.mjs:124-130` | 歧义拒发分支整段删除 |
+| 5 | `thincoder-core/agent-tools/advisor.mjs:133-141` | 诊断尾改按新形渲染「逐文档：输入 → 解析后绝对路径 ∥ 拒因」+ 期望形两句；旧 `:135` 读 `v.attempted.length`——新形无该属性，不随改即抛 TypeError |
+
+异步面 `thincoder-core/agent-tools/advisor-async.mjs:398-400` 只取 `.resolved.values()`，**零改**（不列编辑点）。
+
+**零残留口径命令**（A-AG21 可重跑）：`rg -n --glob '*.mjs' -e 'candidateRoots|sessionReviewRoots|scope-doc-ambiguous' -e '\.attempted\b' thincoder-core` ⇒ 零命中（无 `rg` 时用同形 `grep -RInE`）。
+
+**收面（仓根放宽）**：受理 = **项目内任意 `.md` 文档**——仓根级文档（项目根下直挂的 `.md`，典型如 `METHODOLOGY` 说明档）与非 `docRoot` 树下的仓内文档（如 `thincoder-core/tool-docs/advisor.md`）一律受理；`docRoot` 五键不再充当评审受理边界。`REVIEW_ROOT_KEYS` / `resolveReviewRootsFor` 保留（写门 `resolveReviewTargetPaths` 的面），评审受理不再消费。
+
+**冻结窗同源**：在途设计评审的 docAbs（`thincoder-core/agent-tools/advisor-async.mjs:399`）取同一 `resolved` ⇒ 放宽受理的文档**同受 D5 冻结**（零新增代码；`inflightDesignReviewConflict` 判据不动）。
+
+**受影响文件与行数增量**（现量 = `\n` 计数实测，2026-10-25；读盘逐行显示 = 现量 +1，末段空行）：
+
+| 面 | 文件 | 现量 | 变更 | 编辑点 | 增量预算 |
+|---|---|---|---|---|---|
+| 源 | `thincoder-core/agent-tools/review-facts.mjs` | 158 | 重写 `resolveReviewDocPaths`；删 `sessionReviewRoots` / `candidateRoots` / 四分支注释 | `:53-56` · `:58-125` · `:144-158` | 净 −30～−45（改后 ≤130） |
+| 源 | `thincoder-core/agent-tools/advisor.mjs` | 276 | 删歧义拒发分支 + 诊断尾按新形渲染 + `documents` schema 描述改单一规则 | `:62-66` · `:114-119` · `:120-146` | 净 ≈ −16（实落 260） |
+| 源 | `thincoder-core/tool-docs/advisor.md` | — | `DESC("advisor")` 描述单源：删已退场的「会话 cwd 试探 + 候选项目根 + 祖先目录」句，换 §12 单规则；同档按段长阈值拆段（逐句保留） | 描述段 | 实落（清单外——实施轮披露并获追认） |
+| 源 | `thincoder-core/agent-tools/advisor-async.mjs` | 499（读盘 500——恰在 500 行硬限上） | **零改**：`docAbs` 取同一 `resolved` | `:398-400` | **Δ = 0**（零新增代码） |
+| 文档 | `docs/core/design/ADVISOR-GUARDS.md` | 511 | 本节 + 判据枚举收正 + A-AG19–21 + 集成验收段 + 用例设计段 | 同左 | 已落（现量 511——`\n` 计数实测） |
+| 文档 | `docs/core/design/MANIFEST.md` | 1198 | 评审门条 + 消费点表行 5 + 随动面 + T78 ③ 期望（workspace 锚下评审 documents 相对形 ⇒ 当场拒发） | 见该档 §2.5 ∥ §3 T78 | 已落（行内改写 + T78 ③ 一格；Δ = 0） |
+| 文档 | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | 264 | §8 定位句 ∥ F3 ∥ AC-M6-3 收正 | `:116` · `:124` · `:134` | 已落（同格改写，Δ = 0） |
+| 测试 | `test/RTM.md` | 107 | 故事 6 补 6-4 + 节注收正 | `:69` · `:73` · `:76` | 已落（+1：6-4 一行） |
+| 测试 | `docs/batches/2026-10-25-review-scope-widen.test.mjs` | 0 | 单元测试档（U1–U10——收口即删） | — | 新建 |
+| 测试 | `test/integration/review-doc-scope.test.mjs` | 0 | 集成用例 6-1 … 6-4 | — | 新建 |
+
+**集成验收（起点 = `test/RTM.md` 故事 6「设计评审的文档范围按项目根受理」——delta 三答）**
+
+| 编号 | 组件间交互 | 业务可观察结果 | 入口 | 回指 |
+|---|---|---|---|---|
+| 6-1 | 工具层 `documents` 解析 ⟷ 评审实例点火 | 仓内非 `docRoot` 树下文档被受理，评审读得到该文档 | 会话内发起设计评审（depth-0） | F18 · A-AG20 |
+| 6-2 | 解析 ⟷ 拒发通道 | 项目内代码文件 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=not-doc-file` + 解析后路径 + 期望形），零实例 / 零 token | 同上 | F18 · A-AG20 |
+| 6-3 | 解析 ⟷ 拒发通道 | 项目外绝对路径 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=outside-project`） | 同上 | F18 · A-AG19 |
+| 6-4 | 解析 ⟷ 拒发通道（分支 2） | workspace 锚 + 项目根相对形 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=no-project-root`），文案报锚态 + 期望形 | 同上 | F18 · A-AG19 |
+
+- **破行（改写）**：6-1——原行未写锚态，而分支 2 让锚态决定成败（workspace 锚下相对形一律拒）⇒ 改写为「会话锚在项目内（cwd = 项目根或其子目录）」，否则同一行在 workspace 锚下假红。
+- **冗余**：无——6-1 ∥ 6-2 ∥ 6-3 ∥ 6-4 各判一类（受理 ∥ 非 `.md` ∥ 项目外 ∥ 锚无根），两两不重叠。
+- **缺失**：6-4（`no-project-root`——分支 2 此前无行）；编号已先落 `test/RTM.md` 故事 6，用例标题照 `test('6-4 …')`。
+- **不在本批变更面的两处**：§2.4 类型门本批零代码改动 ⇒ 不立行；§5 冻结窗本批零新增代码（`docAbs` 取同一 `resolved`），判据 / 文案 / 业务可观察结果均不改——放宽受理的文档只是进入既有冻结面，故不新立行。
+
+**用例设计（实现面——四条用例怎么搭）**
+
+夹具与驱动共一套：临时根 `mkdtempSync(join(tmpdir(), "tc-int-scope-"))`；模型侧 = `node:http` 本机假 OpenAI SSE 端点（回一段固定文本），请求体留档（`requests`）；`agent` = 最小对象 `{ config, provider: { ...entry, model }, cwd }`，`baseURL` 指向假端点——先例 `test/integration/advisor-timeout-hot.test.mjs:27-87`。
+
+**驱动面** = 工具层 `advisorTool.execute({ type: "design", async: false, documents }, { agent, _toolCallId: "t<N>" })`：同步轨（范围判定在点火前）；`_advisorRefusals` 只在 `ctx._toolCallId` 给出时登记，故必须传。
+
+**不用两个缝**：不用 `_setProjectRootForTest`（覆盖位短路 `projectRootView` ⇒ 6-4 的 workspace 态不可达）；不用 `_setLedgerDirForTest`（工具面不读台账——先例同档未设）。
+
+| 编号 | 夹具 | 驱动 | 断言点 |
+|---|---|---|---|
+| 6-1 | 真仓 = 本仓（`cwd` = 仓根，`PROJECT-MANIFEST.json` 恒在） | `documents = ["thincoder-core/tool-docs/advisor.md"]`（`docRoot` 树外、真实存在） | ① 回执非拒（无 `scope-not-doc`）；② 假端点收 **1** 个请求，请求体含该文档条目或解析后路径 ⇒ 判据「评审读得到」= 评审消息携带该文档；③ 回执含假端点固定文本（评审跑完，不是半途拒发） |
+| 6-2 | 同 6-1 | `documents = ["thincoder-core/agent-tools/advisor.mjs"]` | 回执含 `criterion=scope-not-doc` ∧ `reason=not-doc-file` ∧ 解析后路径 ∧ 期望形两句；`_advisorRefusals.has("t2")`；假端点 `requests.length === 0`（零实例 / 零 token） |
+| 6-3 | 临时根 `outside/x.md`（无 manifest / 无 `.git`）；项目侧同 6-1 | `documents = [<临时根>/outside/x.md]`（绝对形） | 同 6-2 形态，`reason=outside-project`；`requests.length === 0` |
+| 6-4 | 临时根：无 manifest、无 `.git`；下辖 `p1/` ∥ `p2/` 各写一份最小 `PROJECT-MANIFEST.json`（五键 + `codePaths` + `index`，形同 `DEFAULT_MANIFEST`）；`cwd` = 临时根 | `documents = ["docs/a.md"]`（相对形） | `reason=no-project-root`；文案含锚态（workspace）∧ 期望形两句；`requests.length === 0`；**反证格**：`cwd` 换成 `p1/` 同调用 ⇒ 不再以 `no-project-root` 拒（基面已存在） |
+
+**边界**：不改 `resolveBatchDocPath` / `batchDocBases`（batchDoc = 另一机制，`BATCH-RECORD.md` §4.15）· 不改 `docSetKey` · 不引入候选试探 ∥ 歧义归一 ∥ 新配置键 ∥ `index.docExtensions` 消费 · 不动轮次 / 陈旧判定 / 结算语义 · 零 UI 面。

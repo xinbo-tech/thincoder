@@ -9,10 +9,9 @@
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
 import { resolveBatchDocPath } from "./batch.mjs"
-// M6（模块设计 §2.1 F3）：评审对象来源读 manifest docRoot（声明面）——单一权威源 =
-// review-facts.mjs 的 resolveReviewDocPaths（2026-10-04 · #921 · KD-2——分类四分支 + B 文案
-// 诊断数据单源；write-gate 同名再出口保 normAbs 面）。不 import dispatch.mjs（簇间回边，环风险）。
-import { normAbs } from "../agent/write-gate.mjs"
+// 设计评审的文档受理面单源 = review-facts.mjs 的 resolveReviewDocPaths（判据正文 =
+// docs/core/design/ADVISOR-GUARDS.md §12：相对形按会话项目根 / 绝对形照用 / 受理 = 项目内现存 `.md`）。
+import { projectRootView } from "../manifest-discovery.mjs"
 import { resolveReviewDocPaths } from "./review-facts.mjs"
 import {
   generateDesignToken,
@@ -62,7 +61,7 @@ export const advisorTool = {
       documents: {
         type: "array",
         items: { type: "string" },
-        description: "Doc paths to review (design / requirements / referenced docs). Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/…, or absolute). The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
+        description: "Doc paths to review (design / requirements / referenced docs). One rule: a relative path resolves against the session project root (e.g. docs/core/design/ADVISOR-GUARDS.md); an absolute path is used as-is. Accepted = an existing .md file anywhere inside a project (a repo-root doc such as METHODOLOGY.md counts); anything else is refused with the resolved path, the reason, and the two expected forms. The advisor reviews ONLY these — no git diff scan. Use for both review types to pass the task's docs list.",
       },
       batchDoc: {
         type: "string",
@@ -111,36 +110,21 @@ export const advisorTool = {
       )
     }
 
-    // Design review: the review scope must be documentation files. Classification =
-    // resolveReviewDocPaths (2026-10-04 · #921 · the four-leg single authority in
-    // review-facts.mjs): legs ① session-root set / ② owning-project root set keep the
-    // legacy behavior verbatim; leg ③ probes candidate project roots for bare
-    // project-root-relative forms; leg ④ disambiguates by readable-file uniqueness
-    // (fail-closed — criterion=scope-doc-ambiguous when ≥2 candidates are readable).
+    // 设计评审：受理面 = 项目内现存 `.md`——相对形按会话项目根解析（越根 ⇒ 拒）· 绝对形照用 · 解析不出 ⇒ 拒并说清期望形；零试探、零歧义归一。
     if (reviewType === "design" && documents) {
-      const { resolved, invalid, ambiguous, candidates } = resolveReviewDocPaths(documents, agent.cwd)
-      if (invalid.length > 0 || ambiguous) {
+      const { invalid } = resolveReviewDocPaths(documents, agent.cwd)
+      if (invalid.length > 0) {
         if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-        if (ambiguous) {
-          // 歧义拒（KD-4 独立判据——不混入 not-doc；列全部可读命中——fail-closed 不静默挑一）。
-          return withIdentityLine(
-            `Advisor: design review document "${ambiguous.doc}" matches several projects: ${ambiguous.hits.join(", ")}. Pass an absolute path to select one.`,
-            { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-doc-ambiguous" },
-          )
+        // 拒发文案：既有稳定前缀逐字（行首）+ 逐文档「输入 → 解析后绝对路径 ∥ 拒因」+ 锚态（仅无项目根）+ 期望形两句。
+        const lines = invalid.map((v) => `- ${v.doc} → ${v.resolved ?? "(no base)"} ∥ reason=${v.reason}`)
+        if (invalid.some((v) => v.reason === "no-project-root")) {
+          const view = projectRootView(agent.cwd)
+          const where = view.state === "workspace" ? `workspace (${view.candidates.join(", ")})` : "none (no PROJECT-MANIFEST.json here or above)"
+          lines.push(`Session anchor is ${where} — no project root, so a relative path has no base to resolve against.`)
         }
-        // not-doc 拒：既有稳定前缀逐字（行首）+ 解析诊断尾（B 面根治——逐文档「解析后绝对
-        // 路径 ← 基面 = 会话 cwd」+ 候选项目根提示 cap 5 + 重试指引——纠正「误报因」缺陷）。
-        const invalidList = invalid.map((v) => v.doc).join(", ")
-        const attemptedList = invalid
-          .map((v) => `${v.doc} → ${v.attempted.length > 0 ? v.attempted.join(" | ") : normAbs(v.doc, agent.cwd)}`)
-          .join("; ")
-        const shown = candidates.slice(0, 5)
-        const more = candidates.length - shown.length
-        const candidateNote = shown.length > 0
-          ? `(candidates: ${shown.join(", ")}${more > 0 ? ` +${more} more` : ""}) — pass project-root-relative (e.g. ${shown[0]}/docs/…) or absolute paths`
-          : "— pass project-root-relative or absolute paths"
+        lines.push("Expected form 1 — project-root-relative: docs/core/design/ADVISOR-GUARDS.md (resolved against the session project root).", "Expected form 2 — absolute: D:\\repo\\docs\\core\\design\\ADVISOR-GUARDS.md (used as-is).")
         return withIdentityLine(
-          `Advisor: design review documents must be documentation files (per the project's conventions). Invalid: ${invalidList}\nDiagnosis: resolved against session cwd ${agent.cwd} → ${attemptedList}; no candidate project docRoot contains it ${candidateNote}.`,
+          `Advisor: design review documents must be documentation files (per the project's conventions). Invalid:\n${lines.join("\n")}`,
           { type: reviewType, scope: scopeSummary(documents), round: "—", criterion: "scope-not-doc" },
         )
       }

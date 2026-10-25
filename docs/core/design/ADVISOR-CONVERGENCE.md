@@ -130,6 +130,7 @@ CN:
 ```text
 EN: If you must wrap up with items not fully verified, list each of them explicitly with its state (Status `Unfixed`,
 evidence not verified this round) — never drop an item silently; the verdict line still closes the round with a conclusion.
+
 CN: 若要带着未完全核验的条目收尾：逐一明列（`Unfixed`，证据本轮未核验）——不得静默丢条目；裁决行仍须给出本轮结论。
 ```
 
@@ -146,6 +147,7 @@ CN: 若要带着未完全核验的条目收尾：逐一明列（`Unfixed`，证�
 EN: Every non-fix must carry a reason (a technical rebuttal with evidence, or an explicit acknowledged-not-fixed record);
 the reviewer may push back on insufficient reasons through round 2, and from round 3 accepts reasoned non-fixes —
 a zero-reason refusal is never accepted and stays unresolved.
+
 CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式记录）；第 1–2 轮评审者可对理由不成立的不修项打回，
 第 3 轮起携理由的不修项被接受收口——零理由的沉默/回避永不接受、保持未解。
 ```
@@ -260,7 +262,9 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 - **只存“评审形态输出”作 prior**：评审完成时宿主只在该输出像评审时（markdown 表格行或足够长正文）存为 prior——空回复 / 纯工具进度不得成为 round2+ 的验证清单。同步路径存于 agent 状态；实例路径存于 run 实例；子代理内的 advisor 调用**不写父 agent 状态**。
 - **取件下界（per-review 窗口）**：agent 响应表取件按**本评审实例**收敛——下界 = 本评审**投递水印**（`run.historyAnchorIdx`：本评审结果进入父 history 的落点；async = 投递单点 `injectAsyncResult` ∥ sync = 工具结果提交点落——机制见 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.10）。
   取件 = 自水印**前向**扫描取**首张**响应表；无水印（legacy 直调 / 无实例）回落既有全文倒扫。依据 = 并发评审下全文倒扫取「最新」表 ⇒ 取到他场。
+
   **残余声明**：① **索引稳定性前提**：水印 = 投递刻 history 下标；跨存档重装（整换径 `thincoder-core/session-lifecycle.mjs:115` `agent.history = [...machineMerged]`）∥ 头裁切后可失配；失配两向（同因）——前向窗**越过**本表 ⇒ 回落「no response table」兜底文本 ∥ 前向窗起点**左移** ⇒ 覆盖更早区段（可含投递前）⇒ 可取他场**更早**表；两向均 = 聚焦参考降级、不驱动控制流。
+
   ② 水印下界只保证「≥ 本评审投递点」——他场响应表若在本评审投递之后、本次构建之前交错写入，取件仍可先命中他场；「聚焦参考」语义不变（不驱动控制流——与 F9 / F-A12 不相触）。
 - **已知边界（legacy 路径）**：legacy 收敛路径不应用转义——**直接外部调用方须自行转义**（parent 对话引用字面转义序列时有服务端 400 风险）；正常流已转义，无风险。
 
@@ -298,6 +302,7 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
     && agent._mutatedThisRun          // ① 本 run 改过代码
     && !agent._calledAdvisorThisRun   // ② 修改尚未被评审覆盖
     && hasCodeMutations(agent)        // 内容判定——产品代码全算，文档/临时件排除
+
     && advisorPushbacks < MAX_ADVISOR_PUSHBACKS) { 推回 }
 ```
 
@@ -376,6 +381,7 @@ advisor design review 标准维度补一条：
 ## 12. 验证
 
 评审收敛行为（轮次提示词替换、prior 原文注入、确定性轮次判定、**第 6 次及以后照常受理探针**、guard 推回判定、fresh session、host-verified citations、对象声明块注入）的回归测试按测试基建执行（`docs/core/design/TESTING.md` §10：单入口 `npm test`——`slow` 纯别名、原慢测用例随入口全跑）。
+
 提示词锚（“Do NOT look for new issues”、证据规则句等）的防回退核对 = **逐字读核对**；如需机检，形态限**行为面 / 结构机检**（禁读非测试文件断言「某句在场 / 缺席」的散文锚测试——纪律 = `docs/core/requirements/TESTING.md` §2）。
 
 **验收标准（逐条回指需求）**：
@@ -402,6 +408,7 @@ advisor design review 标准维度补一条：
 | A-AC18 | 集成测试设计段核查维度在位（设计档缺该段 ⇒ 🔴（设计不完整）；改动未触及业务行为 ⇒ 段内写明「无变化 + 理由」，理由须是「未触及业务行为」本身，以窗口上限为由不成立 ⇒ 仍 🔴；段内场景逐条回指业务需求）；设计评审提示词对应维度在位——落点 = `thincoder-core/prompts/advisor-design.md` §评审标准第 12 条（**逐字读核对**；机检限行为面 / 结构机检）；**已落笔**（EN 在盘——2026-10-24） | 集成测试设计段 |
 
 **工具轮 assistant 消息构造（回声恒带——`CONTEXT-COMPACTION.md` §7 D-CC22）**：`thincoder-core/advisor/loop.mjs:207-217` 推入 `messages` 的 assistant 消息由核单点 `assistantToolCallMessage(response, providerSpec(provider))`（`thincoder-core/model-specs.mjs`）构造——`reasoningEcho:"required"`
+
  族（继承主 provider 或显式 `advisor.provider`，均按 `providerSpec` 判定）**恒带** `reasoning_content`（本轮无推理 ⇒ 空串）；`optional` / 未声明族恒不带。
 
 ## 14. 同类先例核查（设计评审维度）
@@ -449,6 +456,7 @@ advisor design review 标准维度补一条：
 12. **Integration-test design**: the design document must contain an integration-test design section — the scenarios this change requires, the business result each asserts, and the business requirement each traces back to.
     **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business behavior states so, with its reason, in that section.
     **A reason that is not "this change alters no business behavior" does not stand** — e.g. the 50–100 case window being full ⇒ still 🔴.
+
     **Why**: integration tests are the only acceptance run that starts from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves the change with no acceptance at all.
 ```
 

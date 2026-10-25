@@ -2,7 +2,7 @@
 
 > 板块 = **工程模式凭证链（结算面）**——评审通过后 token 的**结算 / 持久化 / 回读 / 消费**。
 > 相邻权威 = `docs/core/design/ENG-TOKEN-BINDING.md`（token 生命周期语义：TTL / 格式 / 跨模式存活——本档**不重述**，D2）· `docs/core/design/CONSULTATION.md`（评审引擎）· `docs/core/design/SESSION.md`（会话槽文件与序列化）。
-> 需求侧 = `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md`（源 = VSC 树需求档）；CLI 树需求档 `thincoder-cli/docs/requirements/DESIGN-TOKEN-SETTLEMENT.md` **未迁**（后续批）。
+> 需求侧 = `docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md`（源 = VSC 树需求档）；CLI 树需求档**未迁**（后续批）。
 
 ## 1. 定位
 
@@ -76,12 +76,13 @@
 - **已知有意差异**：两项——① **同 id 冲突裁决**（本仓 = **槽为准**〔「槽 = 权威」〕；VSC = 内存优先——`thincoder-vscode/src/agent/agent-state.mjs:58-76` `reconcileEngDesignTokens`：`!map.has(id)` 才合入）——**A9 核查 = ① 不成立**（两面同具备 Map 与槽两载体，无单侧对象）⇒ 按「端差默认 = 消」转**消解路径 + 到期条件**：
   两面对齐同一裁决规则（方向 = token 结算 / 合并面设计轮裁定——候选 = 槽为准〔核现径〕∥ 内存优先〔端现径，防丢新铸〕）；**到期 = token 结算 / 合并面下次触碰**。
   **处置面**：新清点 / 批量消费面（F-SL1 / F-SL2）按「**槽为准**」（核现径）落地——裁决主项与核侧一致；**两面对齐余项**（VSC 内存优先面收正）**缓办**（零触端 reconcile 面）——待决项维持未裁，到期条件照旧（该面下次触碰）。
+
   ② **过期清理回写时序**（VSC = 当场权威台账回写；本形态 = 惰性〔随下次 `persistEngTokens` / `saveSession` 携带〕）——**形态（写回时序）· 语义零差**（清理对象 = 过期项——任何门禁均不授权，早清晚清不改变授权结果）⇒ 非登记项。源码注释逐字登记（`thincoder-core/token-ttl.mjs:181`–`:186`）。
 - **依赖环（有意、安全）**：`token-ttl.mjs` 只 import 底层槽 I/O（`session-slots.mjs` + `session-guard.mjs`）；`session.mjs` 同时 import `token-ttl.mjs` → 静态环，与既有 session ↔ session-slots 环同构（函数声明实例化期已初始化，环安全）。
 
 ### 6.3 VSC 端结算接线
 
-> 来源 = `thincoder-vscode/docs/design/DESIGN-TOKEN-SETTLEMENT.md`（VSC 产品档——旧档一字未改、留参照历史）。VSC 结构性基线不同：agent 对象**每 run 重建**（`thincoder-vscode/src/agent/setup.mjs`——非 CLI 常驻单对象）⇒ 结算面多出
+> 来源 = VSC 产品档（旧档一字未改、留参照历史）。VSC 结构性基线不同：agent 对象**每 run 重建**（`thincoder-vscode/src/agent/setup.mjs`——非 CLI 常驻单对象）⇒ 结算面多出
 > 「死对象 / 快照 / 清零」三类 VSC 独有断点——D1–D6 全部落地后与 CLI **同机制语义**（settle 即落盘权威台账 / 门禁读权威 / 镜像退役）。生命周期语义 / TTL / 格式 = 核面单一权威（`docs/core/design/ENG-TOKEN-BINDING.md` §6.3——本档不重述）；原 VSC 镜像 `advisor.mjs` 等随 W12/W13 已删）。
 
 | 面 | VSC 落点（实核 · W16 接线面收正） |
@@ -96,6 +97,7 @@
 | 测试覆盖 | 当批定向单测（`docs/batches/<batch>-<topic>.test.mjs`——settle 落盘 / union 忙时 / restore / consume 不复活；收口随批删）。常驻测试档不存在（既有缺口，另账） |
 
 **VSC 侧差异**：① `engTokensMergeForSave` 同 key 冲突「**expiresAt 大者胜**（新 mint）」——**已消解**（W11 转口后同一实现：端壳 = 核 `mergeEngTokensForSave` re-export；
+
   「新铸者胜」与「expiresAt 大者胜」= 同一规则——核档 `thincoder-core/session-slot-write.mjs:172-173`）；② `reconcileEngTokensFromSlot` 同 id 冲突以槽为准（VSC 版内存优先）——**消解路径 + 到期条件在册**（A9 核查与处置 = §6.2 ①）。
 
 ## 7. 并入的关键决策记录
@@ -111,7 +113,7 @@
 
 ## 8. 评审凭证（v2——M6 增量）
 
-**定位**：评审通过 ≠ 授权落地——通过只发「凭证」（designId + token），实现方拿凭证解锁写码；链收口后**同 designId 再 spawn = 机械拒**（链终消费）。v1 已完整实现凭证生命周期（签发 → TTL → 消费 → 移除），**v2 继承零改**，唯一变更 = **评审对象来源改读 manifest `docRoot`**（去硬编码 `docs/`）。
+**定位**：评审通过 ≠ 授权落地——通过只发「凭证」（designId + token），实现方拿凭证解锁写码；链收口后**同 designId 再 spawn = 机械拒**（链终消费）。v1 已完整实现凭证生命周期（签发 → TTL → 消费 → 移除），**v2 继承零改**；评审对象受理面 = 项目内现存 `.md`（判据单源 = `docs/core/design/ADVISOR-GUARDS.md` §12）。
 
 **五功能点**：
 
@@ -119,7 +121,7 @@
 |---|---|---|
 | F1 | 评审通过 → 签发 designToken | **继承 v1**（`generateDesignToken` + `settleDesignReview` → designId+token） |
 | F2 | 链终消费制 | **继承 v1**（`consume-design` → `resolveDesignSlot` + `removeDesignTokenSlot`——消费后同 designId 再 spawn = `designId not found` 机械拒；重复消费幂等 no-op） |
-| F3 | 评审对象来源读 `docRoot` | `advisor.mjs` design-review 分支（文档分类）改读 `resolveReviewTargetPaths`（`agent/write-gate.mjs`，M4 产物——**同源单一权威，不重复实现**；不 import `dispatch.mjs`——簇间回边环风险）；**按用点解析增量**：同单点新导出 `resolveReviewRootsFor(dir)`（`write-gate.mjs:59`）——逐文档所属项目根集（`thincoder-core/agent-tools/advisor.mjs:125` → `:129` 第二步；无主档回退会话根集判定）；**路径归一增量**：documents 解析单源新导出 `resolveReviewDocPaths`（宿主 = `review-facts.mjs`），逐文档四候选试探（会话根集 → 所属项目根集 → 候选项目根 → 歧义可读唯一化）——裸仓相对形按候选项目归一受理，多候选可读命中 ≥2 ⇒ fail-closed 拒（`scope-doc-ambiguous`）；冻结窗 `docAbs`（advisor-async）同源取 resolved（保护洞堵合）。实施 = eng-coder 轮；**锚祖先链增量**：候选③底座并入 **cwd 祖先链全量目录**（现行集在前 ∥ 祖先链随尾、去重保序）——容器相对形在子仓锚下受理；受理判据（目标解析位最近 manifest 声明面）∥ 围栏 ∥ 可读唯一化 ∥ fail-closed 歧义（文档名撞车——非工作区态）零改 |
+| F3 | 评审对象来源 = 项目内现存 `.md` | 解析 / 受理 / 拒发文案的判据单源 = `docs/core/design/ADVISOR-GUARDS.md` §12（本档不复述，D2）；实现宿主 = `resolveReviewDocPaths`（`review-facts.mjs`；不 import `dispatch.mjs`——簇间回边环风险）。实施 = eng-coder 轮 |
 | F4 | 凭证值不落文档 | token / designId **值**永不落档（只记 `review passed`）——`sanitizeText`/`CRED_RE` 机械剥除已实证（继承） |
 | F5 | 六 kind 不签发 | 非全绿（含 🔴）→ 不签发 token（fail-closed，继承） |
 
@@ -129,7 +131,7 @@
 |---|---|
 | AC-M6-1 | 评审通过（全绿）→ 签发 token + 槽登记 |
 | AC-M6-2 | 链终消费后同 designId 再 spawn → 拒 |
-| AC-M6-3 | 评审对象 / 被审文件路径读 `docRoot`（grep 硬编码 `docs/` → 零命中） |
+| AC-M6-3 | 受理面 = 项目内现存 `.md`（判据单源 = `docs/core/design/ADVISOR-GUARDS.md` §12）；源码硬编码 `docs/` → 零命中 |
 | AC-M6-4 | token / designId 值不落文档（只记 `review passed`） |
 | AC-M6-5 | 六 kind 非全绿（含 🔴）→ 不签发 token |
 
