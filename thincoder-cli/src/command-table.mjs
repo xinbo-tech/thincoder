@@ -8,12 +8,17 @@
 import { readFileSync } from "node:fs"
 import { isAbsolute, join } from "node:path"
 import { loadConfig } from "@thincoder/core/config.mjs"
+import { setClientIdentity } from "@thincoder/core/client-identity.mjs"
 import { createMemory, syncDir } from "@thincoder/core/memory.mjs"
 import { teamConfig } from "./cli/make-agent.mjs"
 import { memoryCommand } from "./cli/memory-command.mjs"
 import { distillCommand } from "./cli/distill-command.mjs"
 import { chatCommand, tuiCommand, acpCommand } from "./command-interactive.mjs"
 import { teamCommand } from "./cli/team-command.mjs"
+
+// 客户端标识声明（PROVIDER.md §6.17）：本端进程启动期一次——落点 = 每个命令都过的分发点（headless ∥ ACP ∥ distill ∥ embedding 四条模型路径都不经 `tui/startup.mjs`）。
+const CLI_VERSION = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version
+setClientIdentity({ surface: "cli", version: CLI_VERSION })
 
 /** 命令分发（原 `bin/thincoder.mjs` 顶层 switch 骨架逐字搬移——命令行为零改）。 */
 export async function runCommandTable(command, args, ctx) {

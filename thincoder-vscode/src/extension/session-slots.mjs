@@ -11,7 +11,8 @@
  * 家族按端参数化后，本档原 marker 三式 / `usableSlot` / `resumeSlot` 算法副本**注销归核**
  * ——本档只剩端身份面 + 一行绑定转口：
  *   ① 端名声明：`END = "vscode"` 经 `setSessionEnd(END)` 一次声明（核缺省取值 = 进程端名
- *      `sessionEnd()`——CLI 进程零声明即得 `"cli"`）；
+ *      `sessionEnd()`——CLI 进程零声明即得 `"cli"`）；同处一次客户端标识声明（`setClientIdentity`，版本取本端
+ *      `package.json`——PROVIDER.md §6.17）；
  *   ② 四项绑定转口：`endMarkerPath` / `readEndMarker` / `writeEndMarker` / `resumeSlot`——
  *      一律 `(cwd) => coreX(cwd, END)` 形态（零算法副本；`session-io.mjs` 四维护落点调用零改）；
  *   ③ `sessionsDir` 访问器（核未导出根目录访问器——由核 `sessionPath` 反推，保持单源：
@@ -24,9 +25,11 @@
  * 探测束——端侧探测消费者 = `peer-instances.mjs` / `session-io.mjs`（`test/zero-sync-exec.test.mjs`
  * 域完整性对账随动收窄）。
  */
+import { readFileSync } from "node:fs"
 import { dirname } from "node:path"
 // 本档体内使用（其余核名 = 纯转口，见下 `export … from`）。
 import { sessionPath, setSessionEnd } from "@thincoder/core/session-slots.mjs"
+import { setClientIdentity } from "@thincoder/core/client-identity.mjs"
 import {
   endMarkerPath as coreEndMarkerPath, readEndMarker as coreReadEndMarker,
   writeEndMarker as coreWriteEndMarker, resumeSlot as coreResumeSlot,
@@ -49,6 +52,10 @@ export const END = "vscode"
 // (`newSession` / `saveSession` / `persistEngTokens`) 缺省取进程端名 ⇒ 不带显式端参的核调用
 // 也落本端文件（不跨端互写）。核取值点全在函数体内（核档头注纪律）⇒ 顶层声明不引入环。
 setSessionEnd(END)
+
+/** 客户端标识声明（PROVIDER.md §6.17）：端名声明同处一次 —— 版本取本端 `package.json`。 */
+const VSCODE_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version
+setClientIdentity({ surface: "vscode", version: VSCODE_VERSION })
 
 /** 本端 sessions 根目录（核未导出根访问器——核 `sessionPath` 去掉 hash 文件名即根）。
  *  单源：核 `configDir` 变更与核 `_setSessionsDirForTest` 沙箱缝自动随动（本档零副本）。

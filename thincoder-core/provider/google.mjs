@@ -5,6 +5,7 @@
  */
 
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
 import { abortError, timeoutError } from "../abort-provenance.mjs"
@@ -130,7 +131,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const response = await requestWithRetry(
     () => proxyFetch(url, {
       method: "POST",
-      headers: { ...(provider.headers ?? {}), "Content-Type": "application/json" }, // 定制头展开（PROVIDER.md §21）——定制头在前、内置头在后：内置头胜出
+      headers: { ...withUserAgent(provider.headers), "Content-Type": "application/json" }, // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）；内置头在后故同名胜出
       body: JSON.stringify(body),
       // 2026-09-01：同 core.mjs——绝对墙钟废除；响应头阶段 fetchTimeoutMs（600s 默认），body 阶段读侧 idle 管
       signal,

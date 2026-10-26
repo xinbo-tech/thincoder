@@ -3,10 +3,11 @@
  * 会话级偏好写面（桌面端）。
  *
  * 单源 = 核（`@thincoder/core/session-slots.mjs` / `session.mjs` / `session-slot-write.mjs`）：
- * 存储契约与算法全在核 —— 本档只有端身份面与绑定转口，**零算法副本**（读源判据 = 零文件系统
- * 直读 ∧ 零就地解析；先例 = `thincoder-vscode/src/extension/session-slots.mjs`）：
+ * 存储契约与算法全在核 —— 本档只有端身份面与绑定转口，**零算法副本**（读源判据 = 零**会话存储**
+ * 直读 ∧ 零就地解析；本档唯一自读 = 本端 `package.json` 的 `version`，供客户端标识声明，PROVIDER.md §6.17；
+ * 先例 = `thincoder-vscode/src/extension/session-slots.mjs`）：
  *   ① 端名声明：`END = "desktop"` 经 `setSessionEnd(END)` 一次声明（核缺省取值 = 进程端名
- *      `sessionEnd()` —— CLI 进程零声明即得 `"cli"`）；
+ *      `sessionEnd()` —— CLI 进程零声明即得 `"cli"`）；同处一次客户端标识声明（`setClientIdentity`——PROVIDER.md §6.17）；
  *   ② 转口八项（判据分层 —— 端参绑定 6 / 同形转口 1 / 纯 re-export 1）：端参绑定 = `endMarkerPath` /
  *      `readEndMarker` / `writeEndMarker` / `resumeSlot` / `switchToSlot` / `deleteSlot` —— 一律
  *      `(…) => 核同名(…)` 形态、端参取本档 `END`（`resumeSlot` 走 `{ end: END }`、async；`switchToSlot` /
@@ -39,9 +40,11 @@
  * `main.mjs → ipc.mjs → projects.mjs → session-slots.mjs`）。
  * 端差注销：本端记录 = 本端单写者文件（`{manifest}.desktop`）——与 `.cli` / `.vscode` 互不触碰（NF1）。
  */
+import { readFileSync } from "node:fs"
 import { dirname } from "node:path"
 // 本档体内使用（其余核名 = 纯转口，见下 `export … from`）。
 import { sessionPath, setSessionEnd } from "@thincoder/core/session-slots.mjs"
+import { setClientIdentity } from "@thincoder/core/client-identity.mjs"
 import {
   endMarkerPath as coreEndMarkerPath, readEndMarker as coreReadEndMarker,
   writeEndMarker as coreWriteEndMarker, resumeSlot as coreResumeSlot,
@@ -76,6 +79,11 @@ export const END = "desktop"
 
 /** 端名声明（§6.20 判据句 1）：一次、模块求值期 —— 核 marker 家族与物化入口缺省取之。 */
 setSessionEnd(END)
+
+/** 客户端标识声明（PROVIDER.md §6.17）：端名声明同处一次 —— 版本取**本端** `package.json`，
+ *  不是 materialize 下来的核树版本（那棵树会滞后）。 */
+const DESKTOP_VERSION = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version
+setClientIdentity({ surface: "desktop", version: DESKTOP_VERSION })
 
 /** 本端 sessions 根目录（核未导出根访问器 —— 核 `sessionPath` 去掉 hash 文件名即根）。
  *  单源：核 `configDir` 变更与核 `_setSessionsDirForTest` 沙箱缝自动随动（本档零副本）。 */

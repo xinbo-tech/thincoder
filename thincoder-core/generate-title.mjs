@@ -9,6 +9,7 @@
  */
 
 import { proxyFetch } from "./proxy.mjs"
+import { withUserAgent } from "./client-identity.mjs"
 import { resolveProviderSecrets } from "./env-ref.mjs"
 // D7（2026-09-21 块标题行对齐批——标题链单源）：首条真实 user 消息谓词收核单源
 // （`isRealUserMsg`——纯函数零依赖，无环）。
@@ -97,8 +98,8 @@ export async function generateTitle(userContent, provider) {
       body = JSON.stringify(bodyObj)
       extract = (data) => data.choices?.[0]?.message?.content
     }
-    // 定制头展开（PROVIDER.md §6.17）——定制头在前、内置头在后：内置头胜出；三格式各自内置头。
-    const headers = { ...(provider.headers ?? {}), "Content-Type": "application/json" }
+    // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）——定制头在前、内置头在后：内置头胜出；三格式各自内置头。
+    const headers = { ...withUserAgent(provider.headers), "Content-Type": "application/json" }
     if (provider.format === "anthropic") {
       headers["x-api-key"] = provider.apiKey
       headers["anthropic-version"] = "2023-06-01"

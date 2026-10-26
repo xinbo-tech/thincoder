@@ -7,6 +7,7 @@
  * 装机/主机运维 = 管理面 chat 内动作（KD-SV-135）；chat 回合环自持（`chat.mjs`），同源复用本档预算常量与核装载。
  */
 import { modelEntriesOf } from "../gateway/providers.mjs"
+import { readPackageVersion } from "../ops/update.mjs"
 
 /** 预算缺省（§5——时长 20 分钟 ∥ 工具调用 60 次；超限 ⇒ 停 + 报告）。 */
 export const DEFAULT_MAX_CALLS = 60
@@ -17,9 +18,15 @@ export const DEFAULT_MAX_DURATION_MS = 20 * 60 * 1000
 export const TRIMMED_FACES = Object.freeze(["tty", "memory", "ledger", "subagent", "browser", "team_ledger"])
 
 /** 核装载（KD-SV-78）：动载 `@thincoder/core` provider 客户端（`chat(provider, { messages, tools })`）。
- *  部署前提 = `@thincoder/core` 依赖声明（`package.json`——钉版本）；本仓开发面经注入口替身零依赖。 */
-export async function loadCoreChat() {
-  const mod = await import("@thincoder/core/provider/index.mjs")
+ *  部署前提 = `@thincoder/core` 依赖声明（`package.json`——钉版本）；本仓开发面经注入口替身零依赖。
+ *
+ *  客户端标识声明（PROVIDER.md §6.17）：声明跟核装载点走——核装载成功后才可声明（无核 ⇒ 无 chat ⇒
+ *  无出站请求）；本档顶层零 `@thincoder/core` 静态 import（静态式会让无核的检出树启动即崩，
+ *  破坏「缺核各面退中性」）。`importCore` = 测试注入缝（同「注入口替身」口径）。 */
+export async function loadCoreChat({ importCore = (specifier) => import(specifier) } = {}) {
+  const mod = await importCore("@thincoder/core/provider/index.mjs")
+  const { setClientIdentity } = await importCore("@thincoder/core/client-identity.mjs")
+  setClientIdentity({ surface: "server", version: readPackageVersion() })
   return mod.chat
 }
 

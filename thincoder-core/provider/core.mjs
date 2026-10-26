@@ -8,6 +8,7 @@ import { providerSpec, requestBudget, resolveEnableThinking } from "../config.mj
 import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
 import { resolveProviderSecrets } from "../env-ref.mjs"
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { escapeMessages, stripLocalMessageFields } from "../escape.mjs"
 import { logEvent, errText, classifyErr, headText } from "../log.mjs"
 import { abortError, annotateAbort, deathLine } from "../abort-provenance.mjs"
@@ -413,7 +414,7 @@ async function requestWithRetry(provider, body, signal, onWait) {
       const opts = {
         method: "POST",
         headers: {
-          ...(provider.headers ?? {}), // custom per-provider headers (desktop proposal ④: X-Device-Id etc.)
+          ...withUserAgent(provider.headers), // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）
           "Content-Type": "application/json",
           Authorization: `Bearer ${provider.apiKey}`,
         },

@@ -14,6 +14,7 @@
  * 解析保持防御性（字段缺失即跳过该项）。候选不过滤非对话模型（embedding 等——§16.6 #14）。
  */
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { resolveProviderSecrets } from "../env-ref.mjs"
 import { positiveInt, recordListedContext } from "../model-context.mjs"
 
@@ -74,7 +75,7 @@ function listedWindowOf(row) {
 
 async function listOpenai(provider, signal) {
   const url = `${provider.baseURL}/models`
-  const data = await fetchJson(provider, url, { ...(provider.headers ?? {}), Authorization: `Bearer ${provider.apiKey ?? ""}` }, signal)
+  const data = await fetchJson(provider, url, { ...withUserAgent(provider.headers), Authorization: `Bearer ${provider.apiKey ?? ""}` }, signal)
   // L3 写面的收集段（PROVIDER.md §6.15）：解析 `data[]` 时顺带收 `id → 窗口`——三字段按序取
   // 第一个**合法**值（R25 ∥ R26），非法相当于该字段缺席；三字段都不可得 = 该模型列表未报（不进表）。
   const ids = []
@@ -92,7 +93,7 @@ async function listOpenai(provider, signal) {
 }
 
 async function listAnthropic(provider, signal) {
-  const headers = { ...(provider.headers ?? {}), "x-api-key": provider.apiKey ?? "", "anthropic-version": ANTHROPIC_VERSION }
+  const headers = { ...withUserAgent(provider.headers), "x-api-key": provider.apiKey ?? "", "anthropic-version": ANTHROPIC_VERSION }
   const base = `${provider.baseURL}/models?limit=1000`
   const out = []
   let afterId = null
@@ -108,7 +109,7 @@ async function listAnthropic(provider, signal) {
 }
 
 async function listGoogle(provider, signal) {
-  const headers = { ...(provider.headers ?? {}) }
+  const headers = { ...withUserAgent(provider.headers) }
   const base = `${provider.baseURL}/models?key=${encodeURIComponent(provider.apiKey ?? "")}&pageSize=1000`
   const out = []
   let pageToken = null

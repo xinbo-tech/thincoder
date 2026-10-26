@@ -7,6 +7,7 @@
 
 import { RETRYABLE_STATUS } from "./provider/index.mjs"
 import { resolveEnvRefs } from "./env-ref.mjs"
+import { withUserAgent } from "./client-identity.mjs"
 // #859（MEMORY.md §6.3 ∥ §7 D-MEM31）：嵌入路径发送前净化孤立 UTF-16 代理——sanitize 单源复用
 import { sanitizeLoneSurrogates } from "./escape.mjs"
 const MAX_RETRIES = 3
@@ -111,6 +112,7 @@ async function requestWithRetry(embedder, input, signal) {
       response = await fetch(`${embedder.baseURL}/embeddings`, {
         method: "POST",
         headers: {
+          ...withUserAgent(), // 产品标识头（embedding 无定制头字段——PROVIDER.md §6.17）
           "Content-Type": "application/json",
           Authorization: `Bearer ${embedder.apiKey}`,
         },

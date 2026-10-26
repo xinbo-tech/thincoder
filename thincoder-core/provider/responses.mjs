@@ -13,6 +13,7 @@
  */
 import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
 import { buildBody, normalizeUsage } from "./responses-request.mjs"
@@ -233,8 +234,8 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const estPrompt = estimated - (body.max_tokens ?? 0)
   assertPromptFits(provider, estPrompt, logCtx)
   await rateGate(provider, estimated, onWait, signal)
-  // 定制头展开（PROVIDER.md §21）：provider.headers 在前、内置头在后——同名内置头胜出（三处 fetch 共用）
-  const headers = { ...(provider.headers ?? {}), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }
+  // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）：定制头在前、内置头在后——同名内置头胜出（三处 fetch 共用）
+  const headers = { ...withUserAgent(provider.headers), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }
 
   // round2 复验 #1（2026-08-31）：retry 层对 4xx 非可重试是 throw 而非返回——
   // requestWithRetry 从不返回 400/404 响应 → 下方 isChainInvalidError 分支原来不可达（D6 死代码）。

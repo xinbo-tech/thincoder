@@ -6,6 +6,7 @@
 
 import { specForModel, requestBudget } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
+import { withUserAgent } from "../client-identity.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
 import { assertPromptFits } from "./errors.mjs"
@@ -195,7 +196,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   // 2026-09-01：FETCH_TIMEOUT_MS 常量退役（绝对墙钟废除）——anthropic/responses 经 core.mjs 的
 // effectiveFetchTimeoutMs 共用；响应头阶段 600s 默认，body 阶段 idle 超时。
   const headers = {
-    ...(provider.headers ?? {}), // 定制头展开（PROVIDER.md §21）：定制头在前、内置头在后——同名内置头胜出
+    ...withUserAgent(provider.headers), // 定制头 + 产品标识头（UA 不可被渠道覆盖——PROVIDER.md §6.17）；内置头在后故同名胜出
     "Content-Type": "application/json",
     "x-api-key": provider.apiKey,
     "anthropic-version": ANTHROPIC_VERSION,
