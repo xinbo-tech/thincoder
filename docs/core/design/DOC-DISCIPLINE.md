@@ -953,7 +953,7 @@ node -e "const fs=require('fs');let n=0;fs.readdirSync('.',{recursive:true}).for
 
 5. **不分域**：判据对所有段落一视同仁，命中即拒（用户 2026-10-24 裁定——覆盖 FR45 原判据 4）。代价如实登记：当前盘上超 300 字符的段实测 1,992 段 / 333 档（2026-10-22，需求档 §13.23 载）⇒ 落地后每一处命中都拒写，直到清完；清账另批、按板块分批。
 
-6. **一处单源**：实现单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）；手跑入口（`scripts/doc-check.mjs`）汇总只报这一条口径——口径行 = `FAIL(文字太长，难于阅读): N 段超 300 字符` ∥ `OK(文字太长，难于阅读)`，提示词面命中单列 `FAIL(行太长)`。
+6. **一处单源**：实现单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）；手跑入口（`scripts/doc-check.mjs`）汇总只报这一条口径——口径行 = `FAIL(文字太长，难于阅读): N 段——重新组织语言重写` ∥ `OK(文字太长，难于阅读)`，提示词面命中单列 `FAIL(行太长)`。
 
 **谓词面**：在盘七件（六谓词 + `fenceMark` 标记式：`isTableRow` / `fenceMark` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan`）逐字随迁；新写 `isListItem`（`^\s*(?:[-*+]|\d+[.)、])\s`）与 `isPromptFace`。可执行行在段判据里不豁免（段 = 读者所见，码段渲染后仍在段内）——旧判据的可执行行豁免到此为止。
 
@@ -1218,7 +1218,7 @@ none found: 段合并逻辑——全仓该面 grep `paragraph` 零命中（查�
   - **父侧候选清单 = git（指定 base）**：子代理工具面无 git，交付当下用②；父侧 §6 有 git，可另用①给出候选清单。**权威面 = 父侧**：子代理自报的范围是子集，父侧以自查为准（自报不构成范围证据）。清单口径（含 `<批起 sha>` = 本轮开工前的 HEAD）单源 = 本条「结构兜底」的「② 的范围」——本处不复述、不另立清单。
   - **空范围照实说**：范围 0 档 ⇒ 仍给 `PASS（0 档）` + 一行**必带「0 档受检」**的照实行（如「本会话没有写过清单内的文档；若确认改过 ⇒ 显式传 docs」）——空范围不静默当通过。
 
-- **裁定面**：首行固定三形 = `DOC-CHECK GATE: PASS` ∥ `DOC-CHECK GATE: REFUSED（命中 K 条）` ∥ `DOC-CHECK GATE: ERROR（原因）`——机器可判串（消费判据 = 首行前缀）；命中逐条给 `档:行` + 类（`档缺` / `节缺` / `文字太长，难于阅读` / `行太长`）。
+- **裁定面**：首行固定三形 = `DOC-CHECK GATE: PASS` ∥ `DOC-CHECK GATE: REFUSED（按类分列：锚 A 条 · P 段文字太长，难于阅读 · L 行太长）` ∥ `DOC-CHECK GATE: ERROR（原因）`——机器可判串（消费判据 = 首行前缀）；命中逐条给 `档:行` + 类（`档缺` / `节缺` / `文字太长，难于阅读` / `行太长`）。
 
   - **取参失败 ⇒ ERROR（本因退场）**：参数为内置常量、不读 manifest ⇒ 该因已删除；ERROR 余形 = `target` 指向多项目工作区（候选清单行）。`report` 模式无 `docs` ⇒ 报错（可读串），不扫全域。
 
@@ -1254,7 +1254,7 @@ none found: 段合并逻辑——全仓该面 grep `paragraph` 零命中（查�
 
     - **记入行的单源**：行面 = 批档 §1 的 `批起 sha = <sha>`；写入义务单源 = `docs/core/design/BATCH-RECORD.md` §5.3「文档机检门」下的「`<批起 sha>` 记入行」条（该档只承载写入义务，取法与判集算式不回写——本档即单源）。
 
-  - **裁定**：首行 `REFUSED（命中 K 条）` 的 K = 命中条数（范围恒等于本批笔域集）⇒ K ≥ 1 拒收口。
+  - **裁定**：首行 `REFUSED（…）` 的计数 = 命中条数（按类分列，段与行不合并）（范围恒等于本批笔域集）⇒ K ≥ 1 拒收口。
   - **为什么范围只到本批笔域集（用户 2026-10-25 裁定）**：机检的价值 = 本轮改过的档当场过闸；工作树里别人的脏档不是本轮的事——扫它只会把与本次无关的命中刷进回执（实读：一次收口刷出 321 条），且与需求 `docs/core/requirements/DOC-CHECK.md` AC-2「未改的档不报」直接冲突。
 
   **批档自身不入范围**：载体不是判据对象；批档不入传入清单 ⇒ 不判（判定范围 = 传入清单）；要检批档 = 显式列入清单（另事，本机制不另立域）。
@@ -1308,14 +1308,14 @@ none found: 段合并逻辑——全仓该面 grep `paragraph` 零命中（查�
 
 ```text
 文档纪律机检（报告态 · 非门禁）
-射程：<root> · 传入清单 N 档 · 阈值 <paragraphMax> 字符 · 区带豁免：<名集 ∥ 无>
+射程：<root> · 传入清单 N 档 · 区带豁免：<名集 ∥ 无>
 声明：判据参数 = 工具内置常量（不读项目声明）
 范围：显式档集 N 档（整档入判 · 解析基线 = 传入档 + 引用目标，不收窄）
 命中 K 条（锚 a · 文字太长，难于阅读 p · 行太长 l）
 ✗ 锚·档缺 <档>:<行> `token`
 ✗ 锚·节缺 <档>:<行> `token`（目标 <档> 无 §N）
 ✗ 文字太长，难于阅读 <档>:<行>
-✗ 行太长 <档>:<行>（<len> 字符）
+✗ 行太长 <档>:<行>
 结论：K 条命中——报告态，不作拒执行的理由
 ```
 
@@ -1387,13 +1387,22 @@ none found: 同名第二实现零命中（查过面 = `thincoder-core/**` 全树
 ```text
 DOC-CHECK GATE: PASS
 文档纪律机检（交付门 · gate）
-范围：<来源：本会话写过的文档 ∥ 显式 docs ∥ 本批笔域集> N 档 · 阈值 <DOC_CHECK_BUILTINS.paragraphMax> 字符（内置常量）
-判据：与报告态同源（参数 = 内置常量；解析序两级）——范围只收窄被判档，不收窄解析
-结论：0 条命中（N 档全清）
+范围：<来源：本会话写过的文档 ∥ 显式 docs> N 档
+判据：逐段检查——文字太长，难于阅读
+结论：0 段有问题（N 档全清）
 ```
 
-`REFUSED` 首行 = `DOC-CHECK GATE: REFUSED（命中 K 条）`，其余行同报告态（逐条 `✗` 行），尾行固定：
-`处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）`。
+`REFUSED` 首行按命中类分列，段与行不合并：
+
+```text
+DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行太长）
+```
+
+各类缺位时省去该段（只有段命中 ⇒ `REFUSED（P 段文字太长，难于阅读）`；只有行命中 ⇒ `REFUSED（L 行太长）`）。
+逐条命中行 = `✗ <类名> <档>:<行>`——**不报字符数**（用户 2026-10-26 11:16「不能表述成超长多少个字符，要表述成为文字太长，难于阅读」）。
+尾行：仅当存在「文字太长，难于阅读」类命中时出：
+`处置：文字太长的段落，重新组织语言重写；同轮修正后复跑；不转台账`。
+仅锚命中的不出版处置句——叫人对段落重写而实际问题不在此，是指错方向。
 
 空范围 ⇒ 首行 `DOC-CHECK GATE: PASS（0 档）` + 一行 `范围为空：本会话没有写过文档——若确认改过 ⇒ 显式传 docs`。
 `docs` 含**不可判档**（不在盘 ∥ 非 `.md`）⇒ **报错点名**（fail-closed），不跳过。
@@ -1462,7 +1471,7 @@ DOC-CHECK GATE: PASS
 | DD-89 | 边界 | gate + `docs` 含本轮已删档 ∥ 清单档以同目录裸名引用未改档 | 已删 ⇒ 报错点名（fail-closed）；同目录裸名引用 ⇒ **零 `档缺`**（解析面不缩） |
 | DD-90 | 错误 | gate + `target` 指向多项目工作区 | 首行 `DOC-CHECK GATE: ERROR（原因）`——**不产 PASS**（消费面 fail-closed）；另给候选清单 |
 | DD-92 | 正常 | 夹具项目（manifest + 写者触达一清档）· eng-designer append §2 ∥ eng-coder append §5 | 首行 `PASS`；段落盘；回执含 `[doc-check gate] DOC-CHECK GATE: PASS` 行 |
-| DD-93 | 错误 | 同夹具，写者触达档含悬空指针 · append §2 ∥ §5 各一拍 | throw；串含 `REFUSED（命中 K 条）` + `✗ 锚·档缺` 行；档字节与调用前逐字相同 |
+| DD-93 | 错误 | 同夹具，写者触达档含悬空指针 · append §2 ∥ §5 各一拍 | throw；串含 `REFUSED（` + `✗ 锚·档缺` 行；档字节与调用前逐字相同 |
 | DD-94 | 错误 | 同夹具 · 父侧 `close` ∥ `status`（值「已收口」） | 两者 throw；§1 状态行仍「进行中」；档字节不变 |
 | DD-95 | 边界 | 同夹具 · `status` 值「设计完成」（非冻结值）且触达账有命中 | 不跑门；写入成功；回执逐字旧形 |
 | DD-96 | 边界 | 夹具无 `PROJECT-MANIFEST.json` ⇒ append ∥ close；夹具有 manifest 而不可读（JSON 非法）⇒ close | 前者成功 + 回执「未跑（本项目无声明面）」；后者 throw（ERROR ⇒ fail-closed） |
@@ -2285,7 +2294,7 @@ node scripts/doc-check.mjs --root .
 1. **门位在源面**：`agent-tools/batch.mjs` 的 append 分支在 `insertIntoSection` / `writeFileSync` **之前**、既有拒因（身份 / path / 冻结 / 占位）**之后**调 `runBatchGate`；`batch-lifecycle.mjs` 的 close 与 status（余核 =「已收口」）在 `updateSectionStatusLine` **之前**调同门——行序 `grep` 可判。
 
    **四档 `node --check` 过**：`thincoder-core/agent-tools/batch.mjs` · `batch-lifecycle.mjs` · `batch-gate.mjs` · `agent-tools/doc-check.mjs`。
-2. **① 拒写可跑（DD-93）**：夹具项目（manifest + 一档含悬空指针且在写者 `_touchedFiles`）⇒ append §2 throw，串含 `DOC-CHECK GATE: REFUSED（命中 K 条）` + 逐条命中行；档字节与调用前逐字相同。
+2. **① 拒写可跑（DD-93）**：夹具项目（manifest + 一档含悬空指针且在写者 `_touchedFiles`）⇒ append §2 throw，串含 `DOC-CHECK GATE: REFUSED（按类分列：锚 A 条 · P 段文字太长，难于阅读 · L 行太长）` + 逐条命中行；档字节与调用前逐字相同。
 
 3. **② 拒收口可跑（DD-94 ∥ DD-95 ∥ DD-99）**：同夹具 ⇒ `close` throw ∧ §1 状态行仍「进行中」；`status` 值「已收口」同拒；**工作树内范围外的档命中（DD-99）⇒ 不入判 ∧ `close` 放行 ∧ 回执零该档行**（命中即拒，无分域）。
 4. **零命中放行（DD-92）**：清夹具 ⇒ append / close 成功，回执含 `[doc-check gate] DOC-CHECK GATE: PASS` 行；范围 0 档 ⇒ `PASS（0 档）` + 照实行，仍放行。

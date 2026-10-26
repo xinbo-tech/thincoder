@@ -71,10 +71,10 @@ export function main(argv = process.argv.slice(2), { log = console.log } = {}) {
   const lineHits = paragraphs.filter((h) => h.clazz === DOC_CLASS.line);
   log(paraHits.length
     ? `FAIL(${DOC_CLASS.para}): ${paraHits.length} 段——重新组织语言重写${zoneNote}。`
-    : `OK(${DOC_CLASS.para}): 源域全部 .md 无文字太长、难于阅读的段${zoneNote}。`);
+    : `OK(${DOC_CLASS.para}): 源域全部 .md 无该类段${zoneNote}。`);
   log(lineHits.length
-    ? `FAIL(行太长): ${lineHits.length} 行超 ${DOC_CHECK_BUILTINS.lineMax} 字符——提示词面逐行裸判。`
-    : `OK(行太长): 提示词面无 >${DOC_CHECK_BUILTINS.lineMax} 字符单行。`);
+    ? `FAIL(${DOC_CLASS.line}): ${lineHits.length} 行——提示词面逐行裸判。`
+    : `OK(${DOC_CLASS.line}): 提示词面无单行过长。`);
   return (r.danglingTotal > 0 || paragraphs.length) ? 1 : 0;
 }
 

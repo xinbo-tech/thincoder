@@ -66,7 +66,7 @@ function resolveRange(base, docs) {
 const paragraphHitLine = (base, h) => `✗ ${h.clazz} ${rel(base, h.file)}:${h.line}`
 
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。 */
-function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs, paragraphMax }) {
+function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs }) {
   const total = anchors.hits.length + paragraphs.length
   const src = docsSource === "session" ? "本会话写过的文档" : "显式 docs"
   // 首行：锚与段分列（用户 11:16：段的问题叫「文字太长，难于阅读」，不是「命中 N 条」也不是字符数）
@@ -74,7 +74,11 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
     if (total === 0) return checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: PASS（0 档）"
     const parts = []
     if (anchors.hits.length) parts.push(`锚 ${anchors.hits.length} 条`)
-    if (paragraphs.length) parts.push(`${paragraphs.length} 段文字太长，难于阅读`)
+    // 段与行分列——两类命中不得合并（提示词面一行 = 一个块，属「行太长」，不是「一段文字太长」）
+    const paraCount = paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length
+    const lineCount = paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length
+    if (paraCount) parts.push(`${paraCount} 段${DOC_CLASS.para}`)
+    if (lineCount) parts.push(`${lineCount} ${DOC_CLASS.line}`)
     return `DOC-CHECK GATE: REFUSED（${parts.join(" · ")}）`
   }
   const out = [
@@ -83,7 +87,7 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
     checkFiles.length
       ? `范围：${src} ${checkFiles.length} 档`
       : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）`,
-    "判据：逐段检查——文字太长，难于阅读",
+    "判据：逐段检查——" + DOC_CLASS.para,
   ]
   if (skipped.missing.length) out.push(`跳过 ${skipped.missing.length} 档（已不在盘，未检）：${skipped.missing.map((p) => rel(base, p)).join(" ∥ ")}`)
   if (skipped.notMarkdown.length) out.push(`跳过 ${skipped.notMarkdown.length} 档（非 markdown 档，未检）：${skipped.notMarkdown.map((p) => rel(base, p)).join(" ∥ ")}`)
@@ -107,7 +111,8 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
         : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
     }
     for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-    if (paragraphs.length) out.push("处置：文字太长的段落，重新组织语言重写；同轮修正后复跑；不转台账")
+    // 处置句只跟「段」命中走：仅有行太长时不得叫人对段落重写
+    if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push(`处置：${DOC_CLASS.para}的段落，重新组织语言重写；同轮修正后复跑；不转台账`)
   }
   return out.join("\n")
 }
@@ -162,15 +167,15 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
     skipped: { missing: range.missing, notMarkdown: range.notMarkdown },
   }
   if (gate) {
-    return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs, paragraphMax }) }
+    return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs }) }
   }
 
   const out = [
     "文档纪律机检（报告态 · 非门禁）",
-    `射程：${base} · 传入清单 ${checkFiles.length} 档 · 阈值 ${paragraphMax} 字符（工具内置常量）· 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
+    `射程：${base} · 传入清单 ${checkFiles.length} 档 · 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
     "声明：判据参数 = 工具内置常量；范围 = 传入文件（判定范围 = 解析范围）",
     `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）`,
-    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · 文字太长，难于阅读 ${paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length} · 行太长 ${paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length}）`,
+    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · ${DOC_CLASS.para} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length} · ${DOC_CLASS.line} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length}）`,
   ]
   for (const h of anchors.hits) {
     out.push(h.clazz === "档缺"
@@ -178,7 +183,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
       : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
   }
   for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : "结论：0 条命中（锚 ∥ 文字太长，难于阅读 ∥ 行太长 均清）")
+  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）`)
 
   return { ...shared, report: out.join("\n") }
 }
