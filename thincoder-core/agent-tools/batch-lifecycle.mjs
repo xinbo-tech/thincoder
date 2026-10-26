@@ -22,7 +22,13 @@
  *
  * 链完整性门（§4.18-A）：`close` ∥ `status` 写「已收口」两路在写盘前同过 `assertCloseoutChainComplete`
  * ——§2/§3/§4/§6 各段有内容 ∥ §1 声明不适用（仅 §2/§3/§4 可声明；§6 不可声明 · §5 段号豁免）；
- * 缺段 ⇒ 点名拒（门位 = 冻结拒写之后、文档机检门之前）。重开径（§4.18-B）：已收口档
+ * 缺段 ⇒ 点名拒（门位 = 冻结拒写之后、文档机检门之前）。
+ *
+ * 本批批内单测档门（`TESTING.md` §3.5 零留存的收口门）：同一两路在链门之后、文档机检门之前同过
+ * `assertUnitTestFilesCleared`——本批自己的单元测试档仍在盘 ⇒ 点名拒（单源叶档 =
+ * `batch-unit-test-gate.mjs`；判据 = 同目录最长批档名前缀归属）。门只拒、不代删。
+ *
+ * 重开径（§4.18-B）：已收口档
  * `status` §1 → 进行中 + `note` 非空 ⇒ 状态行改写 + §1 段尾追记行（只追加，其余行字节不变）。
  *
  * 收口重锚（§6.2 · C · AC-M2-30）：收口有两条通路——`close` ∥ `status` 写 §1「已收口」——两路都冻结档、
@@ -43,6 +49,7 @@ import {
 } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
 import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
+import { assertUnitTestFilesCleared } from "./batch-unit-test-gate.mjs"
 import { batchPathKey, executeConsumeDesignAction, unionBatches, unionSlots } from "./design-slots.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向
@@ -402,7 +409,7 @@ function assertStatusNote(note) {
  * path 参数 = 仅 depth-0（D-BR21）——子代理/评审传 path ⇒ 拒（目标 = spawn/实例注入，语法上
  * 写不到别处）。F11-C 挂点 = 写盘前（assertStatusValue 后）：档头结构行含骨架死占位 ⇒ 拒
  * （段体引用豁免；close 不拦——收口是主 agent 终态动作）。
- * **收口第二通路**：值余核 = §1「已收口」时本 action 同样收口（链门 + 机检门 + 冻结与 close 同序）⇒
+ * **收口第二通路**：值余核 = §1「已收口」时本 action 同样收口（链门 + 批内单测档门 + 机检门 + 冻结与 close 同序）⇒
  * 状态行写盘后同调 `reanchorOnClose`（单源——不复制 close 径逻辑），回执携同一 `[ledger reanchor]` 段。
  * @returns {Promise<string>} 成功消息
  */
@@ -475,6 +482,9 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
   // （`STATUS_WORDS[1].closed` 只属 §1 项，`assertStatusValue` 亦拒他段该值；显式 `seg === 1` 让不变量不靠巧合）。
   const closingValue = seg === 1 && stripDecorations(value) === STATUS_WORDS[1].closed
   if (closingValue) assertCloseoutChainComplete(src)
+  // 本批批内单测档门（`TESTING.md` §3.5——门位 = 链门之后、文档机检门之前）：本批自己的单元测试档
+  // 仍在盘 ⇒ 拒（零留存的结构兜底；两路同判——close 与 status 写「已收口」各过一次；放行零回执）。
+  if (closingValue) assertUnitTestFilesCleared(abs, "status")
   // ④ 文档机检门（§3.20「结构兜底」②——门位 = 链门之后、状态行改写之前）：值余核 =「已收口」时同门；
   // REFUSED（K ≥ 1）∥ ERROR ⇒ throw（§1 状态行字节不变）；其余值零挂（回执逐字旧形）。
   const gate = closingValue ? runBatchGate({ abs, cwd: ctx?.agent?.cwd ?? process.cwd(), agent: ctx?.agent ?? {}, scope: "close" }) : null
@@ -498,7 +508,7 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
  * close——收口冻结（§4.13，仅 depth-0）。§1 状态行 →「已收口 <YYYY-MM-DD>」；此后该档
  * append/status 全拒（冻结判据唯一真值 = §1 行——§4.9 零语义变；唯一例外 = 重开合取 §4.18-B）。
  * 对已收口档再 close ⇒ 拒（close 本身是对冻结档的写）。不代写 §6 内容、不替代台账核销事务。
- * 前提规则（#422 + 本批 A 链门 §4.18-A）：① 链完整性门（收口前置——§2/§3/§4/§6 各段有内容 ∥ 声明
+ * 前提规则（#422 + A 链门 §4.18-A + 本批单测档门 §3.5）：① 链完整性门（收口前置——§2/§3/§4/§6 各段有内容 ∥ 声明
  * 不适用；§6 唯一缺段时拒串 = 旧 §6 串逐字零回归）；② 拒句含「失败 ⇒ 勿 close」（append/status 面
  * ——见 batch.mjs 与上方 assertGateOpen）；③ 无状态行档 ⇒ 自建机读位（updateSectionStatusLine
  * 缺失即插——同路收口；「有行但不可解析」仍 fail-closed）。
@@ -514,6 +524,9 @@ export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritte
   // 链完整性门（§4.18-A——门位 = 既有拒因之后、文档机检门之前）：§2/§3/§4/§6 各段有内容 ∥ 声明
   // 不适用；缺段 ⇒ 拒并点名（§6 唯一缺段 = J2 旧串逐字）。含声明形不合判（J3——不静默当作无声明）。
   assertCloseoutChainComplete(src)
+  // 本批批内单测档门（`TESTING.md` §3.5——门位 = 链门之后、文档机检门之前）：本批自己的单元测试档
+  // 仍在盘 ⇒ 拒（零留存的结构兜底；`close` 与 `status` 写「已收口」两路同判；放行零回执）。
+  assertUnitTestFilesCleared(abs, "close")
   // 文档机检门（§3.20「结构兜底」②——门位 = 链门之后、状态行改写之前）：REFUSED（K ≥ 1）∥ ERROR
   // ⇒ throw（fail-closed，不落「已收口」）；PASS / 未跑（无声明面）⇒ 落盘 + 回执明示。
   const gate = runBatchGate({ abs, cwd: ctx?.agent?.cwd ?? process.cwd(), agent: ctx?.agent ?? {}, scope: "close" })

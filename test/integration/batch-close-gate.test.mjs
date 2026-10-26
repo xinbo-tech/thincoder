@@ -1,6 +1,7 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3（RTM CLI 端故事 7「收口只判本批改过的档」；
- * 判据原文 = `test/RTM.md` 第 7 节；机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」）。
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
+ * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调 `runBatchGate`：
  * 本档要的是「收口这件事」的业务可观察结果（放行 ∥ 拒绝、回执行、§1 状态行落没落盘）。
@@ -33,6 +34,8 @@ const CLEAN_A = "docs/notes/clean-a.md"
 const CLEAN_B = "docs/notes/clean-b.md"
 const OUT_REL = "docs/notes/out-of-range.md" // 工作树内、范围外（不在触达账 ∧ 不在提交 diff）
 const DIRTY_REL = "docs/notes/dirty.md" // 笔域集内、含悬空指针
+const OWN_TEST_REL = "docs/batches/fixture.test.mjs" // 7-4：本批自己的单测档（同目录、批档名前缀）
+const OWN_VARIANT_REL = "docs/batches/fixture-extra.test.mjs" // 7-4：同前缀变体（盘上无 fixture-extra.md）
 
 const CLEAN = "# 干净档\n\n无指针。\n"
 const DIRTY = "# 脏档\n\n见 `docs/notes/missing-page.md`。\n" // 恰一条 锚·档缺
@@ -197,3 +200,38 @@ test('7-3 错误 · 笔域集内一档含悬空指针 ⇒ 收口被拒（throw�
   assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
   assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
 })
+
+test('7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被拒（点名绝对路径 + 修法）、删档后同跑放行', async () => {
+  const root = makeProject("r74")
+  const sha = gitRepo(root)
+  assertBatchCommitted(root, sha)
+  // 本批自己的单测档：同名一份 + 同前缀变体一份（盘上无 `fixture-extra.md` ⇒ 归属 = 最长在盘前缀 `fixture`）。
+  // 两档不提交：本门只看「在不在盘」，与提交面 / 笔域集无关。
+  writeFileSync(join(root, OWN_TEST_REL), "// 夹具：本批自己的单元测试档（用毕即删）\n")
+  writeFileSync(join(root, OWN_VARIANT_REL), "// 夹具：同前缀变体\n")
+  const before = readFileSync(join(root, BATCH_REL), "utf8")
+
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)])),
+    (e) => {
+      assert.match(e.message, /本批批内单测档仍在盘/, `拒串点名本门：${e.message}`)
+      assert.match(e.message, /unit test file\(s\) still on disk/, `拒串携机检锚串：${e.message}`)
+      assert.ok(e.message.includes(join(root, OWN_TEST_REL)), `拒串点名该档绝对路径：${e.message}`)
+      assert.ok(e.message.includes(join(root, OWN_VARIANT_REL)), `拒串点名同前缀变体绝对路径：${e.message}`)
+      assert.match(e.message, /删掉上面点名的档/, `拒串带修法（删）：${e.message}`)
+      assert.match(e.message, /Nothing was written\./, `拒串收尾句：${e.message}`)
+      return true
+    },
+  )
+  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
+  assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+
+  // 删档（门只拒、不代删）⇒ 同跑收口放行
+  rmSync(join(root, OWN_TEST_REL))
+  rmSync(join(root, OWN_VARIANT_REL))
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
+  assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `删档后收口放行且落盘：${receipt}`)
+  assert.doesNotMatch(receipt, /本批批内单测档/, `放行零回执（本门不出回执段）：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
+})
+

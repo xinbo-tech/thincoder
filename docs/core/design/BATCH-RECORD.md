@@ -310,6 +310,8 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 **身份判据**：仅 depth-0 放行。**不替代**：台账核销事务 / 前批遗留核对（收口链主面仍是 §6 写入 + 台账动作——close 只收**机械收口**：状态行 + 冻结；不代写 §6 内容）。
 **收口前置（本批）**：写盘前过**链完整性门**（§4.18-A）——§6 非空判据在本门内、口径单源（`sectionContentState`）；**§6 为唯一缺段时拒串逐字不变**（不降级）。
 
+**收口前置（本批单测档）**：两路收口（`close` ∥ `status` 写 §1「已收口」）在文档机检门**之前**过本批批内单测档门——本批自己的单元测试档仍在盘 ⇒ 拒（拒串点名各档绝对路径 + 修法 = 删）；判据（归属 = 同目录最长批档名前缀 + `.test.mjs` 后缀）单源 = `docs/core/design/TESTING.md` §3.5，实现 = `thincoder-core/agent-tools/batch-unit-test-gate.mjs`（本档不复述）。
+
 **收口重锚（本批未落行——自动）**：收口**两路**（`close` ∥ `status` 写 §1「已收口」）**同调单源 `reanchorOnClose`、零二写**——两路的**全部拒因通过、§1 状态行改写落盘之后**调 `ledgerReanchorBatch`（`docs/core/design/LEDGER.md` §7.1）。
 
 判据 ∥ 取行全集 ∥ `cwd` 基准 ∥ 复启句 ∥ 幂等 ∥ 失败语义 ∥ 次序 = `docs/core/design/LEDGER.md` §6.2（本条不重述）；收口被拒 ⇒ **台账零写**；一次收口只出一份 `[ledger reanchor]` 清单（`batch` 一次调用只分派一个 action——两路不同拍）。
