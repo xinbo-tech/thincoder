@@ -15,6 +15,9 @@
  */
 import { readFileSync } from "node:fs"
 
+/** 段判据类名单源（报面与统计同取此名——改报面忘改过滤的字面漂移，2026-10-26 实发过一次）。 */
+export const DOC_CLASS = Object.freeze({ para: "文字太长，难于阅读", line: "行太长" })
+
 /** 表格行谓词（markdown 表格行结构性不可折行——不计入段，与锚检查同源）。 */
 export const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(String(l))
 
@@ -62,7 +65,7 @@ export function inCodeSpan(line, idx) {
 
 /** 段判据（阈值 = 调用方内置常量 `paragraphMax` ∥ `lineMax`；口径逐字 = §3.18 条目 Q）：
  *  · 文档面：相邻非空正文行合并成一段，段长 = 组成行 `[...line].length` 之和 > `paragraphMax` ⇔ 命中
- *    （`clazz: "段太长"`，定位 = 段首行号）。正文行 = 非空 ∧ 非表格行 ∧ 非标题 ∧ 非列表项 ∧ 非引用行
+ *    （`clazz: "文字太长，难于阅读"`，定位 = 段首行号）。正文行 = 非空 ∧ 非表格行 ∧ 非标题 ∧ 非列表项 ∧ 非引用行
  *    ∧ 非围栏（标记行与块内整行）∧ 非区带内；其余行类不计入、且把段断开。
  *  · 提示词面（`isPromptFace`）：逐行裸判——`[...line].length` > `lineMax` ⇔ 命中（`clazz: "行太长"`，
  *    无结构豁免）。
@@ -79,7 +82,7 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
     if (isPromptFace(f)) {
       text.split("\n").forEach((l, i) => {
         const len = [...l].length
-        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: "行太长" })
+        if (len > lineMax) hits.push({ file: f, line: i + 1, len, clazz: DOC_CLASS.line })
       })
       continue
     }
@@ -88,7 +91,7 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
     let para = null // 在写的段 —— { start, len }；非正文行 ⇒ 断开
     const lines = text.split("\n")
     const flush = () => {
-      if (para !== null && para.len > paragraphMax) hits.push({ file: f, line: para.start, len: para.len, clazz: "段太长" })
+      if (para !== null && para.len > paragraphMax) hits.push({ file: f, line: para.start, len: para.len, clazz: DOC_CLASS.para })
       para = null
     }
     lines.forEach((l, i) => {

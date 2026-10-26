@@ -5,4 +5,4 @@
  * 本档只逐名再出口：盘上不留第二份谓词实现；判据口径 / 豁免族一律随产品档位。
  */
 export { DOC_CHECK_BUILTINS } from "../thincoder-core/doc-check/index.mjs";
-export { isTableRow, fenceMark, isFenceLine, isQuoteLine, isZoneHead, isExecutableLine, inCodeSpan, isListItem, isPromptFace, checkParagraphs } from "../thincoder-core/doc-check/paragraph.mjs";
+export { isTableRow, fenceMark, isFenceLine, isQuoteLine, isZoneHead, isExecutableLine, inCodeSpan, isListItem, isPromptFace, checkParagraphs, DOC_CLASS } from "../thincoder-core/doc-check/paragraph.mjs";

@@ -16,7 +16,7 @@ import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { DOC_CHECK_BUILTINS } from "../thincoder-core/doc-check/index.mjs";
 import { checkAnchors } from "./doc-check-anchors.mjs";
-import { checkParagraphs } from "./doc-check-paragraph.mjs";
+import { checkParagraphs, DOC_CLASS } from "./doc-check-paragraph.mjs";
 
 /** 判据项（D3 计数纪律：清单 = 单一数组，计数 = 列表长度——加键时改一处，计数自动同改）。 */
 const CRITERIA_KEYS = ["paragraphMax", "lineMax", "paragraphExemptZones", "exemptions"];
@@ -66,12 +66,12 @@ export function main(argv = process.argv.slice(2), { log = console.log } = {}) {
   const r = checkAnchors(base, DOC_CHECK_BUILTINS, { gate: true, root });
   for (const line of formatReport(r)) log(line);
   const paragraphs = checkParagraphs({ paragraphMax: DOC_CHECK_BUILTINS.paragraphMax, lineMax: DOC_CHECK_BUILTINS.lineMax, exemptZones: zones, files: r.fileList });
-  for (const h of paragraphs) log(`✗ ${h.clazz} ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}（${h.len} 字符）`);
-  const paraHits = paragraphs.filter((h) => h.clazz === "段太长");
-  const lineHits = paragraphs.filter((h) => h.clazz === "行太长");
+  for (const h of paragraphs) log(`✗ ${h.clazz} ${relative(root, h.file).replace(/\\/g, "/")}:${h.line}`);
+  const paraHits = paragraphs.filter((h) => h.clazz === DOC_CLASS.para);
+  const lineHits = paragraphs.filter((h) => h.clazz === DOC_CLASS.line);
   log(paraHits.length
-    ? `FAIL(段太长): ${paraHits.length} 段超 ${DOC_CHECK_BUILTINS.paragraphMax} 字符${zoneNote}——文档人类可读判据。`
-    : `OK(段太长): 源域全部 .md 无 >${DOC_CHECK_BUILTINS.paragraphMax} 字符的段${zoneNote}。`);
+    ? `FAIL(${DOC_CLASS.para}): ${paraHits.length} 段——重新组织语言重写${zoneNote}。`
+    : `OK(${DOC_CLASS.para}): 源域全部 .md 无文字太长、难于阅读的段${zoneNote}。`);
   log(lineHits.length
     ? `FAIL(行太长): ${lineHits.length} 行超 ${DOC_CHECK_BUILTINS.lineMax} 字符——提示词面逐行裸判。`
     : `OK(行太长): 提示词面无 >${DOC_CHECK_BUILTINS.lineMax} 字符单行。`);

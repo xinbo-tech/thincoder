@@ -2,7 +2,7 @@
  * doc-check/index.mjs — 文档纪律机检 · 引擎入口（两条判据 + 报面行）。
  *
  * 判据两条（起步 · 闭集——口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S）：
- *   ① 锚（档缺 / 节缺）——实现 = `./anchors.mjs`；② 段判据（段太长 ∥ 行太长）——口径 = §3.18 条目 Q，实现 = `./paragraph.mjs`。
+ *   ① 锚（档缺 / 节缺）——实现 = `./anchors.mjs`；② 段判据（文字太长，难于阅读 ∥ 行太长）——口径 = §3.18 条目 Q，实现 = `./paragraph.mjs`。
  * 判据参数 = **工具内置常量** `DOC_CHECK_BUILTINS`：不读任何项目的声明面，因而没有「缺参数 ⇒ 拒跑」这一层，
  *   也没有常量校验面——改判据 = 改代码、走评审。
  * 判定范围 = **调用方传入的文件清单**（判定范围 = 解析范围 = 传入的那几档；无目录遍历、无全域兜底）：
@@ -15,7 +15,7 @@
  */
 import { statSync } from "node:fs"
 import { relative, resolve } from "node:path"
-import { checkParagraphs } from "./paragraph.mjs"
+import { checkParagraphs, DOC_CLASS } from "./paragraph.mjs"
 import { checkAnchors } from "./anchors.mjs"
 
 /** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
@@ -62,20 +62,28 @@ function resolveRange(base, docs) {
   return { check: check.sort(), undecidable, missing, notMarkdown, invalid }
 }
 
-/** 段判据命中行（报面单源——两类命中同形，按 `clazz` 分词）。 */
-const paragraphHitLine = (base, h) => `✗ ${h.clazz} ${rel(base, h.file)}:${h.line}（${h.len} 字符）`
+/** 段判据命中行（报面单源——两类命中同形，按 `clazz` 分词）。**不报字符数**：用户 2026-10-26 11:16「不能表述成超长多少个字符，要表述成为文字太长难于阅读」。 */
+const paragraphHitLine = (base, h) => `✗ ${h.clazz} ${rel(base, h.file)}:${h.line}`
 
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。 */
 function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs, paragraphMax }) {
   const total = anchors.hits.length + paragraphs.length
   const src = docsSource === "session" ? "本会话写过的文档" : "显式 docs"
+  // 首行：锚与段分列（用户 11:16：段的问题叫「文字太长，难于阅读」，不是「命中 N 条」也不是字符数）
+  const verdict = () => {
+    if (total === 0) return checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: PASS（0 档）"
+    const parts = []
+    if (anchors.hits.length) parts.push(`锚 ${anchors.hits.length} 条`)
+    if (paragraphs.length) parts.push(`${paragraphs.length} 段文字太长，难于阅读`)
+    return `DOC-CHECK GATE: REFUSED（${parts.join(" · ")}）`
+  }
   const out = [
-    total ? `DOC-CHECK GATE: REFUSED（命中 ${total} 条）` : (checkFiles.length ? "DOC-CHECK GATE: PASS" : "DOC-CHECK GATE: PASS（0 档）"),
+    verdict(),
     "文档纪律机检（交付门 · gate）",
     checkFiles.length
-      ? `范围：${src} ${checkFiles.length} 档 · 阈值 ${paragraphMax} 字符（工具内置常量）`
-      : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）· 阈值 ${paragraphMax} 字符（工具内置常量）`,
-    "判据：工具内置常量（锚 ∥ 段判据）——判定范围 = 解析范围 = 传入档",
+      ? `范围：${src} ${checkFiles.length} 档`
+      : `范围：${src} —— **0 档受检**（空清单：本次没有判任何档，不得读作「已检」）`,
+    "判据：逐段检查——文字太长，难于阅读",
   ]
   if (skipped.missing.length) out.push(`跳过 ${skipped.missing.length} 档（已不在盘，未检）：${skipped.missing.map((p) => rel(base, p)).join(" ∥ ")}`)
   if (skipped.notMarkdown.length) out.push(`跳过 ${skipped.notMarkdown.length} 档（非 markdown 档，未检）：${skipped.notMarkdown.map((p) => rel(base, p)).join(" ∥ ")}`)
@@ -91,7 +99,7 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
         ? "范围为空：显式 docs 里没有可判档——见上方跳过行"
         : "范围为空：显式 docs 是空清单——列出要判的档后复跑"))
   } else if (total === 0) {
-    out.push(`结论：0 条命中（${checkFiles.length} 档全清）`)
+    out.push(`结论：0 段有问题（${checkFiles.length} 档全清）`)
   } else {
     for (const h of anchors.hits) {
       out.push(h.clazz === "档缺"
@@ -99,7 +107,7 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
         : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
     }
     for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-    out.push("处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）")
+    if (paragraphs.length) out.push("处置：文字太长的段落，重新组织语言重写；同轮修正后复跑；不转台账")
   }
   return out.join("\n")
 }
@@ -162,7 +170,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
     `射程：${base} · 传入清单 ${checkFiles.length} 档 · 阈值 ${paragraphMax} 字符（工具内置常量）· 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
     "声明：判据参数 = 工具内置常量；范围 = 传入文件（判定范围 = 解析范围）",
     `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）`,
-    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · 段太长 ${paragraphs.filter((h) => h.clazz === "段太长").length} · 行太长 ${paragraphs.filter((h) => h.clazz === "行太长").length}）`,
+    `命中 ${hits.total} 条（锚 ${anchors.hits.length} · 文字太长，难于阅读 ${paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length} · 行太长 ${paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length}）`,
   ]
   for (const h of anchors.hits) {
     out.push(h.clazz === "档缺"
@@ -170,7 +178,7 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
       : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
   }
   for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : "结论：0 条命中（锚 ∥ 段太长 ∥ 行太长 均清）")
+  out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : "结论：0 条命中（锚 ∥ 文字太长，难于阅读 ∥ 行太长 均清）")
 
   return { ...shared, report: out.join("\n") }
 }
