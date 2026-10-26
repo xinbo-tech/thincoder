@@ -19,7 +19,7 @@ import { dirname, join, parse, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
-import { owningProject } from "../../thincoder-core/manifest-discovery.mjs"
+import { owningProject, projectRootView } from "../../thincoder-core/manifest-discovery.mjs"
 
 /** 真仓根 = 本档上两级的目录（`test/integration/` → 仓根；`PROJECT-MANIFEST.json` 恒在）。 */
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..")
@@ -120,7 +120,7 @@ test('6-3 项目外绝对路径 ⇒ 当场拒发（outside-project），零实�
   const doc = join(outside, "outside", "x.md")
   mkdirSync(dirname(doc), { recursive: true })
   writeFileSync(doc, "# outside\n")
-  assert.equal(owningProject(outside), null, "夹具前置：临时根之上没有任何项目档（否则本用例假红）")
+  assert.equal(owningProject(outside, REPO_ROOT), null, "夹具前置：临时根不在会话项目根之下（outside-project 的前提）")
 
   const s = await scene(t, REPO_ROOT)
   const receipt = String(await review(s.agent, [doc], "t3"))
@@ -142,7 +142,7 @@ test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（no-project-root�
     mkdirSync(join(ws, name), { recursive: true })
     writeFileSync(join(ws, name, "PROJECT-MANIFEST.json"), MANIFEST)
   }
-  assert.equal(owningProject(ws), null, "夹具前置：容器根无项目档（workspace 态的前提）")
+  assert.equal(projectRootView(ws).state, "workspace", "夹具前置：锚无档、下辖 ≥1 项目（workspace 态的前提）")
 
   const s = await scene(t, ws)
   const receipt = String(await review(s.agent, ["docs/a.md"], "t4"))
@@ -163,21 +163,21 @@ test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（no-project-root�
   assert.equal(s.endpoint.requests.length, 0, "反证格同样零 LLM")
 })
 
-test('6-5 容器锚（根无档 ∧ 下辖恰一项目）⇒ 当场拒发（no-project-root），不把唯一下辖项目当根', { timeout: 60_000 }, async (t) => {
+test('6-5 会话锚 = 非项目目录（根无档、下辖 1 个项目）⇒ 当场拒发（no-project-root），不把下辖项目当根', { timeout: 60_000 }, async (t) => {
   const box = mkdtempSync(join(tmpdir(), "tc-int-box-"))
   t.after(() => rmSync(box, { recursive: true, force: true }))
   mkdirSync(join(box, "only"), { recursive: true })
   writeFileSync(join(box, "only", "PROJECT-MANIFEST.json"), MANIFEST)
-  assert.equal(owningProject(box, parse(box).root), null, "夹具前置：容器根及其祖先无项目档（none 态的前提）")
+  assert.equal(owningProject(box, parse(box).root), null, "夹具前置：锚根及其祖先无项目档（workspace 态的前提）")
 
   const s = await scene(t, box)
   const receipt = String(await review(s.agent, ["docs/a.md"], "t5"))
 
   assert.match(receipt, /criterion=scope-not-doc/)
   assert.match(receipt, /reason=no-project-root/, `实际：${receipt}`)
-  assert.match(receipt, /→ \(no base\) ∥ reason=no-project-root/, "无基面：不拿唯一下辖项目当根")
-  assert.match(receipt, /Session anchor is none \(/, `文案报锚态 = none，实际：${receipt}`)
-  assert.ok(!receipt.includes(resolve(join(box, "only"))), `文案不把下辖项目当根，实际：${receipt}`)
+  assert.match(receipt, /→ \(no base\) ∥ reason=no-project-root/, "无基面：不拿下辖项目当根（未解析成该项目的路径）")
+  assert.match(receipt, /Session anchor is workspace \(/, `文案报锚态 = 多根工作区（下辖 1 个项目），实际：${receipt}`)
+  assert.ok(!receipt.includes(resolve(join(box, "only"), "docs", "a.md")), `不以该下辖项目为基面解析，实际：${receipt}`)
   assert.match(receipt, /Expected form 1 — project-root-relative:/, "期望形第 1 句")
   assert.match(receipt, /Expected form 2 — absolute:/, "期望形第 2 句")
   assert.equal(s.agent._advisorRefusals.has("t5"), true, "拒发登记")
