@@ -1201,7 +1201,7 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 | 条目 | 命令（仓根 `thincoder/`） | 期望读数 |
 |---|---|---|
 | A 区清零 | 上面「计数式」第一条 | 改前 `occ 90 lines 71`（同一判据式 = 逐档基线表 91/72 减去 `:184` 假阳 1/1）· 改后 **`occ 38 lines 34`**（2026-10-19 实施轮与设计席同式实跑）；残留坐标逐行落在 B / C / D 清单（34 处 / 30 行）∪ G1 保留位（4 处 / 4 行）两个集合内（零新增） |
-| 逐档体量 | 上面第二条 | 7 档未改档读数不变；9 个改档各 ≤ 基线表上限；全量 ≤ 270,374 |
+| 逐档体量 | 上面第二条 | 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③）：7 档未改档读数不变；9 个改档的逐档读数与全量读数照记 |
 | 结构未失 | 上面第二条（第 3、4 列） | 逐档 `##` 块数与标题节点数与改前相等（本批零新增节；基线读数 = 改前跑一次即得） |
 | 无文档引用 | `node scripts/prompt-refs-check.mjs` | `命中 0`（新文本零文档引用） |
 | 设计档门 | `doc_check(mode:"gate", docs:["docs/core/design/PROMPT-SYSTEM.md"])` | 首行 `DOC-CHECK GATE: PASS` |
@@ -1214,7 +1214,6 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 | C2 | 边界 · 幂等 | 连跑两次 | 两次读数相同（命令无状态、无写盘） |
 | C3 | 边界 · 域未失 | 跑第二条 | 16 档仍在；7 档未改档字符零变；`##` 块数与标题节点数与改前相等 |
 | C4 | 边界 · 口径 | ① 去掉全部词边界（`\b`）∥ ② 把 `red lines?` 写回单数 `red line`（保留边界） | ① 多读两处子串假阳：`thincoder-core/prompts/advisor-round2.md:13` 的 "may note" ∥ `thincoder-core/prompts/discipline-engineering.md:184` 的 `measured line` ⇒ `occ 92 lines 73`（90 + 2）；② 漏读 `thincoder-core/prompts/common.md:179` 的复数形 `red lines`（改前唯一）⇒ `occ 89 lines 70`（90 − 1）——两式均按同一基线核算，故口径按上两条写死 |
-| C5 | 错误防御 | 任一档净增超上限 | 削 why 到一句（保留因的去向），复测；仍超 ⇒ 上报，不放宽帽 |
 
 **条目处置与计数（复算 · 三者自洽）**：
 
@@ -1406,7 +1405,7 @@ C. `thincoder-core/prompts/persona-engineering.md:55` 后新增一行（Advance 
 | A1 | §13.10 ①：显式句在场 + 逐字相等 | `node` 子串比对：逐字块 A 与块 B 各 1 次命中；`:149` 旧尾句 0 命中 |
 | A2 | §13.10 ④：携 why、无禁令腔 | 新增区段扫 `never|do not|don't|must not|may not|forbidden` ⇒ 0 命中（只扫新增段：`:8` 原文的 `was never approved` 是既有描述性否定，不在扫描区） |
 | A3 | §13.10 ①：等价表示与唯一停相在场 | 子串 `any expression of the same intent` · `The one stop shape` 各 1 次命中 |
-| A4 | 体量读数（无帽） | `node -e "console.log(require('fs').readFileSync('thincoder-core/prompts/persona-engineering.md','utf8').length)"` ⇒ ≤ 60,095（改前 58,345；本笔实测净增 911 ⇒ 预计改后 59,256，余量 839） |
+| A4 | 体量读数（无帽） | `node -e "console.log(require('fs').readFileSync('thincoder-core/prompts/persona-engineering.md','utf8').length)"` ⇒ 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③） |
 | A5 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ `命中 0` |
 | A6 | §13.10 ②③ + 行为面（观察项，非机检） | 对照表六句无矛盾（见上）；下一批：仅说「批准」⇒ 同轮 spawn；说「只批设计」⇒ 停 |
 | A7 | 修正项 3 的判据：`:52-55` 锚逐字在场 | `node` 子串比对：逐字块 C 1 次命中；`review firing / implementation starts wait for the user's word` · `all hold for the nod` 各 1 次命中（锚是加行，原四行零改） |
@@ -1484,7 +1483,7 @@ A. `thincoder-core/prompts/persona-engineering.md:163`（`round` 行）之后新
 | A1 | §13.11 ①：清单含 `designToken` + `omitted = refused` 同义句 | `node` 子串比对：逐字块 A 1 次命中；`omitted = refused` ≥2 次（`batchDoc` 行已有 1 次） |
 | A2 | §13.11 ①：取值路径在场 | 子串 `designToken=` ≥1 次、`design-slots` ≥1 次命中（均在块 A 内） |
 | A3 | §13.11 ④：提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0 |
-| A4 | §13.11 ④：体量读数（无帽） | `node -e` 读字符数 ⇒ ≤ 61,033 |
+| A4 | §13.11 ④：体量读数（无帽） | `node -e` 读字符数 ⇒ 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③） |
 
 **边界（本节不做）**：工具说明 / schema / 门报错 = `TOOLS.md` §6.25（本节不重述）· 令牌签发 / TTL / 消费零改 · 自动补全不做（需用户单独裁定）· 普通模式零改 · `:149` / `:157` 零改 · 不新增 `##` 节。
 
@@ -1812,7 +1811,7 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 | A2 | §13.13 ②：传播句在场（触发 / 动作 / 责任面） | `A landed design change propagates to the task books that cite it` · `scan the in-flight batch records` · `append a §2 correction` · `book the day's debt` 各 1 次 |
 | A3 | §13.13 ③：D7 清单含对账项 | `thincoder-core/prompts/discipline-engineering.md` 内 `counts / **§2 ↔ design-doc reconciliation**` 1 次，且与 `7. **D7 settlement sync**` 同一行（行号 = D7 行号）；该行内 `counts /` 与 `pointers` 各出现 1 次（两端锚重复即红） |
 | A4 | §13.13 ④：携 why、无禁令腔 | 新增区段扫 `never|do not|don't|must not|may not|forbidden` ⇒ 0（本席预扫 = 0）；why 子句逐块：A = `A number restated in §2 stays alive only until the next design change falsifies it`；B = `a criterion or count written into batch record §2 as its own text is that second criterion`；C = `a correction left unbooked is one nobody comes back to make`；D = `judging closeout by a stale §2 is what turns a correct implementation red`；E = `closeout fails correct work by a stale criterion` |
-| A5 | §13.13 ⑤：提示词面零文档引用 · 体量读数（无帽） | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0；**块 E 内容判据 = 落地行与本节块 E 逐字围栏块整行相等**（行首三空格缩进在内；只判字数时，措辞微调仍可全绿）；字符数 ≤ 预算（persona 63,292 / discipline 38,186 / designer 18,619）作附带读数（designer 余量 45 字符） |
+| A5 | §13.13 ⑤：提示词面零文档引用 · 体量读数（无帽） | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0；**块 E 内容判据 = 落地行与本节块 E 逐字围栏块整行相等**（行首三空格缩进在内；只判字数时，措辞微调仍可全绿）；字符读数（persona 63,292 / discipline 38,186 / designer 18,619）只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③） |
 | A6 | §13.13 ⑥：与既有条款逐句对照无矛盾；结论记入批次档 | 对照表八行逐句判读结论 = 零矛盾（依据 = 本表「为何不矛盾」列）；结论已记入本批 §2「验收 ⑥ 对照结论」行 |
 | A7 | 派单 ②：三条触发模型侧可观察 | 只引不抄 = 写 §2 时（designer 轮）· 传播 = 设计变更落地（修正轮 / 评审定稿，父侧当轮）· 对账 = 批次收口（D7） |
 | A8 | 派单 ③：`thincoder-core/prompts/persona-eng-designer.md` 同落判定 | 落，理由 = K1（写 §2 的动作者是 designer；只落父侧 = 假指令） |
@@ -1846,7 +1845,7 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 
 - `thincoder-core/prompts/persona-engineering.md:14` 现文：`The go-ahead **does not exempt the approval gate**: the review still runs, the user's approval is still required — **"authorized to fire" is not "approved"**.` 该句让整批令在批准门再停一次——同一份授权收两次费。
 - 设计档自身两处登记引用旧语义：`:1226`（§6.34 成因表 G4，闭合列写「预授权不豁免批准照旧成立」）∥ `:1285`（§6.34 对照表第 2 行，「`:13` 仍成立：预授权照旧不等于批准」）（本笔已落，见 L6 / L7）。
-- 体量读数：父侧交单读数 61,449 字符；本席 `node` 实读 = **62,902 字符 / 243 行**——差额 = FR35 `taskbook-sync` 批已落地的 +1,453。本批基线取实读 62,902，上限 = 62,902 × 1.03 = **64,789**。
+- 体量读数：父侧交单读数 61,449 字符；本席 `node` 实读 = **62,902 字符 / 243 行**——差额 = FR35 `taskbook-sync` 批已落地的 +1,453（只作记录，不作判据——见 §7 D-PS42 ③）。
 
 **机制（四条 = 需求三条 + 默认档一条 · 回指 §13.14）**：
 
@@ -1942,7 +1941,7 @@ R3 — `thincoder-core/prompts/persona-engineering.md:59` 行首插入作用域�
 
 | 文件 | 现行 | Δ | 说明 |
 |---|---|---|---|
-| `thincoder-core/prompts/persona-engineering.md` | 243 行 / 62,902 字符（父侧交单读数 61,449 = FR35 落地前） | ±0 行 / +772 字符（R1 +702 · R2 +35 · R3 +35） | 改后预计 63,674 ≤ 64,789（基线 62,902 × 1.03） |
+| `thincoder-core/prompts/persona-engineering.md` | 243 行 / 62,902 字符（父侧交单读数 61,449 = FR35 落地前） | ±0 行 / +772 字符（R1 +702 · R2 +35 · R3 +35） | 改后预计 63,674 字符（只作记录，不作判据——见 §7 D-PS42 ③） |
 | `docs/core/design/PROMPT-SYSTEM.md` | 1,804 行 / 149,680 字符（§6.38 写入前实读） | 1,950 行 / 159,704 字符（定稿实读；Δ = +146 行 / +10,024 字符） | 本笔 = 设计轮（含评审修正轮）；实施轮零触 |
 | `thincoder-core/prompts/discipline-engineering.md` | 200 行 / 36,773 字符 | ±0 | 判断 = 不加行 |
 | `docs/batches/2026-10-17-prompt-firing-rights.md` | 冻结档 | ±0 | 冻结档不回改 |
@@ -1962,7 +1961,7 @@ R3 — `thincoder-core/prompts/persona-engineering.md:59` 行首插入作用域�
 | A5 | 同节自洽 | R2 / R3 前缀 `**Without a batch-wide go-ahead**,` 各 1 次；**除前缀外逐字不变**——重跑 §6.34 A1 / A7 两处子串比对：块 C 1 次、块 A 1 次、`:8` 原句 `Review firing and advancement both stop at the user's approval gate` 1 次；`:55` 的 `with the go-ahead, continue; without one, hold` 仍 1 次（零改） |
 | A6 | 携 why、无禁令腔 | 新增段（R1 全文 + R2/R3 前缀）扫 `never|do not|don't|must not|may not|forbidden` ⇒ 0；why 句 `charges the same authorization twice` 1 次 |
 | A7 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0 |
-| A8 | 体量读数（无帽） | 改后字符数 ≤ 64,789；预计 63,674（基线 62,902 + 净增 772） |
+| A8 | 体量读数（无帽） | 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③） |
 | A9 | §13.14 ③：对照结论记入批次档 | 实施轮在批次档 §5 写一行「对照结论：§6.38 对照表十一行 = 零矛盾」（引用 §6.38）；收口轮核其在场（批次档内 `对照结论` ≥1 次、引用 §6.38） |
 | A10 | 停相计数并置可判 | 提示词面（实施后）：`The one stop shape` 1 次 · `Four shapes still stop the run` 1 次；本节 `:9` 行写明两轴判据（one = 批准语停形 / four = 批内 run 停相）——子串比对 |
 
@@ -2003,7 +2002,7 @@ R3 — `thincoder-core/prompts/persona-engineering.md:59` 行首插入作用域�
 | F2 | 同上（`:229` 行内） | domain conflicts are queued by the scheduler (returns `queued` + position) | 只写了回执形态，没写读法——`queued` 被当成代价 |
 | F3 | `thincoder-core/prompts/persona-engineering.md:40` | `anything past the approval gate has no approval behind it` | FR36 后整批令覆盖批准门 ⇒ 批内已授权；该断言无作用域，字面不成立（`#1716`） |
 
-体量读数（本席 `node` 实读 2026-10-20）：`thincoder-core/prompts/persona-engineering.md` = **243 行 / 63,674 字符**；本批上限 = 63,674 × 1.03 = **65,584**。
+体量读数（本席 `node` 实读 2026-10-20）：`thincoder-core/prompts/persona-engineering.md` = **243 行 / 63,674 字符**——只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③）。
 
 **机制（四条 = 需求三句 + 自检 · 回指 §13.15）**：
 
@@ -2087,7 +2086,7 @@ R4 的作用域句（`A batch-wide go-ahead puts the batch's whole scope inside 
 
 | 文件 | 现行 | Δ | 说明 |
 |---|---|---|---|
-| `thincoder-core/prompts/persona-engineering.md` | 243 行 / 63,674 字符 | +1 行 / +1,460 字符（S1 +1,157 · R4 +303） | 改后预计 244 行 / 65,134 字符 ≤ 65,584（63,674 × 1.03） |
+| `thincoder-core/prompts/persona-engineering.md` | 243 行 / 63,674 字符 | +1 行 / +1,460 字符（S1 +1,157 · R4 +303） | 改后预计 244 行 / 65,134 字符（只作记录，不作判据——见 §7 D-PS42 ③） |
 | `docs/core/design/PROMPT-SYSTEM.md` | 1,950 行 / 159,704 字符 | 2,096 行 / 171,522 字符（定稿实读；Δ = +146 行 / +11,818 字符） | 本笔 = 设计轮（含评审修正轮 + 设计层记账修正轮）；实施轮零触 |
 | `thincoder-core/prompts/discipline-engineering.md` | 201 行 / 37,337 字符 | ±0 | 判断 = 不加行（行为主体 = 父侧派单面，同 §6.34 K6 判据） |
 | 调度器实现 / `files` · `dependsOn` 语义 / 需求档 / 普通模式面 | — | ±0 | 边界（见下） |
@@ -2106,7 +2105,7 @@ R4 的作用域句（`A batch-wide go-ahead puts the batch's whole scope inside 
 | A2 | §13.15 ②：旧断言清零 + 作用域句在场 | `thincoder-core/prompts/persona-engineering.md:40` 含 `A batch-wide go-ahead puts the batch's whole scope inside that confirmation` 1 次；提示词面 `thincoder-core/prompts/**` 扫 `anything past the approval gate has no approval behind it` ⇒ 0（设计档 F3 ∥ 需求档 ∥ 批次档的引文属分析面，不计） |
 | A3 | 携 why、无禁令腔 | 新增文本（S1 全文 + R4 全文）扫 `never\|do not\|don't\|must not\|may not\|forbidden` ⇒ 0；why 子串各 1 次：`stalls the batch on the same conflict` · `the content lands where its criterion does not live` · `turns a same-minute dispatch into a hand-kept wait` · `a wait leaves the shifted line exactly where it was` |
 | A4 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0 |
-| A5 | 体量读数（无帽） | 改后字符数 ≤ 65,584；预计 65,134（基线 63,674 + 1,460） |
+| A5 | 体量读数（无帽） | 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③）；预计 65,134（基线 63,674 + 1,460） |
 | A6 | §6.38 对照表 +1 行且含 `:40` | 对照表数据行 10 → 11；新行「既有句」列含 `:40`；A9 计数句为「十一行」，与行数一致 |
 | A7 | 触发点可观察 | 本节「触发点」表四行在场；三个观察面 = 派单那一刻 / `queued` 回执 / 串行编辑前 |
 | A8 | 台账收口条件 | `#1716`：A2 两条同时成立即达收口条件；`#1717`：本批 §6 结算（实施面 A1 + A5 绿） |
@@ -2444,10 +2443,10 @@ B4 — `thincoder-core/prompts/discipline-engineering.md:117` 整行替换（保
 
 **受影响文件（现行 = 本席 `node` 实读 · 2026-10-21；Δ = 本节逐字块长度实算）**：
 
-| 文件 | 现行 | Δ → 改后（占比 / 上限 · 上限 = 基线 × 1.03 取整） |
+| 文件 | 现行 | Δ → 改后（占比只作记录，不作判据） |
 |---|---|---|
 | `thincoder-core/prompts/discipline-engineering.md` | 203 行 / 38,203 字符 | L1 −524 +1,389 = +865 ∥ L4 −164 +432 = +268 ⇒ **+1,133 字符 / ±0 行** → 39,336 |
-| `thincoder-core/prompts/persona-engineering.md` | 244 行 / 65,134 字符 | L2：+785 字符 / +3 行 ∥ L2b：+405 字符 / +1 行 ⇒ **+1,190 字符 / +4 行** → 66,324（+1.81% / 上限 67,088 · 余 764） |
+| `thincoder-core/prompts/persona-engineering.md` | 244 行 / 65,134 字符 | L2：+785 字符 / +3 行 ∥ L2b：+405 字符 / +1 行 ⇒ **+1,190 字符 / +4 行** → 66,324（+1.81%） |
 | `thincoder-core/prompts/advisor-design.md` | 76 行 / 12,274 字符 | L3：**+360 字符 / +1 行** → 12,634 |
 | `thincoder-core/prompts/common.md` | 274 行 / 43,728 字符 | **±0**（B4 不落此档 · K8） |
 | `docs/core/design/PROMPT-SYSTEM.md` | 2,247 行 / 184,362 字符（本节写入前） | 本节改写 + §6.26 计数行 |
