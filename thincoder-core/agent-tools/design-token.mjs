@@ -13,6 +13,10 @@
 
 import { randomUUID } from "node:crypto"
 import { tokenExpiryMs } from "../token-ttl.mjs"
+// 批归属派生（DESIGN-TOKEN-SETTLEMENT §10）——判据与清点面同源（同一个 `lastIndexOf("batches")`）。
+// 本档 ⇄ `design-slots.mjs` 为**静态环**（对方取 `effectiveTokenTtlMs`）：两侧绑定只在函数体内
+// 运行时使用，求值期零顶层调用 ⇒ 环安全（与 token-ttl ⇄ session 同构）。
+import { batchAbsPath } from "./design-slots.mjs"
 
 /**
  * F2c/F2e (§29.1 2026-09-07): the engine-generated Approved suffix — ONE builder
@@ -120,8 +124,10 @@ const VERDICT_GATE_MARK = (reason) => `裁定非通过——token 未签发 (rev
  * IS the verdict — the advisor echoes it only on approval. On echo (full string
  * OR truncated — uuid present; §5.1①): slot the token under designId (always the
  * FULL token; + eng-coder gate flag; single-value mirror retired per
- * DESIGN-TOKEN-SETTLEMENT D3) and return the clean output with the Approved
- * suffix (truncated echo: the M2 marker sits before the suffix); the review
+ * DESIGN-TOKEN-SETTLEMENT D3), record its batch attribution (`_engDesignTokenBatches`
+ * — the reviewed doc-set's `batches/` file, §10 E1; no batch in the set ⇒ no
+ * attribution) and return the clean output with the
+ * Approved suffix (truncated echo: the M2 marker sits before the suffix); the review
  * instance CLOSES (a later review of the same doc-set starts a fresh full
  * review). On non-echo: strip every echo form (single source §5.1③) and return
  * the findings text + the constant M1 marker — slots stay untouched
@@ -164,6 +170,16 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   // Echoed the token → review passed. Issue it to the parent for eng-coder.
   agent._engDesignTokens ??= new Map()
   agent._engDesignTokens.set(run.designId, designToken)
+  // §10 E1（DESIGN-TOKEN-SETTLEMENT）：批归属旁列同拍写——派生 = 本评审文档集 `docSetKey` 中
+  // `batches/` 段档的绝对路径（零新输入）。文档集不含批档 ⇒ 归属 = 无（不猜）：**删**该 designId
+  // 的旧行——否则一次改了范围的复评会让新槽继承上一轮的归属，收口时消费掉本不该消费的授权。
+  const batchAbs = batchAbsPath(run.docSetKey)
+  if (batchAbs) {
+    agent._engDesignTokenBatches ??= new Map()
+    agent._engDesignTokenBatches.set(run.designId, batchAbs)
+  } else if (agent._engDesignTokenBatches instanceof Map) {
+    agent._engDesignTokenBatches.delete(run.designId)
+  }
   // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：单值镜像 `_engDesignToken` 退役——
   // 只写多槽 Map（AC3 零镜像写）；settle 落盘由调用方（settleAdvisorRun）当场做。
   // Unlock the dispatch design gate for eng-coder SELF-review (defense-in-depth —

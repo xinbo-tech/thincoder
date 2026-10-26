@@ -100,24 +100,33 @@ export function resolveLedgerRoot(target, boundary) {
   return root ? { root, basis: root === start ? "self" : "ancestor" } : null
 }
 
-/** 无根文案（单源——设计档 §3.8「无根契约」逐字；`openLedger` 写面 ∥ `ledgerDbPath` 共用同一句）：
- *  起点恒报；锚态 = 工作区时追报下辖候选（报明面读数 = `projectRootView` 的 `workspace` 态——
- *  **只供报明，不参与取根**：取根仍以会话锚为界）。 */
-const noRootMessage = (start) => {
+/** 无根文案（单源——`openLedger` 写面 ∥ `ledgerDbPath` ∥ 工具面读面（`ledger-tools.mjs`）共用同一句）：
+ *  **只陈述事实**——起点 + 上溯上界（界内无项目根），不写「祖先链无已注册项目」这类越界断言：
+ *  归属根可能就在界**之上**（界外）——那一格该句为假，读它会教人误判层级。
+ *  锚态 = 工作区时追报下辖候选（报明面读数 = `projectRootView` 的 `workspace` 态——
+ *  **只供报明，不参与取根**：取根仍以会话锚为界）。
+ *  @param {string} start 起点（动作目标路径）
+ *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`）——与 `resolveLedgerRoot` 同一缺省 */
+export const noRootMessage = (start, boundary) => {
   const view = projectRootView(start)
+  const edge = resolve(boundary ?? process.cwd())
   const tail = view.state === "workspace" ? `；下辖候选项目：${view.candidates.join(" ∥ ")}` : ""
-  return `台账：自 ${start} 未能推导项目根——祖先链无已注册项目（带 PROJECT-MANIFEST.json）${tail}`
+  return `台账：自 ${start} 未找到项目根（向上找到 ${edge} 为止）${tail}`
 }
 
 /** 项目根 → 库路径（稳定键 = `ledgerKey` 前 16 位——路径唯一标识，不含分隔符）。
- *  **归单源**（2026-10-16 批 ledger-root-derivation）：根 = `resolveLedgerRoot(cwd)`——与读面 / 写面
+ *  **归单源**（2026-10-16 批 ledger-root-derivation）：根 = `resolveLedgerRoot(cwd, boundary)`——与读面 / 写面
  *  同一推导；无根 ⇒ 抛**同一**无根文案（键需根，不产第二答案）。
+ *  `boundary` = 上溯上界（**会话锚**——设计档 §3.8「界（单源）」）：调用方知道锚就传；
+ *  缺省 = `process.cwd()`（CLI / 进程锚 = 会话锚的调用面不必传）。
  *  v2 键归一（2026-09-25 批）：盘符本大写（CLI）⇒ 键恒等零变；小写盘符（VSC `uri.fsPath`）
- *  并入同键 ⇒ 同项目两端同库（收正前 = 同项目两键两库）。 */
-export function ledgerDbPath(cwd) {
+ *  并入同键 ⇒ 同项目两端同库（收正前 = 同项目两键两库）。
+ *  @param {string} [cwd] 动作目标路径
+ *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`） */
+export function ledgerDbPath(cwd, boundary) {
   const start = resolve(cwd ?? ".")
-  const derived = resolveLedgerRoot(start)
-  if (!derived) throw new Error(noRootMessage(start))
+  const derived = resolveLedgerRoot(start, boundary)
+  if (!derived) throw new Error(noRootMessage(start, boundary))
   return keyedDbFile(derived.root)
 }
 
@@ -220,24 +229,26 @@ function markSchemaVersion(db) {
   if (v < LEDGER_SCHEMA_VERSION) db.exec(`PRAGMA user_version = ${LEDGER_SCHEMA_VERSION}`)
 }
 
-/** 开库（cwd = 「动作目标路径」）→ DatabaseSync 句柄 + 幂等建表 + 老库幂等迁移（executor 列）。
- *  **根推导**（设计档 §2.1 / §3.8）：项目根 = `resolveLedgerRoot(cwd)`——读写同一判据；嵌套取近者、
+/** 开库（cwd = 「动作目标路径」；`boundary` = 上溯上界 / 会话锚）→ DatabaseSync 句柄 + 幂等建表 + 老库幂等迁移（executor 列）。
+ *  **根推导**（设计档 §2.1 / §3.8）：项目根 = `resolveLedgerRoot(cwd, boundary)`——读写同一判据；嵌套取近者、
  *  容器锚不向下取根（无根 ⇒ 报明）。**无根（`null`）**：写面（`create:true`）抛（fail-loud、零落盘零建库）；读面空账
  *  （`null`——与「库不在 = 空账」同形）。
  *  读面（create=false）：库文件不存在 → 返回 null（读面不建库、无副作用）。
  *  写面（create=true）：库文件不存在自动建（台账目录随之创建）。
  *  **只读态**（readOnly=true——读面专用）：只读句柄 + 零 DDL / ALTER + items 探针（见 openReadOnly）；
  *  如实副作用：旧库（缺 executor 列）**读**不再自动补列——补列归写面开库；读出行缺列按 null 归一。
- *  「目录不存在」的真错照抛（fail-loud——先于推导，文案逐字零改）。 */
-export function openLedger(cwd, { create = false, readOnly = false } = {}) {
+ *  「目录不存在」的真错照抛（fail-loud——先于推导，文案逐字零改）。
+ *  `boundary` = 上溯上界（**会话锚**——设计档 §3.8「界（单源）」）：工具面传 `ctx.agent.cwd`；
+ *  缺省 = `process.cwd()`（CLI / 进程锚 = 会话锚的调用面不必传）。 */
+export function openLedger(cwd, { create = false, readOnly = false, boundary } = {}) {
   const start = resolve(cwd ?? ".")
   if (!existsSync(start)) {
     throw new Error(`项目目录不存在：${start}——cwd 请给存在的项目根（相对路径按当前工作目录解析；缺省 = 会话项目根）`)
   }
-  const derived = resolveLedgerRoot(start)
+  const derived = resolveLedgerRoot(start, boundary)
   if (!derived) {
-    if (create) throw new Error(noRootMessage(start)) // 写面抛——零落盘零建库
-    return null // 读面空账（未注册目录下旧行为亦为空 ⇒ 零回归）
+    if (create) throw new Error(noRootMessage(start, boundary)) // 写面抛——零落盘零建库
+    return null // 读面空账（两类同形：未注册目录 ∥ 目标落在界外的已注册项目——后者见 §3.8「界」；读面不抛）
   }
   const file = keyedDbFile(derived.root)
   if (!existsSync(file) && !create) return null

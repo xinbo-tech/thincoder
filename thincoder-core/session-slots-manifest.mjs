@@ -100,15 +100,32 @@ export function slotMtime(cwd, slot) {
   try { return statSync(slotPath(cwd, slot)).mtimeMs } catch { return null }
 }
 
-export function loadManifest(cwd) {
+/** 清单读（两形——DESIGN-TOKEN-SETTLEMENT §10「槽号解析层同判」· KD-BG8）：缺省宽容 ∥ `strict`。
+ *  判据 = 「没有」与「读不到」分清：文件不存在（`ENOENT`）⇒ 默认空账本（无槽号 = 合法缺省，**两形同**）；
+ *  在盘但读失败（`EACCES` ∥ `EISDIR`…）∥ 解析失败 ⇒ 宽容形照旧吞错回默认，**严格形抛**（携 manifest
+ *  路径 + 底层消息）。收口门面（`consumeBatchDesignTokens`）用严格形——manifest 损坏若被读成「无槽号」，
+ *  收口就落成「已收口而凭证仍在」，正是 F-D8 要消的窗口。
+ *  判别用 `err.code === "ENOENT"`——**不用 `existsSync`**：它把权限错也吞成「不存在」，而收口面要拒的正是那类。
+ *  **形状非法**（可读但解析成 `null` ∥ 非对象）按「读不到」处置（fail-closed；与 `saveManifest` 的 `shape-invalid`
+ *  同判）——严格形抛、拒文沿用「could NOT be read」：方向只更严，措辞不另立第三类。
+ *  与 `readEngTokenBatchesFromSlot`（token-ttl.mjs）同一两形先例：同一读函数、同一判据、缺省宽容；
+ *  展示 / 尽力面一律缺省（现行调用点零改），收口门面才传 `{ strict: true }`。 */
+export function loadManifest(cwd, { strict = false } = {}) {
+  let p = "(unresolved manifest path)"
   try {
-    const p = manifestPath(cwd)
-    if (!existsSync(p)) return { slots: {}, sessionId: null }
+    p = manifestPath(cwd)
     const m = JSON.parse(readFileSync(p, "utf8"))
     if (!m.slots) m.slots = {} // 2026-09-01 会诊 deepseek 🔵：损坏的 {} manifest 不再让调用方抛 TypeError
     if (!m.sessionId) m.sessionId = null
     return m
-  } catch { return { slots: {}, sessionId: null } }
+  } catch (e) {
+    // 「没有」：文件不存在 = 合法缺省（新会话 / 首建前）——两形一致，严格形也不抛
+    if (e?.code === "ENOENT") return { slots: {}, sessionId: null }
+    if (strict) {
+      throw new Error(`loadManifest: the session manifest could NOT be read (${p}: ${e?.message ?? e}) — the slot number cannot be resolved, so "no slot" cannot be told apart from "cannot read"; the engineering closeout is refused with the record untouched (fix the manifest file or its permissions and retry).`)
+    }
+    return { slots: {}, sessionId: null }
+  }
 }
 
 /** 可信合并基座判据（§6.23 判据句 1 · ②）：顶层非 null 非数组对象 ∧（`slots` / `slotSessions`

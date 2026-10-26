@@ -7,7 +7,7 @@
  * 契约（§4.15 逐字）：**候选序** = cwd → 项目根 → 逐基底（基底 = `batchDocBases` 声明面单源）；
  * **判据分野** = 读面取首个**可读**文件 / create 取首个**落基底根内**者；**锚定防嵌套** = 串以任一基底的
  * 「项目根相对前缀」打头且前缀后为**路径段边界** ⇒ 只解析项目根形（不二次拼接；不落基底内 ⇒ fail-closed）；
- * **工作区锚**（条 5 · 2026-10-02 · #828）= create 按目标所属项目落基底 ∥ 无所属显式拒；读面候选分支追加；
+ * **工作区锚**（条 5 · 2026-10-02 · #828）= create 按目标所属项目落基底 ∥ 无所属**报明 + 可执行下一步**（下辖项目全列 + 显式路径指引）；读面候选分支追加；
  * 在飞 ∥ 写门基底集 = 候选并集（`batchDocBases`）；**零变面** = 绝对路径照旧、三个错误文案逐字、
  * 「参数在 + 路径可读」判据句、`ok` / `none` 两态。
  * **基底自有项目根分支 + 基底相对单段收窄**（条 6 · 2026-10-05 · #942）= 逐基底 `owningProject` 恰一落点收 ∥ 多落点显式拒（`ambiguousLandingError`）；基底相对分支限单段（多段串不二次拼接）。
@@ -98,8 +98,9 @@ function insideBases(abs, bases) {
 const outsideBasesError = (raw) => new Error(`batch: create path resolves outside the batch-record base roots — a batch record must live under the declared docRoot.batches base (fail-closed). Path: ${raw}`)
 /** create 锚定但落基底外（§4.15 新文案逐字——不二次拼接）。 */
 const anchoredEscapeError = (raw) => new Error(`batch: create path is anchored at a batch base root but does not resolve under the declared docRoot.batches root(s) — refusing to nest it (fail-closed). Path: ${raw}`)
-/** 工作区锚 create 拒面（**文案逐字** = `BATCH-RECORD.md` §4.15 条 5——机检锚 `belongs to no project`）。 */
-const workspaceCreateError = (raw, candidates) => new Error(`batch: create target "${raw}" belongs to no project — the session anchor is a workspace holding ${candidates.length} projects: ${candidates.join(", ")}. Pass an explicit path under a project (e.g. "${candidates[0]}/docs/batches/<file>.md").`)
+/** 工作区锚 create 报明面（**文案逐字** = `BATCH-RECORD.md` §4.15 条 5——机检锚 `belongs to no project`
+ *  ∧ `Pass an explicit path under a project`；下辖项目按名排序绝对路径全列，单句对 1 ∥ ≥2 皆真）。 */
+const workspaceCreateError = (raw, candidates) => new Error(`batch: create target "${raw}" belongs to no project — the session anchor holds ${candidates.length} project(s) below it: ${candidates.join(", ")}. Pass an explicit path under a project (e.g. "${candidates[0]}/docs/batches/<file>.md").`)
 const ambiguousLandingError = (raw, landings) => new Error(`batch: create path resolves under more than one declared batch-record base — refusing to pick one (fail-closed); pass an explicit path (absolute preferred). Path: ${raw}. Candidates: ${landings.join(", ")}`)
 
 /** 工作区锚读面候选分支（条 5）：逐候选项目——项目根形（`resolve(candidate, p)`）∥ 声明基底形
@@ -154,8 +155,8 @@ export function resolveBatchDocPath(cwd, given) {
 /**
  * **create 面**解析（§4.15 条 2/3/6）：绝对路径照旧取用（仍过越基底判据）；相对路径 = 候选序中首个**落基底
  * 根内**者（新档不存在——可读性无判别力）；锚定串只解析项目根形，不落基底内 ⇒ fail-closed 新文案。
- *  **工作区锚**（条 5）：目标所属项目（`owningProject`）∈ 锚候选集 ⇒ 基底 = 该项目声明面（落其基底内；
- *  越出 ⇒ 既有 fail-closed）；无所属 ⇒ **显式拒**（列候选 + 显式路径指引——不静默落锚）。
+ *  **工作区锚**（条 5）：目标所属项目（`owningProject`——界 = 会话锚）∈ 锚候选集 ⇒ 基底 = 该项目声明面（落其基底内；
+ *  越出 ⇒ 既有 fail-closed）；无所属 ⇒ **报明 + 可执行下一步**（列候选 + 显式路径指引——不静默落锚）。
  * @param {string} cwd 会话锚
  * @param {string} given create `path` 原值
  * @param {string[]} bases 已解析的基底根数组（`batchDocBases` 单源；调用方传入以免重复读档）
@@ -168,7 +169,7 @@ export function resolveBatchCreatePath(cwd, given, bases) {
   let roots = bases
   const ws = workspaceCandidates(base)
   if (ws) {
-    const owner = owningProject(isAbsolute(raw) ? resolve(raw) : resolve(base, p))
+    const owner = owningProject(isAbsolute(raw) ? resolve(raw) : resolve(base, p), base)
     if (!owner || !ws.some((c) => samePath(c, owner))) throw workspaceCreateError(raw, ws)
     roots = batchDocBases(owner)
   }

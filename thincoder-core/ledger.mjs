@@ -44,11 +44,13 @@ export function entryTitle(text) {
 }
 
 /** 向上（含自身）最近的**已注册**项目根 → {root, ledger} / null（F4——CLI 锚 = cwd）。
- *  薄委托 `resolveLedgerRoot(anchor)`（设计档 §3.8——上溯以会话锚为界）：`root` = 推导所得项目根（非锚）；
- *  容器 ∥ 工作区锚 ⇒ `null` ⇒ 族发现按容器形（族求和——§7.2 / AC-M2-18 / AC-M2-19）。 */
+ *  薄委托 `resolveLedgerRoot(anchor, anchor)`（设计档 §3.8——上溯以会话锚为界）：锚即本面的会话锚 ⇒
+ *  界 = 锚自身（不越界探外层项目，与工具面同判）；`root` = 推导所得项目根（非锚）；
+ *  多根工作区锚 ⇒ `null` ⇒ 族发现按工作区根形（族求和——§7.2 / AC-M2-18 / AC-M2-19）。
+ *  `ledgerDbPath` 同一界（同一笔读数不能两界）。 */
 export function findProject(anchor) {
-  const derived = resolveLedgerRoot(anchor)
-  return derived ? { root: derived.root, ledger: ledgerDbPath(derived.root) } : null
+  const derived = resolveLedgerRoot(anchor, anchor)
+  return derived ? { root: derived.root, ledger: ledgerDbPath(derived.root, derived.root) } : null
 }
 
 /** 项目族发现：{current, projects}——current = `findProject`（**祖先支**：容器 ∥ 工作区锚 ⇒ `null` ⇒ 按
@@ -70,16 +72,16 @@ export function discoverFamily(anchor) {
  *  `now`/`days` = 注入面（确定性用例——替代 v1 ageOf git 注入面）。
  *  **`days` 只作用于展示面 `aged`**（本函数局部阈值）；`overdue`（出口态）恒按核常量 `AGING_DAYS`
  *  （`overdueOf` 单源）——故 `days` 调小时 `aged` 会先于 `overdue` 涨（两数口径不同，非矛盾）。
- *  **根推导**（设计档 §3.8）：`root` / `name` / `ledger` = `resolveLedgerRoot(anchor)` 推导所得项目根（非锚
- *  ——容器 ∥ 工作区锚取收敛序之根）——与行集读取同一单源；无根 ⇒ `ledger` = `null`（不落兜底根——
- *  该态下 `root` / `name` 回落锚、行集为空，且该 scan 不进族枚举（`discoverFamily` 容器支只列已注册子目录））。
+ *  **根推导**（设计档 §3.8）：`root` / `name` / `ledger` = `resolveLedgerRoot(anchor, anchor)` 推导所得项目根
+ *  （界 = 本面会话锚 ⇒ 命中即根 = 锚自身；多根工作区锚 ⇒ 无根）——与行集读取同一单源；无根 ⇒ `ledger` = `null`
+ *  （不落兜底根——该态下 `root` / `name` 回落锚、行集为空，且该 scan 不进族枚举（`discoverFamily` 只列已注册子目录））。
  *  `inflightExecutors`（F-LX1 · sync 零变——K-LX2）：在途且 executor 非空行集原样携带
  *  {executor, updated_at, created_at}——判活解析由 `resolveExecutorStates` async 单源负责，本函数零探测。 */
 export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
   const anchor = resolve(cwd)
-  const derived = resolveLedgerRoot(anchor)
+  const derived = resolveLedgerRoot(anchor, anchor) // 界 = 会话锚（本面锚即会话锚——与工具面同判）
   const root = derived ? derived.root : anchor
-  const rows = ledgerQuery({ cwd: anchor, now }) // `now` 透传（两读数同时钟——`overdue` 的行键由核同一 `now` 算）
+  const rows = ledgerQuery({ cwd: anchor, boundary: anchor, now }) // `now` 透传（两读数同时钟——`overdue` 的行键由核同一 `now` 算）
   const pending = rows.filter((r) => PENDING_STATUSES.includes(r.status))
   const poolEntries = pending.filter((r) => r.kind === "requirement")
   const techEntries = pending.filter((r) => r.kind === "tech_todo")
@@ -98,7 +100,7 @@ export function buildScan({ cwd, days = AGING_DAYS, now = Date.now() } = {}) {
     .filter((r) => r.status === "在途" && r.executor)
     .map((r) => ({ executor: r.executor, updated_at: r.updated_at ?? null, created_at: r.created_at ?? null }))
   return {
-    name: basename(root), root, ledger: derived ? ledgerDbPath(root) : null,
+    name: basename(root), root, ledger: derived ? ledgerDbPath(root, root) : null,
     pool: poolEntries.length, tech: techEntries.length, aged: aged.length,
     overdue: pending.filter((r) => r.overdue != null).length, // 待处置（§3.7——机判单源 = 行集 `overdue` 键，行值与 `now` 均同源）
     agedKeys: aged.map((r) => normalizeEntry(r.title)), agedTitles: aged.map((r) => entryTitle(r.title)),

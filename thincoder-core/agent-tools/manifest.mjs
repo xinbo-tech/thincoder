@@ -19,7 +19,7 @@
  *
  * 目标面（KD-M1-39——判据复用零新解析器）：`read` = `projectView`；`init` / `write` =
  * `projectRootView`（工作区 ⇒ 拒 + 下辖项目全列 + 显式 `target` 指引）；`resolveProjectRoot` 对
- * 工作区塌缩 `null` 再回落 cwd ⇒ 写 / 建两动作**不得**直用。
+ * 工作区塌缩 `null`（**回落发生在调用方 `writeRoot`，非本函数**）⇒ 写 / 建两动作**不得**直用。
  *
  * 写路径复用（零新写路径）：落盘恒经 `writeManifest` / `initManifest`——`writer` 恒显式 `'main'`
  * （缺省 `'subagent'` = 写门 fail-closed 缺省，KD-M1-3 / AC-M1-5 零改）。

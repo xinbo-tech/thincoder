@@ -2,10 +2,13 @@
  * manifest-discovery.mjs — **发现 ∕ 归属族**出档（2026-09-29 structure-split-2 · 台账 #620）：自 `manifest.mjs`
  * 全量迁出——`MANIFEST_REL` · 测试注入位（`_setProjectRootForTest` / `_resetProjectRootForTest`）·
  * `scanChildren`（两条梯表共用 walk 内核）· `discoverProjects`（项目梯）· `discoverRepos`（仓梯）·
- * `owningProject`（归属形 = 判据本体）· `resolveProjectRoot`（归属形薄委托）；**结构拆分零语义**（面不变 ∕ 判据不变，
- * 只换宿主档；切点 ∕ 缝单源 = 批档 `docs/batches/2026-09-29-structure-split-2.md` §2.2-C）。
+ * `owningProject`（归属形 = 判据本体）· `projectRootView`（三态报明）· `resolveProjectRoot`（归属形薄委托）；
+ * **结构拆分零语义**（面不变 ∕ 判据不变，只换宿主档；切点 ∕ 缝单源 = 批档 `docs/batches/2026-09-29-structure-split-2.md` §2.2-C）。
+ * 拆分后判据变更（2026-10-25「判据本体单源 + 不向下取根」）：`projectRootView` 取根臂收为**仅归属命中**
+ * （界 = 目标所在盘根），`discoverProjects` 的 `self` 只供报明、不进 `root`（项目梯无 `unique`——≥1 即
+ * `workspace`，1 ∥ 2 ∥ 更多同判；仓梯 `discoverRepos` 的 `unique` 保留）。
  *
- * 缝 = 同名再出口：宿主 `manifest.mjs` 转口本档七名既有导出（消费者 import 面零改）；宿主自用四名
+ * 缝 = 同名再出口：宿主 `manifest.mjs` 转口本档八名导出（消费者 import 面零改）；宿主自用四名
  * （`MANIFEST_REL` ∥ `discoverProjects` ∥ `owningProject` ∥ `resolveProjectRoot`）随 import。
  * 零环：本档不引宿主（方向单行）；档外依赖 = `node:fs` ∥ `node:path`；机制详述 = `docs/core/design/MANIFEST.md` §2.2 / §2.9。
  */
@@ -41,14 +44,14 @@ function scanChildren(anchor, isHit) {
 /**
  * **项目发现**（项目梯五级——KD-M1-23 / 设计 `docs/core/design/MANIFEST.md` §2.2；**git 非前提**，
  * 2026-09-21 用户裁定）：① 锚自身带 `MANIFEST_REL` ⇒ 锚；② 锚含 `.git` ⇒ 锚（缺档 = 建档机会）；
- * ③ 直接子目录中**带档**者优先（非空即只看此级：恰一 ⇒ `unique` / ≥2 ⇒ `workspace`——下辖多项目
- * = 工作区常态，非错误态）；④ 零带档才看含 `.git` 的**裸仓**（同判）；⑤ 均无 ⇒ `none`（⇒ 建档流，
- * 落点 = 会话锚）。
+ * ③ 直接子目录中**带档**者非空 ⇒ `workspace`（只看此级；1 ∥ 2 ∥ 更多同判——下辖项目 = 多根工作区，
+ * 常态、非错误态，项目梯无 `unique` 态）；④ 零带档才看含 `.git` 的**裸仓**（≥1 ⇒ `workspace`，同判）；
+ * ⑤ 均无 ⇒ `none`（⇒ 建档流，落点 = 会话锚）。
  * `candidates` 一律**按名排序**（`self` / `none` ⇒ `[]`）；`matched` ∈ `manifest` / `git` / `null`
  * 记命中（或工作区）出自哪一级。**纯 fs**（只判存在性——不解析档内容）· **不抛** · **不向上** · **不递归**。
  * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**（测试注入面——先于真判据，同 `discoverRepos`）。
  * @param {string} [cwd] 会话锚（缺省 → 进程 cwd）
- * @returns {{kind:'self'|'unique'|'none'|'workspace', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
+ * @returns {{kind:'self'|'none'|'workspace', root:string|null, candidates:string[], matched:'manifest'|'git'|null}}
  */
 export function discoverProjects(cwd) {
   if (_projectRootOverride) return { kind: "self", root: resolve(_projectRootOverride), candidates: [], matched: null }
@@ -56,11 +59,9 @@ export function discoverProjects(cwd) {
   if (existsSync(join(anchor, MANIFEST_REL))) return { kind: "self", root: anchor, candidates: [], matched: "manifest" }
   if (existsSync(join(anchor, ".git"))) return { kind: "self", root: anchor, candidates: [], matched: "git" }
   const withManifest = scanChildren(anchor, (d) => existsSync(join(d, MANIFEST_REL)))
-  if (withManifest.length > 1) return { kind: "workspace", root: null, candidates: withManifest, matched: "manifest" }
-  if (withManifest.length === 1) return { kind: "unique", root: withManifest[0], candidates: [...withManifest], matched: "manifest" }
+  if (withManifest.length >= 1) return { kind: "workspace", root: null, candidates: withManifest, matched: "manifest" }
   const bareRepos = scanChildren(anchor, (d) => existsSync(join(d, ".git")))
-  if (bareRepos.length > 1) return { kind: "workspace", root: null, candidates: bareRepos, matched: "git" }
-  if (bareRepos.length === 1) return { kind: "unique", root: bareRepos[0], candidates: [...bareRepos], matched: "git" }
+  if (bareRepos.length >= 1) return { kind: "workspace", root: null, candidates: bareRepos, matched: "git" }
   return { kind: "none", root: null, candidates: [], matched: null }
 }
 
@@ -131,10 +132,10 @@ function isInsideOrEqual(dir, bound) {
 /** **项目根解析的直读形**（判定单点——设计 `MANIFEST.md` §2.2 `projectRootView` 契约行 / §2.5
  *  「单项目解析律与四处会话级缺省收口」条）：`ok`（**仅归属命中**——判据本体 = `owningProject`，
  *  界 = **目标所在盘根** ⇒ 向上无界；函数体唯一 `ok` 出口）/ `workspace`（归属无命中 ∧
- *  `discoverProjects` 报工作区：下辖带档者 ≥2 ∥ 零带档时裸仓 ≥2 ⇒ `root` null + 下辖项目全列
- *  **按名排序**——工作区常态，非错误态）/ `none`（其余，含下辖带档子目录恰一 ∥ 裸仓恰一——
+ *  `discoverProjects` 报工作区：下辖带档者 ≥1 ∥ 零带档时裸仓 ≥1 ⇒ `root` null + 下辖项目全列
+ *  **按名排序**——多根工作区常态，非错误态；1 ∥ ≥2 同判）/ `none`（其余，含裸仓锚——
  *  **不向下取根** ⇒ 双空）；覆盖位在场 ⇒ 头部短路（`ok` + 覆盖值）。
- *  **发现读数只供 `workspace` 报明**：`discoverProjects` 的 `self` / `unique` **不进 `root`**
+ *  **发现读数只供 `workspace` 报明**：`discoverProjects` 的 `self` **不进 `root`**
  *  （判据单源 = `owningProject`）。**非抛错 / 零写**；`resolveProjectRoot` 薄委托本函数。
  *  @returns {{state:'ok'|'workspace'|'none', root:string|null, candidates:string[]}} */
 export function projectRootView(cwd) {

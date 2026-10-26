@@ -18,7 +18,9 @@
  *
  * token 台账字段（`engDesignTokens`）的**槽 I/O 面**不在本档——单源 = `token-ttl.mjs`
  * （settle 落盘 / 门禁回读 / 链终清理三面齐备）；本档只承载其**保存面合并规则**
- * （`mergeEngTokensForSave`——空态保留 + 并集 + 新铸者胜，纯函数）。槽标题写面同样不在
+ * （`mergeEngTokensForSave`——空态保留 + 并集 + 新铸者胜，纯函数）。批次归属旁列
+ * （`engDesignTokenBatches`）同款分层：槽 I/O 在 `token-ttl.mjs`，本档只持其保存面合并规则
+ * （`mergeEngTokenBatchesForSave`）。槽标题写面同样不在
  * 本档——单源 = `session-rename.mjs` 的 `renameSlot`（同 `{ok, reason}` 契约 + mtime 门控）。
  */
 
@@ -191,6 +193,24 @@ export function mergeEngTokensForSave(incoming, existing) {
     if (!(key in out) || expiry(tok) > expiry(out[key])) out[key] = tok
   }
   return out
+}
+
+/**
+ * 保存面「批次归属旁列」合并规则（DESIGN-TOKEN-SETTLEMENT §10 / KD-BG7——纯函数）：
+ *  沿用 `mergeEngTokensForSave` 的「槽独有项保留」半边（忙时保存不得把内存快照的缺席当成删除），
+ *  同 key 冲突**以新写者胜**——旁列值是路径，无 mint 时刻可比，不比 `expiresAt`。
+ *  - `incoming === undefined`（调用方未携带该字段）⇒ 保留槽值；
+ *  - incoming 空值 ⇒ 槽有值则保留槽、槽也空 ⇒ null（写 null = 清字段）；
+ *  - 两端都有 ⇒ 并集：槽独有项保留、incoming 覆盖同 key。
+ *  理由：忙时保存把归属写丢 ⇒ 收口 no-op ⇒ 凭证留存，正是 §10 要消的窗口。
+ */
+export function mergeEngTokenBatchesForSave(incoming, existing) {
+  if (incoming === undefined) return existing ?? null
+  const hasNew = incoming && typeof incoming === "object" && !Array.isArray(incoming) && Object.keys(incoming).length > 0
+  const slotHas = existing && typeof existing === "object" && !Array.isArray(existing) && Object.keys(existing).length > 0
+  if (!hasNew) return slotHas ? existing : null
+  if (!slotHas) return incoming
+  return { ...existing, ...incoming }
 }
 
 /** 会话级偏好（§6.21）键闭集——表外键 = 整 patch 拒（写未发生）。 */

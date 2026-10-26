@@ -28,6 +28,10 @@
  * 收口重锚（§6.2 · C · AC-M2-30）：收口有两条通路——`close` ∥ `status` 写 §1「已收口」——两路都冻结档、
  * 都让批「收口了」，故**两路同调**单源 `reanchorOnClose`（本档下方），调点均在状态行写盘之后。
  * 一次收口只出一份 `[ledger reanchor]` 回执段（判据 = 前态未冻结：已冻结档在两路都被冻结门早拒）。
+ *
+ * 收口自动消费本批设计凭证（DESIGN-TOKEN-SETTLEMENT §10 · 2026-10-26）：同一两路在**写状态行之前**
+ * 调 `consumeBatchDesignTokens`（判据 = 槽的批次归属旁列；口径单源见该档 §10）。消费失败 ⇒ 原样上抛、
+ * close 被拒、档零字节变——位次与重锚（写盘之后）相反，这是机制本体（KD-BG3）。
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs"
 import { dirname, relative, resolve } from "node:path"
@@ -39,6 +43,7 @@ import {
 } from "./batch-skeleton.mjs"
 import { resolveBatchCreatePath } from "./batch-paths.mjs"
 import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
+import { batchPathKey, executeConsumeDesignAction, unionBatches, unionSlots } from "./design-slots.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向
  *  依赖下各自持有，三行谓词不构成第二权威源）。 */
@@ -474,6 +479,8 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
   // REFUSED（K ≥ 1）∥ ERROR ⇒ throw（§1 状态行字节不变）；其余值零挂（回执逐字旧形）。
   const gate = closingValue ? runBatchGate({ abs, cwd: ctx?.agent?.cwd ?? process.cwd(), agent: ctx?.agent ?? {}, scope: "close" }) : null
   if (gate && (gate.state === "refused" || gate.state === "error")) throw new Error(gateRefusalMessage(gate, "status"))
+  // 收口自动消费（§10——第二通路与 close 同效：位次 = 上两道门之后、状态行写盘之前）
+  const designTokens = closingValue ? consumeBatchDesignTokens(ctx?.agent ?? {}, abs) : null
   const written = updateSectionStatusLine(src, seg, lineValue)
   writeFileSync(abs, written)
   onWritten?.(ctx?.agent ?? {}, abs)
@@ -483,8 +490,8 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
   // **一次收口只出一份清单**：触发 = `closingValue` ∧ 前态未冻结；`batch` 一次调用只分派一个 action
   // （close ∥ status 不会同拍）⇒ 同一拍至多一次重锚、至多一份 `[ledger reanchor]`。前一合取项 =
   // **defensive-only**：前态 closed 已被冻结门（`assertGateOpen`，本函数上方）早拒，正常路径跑不到这里。
-  const reanchor = closingValue && readBatchStatusLine(src) !== "closed" ? await reanchorOnClose(abs) : null
-  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${reanchorReceiptLine(reanchor)}`
+  const reanchor = closingValue && readBatchStatusLine(src) !== "closed" ? await reanchorOnClose(abs, ctx?.agent?.cwd ?? process.cwd()) : null
+  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}`
 }
 
 /**
@@ -511,29 +518,79 @@ export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritte
   // ⇒ throw（fail-closed，不落「已收口」）；PASS / 未跑（无声明面）⇒ 落盘 + 回执明示。
   const gate = runBatchGate({ abs, cwd: ctx?.agent?.cwd ?? process.cwd(), agent: ctx?.agent ?? {}, scope: "close" })
   if (gate.state === "refused" || gate.state === "error") throw new Error(gateRefusalMessage(gate, "close"))
+  // 收口自动消费本批设计凭证（§10——位次 = 全部拒因之后、写盘之前；失败 ⇒ 原样上抛、本函数拒）
+  const designTokens = consumeBatchDesignTokens(ctx?.agent ?? {}, abs)
   const date = todayLocal()
   const written = updateSectionStatusLine(src, 1, `已收口 ${date}`)
   writeFileSync(abs, written)
   onWritten?.(ctx?.agent ?? {}, abs)
   // 收口重锚（§6.2 · C · AC-M2-30）：顺序位 = 全部拒因通过、§1 状态行写盘**之后**（上两行）——close 被拒
   //（身份 ∥ 冻结 ∥ 链完整性门 ∥ 文档机检门）⇒ 台账零写（被拒的 close 没有收口，「原批已收口」那时是假事实）。
-  const reanchor = await reanchorOnClose(abs)
-  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${reanchorReceiptLine(reanchor)}`
+  const reanchor = await reanchorOnClose(abs, ctx?.agent?.cwd ?? process.cwd())
+  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}`
+}
+
+// ─── 收口自动消费本批设计凭证（DESIGN-TOKEN-SETTLEMENT §10——单源，close ∥ status 两通路同调）──
+
+/** 「留槽无归属」枚数（§10 观测量）：并集视图里在旁列**无归属行**的槽数——含过期项（清点面
+ *  照列；过期槽同样撑开写门，正是敞口本身）。只认旁列：注册表反查是显示面兜底、不是消费判据
+ *  （旧槽不猜归属——KD-BG4）。 */
+function unattributedSlotCount(agent, batches) {
+  let n = 0
+  for (const id of unionSlots(agent).keys()) if (!batches.has(id)) n++
+  return n
+}
+
+/**
+ * 收口自动消费（DESIGN-TOKEN-SETTLEMENT §10——两通路共调本函数，不复制逻辑）。四步：
+ * ①非工程模式 ⇒ no-op（普通模式批无设计槽——槽只在工程模式评审 settle 时铸，`executeConsumeDesignAction` 同门）；
+ * ②反查 = 内存 Map ∪ 槽文件旁列（`unionBatches`，**严格读** `{strict:true}`——旁列读不到即抛 ⇒ close 被拒，
+ * §10「读形」；「没有」= 空集，不抛）取该 `abs` 名下的 designId 集；
+ * ③空集 ⇒ no-op（重开后再 close 走这条——该批槽已被上一轮消费）；
+ * ④调既有 `executeConsumeDesignAction({ designIds })`——单次落盘 + 内存整体回滚 + 逐枚回执全复用
+ * （KD-BG6：不新写落盘 / 回滚逻辑，否则同一份语义写第二遍、两处必漂）。
+ * **失败语义**：④抛 ⇒ **原样上抛**（消费核已把内存槽整体回滚）⇒ 调用方被拒、档零字节变、可重试——
+ * 「已收口而凭证仍在」正是本节要消掉的窗口，不把它降级成一句回执。
+ * @param {object} agent — 含 `config.agent.engineering` 与槽状态图
+ * @param {string} abs — 本批批档绝对路径（收口目标，`pickTarget` 解析所得）
+ * @returns {{consumed: number, unattributed: number}|null} 消费枚数 ∥ 留槽无归属枚数；`null` = no-op（非工程模式）
+ */
+export function consumeBatchDesignTokens(agent, abs) {
+  if (!agent?.config?.agent?.engineering) return null
+  const target = batchPathKey(abs)
+  const batches = unionBatches(agent, { strict: true })
+  const ids = [...batches]
+    .filter(([, b]) => typeof b === "string" && batchPathKey(b) === target)
+    .map(([id]) => id)
+  if (ids.length === 0) return { consumed: 0, unattributed: unattributedSlotCount(agent, batches) }
+  const held = unionSlots(agent) // 消费前态：与消费核同一并集视图（消费枚数 = 交集大小）
+  const consumed = ids.filter((id) => held.has(id)).length
+  executeConsumeDesignAction({ designIds: ids }, { agent })
+  return { consumed, unattributed: unattributedSlotCount(agent, batches) }
+}
+
+/** 收口回执的凭证段（§10 回执形：单列 `[design tokens]` 一行——消费枚数 ∥ 留槽无归属枚数）；
+ *  标签形与 `[ledger reanchor]` ∥ `[doc-check gate]` 一致（换行 + 方括号前缀）。`null`（普通模式
+ *  no-op）⇒ 无该段——回执逐字旧形。 */
+function designTokensReceiptLine(result) {
+  if (!result) return ""
+  return `\n[design tokens] 消费 ${result.consumed} 枚 · 留槽无归属 ${result.unattributed} 枚`
 }
 
 /** 收口重锚（设计档 §6.2 · C）——收口两条通路（`close` ∥ `status` 写 §1「已收口」）共调本函数（同一单源，
  *  不复制逻辑）；写入单源 = `ledgerReanchorBatch`（本档只供 `cwd` 基准与回执形；工具层零 SQL）。
- *  `cwd` = **批档所属项目根** = `resolveLedgerRoot(dirname(<batchDoc>))?.root`（§6.1 口径 2 同一子表达式）——
- *  **不用会话锚**：会话锚为工作区 ∥ 容器时可能收到别的项目根 ⇒ 选行零命中 ⇒ 唯一的机器写静默失效。
+ *  `cwd` = **批档所属项目根** = `resolveLedgerRoot(dirname(<batchDoc>), boundary)?.root`（§6.1 口径 2 同一子表达式）——
+ *  **不用会话锚**：会话锚为多根工作区时可能收到别的项目根 ⇒ 选行零命中 ⇒ 唯一的机器写静默失效。
+ *  `boundary` = 上溯上界 = **会话锚**（设计档 §3.8「界（单源）」——台账面同一枚界；缺则落进程 cwd）。
  *  无根 ⇒ 传 `null`（核心不取行、不重锚，`failed` 点名——不落兜底基准）。
  *  `batch` = 项目根相对路径（复启句的 `<批名>` 即其文件部分；绝对路径同样可解析，但句内会带整条绝对路径）。
  *  失败**不抛**（台账忙 ∥ 无根均不否决收口——档面写与台账库分属两存储，不做分布式事务）。 */
-async function reanchorOnClose(abs) {
+async function reanchorOnClose(abs, boundary) {
   try {
     const { ledgerReanchorBatch, resolveLedgerRoot } = await import("../ledger.mjs") // 动态 import：ledger-db 静态引 node:sqlite（W8 契约②）
-    const root = resolveLedgerRoot(dirname(abs))?.root ?? null
+    const root = resolveLedgerRoot(dirname(abs), boundary)?.root ?? null
     // 句内路径统一正斜杠（与 `task_book` 列值同形——`<批名>` 是给人读的事实句，不是平台路径）
-    return ledgerReanchorBatch({ cwd: root, batch: root ? relative(root, abs).replace(/\\/g, "/") : abs })
+    return ledgerReanchorBatch({ cwd: root, batch: root ? relative(root, abs).replace(/\\/g, "/") : abs, boundary })
   } catch (e) {
     // 非预期异常（模块加载失败 ∥ 根推导内读声明抛）同样不得否决收口——降为同一返回形（台账零写）
     return { batch: abs, reanchored: [], alreadyAnchored: [], failed: String(e?.message ?? e) }

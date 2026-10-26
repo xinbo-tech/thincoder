@@ -10,9 +10,10 @@
  * 接线：族出口 = `ledger.mjs`（re-export——消费面 agent/family-tools.mjs；旧读二装配面已清零）；
  * 消费侧一律动态 import（`ledger-db.mjs` 静态 import node:sqlite ⇒ W8 契约②）。
  */
-import { isAbsolute, dirname, join } from "node:path"
+import { existsSync } from "node:fs"
+import { isAbsolute, dirname, join, resolve } from "node:path"
 import { ledgerAdd, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerQuery, ledgerUpdate, ledgerUpdateBatch } from "./ledger-cmd.mjs"
-import { resolveLedgerRoot } from "./ledger-db.mjs"
+import { noRootMessage, resolveLedgerRoot } from "./ledger-db.mjs"
 import { DESC } from "./tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/ledger.md（DESC 单解析面）
 
 /** 指针值 → 文件路径（剥 `§N` 段号；空值跳过）。 */
@@ -22,6 +23,12 @@ const ptrPath = (v) => {
   return p || null
 }
 
+/** 会话锚供值面（**单源**——`cwdOf` 的缺省起点与上溯上界（`boundary`）同一表达式）：
+ *  `ctx.agent.cwd` > `ctx.cwd` > 进程 cwd。界 = 会话锚（设计档 §3.8「界（单源）· 两面两界」）——
+ *  工具面传给 `resolveLedgerRoot` / `openLedger` 的上界恒取本值，不取 `process.cwd()`（desktop / VSC
+ *  宿主下两者不同：会话锚才是「不能跑到工作目录以外去」的那道界）。 */
+const anchorOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+
 /** 工具 cwd 供值面：**起点 = 动作目标路径**（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:72`
  *  「参数按用点解析——动作作用于哪个项目的路径，就取那个项目的档」）。
  *  指针（`task_book` ∥ `req_doc` ∥ `batch`）在场 ⇒ 取该文件所在目录为起点（文件 = 其所在目录）；
@@ -30,10 +37,23 @@ const cwdOf = (ctx, ...ptrs) => {
   for (const raw of ptrs) {
     const p = ptrPath(raw)
     if (!p) continue
-    const anchor = ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
-    return dirname(isAbsolute(p) ? p : join(anchor, p))
+    return dirname(isAbsolute(p) ? p : join(anchorOf(ctx), p))
   }
-  return ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+  return anchorOf(ctx)
+}
+
+/** 起点归一（**单源**——显式 `cwd` 与指针同基底）：显式 `cwd` 在场 ⇒ 相对路径按**会话锚**解析、
+ *  绝对路径照用；不在场 ⇒ 按指针 / 会话锚推导（`cwdOf`）。两径同一基底，避免「界 = 会话锚、起点按进程 cwd」
+ *  的自相矛盾（锚 ≠ 进程目录的宿主下，相对 `cwd` 否则恒落界外 ⇒ 一律报无根）。 */
+const startOf = (ctx, anchor, explicit, ...ptrs) => (explicit != null ? resolve(anchor, explicit) : cwdOf(ctx, ...ptrs))
+
+/** 起点推导无根 ⇒ 抛（设计档 §3.8「无根契约」· **工具面**：空集与「记到别的项目」在回执上无法区分——
+ *  静默空集不成立）。判据 = 同一单源 `resolveLedgerRoot`（无第二套上溯）；目录不存在不在此判
+ *  （交 `openLedger` 的既有文案——两判据不混）。展示面（`buildScan` ∥ 族发现）不经本函数：
+ *  无根 ⇒ `ledger: null` + 零行，不抛。`boundary` = 会话锚（界与 `openLedger` 同一枚）。 */
+function assertLedgerStart(start, boundary) {
+  if (!existsSync(start)) return
+  if (!resolveLedgerRoot(start, boundary)) throw new Error(noRootMessage(start, boundary))
 }
 
 // ── 工具层参数守卫（设计档 §3.2 · 2026-09-27 快车道修复 · Gitee #IKIQGK / 台账 #472） ──
@@ -116,7 +136,7 @@ const FULL_ACTIONS = ["add", "update", "close", "query", "count"]
 const READ_ACTIONS = ["query", "count"]
 
 /** cwd 参数描述（五前身声明同文——文本单点）。 */
-const CWD_DESC = "本次动作的目标路径——项目根由它推导：沿祖先链最近的项目目录（带 PROJECT-MANIFEST.json 或已有台账库）；容器目录下收敛到子项目。台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前工作目录解析；查/写别的项目请给绝对路径。缺省 = 当前会话锚"
+const CWD_DESC = "本次动作的目标路径——项目根由它推导：沿祖先链取最近的项目目录（带 PROJECT-MANIFEST.json 的那一层；库在盘不算项目）。多根工作区 / 无项目目录 ⇒ 报明并给候选，不向下取子项目当根。台账按项目根关联存储于用户数据目录（工作树外、不进 git）。相对路径按当前会话锚解析；项目根按上溯界取——界外不挂项目。缺省 = 当前会话锚"
 
 /** 各 action 声明条目（= 前身旧工具 `parameters` 逐字；伪工具对象守卫 + 弃用壳共用单源）。
  *  `parameters` 内的键 = 交模型 / provider 的那一份声明；**组判据两键（`oneOfRequired` / `whenPresent`）
@@ -266,16 +286,18 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
       const spec = ACTION_SPECS[action]
       const rest = assertToolArgs({ name: `ledger(${action})`, ...spec }, rest0)
       // ④ 路由既有核函数（包装细节携自原工具 execute 逐字保留：cwd 缺省 / JSON 缩进 / getSessionId 动态 import）
+      // 界 = 会话锚（`anchorOf` 单源）——逐 action 传 `boundary`：`openLedger` / `resolveLedgerRoot` 的上溯上界
+      const anchor = anchorOf(ctx)
       switch (action) {
         case "add": {
           const { cwd, ...row } = rest
-          const target = cwd ?? cwdOf(ctx, row.task_book, row.req_doc)
-          const id = ledgerAdd({ cwd: target, row })
+          const target = startOf(ctx, anchor, cwd, row.task_book, row.req_doc)
+          const id = ledgerAdd({ cwd: target, row, boundary: anchor })
           return JSON.stringify({ id, status: "待讨论" })
         }
         case "update": {
           const { cwd, id, batch, ...patch } = rest
-          const target = cwd ?? cwdOf(ctx, batch, patch.task_book, patch.req_doc)
+          const target = startOf(ctx, anchor, cwd, batch, patch.task_book, patch.req_doc)
           let executorSessionId
           if (patch.executor == null) {
             // 显式 `null` ≡ 略去（§3.1 `null` 口径 · #474——与缺省同分支）；动态 import——零新静态边（K-LX1）
@@ -283,20 +305,24 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
             executorSessionId = getSessionId()
           }
           // 批级批量（§3.3）——`batch` 与 `id` 恰携其一（守卫 P7 已先裁）
-          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId }) })
-          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId }) })
+          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId, boundary: anchor }) })
+          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId, boundary: anchor }) })
         }
         case "close": {
-          const target = rest.cwd ?? cwdOf(ctx, rest.batch, rest.task_book)
+          const target = startOf(ctx, anchor, rest.cwd, rest.batch, rest.task_book)
           // 批级批量结算（§3.3——勾销径）
-          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }) })
-          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace }) })
+          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor }) })
+          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor }) })
         }
-        case "query":
-          return JSON.stringify(ledgerQuery({ cwd: rest.cwd ?? cwdOf(ctx, rest.task_book), status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
+        case "query": {
+          const target = startOf(ctx, anchor, rest.cwd, rest.task_book)
+          assertLedgerStart(target, anchor)
+          return JSON.stringify(ledgerQuery({ cwd: target, boundary: anchor, status: rest.status, kind: rest.kind, board: rest.board, trigger: rest.trigger, task_book: rest.task_book }), null, 2)
+        }
         case "count": {
-          const target = rest.cwd ?? cwdOf(ctx, rest.task_book)
-          return JSON.stringify({ ...ledgerCount({ cwd: target, task_book: rest.task_book }) })
+          const target = startOf(ctx, anchor, rest.cwd, rest.task_book)
+          assertLedgerStart(target, anchor)
+          return JSON.stringify({ ...ledgerCount({ cwd: target, boundary: anchor, task_book: rest.task_book }) })
         }
         default:
           // 不可达（② 枚举守门已先拒）——fail-loud 兜底（防未来变体增量 drift）

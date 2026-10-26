@@ -1,13 +1,15 @@
 /**
  * design-slots.mjs — design-token 槽位清点 + 消费核（2026-10-07 批 ledger-tool · 台账 #927 并入）。
- * 设计单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §9（F-SL1 清点面 / F-SL2 批量消费）。
+ * 设计单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §9（F-SL1 清点面 / F-SL2 批量消费）∥
+ * §10（批归属派生 · 收口反查并集——`batchAbsPath` / `batchPathKey` / `unionBatches` 三面）。
  *
  * 面一 `executeDesignSlotsAction`（`subagent` action `design-slots`——只读）：
  *   数据源 = 槽文件权威表（`readEngTokensFromSlot`——无 TTL 过滤原样）∪ 内存 Map（并集去重，
  *   冲突以槽为准——D-S3 同源）；**零写**（不 reconcile 回写、不落盘）。列表面 = 逐槽一行
  *   （designId ∥ live/expired ∥ ageDays ∥ expiresAt ∥ 批 ∥ designToken（末位，恒携）；龄序 = 最老在前）
- *   + 计数尾行；「批」= `_advisorRuns` 按 designId 命中 run 的 `docSetKey` 中 `batches/` 段档取 basename
- *   （KD-SL2——零新存储；不可得 ⇒ `—`）。
+ *   + 计数尾行；「批」= 批次归属旁列（§10——settle 时按 `docSetKey` 的 `batches/` 段档落盘的绝对路径）
+ *   取 basename，旁列缺失 ⇒ `_advisorRuns` 按 designId 命中 run 的 `docSetKey` 中 `batches/` 段档兜底
+ *   （KD-SL2）；两者皆不可得 ⇒ `—`。
  *   `designId` 过滤单槽（trim 精确匹配；空串视同缺省；未知 ⇒ 拒 + 列在场 id）；缺省 = 现行清点面逐字零变；零写同前。
  * 面二 `executeConsumeDesignAction`（`subagent` action `consume-design` 消费核——自
  *   `subagent-spawn.mjs` 迁入）：选择器恰一（`designId` ∥ `designIds` ∥ `expired` ∥
@@ -19,15 +21,19 @@
  * 签发链行为零改（mint / settle / TTL / persist 存储形——#868 面另论）；工程模式父侧（depth-0）限定
  * （门 = 本档两执行器；depth 面由装配与受限变体门承载）。
  */
-import { persistEngTokens, readEngTokensFromSlot, reconcileEngTokensFromSlot, removeDesignTokenSlot, tokenExpired, tokenExpiryMs } from "../token-ttl.mjs"
+import { resolve } from "node:path"
+
+import { persistEngTokens, readEngTokensFromSlot, readEngTokenBatchesFromSlot, reconcileEngTokensFromSlot, removeDesignTokenSlot, tokenExpired, tokenExpiryMs } from "../token-ttl.mjs"
+// 本档 ⇄ `design-token.mjs` 为**静态环**（批归属派生 ⇄ TTL 读取）：两侧绑定只在函数体内运行时使用，
+// 任一侧**顶层**不得调用对方绑定（函数声明已提升，但 const 会落 TDZ）——与 token-ttl ⇄ session 同构。
 import { effectiveTokenTtlMs } from "./design-token.mjs"
 import { advisorRuns } from "./advisor-async.mjs"
 
 const DAY_MS = 86400000
 
 /** 槽并集视图（F-SL1 数据源 / F-SL2 目标集解析）：内存 Map 先行、槽文件权威表覆盖（同 id 冲突以槽
- *  为准——D-S3 同源）；纯读——零回写、零落盘。 */
-function unionSlots(agent) {
+ *  为准——D-S3 同源）；纯读——零回写、零落盘。收口自动消费（§10）同源取用（消费计数的前态集）。 */
+export function unionSlots(agent) {
   const merged = new Map()
   const mem = agent?._engDesignTokens
   if (mem instanceof Map) for (const [id, t] of mem) merged.set(id, t)
@@ -36,10 +42,25 @@ function unionSlots(agent) {
   return merged
 }
 
-/** 「批」列派生（KD-SL2——零新存储）：会话内评审实例注册表 `_advisorRuns` 按 designId 命中的**最新**
- *  run ⇒ `docSetKey`（被审文档绝对路径集 JSON）中 `batches/` 段档取 basename；不可得（跨重启 /
+/** 批次归属并集视图（§10 收口反查单源）：内存 Map 先行、槽文件旁列覆盖（同 `unionSlots` 形——
+ *  槽 = 权威，D-S3 同源）；纯读。返回 designId → 批档绝对路径；`strict` 透传读形（§10「读形」）——清点面缺省宽容（读不到 ⇒ 空集），收口面 `{strict:true}` ⇒ 读不到即抛（close 被拒）。 */
+export function unionBatches(agent, { strict = false } = {}) {
+  const merged = new Map()
+  const mem = agent?._engDesignTokenBatches
+  if (mem instanceof Map) for (const [id, b] of mem) merged.set(id, b)
+  const file = readEngTokenBatchesFromSlot(agent, { strict })
+  if (file) for (const [id, b] of Object.entries(file)) merged.set(id, b)
+  return merged
+}
+
+/** 「批」列派生（KD-SL2）：批次归属旁列（§10）优先——取该绝对路径文件的 basename；旁列缺失
+ *  （旁列启用前签发的旧槽）⇒ 会话内评审实例注册表 `_advisorRuns` 按 designId 命中的**最新** run
+ *  ⇒ `docSetKey`（被审文档绝对路径集 JSON）中 `batches/` 段档取 basename；皆不可得（跨重启 /
  *  模式重进 / 注册表回收）⇒ `—`（如实降级）。 */
-function batchOf(agent, designId) {
+function batchOf(agent, designId, batches) {
+  const fromSide = batches instanceof Map ? batches.get(designId) : undefined
+  const sideName = typeof fromSide === "string" ? basenameOfPath(fromSide) : null
+  if (sideName) return sideName
   const runs = advisorRuns(agent)
   if (!(runs instanceof Map)) return "—"
   for (const run of [...runs.values()].reverse()) {
@@ -48,6 +69,12 @@ function batchOf(agent, designId) {
     if (name) return name
   }
   return "—"
+}
+
+/** 绝对路径 → 末段名（分隔符无关：`/` 与 `\` 都切——旁列值可来自任一端写法）；空串 ⇒ null。 */
+function basenameOfPath(p) {
+  const parts = String(p).split(/[\\/]/).filter(Boolean)
+  return parts.length ? parts[parts.length - 1] : null
 }
 
 /** docSetKey（JSON 串）→ `batches/` 段档 basename（首命中）；不可解析 / 无命中 ⇒ null。 */
@@ -64,17 +91,49 @@ function batchBasename(docSetKey) {
   return null
 }
 
+/** docSetKey（JSON 串）→ `batches/` 段档的**绝对路径**（与 `batchBasename` 同一 `lastIndexOf("batches")`
+ *  判据）；不可解析 / 无命中 ⇒ null。settle 时刻的批归属派生单源（§10「批次标识的来源」——
+ *  零新输入：判据与清点面同源）。`resolve` = 归一（分隔符 ∥ `.`/`..`）；落盘值即此形。
+ *  **归属不唯一 ⇒ 不猜**：文档集里出现**多份不同的**批档（收口消费以批为键，猜错 = 消费别批的
+ *  授权）⇒ 返回 null（归属 = 无，与「不含批档」同一降级层——§10 同段「比留下一个可解释的
+ *  滞留槽更坏」的排序）。同一档的两种写法（分隔符 / 大小写）去重，不算两份。 */
+export function batchAbsPath(docSetKey) {
+  if (typeof docSetKey !== "string") return null
+  let list = null
+  try { list = JSON.parse(docSetKey) } catch { return null }
+  if (!Array.isArray(list)) return null
+  const hits = []
+  for (const p of list) {
+    if (typeof p !== "string") continue
+    const parts = p.split(/[\\/]/)
+    const i = parts.lastIndexOf("batches")
+    if (i < 0 || i >= parts.length - 1 || !parts[i + 1]) continue
+    const abs = resolve(p)
+    if (!hits.some((h) => batchPathKey(h) === batchPathKey(abs))) hits.push(abs)
+  }
+  return hits.length === 1 ? hits[0] : null
+}
+
+/** 批档身份键（§10「匹配」）：两侧（旁列值 ∥ 收口目标 `abs`）都是 `node:path` 解析后的绝对路径；
+ *  比较前分隔符归一、`win32` 下不区分大小写（宿主事实）。出处：`docSetKey` 的 `normAbs` 对绝对
+ *  输入原样保留、不归一分隔符，而 `documents` 同时受理项目根相对形与绝对形 ⇒ 同一批档在
+ *  `docSetKey` 里可带正斜杠或反斜杠。 */
+export function batchPathKey(p) {
+  const s = resolve(String(p)).replace(/[\\/]+/g, "/")
+  return process.platform === "win32" ? s.toLowerCase() : s
+}
+
 /** 槽事实（清点列与选择器共用）：状态 = `tokenExpired` 单源；`ageDays` = now − (expiresAt −
  *  `effectiveTokenTtlMs`) 派生（TTL 配置曾改时为近似——如实注）；`expiresAt` 精确；畸形 / 格式外
  *  token ⇒ 两项 `—`（不可判龄）。 */
-function slotFacts(agent, designId, token, now, ttlMs) {
+function slotFacts(agent, designId, token, now, ttlMs, batches) {
   const expiry = typeof token === "string" ? tokenExpiryMs(token) : null
   return {
     designId, token,
     expired: typeof token === "string" && tokenExpired(token, now),
     ageDays: expiry === null ? null : (now - (expiry - ttlMs)) / DAY_MS,
     expiresAt: expiry,
-    batch: batchOf(agent, designId),
+    batch: batchOf(agent, designId, batches),
   }
 }
 
@@ -95,7 +154,8 @@ export function executeDesignSlotsAction(args, ctx) {
   }
   const now = Date.now()
   const ttlMs = effectiveTokenTtlMs(parent)
-  const entries = [...unionSlots(parent)].map(([id, t]) => slotFacts(parent, id, t, now, ttlMs))
+  const batches = unionBatches(parent) // 一次读入（逐行各读一次 = N 次文件解析）
+  const entries = [...unionSlots(parent)].map(([id, t]) => slotFacts(parent, id, t, now, ttlMs, batches))
   entries.sort(byOldest)
   // 参数面（fail-closed——不猜）：`designId` trim 后精确匹配、空串视同缺省；未知 ⇒ 拒 + 列在场 id。
   const rawId = args?.designId

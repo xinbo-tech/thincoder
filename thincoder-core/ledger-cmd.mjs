@@ -40,9 +40,9 @@ function isRowAged(row, now) {
  *  `batch` 同形同口径）。 */
 const filePartOf = (v) => (v == null ? "" : String(v).split("§")[0].trim())
 
-/** 解析基准（设计档 §6.1 口径 2 同一子表达式——与台账库键同源）：`resolveLedgerRoot(cwd)?.root
- *  ?? resolve(cwd ?? ".")`。 */
-const baseOf = (cwd) => resolveLedgerRoot(cwd)?.root ?? resolve(cwd ?? ".")
+/** 解析基准（设计档 §6.1 口径 2 同一子表达式——与台账库键同源）：`resolveLedgerRoot(cwd, boundary)?.root
+ *  ?? resolve(cwd ?? ".")`。`boundary` = 会话锚（与 `openLedger` 同一枚上界——同一笔动作的判据不能两界）。 */
+const baseOf = (cwd, boundary) => resolveLedgerRoot(cwd, boundary)?.root ?? resolve(cwd ?? ".")
 
 /** `evidence` 超限读数（设计档 §5 P4——**读数非闸门**）：缺 / 空 ⇒ false；`query` 逐行携（含归档行——
  *  行值事实）；`count` 的统计集 = 未决四态（§7.1）。 */
@@ -92,8 +92,8 @@ export function overdueOf(row, { now = Date.now(), base = process.cwd() } = {}) 
  *  （§3.7 出口态字串 ∥ null——机判单源 `overdueOf`）；`task_book` = 第 5 枚等值过滤（**原值等值**——列串直比，与 §3.3 选行的
  *  「文件部分解析同址」两径口径不同、各自单源）；`trigger` 过滤仅三枚举等值（`NULL` 不过滤）；
  *  `now` = 注入缝（确定性用例）。 */
-export function ledgerQuery({ cwd, status = null, kind = null, board = null, trigger = null, task_book = null, now = Date.now() } = {}) {
-  const db = openLedger(cwd, { readOnly: true })
+export function ledgerQuery({ cwd, boundary, status = null, kind = null, board = null, trigger = null, task_book = null, now = Date.now() } = {}) {
+  const db = openLedger(cwd, { readOnly: true, boundary })
   if (!db) return []
   try {
     const where = [], args = []
@@ -103,7 +103,7 @@ export function ledgerQuery({ cwd, status = null, kind = null, board = null, tri
     if (trigger) { where.push("trigger = ?"); args.push(trigger) }
     if (task_book) { where.push("task_book = ?"); args.push(task_book) }
     const rows = db.prepare(`SELECT * FROM items${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`).all(...args)
-    const base = baseOf(cwd)
+    const base = baseOf(cwd, boundary)
     return rows.map((r) => ({ ...r, aged: isRowAged(r, now), evidenceOversize: isEvidenceOversize(r), taskBookOnDisk: pointerOnDisk(r, base), overdue: overdueOf(r, { now, base }) }))
   } finally { db.close() }
 }
@@ -113,14 +113,14 @@ export function ledgerQuery({ cwd, status = null, kind = null, board = null, tri
  *  机判单源）；`evidenceOversize` = 其中 `evidence` 超限行数（§5）。**一次 SELECT + 逐行判**——
  *  `evidenceOversize` 与 `overdue` 同一次遍历（零额外 IO；成本模型 = §7.2）；不设缓存（读数须反映
  *  即时盘面）。库不在 = 三零。 */
-export function ledgerCount({ cwd, task_book = null } = {}) {
-  const db = openLedger(cwd, { readOnly: true })
+export function ledgerCount({ cwd, boundary, task_book = null } = {}) {
+  const db = openLedger(cwd, { readOnly: true, boundary })
   if (!db) return { count: 0, overdue: 0, evidenceOversize: 0 }
   try {
     const where = [`status IN (${PENDING_STATUSES.map(() => "?").join(",")})`], args = [...PENDING_STATUSES]
     if (task_book) { where.push("task_book = ?"); args.push(task_book) }
     const rows = db.prepare(`SELECT * FROM items WHERE ${where.join(" AND ")}`).all(...args)
-    const now = Date.now(), base = baseOf(cwd)
+    const now = Date.now(), base = baseOf(cwd, boundary)
     let overdue = 0, oversize = 0
     for (const r of rows) {
       if (overdueOf(r, { now, base }) !== null) overdue++
@@ -132,8 +132,8 @@ export function ledgerCount({ cwd, task_book = null } = {}) {
 
 /** `evidence` 超限行数（设计档 §7.1 导出面——`count` 回报读数**同一单源**：本函数为其薄委托，
  *  不另立第二判定面）。 */
-export function ledgerEvidenceOversize({ cwd, task_book = null } = {}) {
-  return ledgerCount({ cwd, task_book }).evidenceOversize
+export function ledgerEvidenceOversize({ cwd, boundary, task_book = null } = {}) {
+  return ledgerCount({ cwd, boundary, task_book }).evidenceOversize
 }
 
 /** 本笔指名谓词（设计档 §6.1 口径 3）：显式空值（`null` / 空串 / 全空白） ≡ **未指名**——臂② 不触。 */
@@ -149,7 +149,7 @@ const namesPointer = (v) => v != null && String(v).trim() !== ""
  *  判位 = 与迁移表判同层（落盘前）；文案前缀 = 调用函数名；基准 = §6.1 口径 2（根推导单源同子表达式）。
  *  @param {{status:string, trigger:string|null, taskBook:string|null, wroteTaskBook:boolean, wroteBatchTrigger:boolean}} face 本笔写入面
  */
-function assertTaskBookGate(cwd, fnName, face) {
+function assertTaskBookGate(cwd, fnName, face, boundary) {
   const { status, trigger, taskBook, wroteTaskBook, wroteBatchTrigger } = face
   if ((status === "在途" || status === "待核销" || trigger === "归批") && !namesPointer(taskBook)) {
     throw new Error(`${fnName}：task_book 必填（在途 / 待核销 / 归批 须携任务书指针）`)
@@ -157,14 +157,14 @@ function assertTaskBookGate(cwd, fnName, face) {
   if (!wroteTaskBook && !wroteBatchTrigger) return // 臂② 之外零判：旧指针所指档已清不阻任何此类写入
   const part = filePartOf(taskBook)
   if (!part) throw new Error(`${fnName}：task_book 不可解析（缺文件部分）：${taskBook}`)
-  const base = baseOf(cwd) // §6.1 口径 2 同一子表达式（单源 = 本档 `baseOf`）
+  const base = baseOf(cwd, boundary) // §6.1 口径 2 同一子表达式（单源 = 本档 `baseOf`）
   const { ok, abs } = resolveDeclaredRef(base, part)
   if (!ok) throw new Error(`${fnName}：task_book 指向的档不存在：${taskBook}（解析 = ${abs}）`)
 }
 
 /** 新增（写命令，仅主 agent）：INSERT——入待讨论（六态状态机入口）。`row.resume_when` 可空（§3.4）。 */
-export function ledgerAdd({ cwd, row }) {
-  const db = openLedger(cwd, { create: true })
+export function ledgerAdd({ cwd, row, boundary }) {
+  const db = openLedger(cwd, { create: true, boundary })
   try {
     // 结果行状态 = INSERT 硬编码「待讨论」⇒ 臂① 的 `status` 半幅当下不触；`trigger=归批` 半幅与臂② 照判
     assertTaskBookGate(cwd, "ledgerAdd", {
@@ -173,7 +173,7 @@ export function ledgerAdd({ cwd, row }) {
       taskBook: row.task_book ?? null,
       wroteTaskBook: namesPointer(row.task_book),
       wroteBatchTrigger: row.trigger === "归批",
-    })
+    }, boundary)
     const now = nowIso()
     const r = db.prepare(`INSERT INTO items (kind, status, title, board, req_doc, task_book, evidence, trigger, resume_when, created_at, updated_at) VALUES (?, '待讨论', ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(row.kind, row.title, row.board ?? null, row.req_doc ?? null, row.task_book ?? null, row.evidence ?? null, row.trigger ?? null, row.resume_when ?? null, now, now)
@@ -218,7 +218,7 @@ function assertEvidenceValue(fnName, evidence) {
  *  （含两拒面）→ 写门 → UPDATE（判序 = §13.9 逐字未变）。`to` = `patch.status ?? 行现态`
  *  ——批量形纯字段补丁（不携 `status`）时 `to === row.status` ⇒ 迁移表不判、`status` 零写（§3.3）。
  *  `resume_when` = 普通可空字段补丁（`patch.resume_when ?? 行值`——§3.4）。 */
-function applyRowUpdate(db, cwd, row, patch, executorSessionId) {
+function applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary) {
   const to = patch.status ?? row.status
   if (to !== row.status && !(ALLOWED_MIGRATIONS[row.status] ?? []).includes(to)) {
     throw new Error(`ledgerUpdate：迁移 ${row.status} → ${to} 不在允许迁移表`)
@@ -237,7 +237,7 @@ function applyRowUpdate(db, cwd, row, patch, executorSessionId) {
     taskBook: nextTaskBook,
     wroteTaskBook: namesPointer(patch.task_book),
     wroteBatchTrigger: patch.trigger === "归批",
-  }) // → 写门 → UPDATE
+  }, boundary) // → 写门 → UPDATE
   const now = nowIso()
   db.prepare(`UPDATE items SET status = ?, title = ?, board = ?, req_doc = ?, task_book = ?, evidence = ?, trigger = ?, resume_when = ?, executor = ?, updated_at = ? WHERE id = ?`)
     .run(to, patch.title ?? row.title, patch.board ?? row.board, patch.req_doc ?? row.req_doc, nextTaskBook, nextEvidence, patch.trigger ?? row.trigger, patch.resume_when ?? row.resume_when, nextExecutor, now, row.id)
@@ -249,12 +249,12 @@ function applyRowUpdate(db, cwd, row, patch, executorSessionId) {
  *  纯函数可测；工具层动态 import getSessionId() 供值，零新静态边）。
  *  `evidence` 传值 = 追加缺省、`patch.evidenceReplace` = 布尔覆盖旗（§13.9——值计算 / 两拒面 = `evidenceValue`
  *  / `assertEvidenceValue`；判位 = 本语义段，随 executor 目标值同拍）。**单行形**（`id`）——逐行落笔 = `applyRowUpdate`。 */
-export function ledgerUpdate({ cwd, id, patch, executorSessionId }) {
-  const db = openLedger(cwd, { create: true })
+export function ledgerUpdate({ cwd, id, patch, executorSessionId, boundary }) {
+  const db = openLedger(cwd, { create: true, boundary })
   try {
     const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
     if (!row) throw new Error(`ledgerUpdate：行 ${id} 不存在`)
-    const { id: rowId } = applyRowUpdate(db, cwd, row, patch, executorSessionId)
+    const { id: rowId } = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary)
     return { id: rowId }
   } finally { db.close() }
 }
@@ -286,9 +286,9 @@ function applyRowClose(db, row, status, evidence, evidenceReplace) {
  *  判序（同函数体同层，§13.9）：目标集判 → 行取 → 源态判 → 值计算 → 追认门（原样——判**结果值**缺 /
  *  全空白 ⇒ 拒，文案逐字不变）→ 拒面②（新值空白）→ UPDATE（LEDGER.md §3 收口两源）。**单行形**
  *  （`id`）——逐行落笔 = `applyRowClose`。 */
-export function ledgerClose({ cwd, id, status, evidence, evidenceReplace }) {
+export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, boundary }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
-  const db = openLedger(cwd, { create: true })
+  const db = openLedger(cwd, { create: true, boundary })
   try {
     db.exec("BEGIN")
     try {
@@ -330,16 +330,16 @@ function resolveBatchRows(db, base, abs) {
  *  并抛（零行改）——故「部分落地」只由逐行门拒产生，「中途失败」不留半批。
  *  `BEGIN IMMEDIATE`：写锁一次先把（逐行不升级锁 ⇒ 事务级失败在首行之前即失败）。
  *  @returns {{batch: string, status: string|null, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
-export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId }) {
-  const db = openLedger(cwd, { create: true })
+export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, boundary }) {
+  const db = openLedger(cwd, { create: true, boundary })
   try {
-    const base = baseOf(cwd)
+    const base = baseOf(cwd, boundary)
     const abs = assertBatchArg("ledgerUpdate", base, batch)
     db.exec("BEGIN IMMEDIATE")
     try {
       const applied = [], skipped = []
       for (const row of resolveBatchRows(db, base, abs)) {
-        try { applied.push(applyRowUpdate(db, cwd, row, patch, executorSessionId).id) }
+        try { applied.push(applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary).id) }
         catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")
@@ -355,11 +355,11 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId })
  *  （`evidenceValue` 同源）。回执 `status` 恒 `已核销`（批量形缺省 = 勾销单值；携则守卫已收窄为
  *  `{已核销}`——§3.2 `whenPresent`）。事务语义同 `ledgerUpdateBatch`。
  *  @returns {{batch: string, status: string, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
-export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace }) {
+export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, boundary }) {
   const status = "已核销"
-  const db = openLedger(cwd, { create: true })
+  const db = openLedger(cwd, { create: true, boundary })
   try {
-    const base = baseOf(cwd)
+    const base = baseOf(cwd, boundary)
     const abs = assertBatchArg("ledgerClose", base, batch)
     db.exec("BEGIN IMMEDIATE")
     try {
@@ -387,13 +387,14 @@ const REANCHOR_STATUSES = ["待讨论", "待设计", "在途"]
 
 /** 本批行集（只读，任意状态——设计档 §7.1）：批身份单源 = `resolveBatchRows` 解析同址（零二写）；
  *  逐行携读数 `taskBookOnDisk`（不入库、不入 `DATA_COLUMNS`）。`batch` 不可解析 ∥ 无根 ⇒ 抛（同族
- *  `assertBatchArg` 形）；库不在 ⇒ 空集。`cwd` 口径 = 批档所属项目根（§6.2 `cwd` 基准——不用会话锚）。 */
-export function ledgerBatchRows({ cwd, batch } = {}) {
-  const derived = cwd == null ? null : resolveLedgerRoot(cwd)
+ *  `assertBatchArg` 形）；库不在 ⇒ 空集。`cwd` 口径 = 批档所属项目根（§6.2 `cwd` 基准——不用会话锚）；
+ *  `boundary` = 上溯上界（会话锚——与工具面同一枚界；缺省 = 进程 cwd）。 */
+export function ledgerBatchRows({ cwd, batch, boundary } = {}) {
+  const derived = cwd == null ? null : resolveLedgerRoot(cwd, boundary)
   if (!derived) throw new Error(`ledgerBatchRows：批档所属项目根不可推导（${cwd ?? "（缺 cwd）"}）`)
   const base = derived.root
   const abs = assertBatchArg("ledgerBatchRows", base, batch) // 失败语义先于「库不在 ⇒ 空集」（不可解析就是不可解析）
-  const db = openLedger(base, { readOnly: true })
+  const db = openLedger(base, { readOnly: true, boundary })
   if (!db) return []
   try {
     return resolveBatchRows(db, base, abs).map((r) => ({ ...r, taskBookOnDisk: pointerOnDisk(r, base) }))
@@ -406,14 +407,15 @@ export function ledgerBatchRows({ cwd, batch } = {}) {
  *  复句追加 `evidence`。单事务：任一步失败 ⇒ 整集 `ROLLBACK`（零行改）。**不抛**——失败经返回形 `failed`
  *  报出（`null` 常态）；`cwd` 无根 ⇒ 不取行、不重锚（**不落兜底基准**——落了就是静默零命中）。
  *  `updated_at` 零触（机器重锚不是人工推进的痕迹——行龄读数照旧）。
+ *  `boundary` = 上溯上界（会话锚——与工具面 / `ledgerBatchRows` 同一枚界；缺省 = 进程 cwd）。
  *  @returns {{batch:string, reanchored:{id:number,status:string,title:string,sentenceTo:"resume_when"|"evidence"}[], alreadyAnchored:{id:number,status:string,title:string}[], failed:string|null}} */
-export function ledgerReanchorBatch({ cwd, batch } = {}) {
+export function ledgerReanchorBatch({ cwd, batch, boundary } = {}) {
   const failedResult = (why) => ({ batch, reanchored: [], alreadyAnchored: [], failed: why })
-  const derived = cwd == null ? null : resolveLedgerRoot(cwd)
+  const derived = cwd == null ? null : resolveLedgerRoot(cwd, boundary)
   if (!derived) return failedResult("批档所属项目根不可推导")
   const base = derived.root
   let db
-  try { db = openLedger(base) } catch (e) { return failedResult(String(e?.message ?? e)) } // 库不可开 ⇒ 零写报因
+  try { db = openLedger(base, { boundary }) } catch (e) { return failedResult(String(e?.message ?? e)) } // 库不可开 ⇒ 零写报因
   if (!db) return { batch, reanchored: [], alreadyAnchored: [], failed: null } // 库不在 ⇒ 零行可锚
   try {
     let abs

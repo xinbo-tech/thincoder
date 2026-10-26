@@ -21,13 +21,13 @@
  *  - discoverProjects(cwd) → { kind, root, candidates, matched }：**项目梯**（五级 / git 非前提——KD-M1-23）；
  *    `discoverRepos(cwd)` 同形态 = **仓梯**（`.git` 视图——`git` 工具经它接线，KD-M1-22）。
  *    两梯共一模块私有 walk 内核 `scanChildren`（单源）；`candidates` 按名排序、`matched` 记档位。
- *  - owningProject(target) → 归属形单点（沿祖先链取**最近带档目录**——KD-M1-30）。
+ *  - owningProject(target, boundary) → 归属形单点（沿祖先链取**最近带档目录**；界由调用方定——KD-M1-30）。
  *  - projectView(target) → { state, root, path, manifest?, candidates?, errors?, matched }：**按用点解析**
  *    的读侧单点（归属 ∨ 发现兜底 / 五态 / 非抛错 / **零写**——KD-M1-24）。
- *  - resolveProjectRoot(cwd)：项目根（归属 ∨ 发现——KD-M1-30）= `projectRootView(cwd).root`（薄委托）；
+ *  - resolveProjectRoot(cwd)：项目根（**归属形**——KD-M1-30）= `projectRootView(cwd).root`（薄委托；取值规则见下行）；
  *    projectRootView(cwd) → { state: ok|workspace|none, root, candidates }：项目根直读形（判定单点——§2.2）。
  *  - resolveEngineeringManifest(cwd, { writer, init }) → 入口决策树（**非抛错**——KD-M1-20）：
- *    两端入口钩子与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）——失败码五枚
+ *    两端入口钩子与翻转面（拒翻）共用同一张树（判据单源；§2.8 F1）——态码五枚
  *    `missing` / `invalid` / `no-project` / `workspace` / `init-failed`（KD-M1-28）。名中 `Engineering` = 历史命名（沿用不改名）；消费面 = 两端入口钩子 + 翻转面——**非**「模式拥有本模块」。
  *  - manifestFilePath(cwd) → 数据档绝对路径（档路径单源 KD-M1-18——读 / 写 / mtime 门控三处同源）。
  *  - initManifest(cwd, { writer = 'subagent' } = {}) → 经写门写 DEFAULT_MANIFEST，缺省拒。
@@ -38,7 +38,7 @@
  * N3 可迁移：本模块不硬编码任何本仓路径（docRoot 由被开发项目声明；机检参数不在 manifest 面——住引擎内置常量）。
  */
 import { readFileSync, writeFileSync } from "node:fs"
-import { join, resolve } from "node:path"
+import { join, parse, resolve } from "node:path"
 import { DEFAULT_MANIFEST, isValidDocRootValue, validateManifest, fillDefaults } from "./manifest-schema.mjs"
 import { MANIFEST_REL, discoverProjects, owningProject, resolveProjectRoot } from "./manifest-discovery.mjs"
 // #802（KD-M1-36）：未知键读面告警的事件面——诊断日志（fire-and-forget，失败静默降级）。
@@ -50,10 +50,11 @@ export { DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifes
 
 /**
  * **按用点解析**的读侧单点（KD-M1-24 / M1-30——**非抛错 / 零写 / 无缓存**）：两段合成——
- * · **归属（第一段——§⑥ 归属形）**：`owningProject(target)` 沿祖先链取最近带档目录
- *   （子优于根 / 不跨兄弟 / 无全局优先级）⇒ 读该档 ⇒ `ok` / `invalid`。
- * · **发现兜底（第二段——§⑥ 发现规则，纯向下）**：祖先链无档 ⇒ `discoverProjects(target)` ⇒ 命中
- *   （`self` / `unique`）⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`workspace` ⇒
+ * · **归属（第一段——§⑥ 归属形）**：`owningProject(target, target 所在盘根)` 沿祖先链取最近带档目录
+ *   （子优于根 / 不跨兄弟 / 无全局优先级）⇒ 读该档 ⇒ `ok` / `invalid`。界与 `projectRootView`
+ *   同源（目标所在盘根）——同一 target 两面同归属，非会话锚。
+ * · **发现兜底（第二段——§⑥ 发现规则，纯向下）**：祖先链无档 ⇒ `discoverProjects(target)` ⇒
+ *   `self` ⇒ 读其档（带档 ⇒ `ok` / `invalid`；缺档 ⇒ `missing`）；`workspace` ⇒
  *   `workspace`（+ `candidates`）；`none` ⇒ `no-project`。
  * 写侧（建档）**不在**此函数（归入口决策树——KD-M1-25 / M1-29）⇒ 注入器 / 只读消费面不会变写点。
  * `matched` 契约：归属段命中 ⇒ `'manifest'`；发现段 ⇒ `discoverProjects.matched` 逐字；
@@ -65,7 +66,7 @@ export { DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifes
  */
 export function projectView(target) {
   const anchor = resolve(target ?? ".")
-  const owning = owningProject(anchor)
+  const owning = owningProject(anchor, parse(anchor).root)
   if (owning) return viewAtRoot(owning, "manifest")
   const d = discoverProjects(anchor)
   if (d.kind === "workspace") return { state: "workspace", root: null, path: null, candidates: d.candidates, matched: d.matched }
@@ -180,7 +181,7 @@ export function readManifest(cwd) {
 
 /**
  * 装配钩子入口（模块设计 §2.2）——同 readManifest(cwd)。ok:true 返回补默认值后的 manifest；
- * reason:'missing' 由调用方走**建档流**（**工程模式会话**口径——梯②④⑤ 就地建档，**不拒会话**；
+ * reason:'missing' 由调用方走**建档流**（**工程模式会话**口径——梯②⑤ 就地建档，**不拒会话**；
  * KD-M1-29）；普通会话 = 装配钩子零 manifest I/O（KD-M1-12）。
  */
 export function requireManifest(cwd) {
@@ -205,17 +206,17 @@ export function onManifestInit(fn) {
  *
  * 分支（两分支六出口——§2.8 F1 树）：
  *   档合法         → { ok:true, manifest, created:false }（manifest = 补默认值后的档内容）
- *   缺档 + init    → 梯②④⑤（锚 = 裸仓 / 裸仓命中 / 无项目）⇒ `initManifest(cwd, { writer })`
- *                    （抛错 → `init-failed`）；工作区（锚自身无档 ∧ 下辖 ≥2 项目）⇒
+ *   缺档 + init    → 梯②⑤（锚 = 裸仓 / 无项目）⇒ `initManifest(cwd, { writer })`
+ *                    （抛错 → `init-failed`）；工作区（锚自身无档 ∧ 下辖 ≥1 项目——1 ∥ 更多同判）⇒
  *                    `{ ok:false, code:'workspace', message, candidates }`（**不建 / 不猜**）
  *   缺档 + !init   → 梯⑤（无项目）⇒ `{ ok:false, code:'no-project' }`（KD-M1-28；`init:false` 面）；
- *                    梯②④（裸仓可解析、档缺）⇒ `{ ok:false, code:'missing' }`；工作区 ⇒ 同上
+ *                    梯②（裸仓可解析、档缺）⇒ `{ ok:false, code:'missing' }`；工作区 ⇒ 同上
  *   档非法         → { ok:false, code:'invalid', message, errors }
  *
  * `writer` 由调用点**显式**传（生产调用点全传 `'main'`）：缺省 `'subagent'` 是写门 fail-closed
- * 缺省（KD-M1-3），误用缺省 ⇒「缺档 + 梯②④⑤」退化为 `init-failed`（拒翻——与 §2.8 F2 /
+ * 缺省（KD-M1-3），误用缺省 ⇒「缺档 + 梯②⑤」退化为 `init-failed`（拒翻——与 §2.8 F2 /
  * AC-20② 语义相反；T38 反证格）。
- * 失败码文案分野（KD-M1-28）：无项目 ⇒ 可在锚处落地 / 工作区 ⇒ 报明事实 + 点名项目根；文案族 =
+ * 态码文案分野（KD-M1-28）：无项目 ⇒ 可在锚处落地 / 工作区 ⇒ 报明事实 + 点名项目根；文案族 =
  * 「项目不可解析」（稳定锚句 `/项目不可解析/`）——**仅「档非法」格**（§2.8 F2 拒翻面唯一拒格）。
  * 边界：`readManifest` 的非 ENOENT 读错（权限 / 目录等）由 `projectView` 收为 `invalid`（非抛错
  * 契约——`readManifest` 返回语义零改）；本树只承诺上列六出口。
@@ -236,7 +237,7 @@ export function resolveEngineeringManifest(cwd, { writer = "subagent", init = tr
   if (view.state === "workspace") {
     return { ok: false, code: "workspace", candidates: view.candidates, message: workspaceProjectMessage(cwd, view.candidates) }
   }
-  // 缺档（梯②④⑤）：init ⇒ 就地建档（内容 = DEFAULT_MANIFEST，经写门 writer:'main'）；!init ⇒ 归码。
+  // 缺档（梯②⑤）：init ⇒ 就地建档（内容 = DEFAULT_MANIFEST，经写门 writer:'main'）；!init ⇒ 归码。
   if (!init) return { ok: false, code: view.state === "no-project" ? "no-project" : "missing" }
   try {
     const manifest = initManifest(cwd, { writer })

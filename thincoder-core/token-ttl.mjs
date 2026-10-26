@@ -20,6 +20,9 @@
  * - **D3**：**单值镜像 `_engDesignToken` 退役**——AC3 零写 + 仅一次性迁移读。本模块
  *   不再写镜像（engTokenSlotFields 只产多槽表）；restoreEngTokens 是唯一迁移读点（旧
  *   slot 残留 engDesignToken → 迁入 Map，此后不写不读镜像）。
+ * - **§10（2026-10-26）**：批次归属旁列 `engDesignTokenBatches`（designId → 批档绝对路径）与
+ *   槽多槽表**同点序列化 / 同拍恢复 / 同处落盘**；轻读面 = `readEngTokenBatchesFromSlot`。
+ *   token 值形零改（仍 `<uuid>:<expiryMs>`）——旁列只承载归属，不承载授权。
  *
  * 依赖方向：本模块只 import 底层槽 I/O（session-slots.mjs 原语 + session-guard.mjs 轮转
  * 守卫）——session.mjs 同时 import 本模块（engTokenSlotFields/restoreEngTokens），形成
@@ -108,11 +111,16 @@ export function purgeExpiredDesignTokens(agent) {
  *  （JSON-safe）；空/缺 Map → undefined → JSON.stringify 丢 key——清过的会话写
  *  NO field，不从上次 save 复活槽。
  *  DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：单值镜像 `engDesignToken` 退役——
- *  saveSession 不再写镜像字段（AC3 零写）；只产多槽表 engDesignTokens。 */
+ *  saveSession 不再写镜像字段（AC3 零写）；只产多槽表 engDesignTokens。
+ *  批次归属旁列 `engDesignTokenBatches`（DESIGN-TOKEN-SETTLEMENT §10）同处序列化——
+ *  与槽表并列、同空态语义（空表 ⇒ undefined ⇒ 字段不落盘）；承载归属，不承载恢复。 */
 export function engTokenSlotFields(agent) {
   return {
     engDesignTokens: agent._engDesignTokens instanceof Map && agent._engDesignTokens.size > 0
       ? Object.fromEntries(agent._engDesignTokens)
+      : undefined,
+    engDesignTokenBatches: agent._engDesignTokenBatches instanceof Map && agent._engDesignTokenBatches.size > 0
+      ? Object.fromEntries(agent._engDesignTokenBatches)
       : undefined,
   }
 }
@@ -151,6 +159,16 @@ export function restoreEngTokens(agent, data) {
   }
   if (map.size > 0) agent._engDesignTokens = map
   else delete agent._engDesignTokens
+  // 批次归属旁列同拍读入（§10）：值 = 批档绝对路径，无 TTL 可言（承载归属，不承载授权）。
+  // 槽因过期被丢而旁列行仍在 = 惰性残留：消费面按 id 反查时自然落成 no-op（不猜归属）。
+  const batches = new Map()
+  if (data.engDesignTokenBatches && typeof data.engDesignTokenBatches === "object" && !Array.isArray(data.engDesignTokenBatches)) {
+    for (const [id, b] of Object.entries(data.engDesignTokenBatches)) {
+      if (typeof b === "string" && b) batches.set(id, b)
+    }
+  }
+  if (batches.size > 0) agent._engDesignTokenBatches = batches
+  else delete agent._engDesignTokenBatches
   let droppedDesignTokens = 0
   for (const id of before) if (!map.has(id)) droppedDesignTokens++
   return { droppedDesignTokens }
@@ -159,11 +177,14 @@ export function restoreEngTokens(agent, data) {
 // ── 会话槽权威台账 I/O（DESIGN-TOKEN-SETTLEMENT D1/D2/D3——槽文件 = 权威结算台账） ──
 
 /** 当前会话槽号（读侧——无认领副作用）：粘性 _slot 优先；未钉槽时读 manifest active
- *  （loadManifest 只读——不在门禁路径触发认领写）。无槽 → null。 */
-function currentSlotNoReadOnly(agent) {
+ *  （loadManifest 只读——不在门禁路径触发认领写）。无槽 → null。
+ *  `strict` 透传 manifest 读形（§10「槽号解析层同判」）：缺省宽容（manifest 不可读 ⇒ 无槽号）；
+ *  收口面 `{strict:true}` ⇒ manifest 在盘但读失败 ∥ 解析失败即抛；manifest 不存在 ∥ `active` 缺席
+ *  仍是无槽号（合法缺省——「读到了，说没有」）。 */
+function currentSlotNoReadOnly(agent, { strict = false } = {}) {
   const slot = agent?._slot
   if (Number.isInteger(slot)) return slot
-  const active = loadManifest(agent?.cwd)?.active
+  const active = loadManifest(agent?.cwd, { strict })?.active
   return Number.isInteger(active) ? active : null
 }
 
@@ -183,6 +204,46 @@ export function readEngTokensFromSlot(agent) {
       ? data.engDesignTokens
       : null
   } catch { return null }
+}
+
+/** 读当前会话槽文件的批次归属旁列（DESIGN-TOKEN-SETTLEMENT §10——不做 TTL 过滤、不改盘）。
+ *  与 `readEngTokensFromSlot` 同形同读法（JSON.parse 轻读、零 reconcile 副作用）；两者不能合成
+ *  一个函数——既有读者的字段名硬编码（只返回 `data.engDesignTokens`）⇒ 同形兄弟函数。
+ *  **两形（§10「读形（收口面严格 ∥ 清点面宽容）」）**：`strict:false`（缺省 · 清点面）读不到 ⇒ `null`，
+ *  批列照旧如实降级 `—`（F-SL1）；`strict:true`（收口面）读不到 ⇒ **抛**（close 被拒、档零字节变、可重试）。
+ *  判据 = **「没有」与「读不到」分清**：无槽号 ∥ 文件不存在（`ENOENT`）∥ 无该字段 ⇒ 空集（合法缺省，
+ *  两形同）；其余 I/O 错（`EACCES` ∥ `EISDIR` ∥ `EIO`…）∥ `JSON.parse` 失败 ⇒ 宽容形 `null` / 严格形抛。
+ *  **槽号解析层同判（manifest 层）**：槽号来自 `currentSlotNoReadOnly(agent, { strict })`——`_slot` 未钉时
+ *  读 manifest；strict 形把 manifest 的「读不到」原样抛出（拒因点名 manifest，不被本函数重包成旁列读失败）。
+ *  不用 `existsSync` 兜底——它把权限错也吞成「不存在」，正是收口面必须拒的那一类（「无法判定归属 =
+ *  无法证明清账」；§10「严格读的边界」）。
+ *  返回 {designId: <批档绝对路径>} 对象或 null（无槽/无文件/无该字段；宽容形的不可读亦 `null`）。 */
+export function readEngTokenBatchesFromSlot(agent, { strict = false } = {}) {
+  // 槽号解析在 try 之外：manifest 层的「读不到」自带 manifest 坐标（§10「槽号解析层同判」），
+  // 不在这里被重包成「旁列读不到」——两层拒因各自点名。宽容形此步不抛（不可读 ⇒ 无槽号 ⇒ null）。
+  const slot = currentSlotNoReadOnly(agent, { strict })
+  if (slot == null) return null
+  let p = "(unresolved slot path)"
+  try {
+    p = slotPath(agent.cwd, slot)
+    let raw
+    try {
+      raw = readFileSync(p, "utf8")
+    } catch (e) {
+      if (e?.code === "ENOENT") return null // 「没有」：文件不存在（新会话 / 尚无槽）——合法缺省
+      throw e // 「读不到」：其余 I/O 错交外层按读形处置
+    }
+    const data = JSON.parse(raw)
+    return (data && typeof data === "object" && !Array.isArray(data.engDesignTokenBatches)
+      && data.engDesignTokenBatches && typeof data.engDesignTokenBatches === "object")
+      ? data.engDesignTokenBatches
+      : null
+  } catch (e) {
+    if (strict) {
+      throw new Error(`readEngTokenBatchesFromSlot: the session slot file's batch-attribution side column could NOT be read (${p}: ${e?.message ?? e}) — the closeout consume cannot tell which slots belong to this batch, so the closeout is refused with the record untouched; fix the slot file or its permissions and retry.`)
+    }
+    return null
+  }
 }
 
 /** 内存 miss 时从权威槽 reconcile（D2 spawn 门 + D3 dispatch 写门同源）：把槽文件中
@@ -281,6 +342,9 @@ export function persistEngTokens(agent) {
   const fields = engTokenSlotFields(agent)
   if (fields.engDesignTokens !== undefined) data.engDesignTokens = fields.engDesignTokens
   else delete data.engDesignTokens
+  // 批次归属旁列逐字段复制同处（§10「保存 / 合并路径」第二处）：空表 ⇒ 字段删（不从上次落盘复活）。
+  if (fields.engDesignTokenBatches !== undefined) data.engDesignTokenBatches = fields.engDesignTokenBatches
+  else delete data.engDesignTokenBatches
   // 单值镜像字段永不复写（D3 零写）——残留 engDesignToken 随本次写一并清（更快退役，
   // 杜绝 stale 镜像 + 空 Map 组合在下次 restore 二次迁移复活死 token 的边角）。
   delete data.engDesignToken
