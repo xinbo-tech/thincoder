@@ -54,9 +54,10 @@ Evaluate the design against these dimensions:
     each row names the **interaction between components** each evaluates, the business result each asserts, the project's entry (where a user enters the business — a business-observable point), and the business requirement each traces back to.
     **An integration section that starts from a blank "which scenarios do we need" list, with no RTM read, ⇒ 🔴.**
     A missing row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
-    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that touches neither an interaction between components nor a business-observable result an existing case asserts states so, with its reason, in that section.
-    **Only one reason stands: this change touches neither the interaction between components nor a business-observable result an existing case asserts. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
-    **Why**: no other acceptance run evaluates the interaction between components, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that interaction with no acceptance at all.
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business-observable result an existing case asserts and adds no scenario the product really needs states so, with its reason, in that section.
+    **Only one reason stands: this change alters no business-observable result an existing case asserts and adds no scenario the product really needs. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
+    **A case grows from exactly two entries**: a business scenario the product really needs, or a problem production really produced — crossing components is not an entry.
+    **Why**: no other acceptance run evaluates the business result from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that result with no acceptance at all.
     **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result;
     the integration half is reported in the closeout line, not run here.
     Why: acceptance is what the implementing round runs — a suite there turns the release gate into a round cost, and a repeat run proves nothing new.

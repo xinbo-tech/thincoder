@@ -191,7 +191,8 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Unit test files are not promoted into integration tests**.
 - **Integration tests** combine components and test the **interaction between components**.
 - **The pre-release acceptance loop**: walk through the real business from a user-visible entry.
-- **Integration test assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, and a change that alters an interaction between components or a business-observable result an existing case asserts must revise them.
+- **Integration test assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, and a change that alters a business-observable result an existing case asserts must revise it.
+  A change that crosses components but starts from no user-visible entry earns no case — an integration case grows from exactly two entries: a business scenario the product really needs, or a problem production really produced.
 - **The release gate**: the project's full verification chain.
 - **Where integration cases live**: together with the test code, in the project's `test/` directory.
 - **Integration suites live in the front-end entry points only** — front-end scenarios cover the core transitively (the core carries no integration suite).

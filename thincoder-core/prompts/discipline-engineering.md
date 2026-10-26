@@ -168,16 +168,24 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Delete on use — an action, not a question**: at closeout the batch's unit test files are deleted; exactly one reading line stays in batch record §5 (what was verified + command + result), and no executable file is kept.
   Why: after any change the reflex is to run everything, and this is an engineering-scale product — one agent-day produces code that would need hundreds of unit tests to verify, while unit tests are per-batch and one-off.
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
+  **Why the suppression has to be mechanical, not remembered**: the reasoning can be explained and agreed to, and the behavior still comes back.
+  So the restraint goes into the form: with the runnable artifacts deleted there is no "everything" left to run, while keeping them and relying on memory bets the project on the model's own restraint.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
 - **Unit test files are not promoted into integration tests**.
 - **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
   **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
   **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
   Why: the urge is right that the spot matters; a file with no scene pays permanent maintenance and guards nothing.
+- **The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added"**: it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
+  **The only question worth asking is whose job the guarding is**: guarding is the integration suite's job, and an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
+  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect — one ledger row for the parent to book, no permanent file manufactured to discharge the urge.
+  Why: the shape is convincing by construction — a mechanism-internal change does cross components and does change what its caller sees, so the wrong criterion passes itself off as the right one.
+  Real instance: a tool that returned an empty set now throws a report when it cannot derive a root — it reads like a business-observable change, while no user walks that path.
 - **Closeout test line**: each batch closeout reports two halves.
   ① this batch's unit test files named, with one verification reading (what was verified ∥ command ∥ result).
   ② the integration set as it now stands against the ≈50–100 window, plus the cases this batch added ∥ revised, by case name — each case file lands under the project's integration test directory.
-- **`none` stands only where the change touches neither the interaction between components nor a business-observable result an existing case asserts**: a batch that touches either and closes with no integration-case change is incomplete — that case should have been designed before the code.
+- **`none` stands only where neither trigger holds**: the change alters no business-observable result an existing case asserts, and neither entry a case grows from applies — a scenario the product really needs, or a problem production really produced.
+  **A change that crosses components but starts from no user-visible entry earns no case**: crossing components is not a trigger, and closing with no integration-case change is not a defect.
   Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
 - **Integration tests** combine components and test the **interaction between components** — the **pre-release acceptance loop**, which this project enters from a user-visible entry.
 - **The integration index is `test/RTM.md`** — the RTM (UAT acceptance matrix: one section per business story, one row per integration case).
