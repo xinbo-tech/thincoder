@@ -138,11 +138,13 @@ export function contextUsage(agent, extras = {}) {
   const overhead = system + tools
   const historyTokens = estimateTokens(history)
   const measured = agent?._lastPromptTokens != null
+  // §6.3 / §6.17 估算自校准：估算值乘 `_tokRatio`；`_lastPromptTokens` 是服务端真值，不乘。
+  const ratio = agent?._tokRatio ?? 1
   return {
     basis: measured ? "measured" : "estimated",
     total: measured
-      ? agent._lastPromptTokens + estimateTokens(history.slice(agent._usageAtLen ?? history.length))
-      : historyTokens + overhead,
+      ? agent._lastPromptTokens + Math.round(estimateTokens(history.slice(agent._usageAtLen ?? history.length)) * ratio)
+      : Math.round((historyTokens + overhead) * ratio),
     history: historyTokens,
     system,
     tools,
@@ -151,6 +153,25 @@ export function contextUsage(agent, extras = {}) {
       ?? resolveCompactThreshold(agent?.config?.agent?.compactThreshold, agent?.provider).value,
     window: providerSpec(agent?.provider).context,
   }
+}
+
+/**
+ * 估算自校准采样（§6.17「估算自校准」）——池化比：`num += usage.prompt_tokens`、`den += estPrompt`
+ * （分子分母同取输入侧口径；`estPrompt` 由发送面随 result 带回，与净判同一个值）。
+ * `key = format:model` 变 ⇒ 归零重采（切模型自清，不接四个刷新点）；`_tok` / `_tokRatio` 只由本函数写，
+ * `/new` 与 run 装配复位。无样本 ⇒ 比 = 1（估算维持原口径）。
+ * 作用面 = `contextUsage` 两支承（§6.3）；实测基线 `_lastPromptTokens` 不乘。
+ */
+export function recordTokenSample(agent, provider, estPrompt, usage) {
+  const prompt = Number(usage?.prompt_tokens)
+  if (!agent || !(prompt > 0) || !(estPrompt > 0)) return
+  const key = `${provider?.format ?? "openai"}:${provider?.model ?? ""}`
+  if (agent._tok?.key !== key) agent._tok = { key, num: 0, den: 0 }
+  agent._tok.num += prompt
+  agent._tok.den += estPrompt
+  // 下界 = 1：已知偏差方向是估算偏低；比 < 1 会把全部估算支缩小、重开「该压没压」原始故障，
+  // 保守方向不取（仅一侧校准，零新魔数）。
+  agent._tokRatio = Math.max(1, agent._tok.num / agent._tok.den)
 }
 
 /**

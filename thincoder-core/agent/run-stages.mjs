@@ -11,6 +11,7 @@ import { compressIfNeeded, compressFallback, COMPRESS_FAILURE_LIMIT } from "../c
 // §6.17/D-CC32 溢出守卫（兜底，非主修）：预算面单源 requestBudget ∥ 再估面 contextUsage（与压缩判定同一函数）
 import { requestBudget } from "../config.mjs"
 import { contextUsage } from "../token-window.mjs"
+import { contextOverflowError } from "../provider/errors.mjs"
 import { ensureAutoReminder, injectEngineeringReminder, ContinueError, snapshotGuard } from "./helpers.mjs"
 import { pushManifestStateReminder } from "./setup-reminders.mjs"
 import { cleanupConsultSessions } from "../agent-tools/consult.mjs"
@@ -97,6 +98,19 @@ export async function runCompactionCheck(agent, ctx) {
     callbacks.onCompress?.(agent._lastCompressInfo ?? {})
     ensureAutoReminder(agent)
   }
+  // 压缩失败记账（两处共用：下面的阈值面 catch ∥ 下面的守卫面强制压缩）——AbortError 必须透传。
+  const noteCompressFailure = (compressError) => {
+    if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
+    agent._compressFailures = (agent._compressFailures ?? 0) + 1
+    // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
+    // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
+    callbacks?.onCompressFail?.(compressError)
+  }
+  const degradeIfCompressExhausted = () => {
+    if (agent._compressFailures < COMPRESS_FAILURE_LIMIT) return
+    agent._compressFailures = 0
+    if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})
+  }
   try {
     let compacted = await compressIfNeeded(
       agent, threshold, callbacks,
@@ -111,49 +125,39 @@ export async function runCompactionCheck(agent, ctx) {
     }
     if (compacted) bookkeepCompaction()
   } catch (compressError) {
-    // AbortError must not be swallowed: user cancellation must propagate
-    if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
-    agent._compressFailures = (agent._compressFailures ?? 0) + 1
-    // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
-    // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
-    callbacks?.onCompressFail?.(compressError)
+    noteCompressFailure(compressError)
     if (pending) {
       // 失败注记（§6.16.2 回执面②）：模型面告知缺口——既有失败链 / 面板面零改，仅补一行机器注记
       const { compactFailureNote } = await import("../agent-tools/context.mjs")
       agent.history.push({ role: "user", content: compactFailureNote(errText(compressError), agent._compressFailures), transient: true })
     }
-    if (agent._compressFailures >= COMPRESS_FAILURE_LIMIT) {
-      agent._compressFailures = 0
-      if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-    }
+    degradeIfCompressExhausted()
   }
 
   // 溢出守卫（CONTEXT-COMPACTION.md §6.17 / D-CC32——兜底，非主修；本缝 = catch 闭合后、返回前）。
-  // 判据 = maxTokensSource !== "absent" ∧ prompt 估算 > limit（limit = window − reserve，恒为数）。
-  // **判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）；absent 档客户端未预留
-  // ⇒ 守卫不覆盖（服务端 400 兜——把规格 maxOutput 当实发判会让 doubao 三行永久发不出去）。
+  // 判据 = prompt 估算 > `budget.limit`（**无档次门**——absent 档 limit 取地板 max(window − reserve, threshold)，
+  // 恒为正数、恒可判）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
   // 真 ⇒ 以 force 强制压缩一次（先压再判）；再估仍超 ⇒ 抛三实数、回合请求零发。不截断、不静默削输出。
   const budget = requestBudget(agent.provider)
-  if (budget.maxTokensSource !== "absent") {
-    let usage = contextUsage(agent, compactionOverhead)
-    if (usage.total > budget.limit) {
+  let usage = contextUsage(agent, compactionOverhead)
+  if (usage.total > budget.limit) {
+    // 强压一次：失败走与阈值面同一条记账 / 降级链（不把摘要错误当回合错误直抛——
+    // 记账后仍按「压后仍超」判：降级截断可能已把上下文压到线下）。
+    try {
       const compacted = await compressIfNeeded(
         agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
       )
       if (compacted) bookkeepCompaction()
-      usage = contextUsage(agent, compactionOverhead)
-      if (usage.total > budget.limit) {
-        const remedy = budget.limit < 0
-          ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
-          : "reduce the conversation (/compact or prune) before retrying"
-        const overflow = new Error(
-          `context overflow: prompt ~${usage.total} tokens + max_tokens ${budget.maxTokens} > window ${budget.window}` +
-          ` (limit ${budget.limit}) — forced compaction ran but the prompt still exceeds the window; ${remedy}`,
-        )
-        overflow.kind = "context_overflow"
-        overflow.retryable = false
-        throw overflow
-      }
+    } catch (compressError) {
+      noteCompressFailure(compressError)
+      degradeIfCompressExhausted()
+    }
+    usage = contextUsage(agent, compactionOverhead)
+    if (usage.total > budget.limit) {
+      const remedy = budget.limit < 0
+        ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
+        : "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
+      throw contextOverflowError(agent.provider, usage.total, budget, remedy)
     }
   }
 }

@@ -73,6 +73,7 @@ export function createAgent({
     _pendingTimers: [],
     _sessionStart: sessionStart,
     _lastPromptTokens: null, _usageAtLen: null,
+    _tok: null, _tokRatio: 1, // §6.17 估算自校准池化比（{key,num,den}；采样 = turn-loop，清空 = /new）
     _compressFailures: 0,
     _emptyRetries: 0, // empty-response retry budget (per-run; reset on a fresh user turn)
     _runStartHistoryLen: 0, // machine-line length at the start of the current run — end-of-run exploration distillation slices from here

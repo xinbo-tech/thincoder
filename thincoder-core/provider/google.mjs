@@ -11,6 +11,7 @@ import { abortError, timeoutError } from "../abort-provenance.mjs"
 import { terminateBody } from "../stream-destroy.mjs"
 import { requestBudget } from "../config.mjs"
 import { DEFAULT_BODY_IDLE_MS } from "../config-defaults.mjs"
+import { assertPromptFits } from "./errors.mjs"
 
 /** OpenAI 语义 tool_choice → Gemini FunctionCallingConfig（2026-08-31 能力层）。 */
 function mapFunctionCallingConfig(choice) {
@@ -77,7 +78,7 @@ export function convertMessages(messages) {
 
 /** Build and send a Gemini chat request. Returns the same shape as core.mjs chat.
  *  2026-08-31 会诊 #6：接入 rateGate/recordRate（原实现完全绕过 TPM/RPM 闸门）。 */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice }) {
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, logCtx }) {
   const systemMessages = messages.filter((m) => m.role === "system")
   const contents = convertMessages(messages)
 
@@ -118,7 +119,10 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
 
   // 会诊 #6：TPM/RPM 闸门 + 记账
   const { rateGate, recordRate, estimateRequestTokens } = await import("./rate.mjs")
-  const estimated = estimateRequestTokens({ messages })
+  // §6.17 发送面净判：估准面补 `tools`（原只投影 messages）；body 用 `maxOutputTokens`、无 `max_tokens` 键 ⇒ 减项恒 0
+  const estimated = estimateRequestTokens({ messages, tools })
+  const estPrompt = estimated - (body.max_tokens ?? 0)
+  assertPromptFits(provider, estPrompt, logCtx)
   await rateGate(provider, estimated, onWait, signal)
 
   // 2026-08-31：5xx/网络与 OpenAI 格式统一退避重试链（原完全无重试——Gemini 高峰
@@ -145,6 +149,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       content: result.content,
       reasoning: result.reasoning,
       finishReason: result.finishReason ?? null, // §6.31.7 F-DA5（原三 transport 恒 null——字段值收正）
+      estimated: estPrompt, // §6.17 自校准采样（den 与净判同口径）
       usage: {
         prompt_tokens: usage.prompt_tokens ?? 0,
         completion_tokens: usage.completion_tokens ?? 0,
@@ -154,7 +159,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     }
   }
 
-  return { content: result.content, reasoning: result.reasoning, finishReason: result.finishReason ?? null, toolCalls: result.toolCalls }
+  return { content: result.content, reasoning: result.reasoning, finishReason: result.finishReason ?? null, estimated: estPrompt, toolCalls: result.toolCalls }
 }
 
 /** Gemini `finishReason` ⇒ 核统一 `finishReason`（§6.31.7 F-DA5——归一只喂既有分类；

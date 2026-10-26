@@ -16,7 +16,7 @@ import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { rateGate, recordRate, estimateRequestTokens } from "./rate.mjs"
 import { buildBody, normalizeUsage } from "./responses-request.mjs"
-import { classifyResponsesErrorCode } from "./errors.mjs"
+import { classifyResponsesErrorCode, assertPromptFits } from "./errors.mjs"
 // 同名 re-export（2026-09-29 structure-split-2 · 台账 #620——缝 = 同名再出口）：请求构造面出档 `provider/responses-request.mjs`；
 // `buildBody` / `isStoreRequiredHost` / `builtinToolsFor` 三名既有导出经本档转口——消费者 import 面零改。
 export { buildBody, isStoreRequiredHost, builtinToolsFor } from "./responses-request.mjs"
@@ -223,12 +223,15 @@ function handleEvent(ev, h) {
 }
 
 /** 主入口：请求 + 链状态推进（与 core.mjs 的 chat 同形返回）。 */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, stateful }) {
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, stateful, logCtx }) {
   const { body: reqBody, previousResponseId, warnings, newChain } = buildBody(provider, messages, tools, { toolChoice, stateful })
   const body = { ...reqBody, ...(previousResponseId ? { previous_response_id: previousResponseId } : {}) }
 
   // rateGate/recordRate 对齐 core（responses body 无 messages 键——按本地全量 messages 估算）
-  const estimated = estimateRequestTokens({ messages })
+  // §6.17 发送面净判：估准面补 `tools`（原只投影 messages）；body 用 `max_output_tokens`、无 `max_tokens` 键 ⇒ 减项恒 0
+  const estimated = estimateRequestTokens({ messages, tools })
+  const estPrompt = estimated - (body.max_tokens ?? 0)
+  assertPromptFits(provider, estPrompt, logCtx)
   await rateGate(provider, estimated, onWait, signal)
   // 定制头展开（PROVIDER.md §21）：provider.headers 在前、内置头在后——同名内置头胜出（三处 fetch 共用）
   const headers = { ...(provider.headers ?? {}), "Content-Type": "application/json", Authorization: `Bearer ${provider.apiKey}` }
@@ -287,11 +290,17 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
       { signal, onWait, buildMessage: (status, text) => `Responses API error ${status}: ${text}` },
     )
   }
-  return finish(provider, response, { onToken, onReasoning, signal, newChain, warnings, estimated })
+  return finish(provider, response, {
+    onToken, onReasoning, signal, newChain, warnings, estimated,
+    // §6.17 自校准口径：链式（`previous_response_id`）请求的 body 只带增量（`responses-request.mjs`
+    // `body.input = newOutputs`），而分母是本地全量估算 ⇒ 两者口径不同，本轮不采样。
+    estPrompt: previousResponseId ? undefined : estPrompt,
+  })
 }
 
-async function finish(provider, response, { onToken, onReasoning, signal, newChain, warnings, estimated }) {
+async function finish(provider, response, { onToken, onReasoning, signal, newChain, warnings, estimated, estPrompt }) {
   const result = await parseStream(response, { onToken, onReasoning, signal })
+  result.estimated = estPrompt // §6.17 自校准采样（den 与净判同口径）
   recordRate(provider, estimated, result.usage)
   // 链状态推进：completed 事件里 response.id 供同一 turn 后续增量；
   // 截断/失败/无 id（部分端点不回传）→ 链作废（后续全量，正确性优先）。

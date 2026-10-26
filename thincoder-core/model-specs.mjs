@@ -235,11 +235,12 @@ const MODEL_SPECS = [
   ["doubao-seed-2-0-lite-260428", { context: 256_000, maxOutput: 131_072, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"], multimodal: true }],
   // doubao-seed-2-1 三档（火山方舟 · 2026-09-24 bench 名单批 · 三行同形）：thinking / thinkApi / 枚举 = **实测**
   // （裸请求 rc 在场；`reasoning_effort:"none"` → rc=0；七值全 200、乱值 400 泛化 ⇒ **受理级**——等级低于 2.0 行的
-  // 「真校验」，同值集不混级）；maxOutput 524_288 = **受理级**（262 144 / 524 288 均受理；**上限未证**）；
-  // context = **族沿用 2.0 行**（官方口径未逐名取证）；**视觉面未探**（不声明——如实标级，不冒充实测）。
-  ["doubao-seed-2-1-pro-260915",   { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
-  ["doubao-seed-2-1-turbo-260628", { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
-  ["doubao-seed-2-1-lite-260915",  { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+  // 「真校验」，同值集不混级）；context / maxOutput = **官方模型列表口径**（2026-10-26 实查：pro / lite 上下文 1024k、
+  // turbo 256k；三行最大回答 256k）；旧值 context 256_000 / maxOutput 524_288 在档内无任何受理读数取证面，已退场。
+  // **视觉面未探**（不声明——如实标级，不冒充实测）。
+  ["doubao-seed-2-1-pro-260915",   { context: 1_024_000, maxOutput: 256_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+  ["doubao-seed-2-1-turbo-260628", { context: 256_000,   maxOutput: 256_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+  ["doubao-seed-2-1-lite-260915",  { context: 1_024_000, maxOutput: 256_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
   // step-3.7-flash（StepFun · 2026-09-25 批 §14.2 #2-6 · §1.7.1 父侧交付）：**尺寸行**——context 262_144（多源 256K =
   // 网络转述级；渠道未激活——400 "product is not activated"）；maxOutput 未取到 ⇒ 零口径——取兜底值 32_000（与建行前
   // 生效值同值）；行键 = 裸名（渠道名录形 stepfun/step-3.7-flash——命名空间剥离同命中）。

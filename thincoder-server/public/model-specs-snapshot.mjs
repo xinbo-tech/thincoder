@@ -80,9 +80,9 @@ const DISPLAY_SPECS = [
   ["hy4-preview", 256_000, 128_000],
   ["doubao-seed-2-0-code-preview-260215", 256_000, 131_072, true],
   ["doubao-seed-2-0-lite-260428", 256_000, 131_072, true],
-  ["doubao-seed-2-1-pro-260915", 256_000, 524_288],
-  ["doubao-seed-2-1-turbo-260628", 256_000, 524_288],
-  ["doubao-seed-2-1-lite-260915", 256_000, 524_288],
+  ["doubao-seed-2-1-pro-260915", 1_024_000, 256_000],
+  ["doubao-seed-2-1-turbo-260628", 256_000, 256_000],
+  ["doubao-seed-2-1-lite-260915", 1_024_000, 256_000],
   ["step-3.7-flash", 262_144, 32_000],
 ]
 

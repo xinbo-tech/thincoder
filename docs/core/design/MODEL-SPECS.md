@@ -258,7 +258,8 @@
 | `thincoder-vscode/webview/model-picker.js` | **149** | — | **回归修复 · 披露面**（§2.8-3 · A-17 · 裁定①）：两处归一改 `effortDefault` 优先（`:85` / `:123`；对端同根面 = `thincoder-vscode/webview/settings-state.js` 兜底链）——补枚举使 `levels[0]` 对四新档落 `"none"`；该取值式随 §15.4 收正 |
 | `thincoder-vscode/test/model-picker-fallback.test.mjs` | **221** | — | **回归修复 · 测试**：T-17；既有 ② 用例标题/注释按新语义（fixture 无该档 ⇒ 断言值不变） |
 
-**行数上限**：本表产品码/单元测试档读数 = 253 / 84 / 253 / 395 / 304 / 152 / 154 / 149 / 221（行序同上）；**最新读数面 = §14.6**。
+**行数上限**：本表产品码/单元测试档读数 = 253 / 84 / 253 / 395 / 304 / 152 / 154 / 149 / 221（行序同上）。行数口径统一 = `wc -l`，各节读数按各自取数日期登记——本档不设跨节「最新读数面」指针（那会把旧读数当现行值读）。
+
 **本文件自身**增删零越线；**两档现越 300 软线**（`thincoder-core/test/model-specs.test.mjs` 395 · `thincoder-core/test/provider-merge.test.mjs` 304）——增量均来自 `[onboard]` / `B-1…B-6` 段；硬限 500 未越。
 
 越线两档的**拆分计划**登记面 = `thincoder-core/test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`（`docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表现读空壳）——不拆档——单档内聚 + 消解窗口；`thincoder-vscode/test/model-picker-fallback.test.mjs`（221）仍 < 300。
@@ -594,7 +595,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 
 ### 9.10 本节边界（不做什么）
 
-- 不登记**未开通**名（`doubao-seed-2-1-*` = ModelNotOpen）。
+- 不登记**未开通**名——`doubao-seed-2-1-*` 三行已在册（§13.2 #7–9），本条不覆盖该三名。
 - 不为两族登记音频/视频模态位（产品无发送路径，同 §2.7 判）。
 - 不引入方舟 schema 剥除兼容层（§9.5 实测裁定），亦**不**为兼容层预建字段。
 - 不为转售名增设渠道限定行、不给 `lookupSpec` 扩 provider 维度（§9.4 D-12——机制变更越本节边界）。
@@ -954,7 +955,7 @@ v2.5 两行（改值面；其余字段零改）：
 
 | 消费点 | 读什么 | 三新款变化（数据驱动） |
 |---|---|---|
-| 压缩阈值 / 上下文占比 | `context` · `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值 = 可用窗口 × 0.8；核侧 `thincoder-core/config.mjs:116-120`（`resolveCompactThreshold`）· `thincoder-core/token-window.mjs:152`（窗口与占比）· `:161`；面板 `thincoder-vscode/src/specs.mjs:73` · `:87`；CLI 帧 `thincoder-cli/src/tui/render-frame.mjs:393`） | 128K → 1M（长会话截断面解除） |
+| 压缩阈值 / 上下文占比 | `context` · `maxOutput`（完成预留——可用窗口 = 窗口 − 预留；阈值算式单源 = `docs/core/design/CONTEXT-COMPACTION.md` §6.2（`min(可用窗口, ⌊窗口 × 0.6⌋)`），本节不另立算式；核侧 `thincoder-core/config.mjs:116-120`（`resolveCompactThreshold`）· `thincoder-core/token-window.mjs:152`（窗口与占比）· `:161`；面板 `thincoder-vscode/src/specs.mjs:73` · `:87`；CLI 帧 `thincoder-cli/src/tui/render-frame.mjs:393`） | 128K → 1M（长会话截断面解除） |
 | 温度钳位 | `tempRange`（`thincoder-core/provider/core.mjs:187-188`） | 不钳位 → 钳至 [0, 1.5]（越界值不再打到服务端吃 400） |
 | 视觉门（**8** 处） | `multimodal`（坐标 = §2.7 第 1 项） | 无视觉 → `read_image` 注册 + 贴图注入生效 |
 | 工具轮回声构造 | `reasoningEcho`（`thincoder-core/model-specs.mjs:288-290`） | 无字段 → 工具轮 assistant 消息恒带 `reasoning_content`（缺值 ⇒ `""`；三形态全 200 实测支撑） |
@@ -1064,7 +1065,7 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 | 2 | `qwen3.7-plus` | 建行（context 官方口径 + 机制位族沿用 `qwen3.7-flash` 行；枚举 / 视觉不声明） | 新增行（`qwen3.7-flash` 行之后） |
 | 3 | `qwen3.5-27b` | 建行（context 官方口径 · 定价页分档佐证；其余族沿用 `qwen3.6-27b` 行） | 新增行（`qwen3.6-27b` 行之后） |
 | 4–6 | `kimi-k2.6` / `kimi-k2.7-code` / `kimi-k2.7-code-highspeed` | 建行（温度「仅受理 1」= 校验级；尺寸位未取证 ⇒ 沿现盘兜底值 + 标级；**不得带 `tempRange`**） | 新增三行（`k3` 行之后） |
-| 7–9 | `doubao-seed-2-1-pro-260915` / `-turbo-260628` / `-lite-260915` | 建行（thinking / 枚举 / maxOutput = 实弹；context 族沿用 2.0 行；视觉**未探**不声明） | 新增三行（`doubao-seed-2-0-lite-260428` 行之后） |
+| 7–9 | `doubao-seed-2-1-pro-260915` / `-turbo-260628` / `-lite-260915` | 建行（thinking / 枚举 = 实弹；context = 官方模型列表口径（pro / lite 1024k、turbo 256k）；maxOutput = 官方口径 256k；视觉**未探**不声明）。旧值 524,288 在档内无任何受理读数取证面，故不保留「maxOutput = 实弹」级 | 新增三行（`doubao-seed-2-0-lite-260428` 行之后） |
 | 10 | `MiniMax-M2.7`（前缀行——覆盖标准档与 `-highspeed`） | 建行（thinking 实测；尺寸 / 机制位族沿用 `minimax-m1` 行；`thinkApi` / 枚举不声明） | 新增行（`minimax-m1` 行之后） |
 | 11 | `qwen3.7-max` | 声明面裁定：**保持不声明**（实测拒图像——T-7 语义下的「无视觉」形态）+ 补测试锚 | 行注（既有行）+ 单元测试档 |
 | 12 | `hy3` | 同 11（实测无视觉——A-1 锚已在位，行注 / 测试零改） | —— |
@@ -1083,7 +1084,8 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 | `qwen3.7-plus` | 1_000_000（**官方口径 · 网络转述**——AC-6 已裁「允许入表 + 行注标级」） | 131_072（族沿用 `qwen3.7-flash` 行） | true（族沿用）；枚举**不声明**（零口径） | 不声明（未探） | partialMode / cacheMode `none` / thinkApi `effort` / tempRange [0, 2]（族沿用 `qwen3.7-flash` 行） |
 | `qwen3.5-27b` | 262_144（**官方口径 · 定价页分档佐证**——[128K, 256K) 档在售；规格页未逐名核） | 65_536（族沿用 `qwen3.6-27b` 行） | true（族沿用）；枚举**不声明**（零口径） | 不声明（未探） | partialMode / cacheMode `none` / thinkApi `effort` / tempRange [0, 2]（族沿用） |
 | `kimi-k2.6` · `kimi-k2.7-code` · `kimi-k2.7-code-highspeed` | 128_000（**未取证**——沿现盘兜底值；建行不改变生效值） | 32_000（同左） | 不声明（未探）；枚举**不声明** | 不声明（未探） | **零机制位声明**（`tempRange` 不得给——KD-31 例外档不变量） |
-| `doubao-seed-2-1-pro-260915` · `-turbo-260628` · `-lite-260915` | 256_000（族沿用 `doubao-seed-2-0-*` 两行；官方口径未逐名取证） | **524_288**（**受理级**——262 144 / 524 288 均 200；**上限未证**） | true（**实测**：裸请求 rc 在场）+ thinkApi `effort`（实测）+ 枚举七值（**受理级**——七值全 200、乱值 400 泛化） | **不声明（未探）**——如实标级 | 无（与 2.0 行同形：零 cacheMode / partialMode / tempRange / reasoningEcho 声明） |
+| `doubao-seed-2-1-pro-260915` · `-lite-260915` | **1_024_000**（官方模型列表口径，2026-10-26 实查） | **256_000**（官方「最大回答(默认4k)」列 = 256k） | true（**实测**：裸请求 rc 在场）+ thinkApi `effort`（实测）+ 枚举七值（**受理级**——七值全 200、乱值 400 泛化） | **不声明（未探）**——如实标级 | 无（与 2.0 行同形：零 cacheMode / partialMode / tempRange / reasoningEcho 声明） |
+| `doubao-seed-2-1-turbo-260628` | **256_000**（官方口径同页：256K 窗） | **256_000**（同上） | 同上（三行同形） | 同上 | 同上 |
 | `MiniMax-M2.7` | 256_000（族沿用 `minimax-m1` 行） | 128_000（族沿用） | true（**实测**：裸请求 rc 在场）；thinkApi **不声明**（off 路径**未找到**——`disabled` 不生效）；枚举**不声明**（effort 被忽略 ⇒ 无生效面） | 不声明（未探） | cacheMode `auto` / noUsageStream（族沿用 `minimax-m1` 行） |
 
 **行注草案（逐行 JS 注释 · 实现轮照抄；行注 = 证据等级承载面）**：
@@ -1112,14 +1114,14 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 
 // doubao-seed-2-1 三档（火山方舟 · 三行同形）：thinking / thinkApi / 枚举 = **实测**
 // （裸请求 rc 在场；`reasoning_effort:"none"` → rc=0；七值全 200、乱值 400 泛化 ⇒ **受理级**——等级低于 2.0 行的
-// 「真校验」，同值集不混级）；maxOutput 524_288 = **受理级**（262 144 / 524 288 均受理；**上限未证**）；
-// context = **族沿用 2.0 行**（官方口径未逐名取证）；**视觉面未探**（不声明——如实标级，不冒充实测）。
+// 「真校验」，同值集不混级）；尺寸 = **官方模型列表口径**（2026-10-26 实查）：pro / lite 窗口 1024k、turbo 256k，
+// 三行最大回答 256k（默认 4k）；**视觉面未探**（不声明——如实标级，不冒充实测）。
 
-["doubao-seed-2-1-pro-260915",   { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+["doubao-seed-2-1-pro-260915",   { context: 1_024_000, maxOutput: 256_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
 
-["doubao-seed-2-1-turbo-260628", { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+["doubao-seed-2-1-turbo-260628", { context: 256_000, maxOutput: 256_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
 
-["doubao-seed-2-1-lite-260915",  { context: 256_000, maxOutput: 524_288, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
+["doubao-seed-2-1-lite-260915",  { context: 1_024_000, maxOutput: 256_000, thinking: true, thinkApi: "effort", reasoningEffortEnum: ["none", "minimal", "low", "medium", "high", "xhigh", "max"] }],
 
 // MiniMax-M2.7（前缀行——覆盖标准档与 -highspeed）：thinking = **实测**（裸请求 rc 在场）；off 路径 **未找到**
 // （`thinking:{type:"disabled"}` 不生效——如实，不声明 thinkApi）；effort 被忽略 ⇒ **无生效面**（枚举不声明；medium 照发仅口径统一）；
@@ -1153,7 +1155,7 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 |---|---|---|
 | 10 档无专行 ⇒ 建行逐名命中 | §13.2 / §13.3 | G-1（`specMatch(name).matched === true`）+ G-2（取值逐字段对读） |
 | 4 档视觉声明分态（实测无视觉 / 未探）且 T-7 零改 | §13.1 / §13.2 | G-6（`qwen3.7-max` / `hy3` 不声明 + 理由锚；未探两档行注「未探」在场） |
-| 尺寸失实面（doubao 2.1 上限低估）收正 | §13.3 | G-2（`maxOutput = 524_288` 受理级 + 行注「上限未证」） |
+| 尺寸面按官方口径（doubao 2.1 三行） | §13.3 | G-2（pro / lite `context = 1_024_000`、turbo `256_000`；三行 `maxOutput = 256_000`） |
 | 未探面如实标级（不冒充实测） | §13.3 | G-3（「未探 / 未取证」词在场）+ 本表登记 |
 | 三端产品行为零回归 | §13.5 | G-7（既有族代表名字段零改）+ 核测试全绿 |
 
@@ -1164,7 +1166,7 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 | id | 类 | 输入 | 期望与判据 |
 |---|---|---|---|
 | G-1 | 正常 | 10 个新建名（§13.2 #1–#10） | `specMatch(name).matched === true`（命中独立行，非兜底）；表行名提取含全 10 名（正则空扫防护同 T-7） |
-| G-2 | 正常 | 逐名关键字段 | 取值 = §13.3 表逐字段（context / maxOutput / thinking / 枚举 / 视觉 / 机制位）；`doubao` 三行枚举七值 + `maxOutput = 524_288`；`kimi` 三行 `tempRange === undefined` |
+| G-2 | 正常 | 逐名关键字段 | 取值 = §13.3 表逐字段（context / maxOutput / thinking / 枚举 / 视觉 / 机制位）；`doubao` 三行枚举七值 + `maxOutput = 256_000`（pro / lite `context = 1_024_000`，turbo `256_000`）；`kimi` 三行 `tempRange === undefined` |
 | G-3 | 正常 | 行注证据词 | 新建行注含「未探 / 未取证」字面（`glm-4.5-air` / `kimi×3` / `doubao×3` / `MiniMax-M2.7`）+ 按 §13.3 在位「受理级 / 实测 / 官方口径 / 族沿用」 |
 | G-4 | 边界 | KD-31 例外档不变量 | `kimi-k2.6` / `k2.7-code` / `k2.7-code-highspeed` 的 `tempRange === undefined`（入档值 = 实发值） |
 | G-5 | 边界（退化锚改指） | `qwen3.7-plus`（建行后不再走退化面） | T-4/A-14 改指仍在兜底的名字（如 `qwen3.5-flash`）+ 保留「退化形状已知」判据；`qwen3.7-plus` 新增「建行命中」断言 |
@@ -1880,7 +1882,7 @@ function lookupSpec(model) {
 
 | 字段 | 消费点 | 行为变化 |
 |---|---|---|
-| `context` | `providerSpec` → 压缩阈值（`thincoder-core/config.mjs:116-120`（`resolveCompactThreshold`）；`COMPACT_RATIO = 0.8` `:51`）· 上下文占比显示（`thincoder-vscode/src/specs.mjs:82` / `:96`）· advisor 预算（`thincoder-core/advisor/compaction.mjs:35-36`） | 压缩阈值按 1M 窗口重算——预设渠（`maxTokens: 8192`，`thincoder-core/config-presets.mjs:30`）：≈ 71 884 ⇒ **838 860**；无显式 `maxTokens` 渠：**838 860**（= min(1 048 576 − 65 536, floor(1 048 576 × 0.8))）；长会话不再被 128K 档提前压缩 |
+| `context` | `providerSpec` → 压缩阈值（`thincoder-core/config.mjs:116-120`（`resolveCompactThreshold`）；`COMPACT_RATIO = 0.6` `thincoder-core/config.mjs:53`）· 上下文占比显示（`thincoder-vscode/src/specs.mjs:82` / `:96`）· advisor 预算（`thincoder-core/advisor/compaction.mjs:35-36`） | 压缩阈值按 1M 窗口重算——无显式 `maxTokens` 渠：**629 145**（= min(1 048 576 − 65 536 = 983 040, floor(1 048 576 × 0.6) = 629 145)，比例项胜出）；预设渠（`maxTokens: 8192`，`thincoder-core/config-presets.mjs:30`）同值 **629 145**（可用窗口 1 040 384 > 比例项，两态同值）；长会话不再被 128K 档提前压缩 |
 | `maxOutput` | `outputReserve`（`thincoder-core/config.mjs:59-62`）——仅无显式 `provider.maxTokens` 时生效 | 预留 32 000 ⇒ 65 536（计入上式）；显式 `maxTokens` 渠零变化（预设主导）。**发送面**：spec 值不达 google 请求（`thincoder-core/provider/google.mjs:86` 发 `maxOutputTokens` 仅取 `provider.maxTokens`） |
 | `multimodal` | 图像门族（清单与语义单源 = §2.7 第 1 项：`thincoder-core/attachments.mjs:54` 入列（第八处）∥ `thincoder-vscode/src/agent/setup-tooltable.mjs:305` ⇒ `thincoder-vscode/src/agent/tool-table.mjs:177` ∥ `thincoder-vscode/src/extension/image-handler.mjs:110` ⇒ `:43`） | 两档由「非多模态」（`true` 之外一切）转「多模态」：`read_image` 注册门（`thincoder-core/tools/index.mjs:66`——读点 `specForModel(model)?.multimodal`；注册表达式 `:69`）、贴图 / 读图 / 注入门放行；google 侧 `inlineData` 通路既有（`thincoder-core/provider/google.mjs:54-59`） |
 | `thinking` | `effortEnumForModel` 读取点：`spec.thinking` 直接读点 = `thincoder-vscode/src/specs.mjs:72`（读形 `s.reasoningEffortEnum || (s.thinking ? ["enabled"] : ["high","max"])`）此一处；消费面（调用点）= `thincoder-vscode/src/extension/provider-probe-window.mjs:66` | 该两档 VSC 档位面落 `["enabled"]` 单档（思考开关族既有形；选档归一落中性档、零 patch——§16.6-⑴）；其余面零变 |
@@ -1918,7 +1920,7 @@ function lookupSpec(model) {
 | AC-1 | #1198 | §18.2 / §18.3 | 两行逐字段在场：`specForModel("gemini-3.8-flash")` ∧ `("gemini-3.7-flash")` 各 deepEqual `{ context: 1_048_576, maxOutput: 65_536, thinking: true, thinkAlwaysOn: true, multimodal: true }`；`specMatch` 双名 `matched === true` |
 | AC-2 | #1198 | §18.2 | 零改既有面：存量 gemini 四行逐名与批前同判（`gemini-3.1-pro` 保持 `{ context: 1_048_576, maxOutput: 65_536 }`）；未知名面零变（`gemini-3.9-flash` / 裸段 `gemini-3.8` ⇒ `matched: false` + `DEFAULT_SPEC`） |
 | AC-3 | #1198 | §18.3 | 机制位不声明面（防空扫）：两行 `thinkApi` / `reasoningEffortEnum` / `tempRange` / `noUsageStream` / `format` 全 `undefined`；`thinkOffPath(spec) === false` |
-| AC-4 | #1198 | §18.4 | 影响面读数：`outputReserve({ model: "gemini-3.8-flash" }, spec)` = 65 536；`resolveCompactThreshold(null, { model: "gemini-3.8-flash" })` = `{ value: 589_824, auto: true }`；显式 `{ maxTokens: 8192 }` ⇒ 624 230。实施前确认两函数导出面（均具名导出，见 `thincoder-core/config.mjs` 行 117 / 139）；若现读为模块内函数 ⇒ 改经公开消费面取读数 |
+| AC-4 | #1198 | §18.4 | 影响面读数：`outputReserve({ model: "gemini-3.8-flash" }, spec)` = 65 536；`resolveCompactThreshold(null, { model: "gemini-3.8-flash" })` = `{ value: 629_145, auto: true }`；显式 `{ maxTokens: 8192 }` 同值 `{ value: 629_145, auto: true }`（可用窗口 1 040 384 > 比例项 629 145 ⇒ 两态一致）。实施前确认两函数导出面（均具名导出，见 `thincoder-core/config.mjs` 行 117 / 139）；若现读为模块内函数 ⇒ 改经公开消费面取读数 |
 
 ### 18.7 用例表（正常 / 边界 / 错误 · 落点 = 单元测试档（拟新增））
 
@@ -1932,7 +1934,7 @@ function lookupSpec(model) {
 | G-4 | 错误 | `gemini-3.9-flash`（无行）；裸段 `gemini-3.8` | 均 `matched: false` + `DEFAULT_SPEC`（128 000 / 32 000）+ 告警一次（既有 dedupe 面）——未知名兜底零变 |
 | G-5 | 回归 | 存量四行：`gemini-3-pro` / `gemini-2.5-pro` / `gemini-2.5-flash` / `gemini-3.1-pro` | 逐名与批前同判（取值逐字段不变；`gemini-3.1-pro` = `{ context: 1_048_576, maxOutput: 65_536 }` 零改） |
 | G-6 | 边界 | `thinkOffPath(specForModel("gemini-3.8-flash"))` + 机制位缺位断言 | `false`（恒思考族）；`thinkApi` / `reasoningEffortEnum` / `tempRange` / `noUsageStream` / `format` 全 `undefined` |
-| G-7 | 正常 | `outputReserve` / `resolveCompactThreshold`（`thincoder-core/config.mjs`）两态 | 无显式：预留 65 536、阈值 `{ value: 589_824, auto: true }`；显式 `maxTokens: 8192`：阈值 624 230。实施前确认两函数导出面（均具名导出；若现读为模块内函数 ⇒ 改经公开消费面取读数） |
+| G-7 | 正常 | `outputReserve` / `resolveCompactThreshold`（`thincoder-core/config.mjs`）两态 | 无显式：预留 65 536、阈值 `{ value: 629_145, auto: true }`；显式 `maxTokens: 8192`：同值 `629_145`。实施前确认两函数导出面（均具名导出；若现读为模块内函数 ⇒ 改经公开消费面取读数） |
 
 ### 18.8 边界（本节不做）
 

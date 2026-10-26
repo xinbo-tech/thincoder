@@ -13,6 +13,7 @@ import { recordToolResults } from "./record-results.mjs"
 import { injectPostTurn } from "./post-turn.mjs"
 import { handleCompletion } from "./completion.mjs"
 import { runCompactionCheck, injectTurnReminders, injectResponseReminders } from "./run-stages.mjs"
+import { recordTokenSample } from "../token-window.mjs"
 import { callModelTurn } from "./chat-call.mjs"
 import {
   turnFrame, // 第 19 批（TURN-ACROSS-SEGMENTS）：跨段累计编号帧（设计 TURN-CAP-CONTINUE.md §4）
@@ -194,6 +195,8 @@ export async function runTurnLoop(agent, {
         agent._lastPromptTokens = response.usage.prompt_tokens
         agent._usageAtLen = agent.history.length
       }
+      // §6.17 估算自校准：服务端真值 ÷ 输入侧估算（`estimated` = 发送面净判同一个 estPrompt）
+      recordTokenSample(agent, agent.provider, response.estimated, response.usage)
     }
 
     // Warn on abnormal finish reasons — the response may be incomplete/truncated.

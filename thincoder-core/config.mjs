@@ -46,11 +46,11 @@ import { positiveInt, warnContextOnce } from "./model-context.mjs"
 // Window utilization ratio (CONTEXT-COMPACTION.md §6.2 / D-CC30 / §6.17 / D-CC32): auto threshold =
 // min(usableWindow(window, reserve), ⌊window × COMPACT_RATIO⌋) — reserve is the output budget
 // ACTUALLY sent as max_tokens (uncapped; §6.17 requestBudget is the single source). Rows with
-// reserve ≤ 20% of the window land on the ratio term; larger reservations pull the line down to
-// window − reserve — overflow-free outranks the 75–80% band (mathematically exclusive there, §6.2).
-// Headroom above the line absorbs injected context (directory tree, git context, outline, project
-// instructions, memory/doc search results — 30–50K tokens per turn).
-const COMPACT_RATIO = 0.8
+// reserve < 40% of the window land on the ratio term (line = 60.0% of the window); larger
+// reservations pull the line down to window − reserve — overflow-free outranks the ratio (the two
+// are mathematically exclusive once reserve ≥ 40%, §6.2). Headroom above the line absorbs injected
+// context (directory tree, git context, outline, project instructions, memory/doc search — 30–50K).
+const COMPACT_RATIO = 0.6
 
 /** Output reservation counted against the window: the value ACTUALLY sent as max_tokens —
  *  explicit `provider.maxTokens` when set (the transport faces send it verbatim), else the spec
@@ -64,9 +64,9 @@ export function outputReserve(provider, spec) {
 }
 
 /** Usable input window = window − output reservation. Degenerate guard: a reservation
- *  ≥ the window is non-physical (no input could ever fit — e.g. the doubao spec
- *  `maxOutput` 524_288 > `context` 256_000 ∥ the test harness&apos;s 1K window vs the default
- *  spec); collapsing the budget to 0 would be instant `context_limit` death — the very
+ *  ≥ the window is non-physical (no input could ever fit — e.g. `doubao-seed-2-1-turbo-260628`:
+ *  256_000 window / 256_000 `maxOutput` (官方口径) ∥ the test harness&apos;s 1K window vs the
+ *  default spec); collapsing the budget to 0 would be instant `context_limit` death — the very
  *  failure the reservation fold exists to prevent. Fall back to half the window.
  *  (2026-10-06——收口核验捕获：advisor-loop-split B5a 红。） */
 export function usableWindow(context, reserve) {
@@ -93,7 +93,10 @@ export function usableWindow(context, reserve) {
  *  - usable: usableWindow(window, reserve) (degenerate half-window guard).
  *  - threshold: min(usable, ⌊window × COMPACT_RATIO⌋) — the compaction trigger line.
  *  - limit: window − reserve — hard prompt ceiling; the guard's ONLY numeric criterion field
- *    (always a number; negative = any prompt overflows). */
+ *    (always a number; negative = any prompt overflows). `absent` rows (the transport sends no
+ *    max_tokens) take the floor max(window − reserve, threshold): only the degenerate
+ *    reserve ≥ window rows move (bare value 0 ⇒ every prompt would be rejected), and for
+ *    reserve < window threshold ≤ usable = window − reserve makes the floor a no-op. */
 export function requestBudget(provider, spec) {
   // windowSource = 五级链的同一次遍历出口（§6.15）——L1 / L3 命中也会如实报来源，不再二值猜。
   // 调用方传 spec（core.mjs 已算过 providerSpec）时窗口值用它，来源仍读 resolution（恒等映射，不并类）。
@@ -108,15 +111,18 @@ export function requestBudget(provider, spec) {
   const maxTokensSource = explicit != null ? "explicit" : anthropicAlwaysSends ? "spec" : "absent"
   const reserve = maxTokens ?? resolved?.maxOutput ?? 0
   const usable = usableWindow(window, reserve)
+  const threshold = Math.min(usable, Math.floor(window * COMPACT_RATIO))
+  const bare = window - reserve
   return {
-    window, windowSource, maxTokens, maxTokensSource, reserve, usable,
-    threshold: Math.min(usable, Math.floor(window * COMPACT_RATIO)),
-    limit: window - reserve,
+    window, windowSource, maxTokens, maxTokensSource, reserve, usable, threshold,
+    // §6.17 地板：absent 档 reserve 可能 ≥ window（退化行，bare ≤ 0）——裸式下任何 prompt 都判真、
+    // 该档永久发不出去；地板把它抬到 ≤ ⌊w/2⌋。非 absent 档逐位不变（仍是 bare）。
+    limit: maxTokensSource === "absent" ? Math.max(bare, threshold) : bare,
   }
 }
 
 /** Derive compaction threshold; explicit is the value explicitly set in config file (takes priority),
- *  otherwise auto = requestBudget().threshold (§6.17 single source — min(usable, ⌊window × 0.8⌋),
+ *  otherwise auto = requestBudget().threshold (§6.17 single source — min(usable, ⌊window × 0.6⌋),
  *  reserve uncapped). Second param accepts EITHER a model name string (pure spec lookup — compat shape,
  *  no caller passes a string today) OR a provider object (providerSpec — the providers[].context
  *  override in K units is honored, PROVIDER.md §15 T-C2). */

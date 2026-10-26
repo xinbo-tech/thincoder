@@ -164,10 +164,9 @@ function applyCompression(agent, headEnd, tailStart, note) {
  */
 export async function compressIfNeeded(agent, threshold, callbacks, extras = {}, signal) {
   const history = agent.history
-  // 单源（§6.16.4）：total / overhead 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）
+  // 单源（§6.16.4）：total 与 stats 面同一函数（既有内联式改调 contextUsage，判定语义零改）
   const usage = contextUsage(agent, extras)
   const tokens = usage.total
-  const overhead = usage.overhead
   if (!extras.force && tokens <= threshold) return false
 
   const keepTail = keepTailSize(agent.provider, history.length)
@@ -222,11 +221,12 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
 
   // Completion info for the compression panel (D-C2): tokens freed = the pre-compression prompt
   // estimate (`tokens` — the value that tripped the threshold, incl. system/tools overhead on the
-  // pure-estimation path) minus the post-compression estimate on the same basis. Elapsed = the
-  // summary call + splice duration. agent.mjs forwards this to onCompress unchanged.
+  // pure-estimation path) minus the post-compression estimate on the SAME basis (`contextUsage`
+  // — a bare `estimateTokens` sum would skip the §6.17 `_tokRatio` and overstate the freed tokens).
+  // Elapsed = the summary call + splice duration. agent.mjs forwards this to onCompress unchanged.
   agent._lastCompressInfo = {
     mode: "summary",
-    tokensFreed: Math.max(0, Math.round(tokens - (estimateTokens(agent.history) + overhead))),
+    tokensFreed: Math.max(0, Math.round(tokens - contextUsage(agent, extras).total)),
     elapsedMs: performance.now() - startedAt,
   }
   return true

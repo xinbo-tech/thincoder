@@ -8,6 +8,7 @@
  */
 
 import { RETRYABLE_STATUS, RATE_LIMIT_BACKOFF_MS } from "./rate.mjs"
+import { requestBudget } from "../config.mjs"
 
 /** Parse Retry-After: 秒数 or HTTP-date；上限 300s（会诊 #11）— 异常头不得让 CLI 睡数小时。
  *  header 缺失/非法时退回指数退避表（rateLimitHits 计数取档）。 */
@@ -131,4 +132,44 @@ export function classifyResponsesErrorCode(code) {
     default:
       return null
   }
+}
+
+/** 越窗报文特征（§6.17 HTTP 400 分类——三个渠道的逐字形态；词表就这一处）。 */
+const CONTEXT_OVERFLOW_PHRASES = ["maximum context length", "context_length_exceeded", "prompt is too long"]
+
+/** 越窗 typed 错误（§6.17）：三实数逐字带出（prompt / max_tokens / 窗口，另附 limit）；kind / retryable
+ *  复用同族既有词表（`classifyResponsesErrorCode("context_length_exceeded")`），零新词。 */
+export function contextOverflowError(provider, prompt, budget, remedy) {
+  const cls = classifyResponsesErrorCode("context_length_exceeded")
+  const err = new Error(
+    `context overflow: prompt ~${prompt} tokens · max_tokens ${budget.maxTokens ?? "not sent"}` +
+    ` · window ${budget.window} (limit ${budget.limit}) — ${remedy} [model ${provider?.model ?? "unknown"}]`,
+  )
+  err.kind = cls.kind
+  err.retryable = cls.retryable
+  return err
+}
+
+/** 发送面净判（§6.17 第二道，四个装配面同形一次调用）：`estPrompt` = 输入侧估算
+ *  （= `estimateRequestTokens(X) − (body.max_tokens ?? 0)`，四面同一定义——不减会把输出预算白扣一份）。
+ *  内部阶段豁免：`compress` / `distill` / 续写本身就是越线后用来把上下文降下来的那次调用，
+ *  判它 = 判掉止血动作本身（标签已存在，零新增机制）。 */
+export function assertPromptFits(provider, estPrompt, logCtx) {
+  const stage = logCtx?.stage
+  if (stage === "compress" || stage === "distill" || logCtx?.isContinuation === true) return
+  const budget = requestBudget(provider)
+  if (!(estPrompt > budget.limit)) return
+  throw contextOverflowError(provider, estPrompt, budget, "the request was not sent; reduce the conversation (/compact or prune) before retrying")
+}
+
+/** HTTP 400 越窗报文 ⇒ typed 错误（§6.17）；未命中 ⇒ 原样返回入参错误（不发明分类）。 */
+export function markContextOverflow(error, status, text) {
+  if (status !== 400) return error
+  const lower = String(text ?? "").toLowerCase()
+  if (!CONTEXT_OVERFLOW_PHRASES.some((p) => lower.includes(p))) return error
+  const cls = classifyResponsesErrorCode("context_length_exceeded")
+  error.kind = cls.kind
+  error.retryable = cls.retryable
+  if (cls.hint) error.message += `（${cls.hint}）`
+  return error
 }

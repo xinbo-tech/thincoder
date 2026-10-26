@@ -8,6 +8,7 @@ import { specForModel, requestBudget } from "../config.mjs"
 import { proxyFetch } from "../proxy.mjs"
 import { requestWithRetry } from "./retry.mjs"
 import { effectiveFetchTimeoutMs, effectiveBodyIdleMs } from "./core.mjs"
+import { assertPromptFits } from "./errors.mjs"
 import { abortError } from "../abort-provenance.mjs"
 
 const ANTHROPIC_VERSION = "2023-06-01"
@@ -153,7 +154,7 @@ export function convertMessages(messages) {
  *  2026-08-31 会诊 #6：接入 rateGate/recordRate + 429 Retry-After 单次重试
  *  （原实现完全绕过 TPM/RPM 闸门与记账——用户配了 tpm 以为受控实际不受控）。
  *  注：5xx/网络退避重试未与 OpenAI 格式对齐（三 transport 共用那步工作量大，见报告）。 */
-export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, parallelToolCalls }) {
+export async function chat(provider, { messages, tools, onToken, onReasoning, onWait, signal, toolChoice, parallelToolCalls, logCtx }) {
   // Extract system message(s) — Anthropic uses top-level `system` field
   const systemMessages = []
   const chatMessages = []
@@ -204,11 +205,13 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   if (signal?.aborted) throw abortError(signal, "provider", "transport-anthropic")
 
   // 会诊 #6：TPM/RPM 闸门 + 记账（rate.mjs 与 OpenAI 格式共用同一窗口）
-  const { rateGate, recordRate } = await import("./rate.mjs")
-  const estimated = await (async () => {
-    const { estimateRequestTokens } = await import("./rate.mjs")
-    return estimateRequestTokens(body)
-  })()
+  const { rateGate, recordRate, estimateRequestTokens } = await import("./rate.mjs")
+  // §6.17 发送面净判：`estPrompt` = 输入侧**全量**（X 无 `max_tokens` 键 ⇒ 减项恒 0）——取调用方的
+  // messages（含 system）而不是 body.messages：anthropic 的 system 是顶层字段（`body.system`），
+  // 走 body 会把整块 system 漏在判据外。`estimated`（含 max_tokens）仍供 rateGate / recordRate。
+  const estPrompt = estimateRequestTokens({ messages, tools })
+  const estimated = estimateRequestTokens(body)
+  assertPromptFits(provider, estPrompt, logCtx)
   await rateGate(provider, estimated, onWait, signal)
 
   // 2026-08-31：4xx/5xx/网络与 OpenAI 格式统一退避重试链（原仅 429 Retry-After 单次重试，
@@ -230,6 +233,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
   const result = await parseAnthropicStream(response, { onToken, onReasoning, signal })
   recordRate(provider, estimated, result.usage)
   const finished = finishAnthropic(result)
+  finished.estimated = estPrompt // §6.17 自校准采样：den 与净判同口径
   // §6.27 告警投递：R7 的畸形参数告警并入既有 `_warnings` 机读线（消费面 agent/run-stages.mjs:44-45）
   finished._warnings = [...(finished._warnings ?? []), ...warnings]
   return finished

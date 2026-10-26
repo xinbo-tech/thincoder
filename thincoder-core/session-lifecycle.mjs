@@ -322,6 +322,9 @@ export function resetSessionState(agent) {
   agent._runStartHistoryLen = 0
   agent._lastPromptTokens = null
   agent._usageAtLen = null
+  // §6.17 估算自校准：新会话无样本（比 = 1）——跨会话不继承旧模型的估算偏差
+  agent._tok = null
+  agent._tokRatio = 1
   agent.planMode = false
   agent.goal = null
   agent._pendingReminders = []
