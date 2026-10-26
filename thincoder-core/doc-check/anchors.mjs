@@ -17,7 +17,7 @@
  */
 import { readFileSync, statSync } from "node:fs"
 import { basename, dirname, resolve } from "node:path"
-import { fenceMark, isExecutableLine, isPromptFace } from "./paragraph.mjs"
+import { fenceMark, isFenceClose, isExecutableLine, isPromptFace } from "./paragraph.mjs"
 
 /** 文档指针 token：`(目录段/)*名.md` + 可选行号坐标尾 + 可选节指示（`§` + 编号）。
  *  左界守卫排除更长 token 的尾段；右界排除后续字母数字（`.md` 之后紧邻 `[\w]` ⇒ 非完整 token）。 */
@@ -111,7 +111,7 @@ export function checkAnchors(root, { files = [] } = {}) {
       const mark = fenceMark(l)
       if (mark !== null) { // 围栏块整块跳过：起于围栏行、止于同形围栏行（未闭合 ⇒ 至档尾免）
         if (fence === null) fence = mark
-        else if (mark === fence) fence = null
+        else if (isFenceClose(mark, fence)) fence = null
         return
       }
       if (fence !== null) return

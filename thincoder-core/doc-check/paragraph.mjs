@@ -21,13 +21,18 @@ export const DOC_CLASS = Object.freeze({ para: "文字太长，难于阅读", li
 /** 表格行谓词（markdown 表格行结构性不可折行——不计入段，与锚检查同源）。 */
 export const isTableRow = (l) => /^\s*\|.*\|\s*$/.test(String(l))
 
-/** 围栏标记（行首可选空白 + 三反引号 ∥ 三波浪号 ⇒ 标记字符；非围栏行 ⇒ null）——**单源**：
+/** 围栏标记（行首可选空白 + 三反引号 ∥ 三波浪号 ⇒ `{ ch, len }`；非围栏行 ⇒ null）——**单源**：
  *  `isFenceLine` 与两处块扫描（本节段判据 ∥ `./anchors.mjs` 锚抽取）同取此式，使「同形围栏行止」只此一解
- *  （同一模块内同符两义 = 单源可漂的结构口子）。 */
+ *  （同一模块内同符两义 = 单源可漂的结构口子）。
+ *  **长度带出**：闭合 = 同字符 ∧ 长度 ≥ 开启长度（CommonMark 围栏语义）——只比字符会让
+ *  `` ```` `` 包 `` ``` `` 的嵌套围栏在外层开启行处提前闭合，内层代码行落入正文并被并成段。 */
 export function fenceMark(l) {
   const m = /^\s*(`{3,}|~{3,})/.exec(String(l))
-  return m ? m[1][0] : null
+  return m ? { ch: m[1][0], len: m[1].length } : null
 }
+
+/** 围栏闭合谓词（单源 = 上面的长度语义）：两个 `{ ch, len }` 判闭合。 */
+export const isFenceClose = (mark, fence) => mark.ch === fence.ch && mark.len >= fence.len
 
 /** 围栏行谓词（单源 = `fenceMark`）——围栏行自身与块内整行均不计入段。 */
 export const isFenceLine = (l) => fenceMark(l) !== null
@@ -98,7 +103,7 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
       const mark = fenceMark(l)
       if (mark !== null) {
         if (fence === null) fence = mark
-        else if (mark === fence) fence = null
+        else if (isFenceClose(mark, fence)) fence = null
         flush()
         return // 围栏标记行自身断段
       }
