@@ -1,6 +1,6 @@
 {
   "name": "@thincoder/core",
-  "version": "0.10.12",
+  "version": "0.10.13",
   "description": "ThinCoder shared core — shared mechanism modules + shared prompt content (CLI ↔ VS Code extension).",
   "keywords": [
     "ai",

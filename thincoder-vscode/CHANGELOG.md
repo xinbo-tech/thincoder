@@ -1,3 +1,9 @@
+## [0.10.13] — 2026-10-26
+
+### Changed
+
+- **升级核到 `0.10.13`**：承载「模型请求带产品身份头」。VSC 在 `src/extension/session-slots.mjs` 声明自己的端与版本（与既有端名声明同处，零 electron ∥ vscode 依赖，可被单测直 import）。
+
 ## [0.10.12] — 2026-10-26
 
 ### Changed

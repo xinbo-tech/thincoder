@@ -3,6 +3,19 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.10.13] — 2026-10-26
+
+### Added
+
+- **`client-identity.mjs`：模型请求带产品身份头**——新增 `setClientIdentity({ surface, version })` ∥ `clientIdentity()` ∥ `userAgent()` ∥ `withUserAgent(headers)`；字形 `ThinCoder/<surface>/<version>`，surface 小写枚举 `cli` ∥ `vscode` ∥ `desktop` ∥ `server`（内部缺省 `core`）。
+- **不可被渠道配置覆盖**：`withUserAgent` 先删任何大小写变体的 `user-agent` 键再写本产品值——fetch `Headers` 对变体是合并语义，只靠后写会得双值。
+- **七处消费点全部装配**：provider/{core,anthropic,google,responses,list-models} · `generate-title.mjs` · `embedding.mjs`。
+- **缺省哨兵** `ThinCoder/core/0.0.0`：任何真实端版本都不等于 `0.0.0`，四端进程内出现即声明漏接。
+
+### Note
+
+- **核须先于端发版**：四端都载本件，旧核 + 新端 = 启动即 `ERR_MODULE_NOT_FOUND`。
+
 ## [0.10.12] — 2026-10-26
 
 ### Changed

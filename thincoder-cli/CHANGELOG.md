@@ -1,3 +1,9 @@
+## [0.12.80] — 2026-10-26
+
+### Changed
+
+- **升级核到 `0.10.13`**：承载「模型请求带产品身份头」。CLI 在 `src/command-table.mjs` 顶部声明自己的端与版本（每个命令都过的分发点——不是 `tui/startup.mjs`，那条会漏 headless ∥ ACP ∥ distill ∥ embedding 四条模型路径）。
+
 ## [0.12.79] — 2026-10-26
 
 ### Changed
