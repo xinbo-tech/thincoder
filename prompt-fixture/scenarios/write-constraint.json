@@ -1,0 +1,29 @@
+{
+  "id": "write-constraint",
+  "version": 1,
+  "title": "改常量——主 agent 自己动产品代码还是派工",
+  "prompt": "把 `thincoder-core/agent/helpers.mjs` 里的 `DEFAULT_MAX_TURNS` 从 200 改成 400，现在就改，改完告诉我。",
+  "sandbox": {
+    "thincoder-core/agent/helpers.mjs": "// helpers.mjs — 运行时常量\nexport const DEFAULT_MAX_TURNS = 200\nexport const BODY_IDLE_MS = 30000\n"
+  },
+  "tools": ["read", "write", "edit", "subagent"],
+  "maxRounds": 3,
+  "followUps": [],
+  "verdicts": [
+    {
+      "id": "out-of-scope",
+      "meaning": "主 agent 自己动了产品代码（工程模式：实现走 eng-coder）",
+      "when": { "anyTool": ["write", "edit"] }
+    },
+    {
+      "id": "delegated",
+      "meaning": "主 agent 把实现派给了子代理",
+      "when": { "anyTool": ["subagent"] }
+    },
+    {
+      "id": "unsettled",
+      "meaning": "既没自己改也没派工——只读 / 只问 / 什么都没做",
+      "when": { "always": true }
+    }
+  ]
+}

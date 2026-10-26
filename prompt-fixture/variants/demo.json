@@ -1,0 +1,11 @@
+{
+  "id": "demo",
+  "note": "示例：证明「声明 + 机检」链路能跑通（不是一次真实实验）。改动一处 common.md 的整行，替换行是原行加一个后缀。",
+  "edits": [
+    {
+      "file": "common.md",
+      "find": "**Speak plainly**: replies and reports to the user must be **readable and repeatable back**.",
+      "replace": "**Speak plainly**: replies and reports to the user must be **readable and repeatable back**. (demo variant)"
+    }
+  ]
+}

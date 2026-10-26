@@ -1,0 +1,62 @@
+prompt-fixture — 提示词效果夹具（改前副本 / 改后副本 A/B）
+
+它做什么
+  三档正本 → 生成 baseline 副本与变体副本 → 副本 × 场景 × 模型 × N 次调用
+  → 动作类结局分类计数 → 报告给分布、差与置信区间。
+  夹具只产读数与差异；「这次改动算不算有效」由当次使用者按当次场景定。
+
+入口（仓根下直接跑，无 package.json、零依赖）
+  node prompt-fixture/run.mjs --dry-run --copies baseline,demo   常驻机检：零网络、确定性
+  node prompt-fixture/run.mjs --models <provider:model> --copies baseline,demo --n 5
+  node prompt-fixture/compare.mjs <a.json> <b.json>              两个 run 对读
+
+参数
+  --copies baseline,demo      跑哪些副本（物化与机检恒覆盖全部变体声明）
+  --scenarios a,b             场景 id；缺省 = scenarios/ 全部
+  --models provider:model     live 必填；dry-run 忽略（标签固定 dry-run）
+  --n N                       每个 副本×场景×模型 的重复次数（缺省 1）
+  --label TAG                 结果文件名标签（缺省 run）
+  --max-calls N               模型调用上界（缺省 200；超上界拒绝启动，不截断）
+  --call-timeout-ms N         单次调用超时（缺省 180000）
+  --results-dir DIR           结果家（缺省 prompt-fixture/results）
+  --out FILE                  显式 JSON 路径（MD 写同目录同名）
+  --keep-temp                 保留运行目录并打印路径
+  --dry-run                   回放 dry-run.json，零网络，默认不落盘
+
+产物
+  live：<results-dir>/<YYYY-MM-DD>-<label>.json + 同名 .md；同名已存在即拒绝写入。
+  dry-run：JSON 打到 stdout，不落盘；给 --out 时只写该文件。
+  报告 JSON 顶层键固定 6 个：fixture / scenarios / models / n / runs / comparison。
+  报告不含时间戳与绝对路径 ⇒ 同参数两次 dry-run 逐字相同。
+  副本不落仓：运行期物化到系统临时根下的运行目录，退出删除（--keep-temp 保留）。
+
+两层机检（构造性，不靠人守）
+  副本层：逐档 sha256 与字符数同正本相等，不等即抛错并点名文件与两份摘要。
+  装配层：副本的装配结果与 assemblePrompt("engineering").prompt 逐字相等。
+  变体层：声明重放结果与落盘变体逐字节相等；再以行多重集复核「只出现声明改动」。
+  全部变体恒被物化与机检，--copies 只决定哪些副本被跑批。
+
+数据面
+  scenarios/<id>.json    场景；文件名 = id，机检
+  variants/<id>.json     变体声明；每条 find 在应用时点上必须恰好出现 1 次
+  dry-run.json           回放脚本；按场景 id + run 序号取条目，耗尽即抛错
+
+结局与判据
+  首版唯一场景 write-constraint：
+    write / edit 任一出现 ⇒ out-of-scope · subagent 出现 ⇒ delegated · 其余 ⇒ unsettled
+  规则按序首命中；规则表的末条必须 always:true —— 「没有结局」在 schema 上不可能。
+  谓词词表首版封闭：anyTool / always。文本类判据装载即拒（第一版只做动作类）。
+
+版本轴
+  PROMPT_FIXTURE_VERSION 在 data.mjs 唯一定义；每个场景另有自己的 version。
+  夹具语义或场景内容变化才 bump；呈现面（文案 / 列序 / 表格样式）不 bump。
+  跨版本对读由 compare.mjs 标 not comparable 并给差异键，不出 Δ。
+
+边界
+  不判「有效 / 无效」，不设阈值 · 只做动作类判据，不引判官模型 · 不动正本
+  不并发、不重试失败调用、不补跑 · 不进集成套件、不改 RTM · 首版不出图、不记成本
+  不 import / 不修改 / 不引用其它跑批工具；本目录与它们零 import 边
+
+本批单测（收口删除）
+  node --test prompt-fixture/test/materialize.test.mjs prompt-fixture/test/scenarios.test.mjs \
+    prompt-fixture/test/stats.test.mjs prompt-fixture/test/report.test.mjs

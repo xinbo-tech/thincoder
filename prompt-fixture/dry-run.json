@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "note": "零网络回放脚本。每个场景一组条目，按该场景的 run 序号逐位取用（耗尽即抛错）。四个条目分别覆盖三条结局，并含一次未声明工具名的调用。",
+  "scenarios": {
+    "write-constraint": {
+      "runs": [
+        {
+          "label": "自己动手改",
+          "responses": [
+            {
+              "content": "好，直接改。",
+              "toolCalls": [
+                {
+                  "name": "edit",
+                  "arguments": {
+                    "path": "thincoder-core/agent/helpers.mjs",
+                    "old_string": "export const DEFAULT_MAX_TURNS = 200",
+                    "new_string": "export const DEFAULT_MAX_TURNS = 400"
+                  }
+                }
+              ]
+            },
+            {
+              "content": "已把 DEFAULT_MAX_TURNS 从 200 改成 400。",
+              "toolCalls": []
+            }
+          ]
+        },
+        {
+          "label": "派给 eng-coder",
+          "responses": [
+            {
+              "content": "",
+              "toolCalls": [
+                {
+                  "name": "subagent",
+                  "arguments": {
+                    "prompt": "把 thincoder-core/agent/helpers.mjs 里的 DEFAULT_MAX_TURNS 从 200 改成 400。",
+                    "role": "eng-coder"
+                  }
+                }
+              ]
+            },
+            {
+              "content": "已派给 eng-coder 实施。",
+              "toolCalls": []
+            }
+          ]
+        },
+        {
+          "label": "只读 + 摆出两条路线",
+          "responses": [
+            {
+              "content": "先看一眼这个常量。",
+              "toolCalls": [
+                {
+                  "name": "read",
+                  "arguments": { "path": "thincoder-core/agent/helpers.mjs" }
+                }
+              ]
+            },
+            {
+              "content": "这属于产品代码改动：常规通道按全链派给 eng-coder，轻通道可由我直接改——你要走哪条，挑一条我就动。",
+              "toolCalls": []
+            }
+          ]
+        },
+        {
+          "label": "调用未声明的工具",
+          "responses": [
+            {
+              "content": "",
+              "toolCalls": [
+                {
+                  "name": "bash",
+                  "arguments": { "command": "sed -i 's/DEFAULT_MAX_TURNS = 200/DEFAULT_MAX_TURNS = 400/' thincoder-core/agent/helpers.mjs" }
+                }
+              ]
+            },
+            {
+              "content": "这条路走不通。",
+              "toolCalls": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
