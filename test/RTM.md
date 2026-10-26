@@ -79,13 +79,14 @@
 ### 7. 收口只判本批改过的档
 
 > 目的：收口门判的只是本批笔域集——范围外的脏档不拦收口，也不进回执。
-> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）；三态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误。
+> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；四态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 7-1 | 在夹具项目里跑一次 `batch` 收口，本批笔域集内各档零命中 | 收口放行，回执含 `[doc-check gate] DOC-CHECK GATE: PASS` 行（verdict 为 gate 段首行；close 回执首行 = 状态句），范围行档数 = 笔域集档数 | **PASS** | 2026-10-25 | 父侧亲跑 | — | `test/integration/batch-close-gate.test.mjs` |
 | 7-2 | 同一夹具，工作树里放一档范围外的档且含悬空指针，再收口 | 该档不入判、收口放行、回执零该档行（连档名都不出现） | **PASS** | 2026-10-25 | 父侧亲跑 | — | `test/integration/batch-close-gate.test.mjs` |
 | 7-3 | 同一夹具，本批笔域集内一档含悬空指针，再收口 | 收口被拒（throw），§1 状态行字节不变 | **PASS** | 2026-10-25 | 父侧亲跑 | — | `test/integration/batch-close-gate.test.mjs` |
+| 7-4 | 同一夹具，收口前在批档同目录放本批自己的单元测试档 `<批档名>.test.mjs`（另备前缀变体 `<批档名>-extra.test.mjs`，盘上无 `<批档名>-extra.md`），再收口 | 收口被拒（throw）：拒串点名该档绝对路径 + 修法（删）；§1 状态行字节不变；删档后同跑收口放行 | 待执行 | — | — | — | `test/integration/batch-close-gate.test.mjs` |
 
 ### 8. 批次档建在项目里（工作区锚报明、不落锚目录）
 
@@ -115,6 +116,19 @@
 |---|---|---|---|---|---|---|---|
 | 10-1 | 工程模式夹具里，让一次设计评审的 `documents` 带上批档（签发一个槽），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
+| 10-3 | 工程模式夹具里造三行 `待核销`：a 行 `task_book` 指向「已收口 ∧ 槽内有归属」的批档；b 行指向「未收口」的批档；c 行指向「已收口但槽内无归属」的批档。三行各跑一次 `thincoder ledger close --id <行>` | a 行核销成功（`status = 已核销`，`closed_at` 非空）；b / c 行被拒，回执分别点名缺 ② ∥ 缺 ③，且两行 `status` 仍 `待核销`、`closed_at` 仍空 | 待执行 | — | — | — | `test/integration/ledger-close-proof.test.mjs` |
+
+### 11. 超窗守卫与内部阶段豁免（absent 档全档同判）
+
+> 目的：越窗时要么先压一次再发，要么带三实数当场报错——不把同一条超限请求丢给服务端吃 400。
+> 节注：回指 = `docs/core/design/CONTEXT-COMPACTION.md` §6.2 ∥ §6.17；交互组件 = `thincoder-core/agent/run-stages.mjs`（守卫）· `thincoder-core/provider/{core,anthropic,google,responses}.mjs`（净判）· `thincoder-core/provider/errors.mjs`（400 分类）；需求回指 = F-LX4 的上下文面（本批 §2 R1–R4）。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 11-1 | CLI 会话经 provider 桩跑到估算越线（显式压缩线 750,000 隔离阈值面），再发一条消息 | 压缩事件恰好 1（`mode:"summary"`）；压缩请求 1 · 回合请求 1；全 200 无 400；`max_tokens` 仍未发 | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-2 | 同上，摘要桩回超长摘要使压后仍越线 | 错误带 prompt / `max_tokens not sent` / 窗口三实数；强压请求恰 1 · 回合请求 0；无 400 | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-3 | `absent` 档（deepseek-flash 形状）两半段：越线 620,000 ∥ 未越线 100,000，另加退化档 `doubao-seed-2-1-turbo-260628` | 越线：强压 1 · 回合请求 1 · 零 400；未越线：零压缩 · 请求照发；退化档：零压缩 · 请求照发（地板不误伤） | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-4 | provider 桩直接回 400 越窗报文 | 错误 `kind = "context_overflow"` · `retryable === false` · 不重试（请求恰 1 次） | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
 
 ## VS Code 端（thincoder-vscode）
 

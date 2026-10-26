@@ -246,6 +246,8 @@ The round ledger row's title carries 「收尾链待跑」 — that marker is th
   **Cross-session pickup**: at session start (on the same beat as "Re-check deferred batches first") ⇒ scan for unclosed light-channel rounds (the round row unsettled ∥ the batch record not closed out).
   Found ⇒ raise the pickup reminder first, carrying the same four elements (round ∥ pen count ∥ steps owed ∥ one word runs it); the user's one word ⇒ take over and run the full closeout chain.
   Closeout-chain segment map: §2 design formalization · §3 independent review · §4 approval · §6 closeout settlement; the round row settles only after the full chain passes (pen rows may settle with the closeout).
+  **Why the closeout chain cannot be skipped**: a light-channel pen changes code only — the design docs keep describing the code as it was before the pen, and no other step in the round pulls them back in sync.
+  The chain is that step: the design seat writes the code's current state back into the design docs, an independent review checks it, and the approval closes it; skipped, every later reader follows a description of code that no longer exists.
 
 **A pen answers the three questions before it moves**: where the function lives now (a coordinate ∥ a doc section) · what it is called (the existing name, verbatim) · who uses it.
 **The answer joins the pen's §1 entry in one of three shapes**:

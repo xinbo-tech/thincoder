@@ -15,6 +15,10 @@
  * 核销标记门（LIGHT-CHANNEL.md §2.5 · 台账 #1780）：写入 `已核销` 的三径（close 单行 ∥ close 批量 ∥
  *  update 迁移——均经两逐行共函数）判**结果行标题**携 `ROUND_MARKER` ⇒ 拒；判据只认标题标记
  * （不查批档 ∥ 不查评审实跑），撤回（→ 已废弃）不拦。
+ * 核销机检（F-LX4 · 2026-10-26 批 §2）：同一两逐行共函数在写 `已核销` 前判三件（批档在盘 ∥ §1 =
+ * 已收口 ∥ 该批档在 design token 槽的批次归属有记录），缺一即拒、一次报全缺项、行零改；判据只有
+ * 目标值一条。本体住拆分件 `ledger-close-proof.mjs`（同 `ledger-tools.mjs` 先例）；标记门在前
+ * （零成本字符串判先报），两门互不替代。
  *
  * 接线（设计档 §2.2 命令面接线）：族出口 = `ledger.mjs`（re-export 两源——KD-M2-3）；查询命令 ←
  * tools/index.mjs（assembleBuiltinTools 全角色面）；写命令 ← agent/family-tools.mjs（assembleFamilyTools
@@ -24,6 +28,7 @@
 import { resolve } from "node:path"
 import { AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_SOFT_LIMIT, nowIso, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER } from "./ledger-db.mjs"
 import { resolveDeclaredRef } from "./declaration.mjs"
+import { assertCloseOutProof, filePartOf, namesPointer, readCloseOutBatches } from "./ledger-close-proof.mjs"
 
 /** 逐行老化判真（LEDGER.md §13.4 · 2026-10-07 批 ledger-tool）：未决四态（`PENDING_STATUSES`）∧
  *  行龄 > `AGING_DAYS` 天；行龄源 = `updated_at ?? created_at`（§5 同源）；时间戳缺 / 不可解析
@@ -35,10 +40,6 @@ function isRowAged(row, now) {
   const ms = Date.parse(String(t))
   return Number.isFinite(ms) && (now - ms) / 86400000 > AGING_DAYS
 }
-
-/** 指针 ∥ 批档值 → 文件部分（首个 `§` 前子串，trim——设计档 §6.1 口径 1 单源；`task_book` 与
- *  `batch` 同形同口径）。 */
-const filePartOf = (v) => (v == null ? "" : String(v).split("§")[0].trim())
 
 /** 解析基准（设计档 §6.1 口径 2 同一子表达式——与台账库键同源）：`resolveLedgerRoot(cwd, boundary)?.root
  *  ?? resolve(cwd ?? ".")`。`boundary` = 会话锚（与 `openLedger` 同一枚上界——同一笔动作的判据不能两界）。 */
@@ -136,9 +137,6 @@ export function ledgerEvidenceOversize({ cwd, boundary, task_book = null } = {})
   return ledgerCount({ cwd, boundary, task_book }).evidenceOversize
 }
 
-/** 本笔指名谓词（设计档 §6.1 口径 3）：显式空值（`null` / 空串 / 全空白） ≡ **未指名**——臂② 不触。 */
-const namesPointer = (v) => v != null && String(v).trim() !== ""
-
 /** 写门·指针点名（设计档 §6.1 两臂 · AC-M2-10 ∥ AC-M2-29）：判**本笔写入面**——两臂之外零判。
  *  臂①（点名非空）：结果行 `status ∈ {在途, 待核销}` ∨ 结果行 `trigger = 归批` ⇒ `task_book` 非空
  *  （缺 / 空串 / 全空白 ⇒ 拒「必填」）；**不判在盘**（列值事实，不随盘面翻转——DDL 咬合 CHECK 为该半幅防线）。
@@ -214,11 +212,11 @@ function assertEvidenceValue(fnName, evidence) {
 }
 
 /** 单行落笔·update（**单行形 ∥ 批量形共函数**——设计档 §3.3「逐行语义单源」）：迁移表判 → 核销标记门
- *  （目标 = `已核销` ∧ 结果标题携标记 ⇒ 拒——判序 = LIGHT-CHANNEL.md §2.5）→ executor / evidence 值计算
- *  （含两拒面）→ 写门 → UPDATE（判序 = §13.9 逐字未变）。`to` = `patch.status ?? 行现态`
+ *  （目标 = `已核销` ∧ 结果标题携标记 ⇒ 拒——判序 = LIGHT-CHANNEL.md §2.5）→ **核销机检**（目标 = `已核销`
+ *  ⇒ `assertCloseOutProof`）→ executor / evidence 值计算（含两拒面）→ 写门 → UPDATE（判序 = §13.9 逐字未变）。`to` = `patch.status ?? 行现态`
  *  ——批量形纯字段补丁（不携 `status`）时 `to === row.status` ⇒ 迁移表不判、`status` 零写（§3.3）。
  *  `resume_when` = 普通可空字段补丁（`patch.resume_when ?? 行值`——§3.4）。 */
-function applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary) {
+function applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, proof = {}) {
   const to = patch.status ?? row.status
   if (to !== row.status && !(ALLOWED_MIGRATIONS[row.status] ?? []).includes(to)) {
     throw new Error(`ledgerUpdate：迁移 ${row.status} → ${to} 不在允许迁移表`)
@@ -227,6 +225,8 @@ function applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary) {
   if (to === "已核销" && String(patch.title ?? row.title ?? "").includes(ROUND_MARKER)) {
     throw new Error(`ledgerUpdate：行标题仍携「${ROUND_MARKER}」——收尾链未跑完，不许核销（先跑收尾全链，再由父侧清标记）`)
   }
+  // 核销机检（F-LX4）：目标值 = `已核销` ⇒ 写库前三件校验（批档在盘 ∥ §1 已收口 ∥ 槽内有归属）
+  if (to === "已核销") assertCloseOutProof("ledgerUpdate", { agent: proof.agent, base: proof.base ?? baseOf(cwd, boundary), row, batches: proof.batches })
   const nextExecutor = resolveExecutorTarget(row, to, patch, executorSessionId)
   const nextEvidence = evidenceValue("ledgerUpdate", row.evidence, patch.evidence, patch.evidenceReplace)
   assertEvidenceValue("ledgerUpdate", patch.evidence)
@@ -249,27 +249,30 @@ function applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary) {
  *  纯函数可测；工具层动态 import getSessionId() 供值，零新静态边）。
  *  `evidence` 传值 = 追加缺省、`patch.evidenceReplace` = 布尔覆盖旗（§13.9——值计算 / 两拒面 = `evidenceValue`
  *  / `assertEvidenceValue`；判位 = 本语义段，随 executor 目标值同拍）。**单行形**（`id`）——逐行落笔 = `applyRowUpdate`。 */
-export function ledgerUpdate({ cwd, id, patch, executorSessionId, boundary }) {
+export function ledgerUpdate({ cwd, id, patch, executorSessionId, boundary, agent }) {
   const db = openLedger(cwd, { create: true, boundary })
   try {
     const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
     if (!row) throw new Error(`ledgerUpdate：行 ${id} 不存在`)
-    const { id: rowId } = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary)
+    const { id: rowId } = applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, { agent, base: baseOf(cwd, boundary) })
     return { id: rowId }
   } finally { db.close() }
 }
 
 /** 单行落笔·close（**单行形 ∥ 批量形共函数**——设计档 §3.3「逐行语义单源」）：源态判（核销仅三源——
  *  在途不可跳）→ 核销标记门（LIGHT-CHANNEL.md §2.5——`已核销` ∧ 标题携标记 ⇒ 拒；撤回不拦）→
- *  值计算（拒面① 旗独传判于此）→ 追认口 `evidence` 门 → 拒面② → UPDATE。
+ *  **核销机检**（`已核销` ⇒ `assertCloseOutProof`）→ 值计算（拒面① 旗独传判于此）→ 追认口 `evidence`
+ *  门 → 拒面② → UPDATE。
  *  撤回（任意态 → 已废弃——含在途直撤）同步 `executor = NULL`（LEDGER.md §3.1 ④）；核销两源（勾销 /
  *  追认）`executor` 零触碰（非在途出边）。 */
-function applyRowClose(db, row, status, evidence, evidenceReplace) {
+function applyRowClose(db, row, status, evidence, evidenceReplace, proof = {}) {
   if (status === "已核销" && !["待讨论", "待设计", "待核销"].includes(row.status)) throw new Error(`ledgerClose：核销仅限 待讨论 / 待设计 / 待核销（现态 ${row.status}）`)
   // 核销标记门（LIGHT-CHANNEL.md §2.5）：勾销 ∥ 追认同判；撤回（→ 已废弃）不入本门
   if (status === "已核销" && String(row.title ?? "").includes(ROUND_MARKER)) {
     throw new Error(`ledgerClose：行标题仍携「${ROUND_MARKER}」——收尾链未跑完，不许核销（先跑收尾全链，再由父侧清标记）`)
   }
+  // 核销机检（F-LX4）：判序 = 标记门之后（零成本字符串判先报）、值计算之前
+  if (status === "已核销") assertCloseOutProof("ledgerClose", { agent: proof.agent, base: proof.base, row, batches: proof.batches })
   const nextEvidence = evidenceValue("ledgerClose", row.evidence, evidence, evidenceReplace)
   if (status === "已核销" && ["待讨论", "待设计"].includes(row.status) && (nextEvidence == null || String(nextEvidence).trim() === "")) throw new Error(`ledgerClose：追认核销须带 evidence（现态 ${row.status}）`)
   assertEvidenceValue("ledgerClose", evidence) // 判序：拒面②（新值空白）落追认门之后 → UPDATE
@@ -283,10 +286,10 @@ function applyRowClose(db, row, status, evidence, evidenceReplace) {
  *  可选 `evidence` 参：传值 = 追加缺省（§13.9——旧空直写 / 旧非空拼 `旧｜新`）、`evidenceReplace: true`
  *  同传 = 整段替换；勾销 / 追认 / 撤回三径同携（写值落行，内容不判）；两拒面（旗独传 @值计算 ∥
  *  新值空白 @追认门后）见 `evidenceValue` / `assertEvidenceValue`。
- *  判序（同函数体同层，§13.9）：目标集判 → 行取 → 源态判 → 值计算 → 追认门（原样——判**结果值**缺 /
- *  全空白 ⇒ 拒，文案逐字不变）→ 拒面②（新值空白）→ UPDATE（LEDGER.md §3 收口两源）。**单行形**
- *  （`id`）——逐行落笔 = `applyRowClose`。 */
-export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, boundary }) {
+ *  判序（同函数体同层，§13.9）：目标集判 → 行取 → 源态判 → **核销机检**（`已核销` 才触）→ 值计算 →
+ *  追认门（原样——判**结果值**缺 / 全空白 ⇒ 拒，文案逐字不变）→ 拒面②（新值空白）→ UPDATE（LEDGER.md §3
+ *  收口两源）。**单行形**（`id`）——逐行落笔 = `applyRowClose`。 */
+export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, boundary, agent }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
   const db = openLedger(cwd, { create: true, boundary })
   try {
@@ -294,7 +297,7 @@ export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, bounda
     try {
       const row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
       if (!row) throw new Error(`ledgerClose：行 ${id} 不存在`)
-      const out = applyRowClose(db, row, status, evidence, evidenceReplace)
+      const out = applyRowClose(db, row, status, evidence, evidenceReplace, { agent, base: baseOf(cwd, boundary) })
       db.exec("COMMIT")
       return out
     } catch (e) { db.exec("ROLLBACK"); throw e }
@@ -330,16 +333,20 @@ function resolveBatchRows(db, base, abs) {
  *  并抛（零行改）——故「部分落地」只由逐行门拒产生，「中途失败」不留半批。
  *  `BEGIN IMMEDIATE`：写锁一次先把（逐行不升级锁 ⇒ 事务级失败在首行之前即失败）。
  *  @returns {{batch: string, status: string|null, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
-export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, boundary }) {
+export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, boundary, agent }) {
   const db = openLedger(cwd, { create: true, boundary })
   try {
     const base = baseOf(cwd, boundary)
     const abs = assertBatchArg("ledgerUpdate", base, batch)
+    // 核销机检 ③：迁移径（结果态 = `已核销`）在 BEGIN 之前一次读入、行间复用（严格读抛 = 会话级 ⇒ 整批拒）；
+    // 纯字段补丁径也读一次（不抛）：闸只对归档行触（存量已知接受），读失败向每行报 ③ 形——不改业务结果
+    // （那些行本就被拦），但会以逐行拒因呈现环境问题（父侧已知项，待裁）。
+    const proof = { agent, base, batches: patch.status === "已核销" ? readCloseOutBatches(agent, "ledgerUpdate") : patch.status == null ? readCloseOutBatches(agent) : undefined }
     db.exec("BEGIN IMMEDIATE")
     try {
       const applied = [], skipped = []
       for (const row of resolveBatchRows(db, base, abs)) {
-        try { applied.push(applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary).id) }
+        try { applied.push(applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary, proof).id) }
         catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")
@@ -355,12 +362,14 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, b
  *  （`evidenceValue` 同源）。回执 `status` 恒 `已核销`（批量形缺省 = 勾销单值；携则守卫已收窄为
  *  `{已核销}`——§3.2 `whenPresent`）。事务语义同 `ledgerUpdateBatch`。
  *  @returns {{batch: string, status: string, applied: number[], skipped: {id: number, from: string, why: string}[]}} */
-export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, boundary }) {
+export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, boundary, agent }) {
   const status = "已核销"
   const db = openLedger(cwd, { create: true, boundary })
   try {
     const base = baseOf(cwd, boundary)
     const abs = assertBatchArg("ledgerClose", base, batch)
+    // 核销机检 ③：本径恒写 `已核销` ⇒ 归属并集在 BEGIN 之前一次读入（严格读抛 = 会话级 ⇒ 整批拒、不进 skipped）
+    const proof = { agent, base, batches: readCloseOutBatches(agent, "ledgerClose") }
     db.exec("BEGIN IMMEDIATE")
     try {
       const applied = [], skipped = []
@@ -371,7 +380,7 @@ export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, bounda
           skipped.push({ id: Number(row.id), from: row.status, why })
           continue
         }
-        try { applied.push(applyRowClose(db, row, status, evidence, evidenceReplace).id) }
+        try { applied.push(applyRowClose(db, row, status, evidence, evidenceReplace, proof).id) }
         catch (e) { skipped.push({ id: Number(row.id), from: row.status, why: String(e?.message ?? e) }) }
       }
       db.exec("COMMIT")

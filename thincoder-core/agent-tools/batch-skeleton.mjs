@@ -20,6 +20,14 @@
  * 段标题定位（`## §N` 独立标题——`## §20` 不误命中 §2）。
  */
 export const sectionHeaderRe = (seg) => new RegExp(`^## §${seg}(?=\\s|$)`, "m")
+
+/** §1 段头正则（单源——`readBatchStatusLine` 与 `isBatchRecord` 共用；`## §10` 不误命中 §1）。 */
+const SECTION_1_HEADER_RE = /^## §1(?=\s|$)/m
+/** 批档谓词（只读 · 零 fs）：档内有 §1 段头 ⇒ 批次档——判别式 = 上面那条同一正则（「是不是批档」与
+ *  「§1 状态行是什么」两问不各持一份）；消费面 = 台账核销机检（`ledger-close-proof.mjs`）。 */
+export function isBatchRecord(src) {
+  return typeof src === "string" && SECTION_1_HEADER_RE.test(src)
+}
 /**
  * STATUS_WORDS——状态行合法关键字**分段词表常量单源**（D-BR19 / fix 轮 #1；轮 2 #3 裁定②）：
  *  - §1 项 = gate 词表 `{ open: 进行中, closed: 已收口 }`——**gate 只消费 §1 项**（单源仍成立）；
@@ -120,7 +128,7 @@ export function placeholderResidueError(residues) {
  * （fail-closed 视为冻结）。
  */
 export function readBatchStatusLine(src) {
-  const s1 = /^## §1(?=\s|$)/m.exec(src)
+  const s1 = SECTION_1_HEADER_RE.exec(src) // 段头单源（与 isBatchRecord 同一正则）
   if (!s1) return "unknown"
   const nextRe = /^## §\d/gm
   nextRe.lastIndex = s1.index + s1[0].length

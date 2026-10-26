@@ -305,14 +305,14 @@ function makeLedgerTool(actions, { readonly = false, writeFace = false } = {}) {
             executorSessionId = getSessionId()
           }
           // 批级批量（§3.3）——`batch` 与 `id` 恰携其一（守卫 P7 已先裁）
-          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId, boundary: anchor }) })
-          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId, boundary: anchor }) })
+          if (batch != null) return JSON.stringify({ ...ledgerUpdateBatch({ cwd: target, batch, patch, executorSessionId, boundary: anchor, agent: ctx?.agent }) })
+          return JSON.stringify({ ...ledgerUpdate({ cwd: target, id, patch, executorSessionId, boundary: anchor, agent: ctx?.agent }) })
         }
         case "close": {
           const target = startOf(ctx, anchor, rest.cwd, rest.batch, rest.task_book)
           // 批级批量结算（§3.3——勾销径）
-          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor }) })
-          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor }) })
+          if (rest.batch != null) return JSON.stringify({ ...ledgerCloseBatch({ cwd: target, batch: rest.batch, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor, agent: ctx?.agent }) })
+          return JSON.stringify({ ...ledgerClose({ cwd: target, id: rest.id, status: rest.status, evidence: rest.evidence, evidenceReplace: rest.evidenceReplace, boundary: anchor, agent: ctx?.agent }) })
         }
         case "query": {
           const target = startOf(ctx, anchor, rest.cwd, rest.task_book)
