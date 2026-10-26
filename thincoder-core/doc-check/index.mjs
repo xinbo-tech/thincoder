@@ -112,7 +112,7 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
     }
     for (const w of paragraphs) out.push(paragraphHitLine(base, w))
     // 处置句只跟「段」命中走：仅有行太长时不得叫人对段落重写
-    if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push(`处置：${DOC_CLASS.para}的段落，重新组织语言重写；同轮修正后复跑；不转台账`)
+    if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push("处置：上面这些段落，重新组织语言重写；同轮修正后复跑；不转台账")
   }
   return out.join("\n")
 }
