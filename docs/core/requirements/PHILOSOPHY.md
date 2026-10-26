@@ -140,10 +140,10 @@ Agent 永远比人快，速度根本不是瓶颈。唯一能坏事的，是匆�
 
 | 提示词文件（落点 = `thincoder-core/prompts/**`） | 角色 | 主要对哪一块三观 |
 |---|---|---|
-| `persona-normal.md` / `persona-engineering.md` / `persona-{role}.md` | 人格层定义 | 人生观（我是谁）+ 世界观（怎么看编程） |
-| `common.md` | 公共层（人机分工 / 确认门 / 语言） | 世界观（人是决策者、子 Agent 授权） |
-| `discipline-normal.md` / `discipline-engineering.md` | 纪律层 | 价值观（交付透明、正确性、诚实）+ 世界观（设计文档优先、官方资料优先）+ 全部方法论 |
-| 特殊模块（顾问 / 评审） | 子代理基底 | 人生观（独立负责自己的任务） |
+| `thincoder-core/prompts/persona-normal.md` / `thincoder-core/prompts/persona-engineering.md` / `thincoder-core/prompts/persona-{role}.md` | 人格层定义 | **三观在该角色上的具体化 + 岗位身份**——同一上位依据按角色取形，不复制原文 |
+| `thincoder-core/prompts/common.md` | 公共层（人机分工 / 确认门 / 语言） | **协作基础 + 9 条公共三观**（2.1 ∥ 2.3 ∥ 2.5 ∥ 2.6 ∥ 3.7 ∥ 4.1 ∥ 4.2 ∥ 4.3 ∥ 4.4） |
+| `thincoder-core/prompts/discipline-normal.md` / `thincoder-core/prompts/discipline-engineering.md` | 纪律层 | **方法论**（三观的操作化：流程 / 规则 / 工具观） |
+| 特殊模块（顾问 / 评审） | 子代理基底（自含装配，不装配公共层） | 本批不接三观——待另批（其基底档自带独立性要求） |
 | 工具描述（`thincoder-core/tool-docs/**`） | 工具行为约束 | 价值观（正确性绝对优先、关联问题不回避） |
 
 **提示词 = 代码单源**：`thincoder-core/prompts/**`（运行期加载面，唯一副本）；规则的人读权威 = 中文机制文档。项目地图与文档规范 = `docs/README.md`。三层可逐级核对：**哲学 → 纪律层 → 提示词**。

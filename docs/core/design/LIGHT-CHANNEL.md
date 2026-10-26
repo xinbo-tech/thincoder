@@ -278,11 +278,11 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 ### 2.10 路由选择题落提示词面（F-LC2）
 
-**落点两档**：`thincoder-core/prompts/persona-engineering.md`（轻通道块整段 = 第 211–218 行 + 两处指代）∥ `thincoder-core/prompts/discipline-engineering.md`（六处句内改：首句 + 同行收尾句 ∥ 缺陷类分类义 ∥ 走查点名归类 ∥ 附则指代 ∥ 轮次形指代 ∥ 行使线）。提示词面 = 产品代码面（D1）⇒ **落笔 = 实施轮 eng-coder**；本段给逐字锚，实施席照此落笔、不另行改写。
+**落点两档**：`thincoder-core/prompts/persona-engineering.md`（轻通道块整段 = bullet 头起 8 行 + 两处指代）∥ `thincoder-core/prompts/discipline-engineering.md`（六处句内改：首句 + 同行收尾句 ∥ 缺陷类分类义 ∥ 走查点名归类 ∥ 附则指代 ∥ 轮次形指代 ∥ 行使线）。提示词面 = 产品代码面（D1）⇒ **落笔 = 实施轮 eng-coder**；本段给逐字锚，实施席照此落笔、不另行改写。
 
 提示词面 ∥ 设计档面 ∥ 需求档面笔不入轻通道（三面各有唯一作者——§5 边界；同档 `:224` 既有句）⇒ 提请句限定 **code pen**：这三面只有全链一条路，不出一条无 A 项可选的选择题（需求 §2.1 面界）。
 
-**逐字 EN（`thincoder-core/prompts/persona-engineering.md`——落笔块 = **第 211–218 行**（8 行 = 原 7 行 + 第 6 行按句界拆出的一行，文字零改）：轻通道块 bullet 头 `**Light channel (detail-face ∥ convergence-face pens — hit one of the three ⇒ walk)**` 及其后七行；第 219 行「Start-up booking」起不动。旧头随整行删除，不叠新头）**：
+**逐字 EN（`thincoder-core/prompts/persona-engineering.md`——落笔块 = 轻通道块 bullet 头起 8 行（原 7 行 + 第 6 行按句界拆出的一行，文字零改）：轻通道块 bullet 头 `**Light channel (detail-face ∥ convergence-face pens — hit one of the three ⇒ walk)**` 及其后七行；`**Start-up booking**` 块起不动。旧头随整行删除，不叠新头）**：
 
 ```text
 - **Light channel (detail-face ∥ convergence-face pens — hit one of the three ⇒ put it up as a choice)**: before each **code** pen, put the route to the user as a **choice question** — both routes on the same line, nothing preset:
@@ -314,7 +314,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 | 文件 | 现量 | Δ | 形态 |
 |---|---|---|---|
-| `thincoder-core/prompts/persona-engineering.md` | 459 行 | 轻通道块 7 行 → 8 行（第 211–218 行整段改写）+ 两处句内改 ⇒ +1 行（第 6 行按句界拆为两行，文字零改） | 提示词面——实施轮 eng-coder 落笔 |
+| `thincoder-core/prompts/persona-engineering.md` | 459 行 | 轻通道块 7 行 → 8 行（bullet 头起整段改写）+ 两处句内改 ⇒ +1 行（第 6 行按句界拆为两行，文字零改） | 提示词面——实施轮 eng-coder 落笔 |
 | `thincoder-core/prompts/discipline-engineering.md` | 349 行 | 六处句内改（首句 + 同行收尾句 ∥ `:102` 归类 ∥ `:104` 归类 ∥ 附则 ∥ 轮次形 ∥ 行使线）⇒ +1 行（`:97` 首句按句界拆为两行，文字零改） | 提示词面——实施轮 eng-coder 落笔 |
 | `docs/core/design/LIGHT-CHANNEL.md` | 474 行（含本批落笔） | §1 定位 / §2.1 / §2.2 / §2.10 / §3 两处 / §4 ② / §7 K4 / §8 | 设计档——本席笔（本批） |
 | `docs/core/design/PROMPT-SYSTEM.md` | 4,402 行 | §6.12 分层归属一句（改为选择题形） | 设计档——本席笔（本批） |
@@ -363,7 +363,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 | 铁律二（错结构就地修） | **不改写**——铁律二 = 全链的活（语义零损）；误准入（含撞错结构）交收尾全链兜底捕获（判据收口） |
 | 变更面分流（产品代码面 = 全流程） | **不改写表行**——轻通道例外由机制块承载（条件 = 三样清单 + 一句边界；代价 = 收尾全链显式） |
 | 确认与批准门（写文件前先确认） | **不改写**——轻通道笔免例行「复述 + 等确认」步，由**路由选择题**一次选定承担（A/B 平等摆出 + 用户选定 ⇒ 该笔放行）；分钟级目标不变 |
-| 「父侧不代笔」（三类例外 + 打标义务） | **不改写**——轻通道笔执行形态 = 父侧直改：**明示为新例外——由机制块承载（条件 = 三样清单 + 一句边界 + 路由选择题与用户选定 + 走查/读数 + 收尾全链闭合）**；三类例外本体零动。**打标义务即满足**——选择题 A 项「回退 = 可 revert」+ 轮次记录 §1「父侧笔」逐笔收录（「父侧直接执行」随逐笔选择题与选定、§1 留痕明示，不另加注） |
+| 「父侧不代笔」（轻通道笔的执行形态） | **不改写**——轻通道笔 = 父侧直改，由本档机制块承载（条件 = 三样清单 + 一句边界 + 路由选择题与用户选定 + 走查/读数 + 收尾全链闭合）；**打标义务即满足**——选择题 A 项「回退 = 可 revert」+ 轮次记录 §1「父侧笔」逐笔收录（「父侧直接执行」随逐笔选择题与选定、§1 留痕明示，不另加注） |
 | 批次档生命周期（五条） | **不改写**——轮次 = 批档一本（§2.6 复用形）；轮次界 = 收口 |
 | 台账生命周期（事件 → 动作） | **不改写**——核销前置 = 机械门（§2.5——`ledger-cmd.mjs` 判据新增；迁移表 ∥ 写门 ∥ 六态零动）；启动即挂账 = 既有迁移表连步（待讨论 → 待设计 → 在途）+ 在途不可跳核销（既有源态判） |
 | 测试纪律（收口测试行 ∥ 单元测试档） | **不改写**——「必要测试」判据按同轴定形（§2.4） |

@@ -602,7 +602,7 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 - **用例 → 行**：集成用例档内的用例标题以 RTM 编号开头（如 `test('1-1 …')`）——用例标识符与报告标识符同字，标准 §6.4.1.3 a) 的「测试用例的标识符」由此机判。**次序：先定 RTM 编号 → 再落用例标题**（编号先行）；**实施轮随用例设立**（本设计不写 `test/**`）。
 - **覆盖判据**：故事下每个用例一行；一个用例不出现在两张表（不重复登记）。
 - **设计轮 → 表**：设计的第一动作 = 读 `test/RTM.md` 的本端节出 delta（改坏 ∥ 冗余 ∥ 缺失三问）——机制与判据 = §11.15。
-- **现状**：仓内一份（`test/RTM.md`）——CLI 节 5 故事 15 行（性质 = **既有 15 例回填索引**，不是 §5.1 的起步批量；§5.1 起步批量 = 场景① × 三前端、例数窗 3–9，仍待落——CLI 缺的 3 行编号见 §11.16「D-3 缺失答案」）；vsc ∥ desktop 节 = 骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
+- **现状**（2026-10-25 实读 `test/RTM.md` = 138 行）：仓内一份——**9 个故事节、26 行编号用例**（初始 15 例由 §11 批回填，其后 §6–§9 各批增至现量）；vsc ∥ desktop 节 = 骨架（无故事节、注「尚无集成用例」），故事节随首个用例设立；**不得以单元测试档凑行**（两层永不互转，§3.2）。
 
 ### 11.5 签署面
 
@@ -904,23 +904,24 @@ console.log('bad-column-rows', badColumnRows);
 
 **`#87` 保留件的并存口径（写死）**：① ② 一律「**替换开篇口径、`#87` 的字段句与注解逐字保留**」。
 
-**三个用名（一处定名，本节各条共用）**：**字段句** = 字段列举句；**注解括注** = 字段句内那句 `(where a user enters the business — a business-observable point)`（「注解」与「注解括注」是同一个东西）；**两维触发行** = 以 `A change that alters …` 开局、两维取或的那一行。
+**三个用名（一处定名，本节各条共用）**：**字段句** = 字段列举句；**注解括注** = 字段句内那句 `(where a user enters the business — a business-observable point)`（「注解」与「注解括注」是同一个东西）；**触发行** = 以 `A change that alters …` 开局、判该不该有用例的那一行。
 
-注解括注在字段句之内 ⇒ 保留字段句即保留注解：① 的保留件 = 字段句 + 两维触发行；② 的 = 字段句 + `:54` 行（缺段 🔴 与两维取或句，按 `:914` 原样保留）。
+注解括注在字段句之内 ⇒ 保留字段句即保留注解：① 的保留件 = 字段句 + 触发行；② 的 = 字段句 + `:54` 行（缺段 🔴 与行字段句，按 `:914` 原样保留）。
 不取「只加不删」——留着 `the scenarios this change earns` 就是留着本批被取代的起点口径（批 §1 已定：设计步起点 = 读 RTM 出 delta，不再是「这次要什么场景」），两套起点并存比删更坏。
-也不取「整项替换」——`#87` 的判据轴、注解与两维触发行是上一批的交付物，替换即删。保留件逐处列在各小条里。
+也不取「整项替换」——`#87` 的判据轴、注解与触发行是上一批的交付物，替换即删。保留件逐处列在各小条里。
 
 **折行形（三段共用）**：每段按语义断行、逐行 ≤300 字符（本席实测最大 241）；**折行不折字**——断行处只以一个空格换行，不加字、不减字、不加连字符。
 三档提示词逐行 ≤300 是硬约束（现盘 persona 298 ∥ advisor 290 ∥ discipline 300，多一行超宽即破写形）。
 
-**① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 137–138 行）替换为**（保留件 = 字段句 `each row naming … business-observable point).`（含注解括注）与两维触发行，逐字不动）：
+**① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 137–138 行）替换为**（保留件 = 字段句 `each row naming … business-observable point).`（含注解括注）与触发行，逐字不动）：
 
 ```text
 9. **Integration test design — start from the index**: `test/RTM.md` is the RTM (UAT acceptance matrix: one section per business story, one row per integration case, 8 columns).
    Read it before designing, then answer as a delta: which rows this change breaks (rewrite them), which rows are redundant (delete them), which rows are missing (new rows) —
    with each row naming the **interaction between components** it evaluates, the business-observable result it asserts, the requirement it serves, and this project's entry (where a user enters the business — a business-observable point).
    A new row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
-   A change that alters an interaction between components or a business-observable result an existing case asserts names the cases it adds ∥ revises — "no change" is not an answer there.
+   A change that alters a business-observable result an existing case asserts names the case it revises — "no change" is not an answer there.
+   A change that crosses components but starts from no user-visible entry earns no case: an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
 ```
 
 **② `thincoder-core/prompts/advisor-design.md` 第 12 条（现 52–59 行）首句替换、并加一条 🔴**（保留件 = 字段句 `the **interaction between components** … each traces back to`（含注解括注），逐字不动）：
@@ -933,7 +934,7 @@ console.log('bad-column-rows', badColumnRows);
     A missing row's number is fixed in the RTM before its case title is written — `test('1-1 …')`, the same number verbatim.
 ```
 
-（该条其余现有行——缺段 🔴 `:54` ∥ 唯一成立的理由 `:55` ∥ 窗口满不算理由 `:55` ∥ 全量跑 🔴 `:57`–`:58` ∥ 两条 Why `:56` ∥ `:59`——原样保留、逐字不动。）
+（该条其余现有行——`:55` ∥ `:56` 的缺段 🔴 与行号句、`:60`–`:62` 的验收例外与两条 Why——原样保留、逐字不动；判据三行 `:57`–`:59` 按本档 §13.2 落点 ⑤ 替换为单臂。）
 
 **③ `thincoder-core/prompts/discipline-engineering.md` 集成段（现 181 行之后）新增一条**（该段无 `#87` 保留件；该档 `:195`–`:196` 的验收例外句在新条之后，原文不动）：
 
@@ -1038,5 +1039,209 @@ console.log('bad-column-rows', badColumnRows);
 
 ### 12.9 集成测试设计（RTM delta——§11.15 三问）
 
-读表（2026-10-25 实读：CLI 端表现行档 = `thincoder-cli/test/` 下的 RTM 总表，5 节 15 行在盘——`docs/core/design/LIGHT-CHANNEL.md:390` 同日实读互证）：本批 = 用例档位置移动 + runner 上移 + RTM 合并，组件间交互与既有用例断言的业务可观察结果零改 ⇒ **破行 0 ∥ 冗余行 0 ∥ 缺失行 0**；新增集成用例 = 无。RTM 本体合并 = 本批交付物（§12.2 RTM 行），窗口读数 = 15 例（50–100 窗内）。
+读表（本轮实读：RTM 单一副本 = 仓根 `test/RTM.md`，**5 节 / 9 个故事节 / 26 行编号用例 / 138 行**；CLI 端旧副本已不在盘）：本批 = 用例档位置移动 + runner 上移 + RTM 合并，既有用例断言的业务可观察结果零改 ⇒ **破行 0 ∥ 冗余行 0 ∥ 缺失行 0**；新增集成用例 = 无。RTM 本体合并 = 本批交付物（§12.2 RTM 行），窗口读数 = 26 例（50–100 窗内）。
+
+
+## 13. 测试纪律的两层 why（提示词面 · 2026-10-25）
+
+> 面 = 提示词运行面补「why + 判据」，零代码、零行为改动。需求口径 = `docs/core/requirements/TESTING.md` §0（「组件」= 项目整体）∥ §1.1（原话 + 「由此得到的两条判据」）。本节持最终英文文案，落笔面 = 产品代码（实施轮执行）。
+
+### 13.1 方案与理由
+
+**要补的两层**（落笔后位置按 §13.3 行数推得）：
+
+| 层 | 落笔后位置 | 现文本止于 | 补什么 |
+|---|---|---|---|
+| ① 为什么抑制落在形态上 | 「delete on use」条的 why 之后，`:171`–`:172` | 只说了「删掉可跑件就没有可跑的全量」 | 道理讲得通、行为仍复发 ⇒ 抑制靠形态：删可跑件 vs 靠记性 = 拿项目寿命赌模型的克制力 |
+| ② 冲动会换壳 | 「想留常驻件 = 集成测试在说话」条之后，`:179`–`:183` | 只把冲动指向集成用例；未覆盖换壳形「这面改了行为没人守 ⇒ 得补一条」 | 换壳形自带像样的理由（涉组件交互 ∥ 改可观察结果）；判据 = 守什么归集成测试，用例只从两入口长出 |
+
+**为什么现在补**：宽口径判据能自证——一次机制内部改动（工具无法推导项目根时由「返回空集」改为「抛出报明」）读起来像业务可观察的变化，而从无用户走这条路径；设计席、评审席与父侧据此判「该补 RTM 行」，用户的口径是：业务上没有这条路径，不进 RTM。
+
+**先例对齐**：同档 §11.17「提示词落点（三处逐字）」——设计持最终英文文案、实施轮落地、逐行 ≤300 字符；本设计同形照做，偏离 = 无。先例批 = 无（§11.17 起首次成此形制）。
+
+**实施坐标**：落点 ①–⑥ 的落笔面 = 四档提示词——工程 = `thincoder-core/prompts/discipline-engineering.md` · 设计席 = `thincoder-core/prompts/persona-eng-designer.md` · 评审 = `thincoder-core/prompts/advisor-design.md` · 普通 = `thincoder-core/prompts/discipline-normal.md`；
+逐处文案见 §13.2，行数见 §13.3。
+
+**勘察证据行**：查过 `thincoder-core/prompts/discipline-engineering.md` 测试纪律段（实测 `:165`–`:210`、全档 349 行）· `docs/core/requirements/TESTING.md` §0（「组件」粒度 = 项目整体）+ §1.1「由此得到的两条判据」· 本档 §11.17（提示词落点体式）∥ §3.2（两层界线）· `test/RTM.md`（实测 138 行、五节）。结论 = 均有归属、无需新建文件；外部公共源无相关（提示词文字属项目自有体式）。
+
+### 13.2 接口契约（提示词落点 · 逐字文案）
+
+面 = 提示词（产品码，模型读的原文）；施加面 = `thincoder-core/prompts/discipline-engineering.md`「Testing discipline」段。运行时行为零变，无 API ∥ 数据流改动。
+
+**落点 ①（纯追加 · 「delete on use」条 why 末行之后；落笔后 `:171`–`:172`）**——承「删除可跑件」的 why，补「为什么是删、而不是记住」：
+
+```text
+  **Why the suppression has to be mechanical, not remembered**: the reasoning can be explained and agreed to, and the behavior still comes back.
+  So the restraint goes into the form: with the runnable artifacts deleted there is no "everything" left to run, while keeping them and relying on memory bets the project on the model's own restraint.
+```
+
+**落点 ②（纯追加 · 「想留常驻件 = 集成测试在说话」条末行之后新增一条；落笔后 `:179`–`:183`）**——承该条，补换壳形与守卫判据：
+
+```text
+- **The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added"**: it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
+  **The only question worth asking is whose job the guarding is**: guarding is the integration suite's job, and an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
+  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect — one ledger row for the parent to book, no permanent file manufactured to discharge the urge.
+  Why: the shape is convincing by construction — a mechanism-internal change does cross components and does change what its caller sees, so the wrong criterion passes itself off as the right one.
+  Real instance: a tool that returned an empty set now throws a report when it cannot derive a root — it reads like a business-observable change, while no user walks that path.
+```
+
+**落点 ③（改两条 · 首臂删除 + 两触发补齐；落笔后 `:187`–`:188`，其 `Why` 行居 `:189`）**——判据句的「涉组件交互」首臂按 IEEE 的宽口径写，本项目「组件」粒度 = 项目整体（需求 §0），两条口径正面相抵；换成单臂，并把 `none` 的成立条件补全为需求 F34 的两条触发：
+
+```text
+- **`none` stands only where neither trigger holds**: the change alters no business-observable result an existing case asserts, and neither entry a case grows from applies — a scenario the product really needs, or a problem production really produced.
+  **A change that crosses components but starts from no user-visible entry earns no case**: crossing components is not a trigger, and closing with no integration-case change is not a defect.
+  Why: an unconditional `none` let any change close against an empty set, so the set stayed empty while every closeout read green.
+```
+
+**落点 ④（改一条 · 设计席 `thincoder-core/prompts/persona-eng-designer.md:141` 一行拆两行；落笔后 `:141`–`:142`）**——同一判据、设计席的话（写用例）：
+
+```text
+   A change that alters a business-observable result an existing case asserts names the case it revises — "no change" is not an answer there.
+   A change that crosses components but starts from no user-visible entry earns no case: an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
+```
+
+**落点 ⑤（改三条 · 评审席 `thincoder-core/prompts/advisor-design.md:57`–`:59` 三行原位替换，第二行拆两行；落笔后 `:57`–`:60`）**——同一判据、评审席的话（判该不该有）：`none` 条件同补两条触发，并补「用例只从两入口长出」句：
+
+```text
+    **A design missing that section ⇒ 🔴 (design incomplete)**; a change that alters no business-observable result an existing case asserts and adds no scenario the product really needs states so, with its reason, in that section.
+    **Only one reason stands: this change alters no business-observable result an existing case asserts and adds no scenario the product really needs. Anything else — e.g. the 50–100 case window being full — is still 🔴.**
+    **A case grows from exactly two entries**: a business scenario the product really needs, or a problem production really produced — crossing components is not an entry.
+    **Why**: no other acceptance run evaluates the business result from a user-visible entry, and the batch's unit-test files are deleted at closeout — a design that never names those scenarios leaves that result with no acceptance at all.
+```
+
+**落点 ⑥（改一条 · 普通侧 `thincoder-core/prompts/discipline-normal.md:194` 一行拆两行）**——普通侧同一判据（它同一行已载两入口）：
+
+```text
+- **Integration test assets**: business scenarios + production-problem additions, asserting only business-observable results; permanent, and a change that alters a business-observable result an existing case asserts must revise it.
+  A change that crosses components but starts from no user-visible entry earns no case — an integration case grows from exactly two entries: a business scenario the product really needs, or a problem production really produced.
+```
+
+落点 ①–⑥ 逐行 ≤300 字符（本轮 `node` 逐行实读字符数：① 200 · ② 262 · ③ 251 · ④ 228 · ⑤ 230 ∥ 222 ∥ 171 ∥ 239 · ⑥ 231 ∥ 227）；折行不折字——断行处只以一个空格换行。
+
+### 13.3 受影响文件
+
+| 档 | 现行 | 变动 |
+|---|---|---|
+| `thincoder-core/prompts/discipline-engineering.md` | **349** | 落点 ① +2 ∥ ② +5 ∥ ③ +1（一条拆两条，其 `Why` 行原样保留）⇒ **357** |
+| `thincoder-core/prompts/persona-eng-designer.md` | **154** | 落点 ④ 一行拆两行 ⇒ **155** |
+| `thincoder-core/prompts/advisor-design.md` | **142** | 落点 ⑤ 三行原位替换、第二行拆两行 ⇒ **143** |
+| `thincoder-core/prompts/discipline-normal.md` | **314** | 落点 ⑥ 一行拆两行 ⇒ **315** |
+| `docs/core/design/TESTING.md`（本档） | — | 本节 §13（设计笔；本档行数随本节自身变动，不设读数） |
+| 代码面 | — | **零改** |
+
+行数口径 = `split('\n').length - 1` 实测（四档均以末行换行收尾——本轮 `node` 实读；该口径即真实行数：349 ∥ 154 ∥ 142 ∥ 314，与 §6.50 A6 的「现行」列同数）。
+
+### 13.4 关键决策记录
+
+| # | 决策 | 被否方案与理由 |
+|---|---|---|
+| KD-T1 | 两处 why 各跟在所修饰的纪律之后 | 段末单列一节「为什么」——判据与被修饰的纪律隔开，读段时容易只取前半 |
+| KD-T2 | 判据句的「涉组件交互」首臂删除，判据收到「既有用例断言的业务可观察结果」+ 两入口 | 只加不删——两句并存时，能自证的那句宽口径仍会被读到，误判正由它产生 |
+| KD-T3 | 只写判据与 why，不新增门禁 ∥ 脚本 ∥ 可跑件 | 加一条机械检查——与同段「不累积」相抵，且把一个判据变成一处维护面 |
+| KD-T4 | 实例只作行为描述（空集 → 抛报明），不写档名与坐标 | 引设计档指针——提示词面禁文档引用，且指向的措辞会变 |
+| KD-T5 | 集成测试的定义句（combine components ⇒ 评估 interaction between components）保留 | 连定义一并删——定义答「集成测试是什么」，判据答「什么时候补一条」；删定义会连带丢掉同句里「从用户可见入口进入」这半个口径 |
+
+### 13.5 验收标准（回指需求）
+
+| # | 判据（可机判） | 回指 |
+|---|---|---|
+| AC13-1 | 该档两处新文案逐字等于 §13.2 落点 ① ②（落笔后居 `:171`–`:172` ∥ `:179`–`:183`），全档 357 行 | 需求 §1.1「由此得到的两条判据」 |
+| AC13-2 | 全档 `interaction between components` 命中 = 1 处（集成测试定义句，落笔后 `:190`）；`touches … the interaction between components` 判据 0 命中 | 需求 §0（「组件」= 项目整体）+ §1.1 判据② |
+| AC13-3 | `doc_check(mode:"gate")` 对该档 PASS（提示词面行宽 ≤300；落笔后最长行仍 300，在 `:68`） | 本档 §11.17 折行形 |
+| AC13-4 | 行为零改：`git diff --stat`（基线 = 本批起点 `#1796`）只含落点四档 + 本设计档 + `docs/core/design/PROMPT-SYSTEM.md`（§13.12 落点 ⑦–⑩ 的同批改） | 本设计 §13.7 边界 |
+| AC13-5 | 四档 `touches neither` = 0；单臂判据逐档在盘：`alters no business-observable result an existing case asserts` = 工程 1 ∥ 评审 2 ∥ 设计席 0 ∥ 普通 0（设计席 ∥ 普通以 `alters a business-observable result` 形承载）；`earns no case` = 工程 1 ∥ 设计席 1 ∥ 普通 1 ∥ 评审 0；`grows from exactly two entries` = 工程 1（落点 ②）∥ 设计席 1 ∥ 普通 1 ∥ 评审 1；`neither entry a case grows from` = 工程 1（落点 ③）∥ `adds no scenario the product really needs` = 评审 2（落点 ⑤ 两行）（按落点 ①–⑥ 替换模拟，本轮 `node` 实跑） | 需求 §1.1 判据② ∥ F34 两触发 |
+| AC13-6 | 四档行数 = 357 ∥ 155 ∥ 143 ∥ 315（实测口径 = `split('\n').length - 1`；与 §6.50 A6 的同组数字互校一致） | 本设计 §13.3 |
+| AC13-7 | 四档逐行 ≤300 字符（`>300 = 0`；新折行处 = 落点 ④ ∥ ⑥ 两处） | 本档 §11.17 折行形 |
+
+### 13.6 用例表（读判据 · 正常 ∥ 边界 ∥ 错误）
+
+| 类 | 输入（模型遇到的情形） | 期望 |
+|---|---|---|
+| 正常 | 想给某面补验收，而它不从用户入口进入、也不是两入口之一 | 判 `none`：记一行台账交父侧入册，不造常驻件 |
+| 正常 | 生产真出过的问题 ∥ 业务真实需要的场景 | 补集成用例，编号先入 RTM |
+| 边界 | 改动改了既有集成用例断言的结果 | 必须改该用例（第一臂保留） |
+| 边界 | 机制内部改动（台账空集 → 抛报明） | `none`，且「没有测试守着」不是缺陷 |
+| 错误 | 以「涉组件交互」为由补用例 | 判为错判，撤销：业务上没有这条路径 |
+| 错误 | 新增了业务上真实需要的场景（∥ 生产真出过的问题），却想判 `none` | 判「该补」：用例只从两入口长出，`none` 只在两条触发都不成立时成立 |
+
+### 13.7 边界（本设计不做）与待裁
+
+- 不做：不动落点之外的既有行字面 · 不改任何代码 · 不新增门禁 ∥ 检查脚本 · 不改需求档。
+- **不改的两类行**：集成测试定义句（工程 `:190` ∥ 普通 `:192`）与 RTM 行字段（设计席 `:139` ∥ 评审 `:54`）——定义答「集成测试是什么」、行字段答「一行写什么」，都不是「什么时候补一条」的判据；逐处处置见 §13.11。
+- **设计面同拍改（父侧 2026-10-25 23:03 裁定）**：`docs/core/design/PROMPT-SYSTEM.md` §6.50 的判据句与逐字块、本档 §11.17 ① 的触发行，与运行面同批收到单臂 + 两入口；落点与逐字对账见 §13.12。
+
+### 13.8 界面 ∥ 交互决策
+
+不适用：本批只改提示词文本，无 UI ∥ 交互面。唯一读者面决策 = 位置与折行，已由 KD-T1 ∥ §13.2 定。
+
+### 13.9 集成测试设计（RTM delta · §11.15 三问）
+
+读表（本轮实读 `test/RTM.md` = **138** 行 · **5 节 / 9 个故事节 / 26 行编号用例**）：CLI 端故事 1–9 在盘，另有 VS Code 端 ∥ Desktop 端 ∥ 异常与更正 ∥ 签署面四节。
+
+delta：本批 = 提示词文本增补与设计档判据换臂，既有用例所断言的业务可观察结果零改、两入口均不成立 ⇒ **破行 0 ∥ 冗余行 0 ∥ 缺失行 0**；新增集成用例 = 无。
+
+- 判据依据 = `docs/core/requirements/TESTING.md` §1.1「由此得到的两条判据」②——集成用例只从「业务真实需要的场景 ∥ 生产真出过的问题」长出，提示词措辞不构成业务场景；两条触发都不成立才是本批判 `none` 的理由。
+
+### 13.10 新增名核查（三问）
+
+| 名 | 住哪 | 逐字名 | 谁用 |
+|---|---|---|---|
+| `none`（无集成用例变更） | `thincoder-core/prompts/discipline-engineering.md:187` | `none` | 模型读该段时判这次改动要不要补集成用例 |
+| 两入口 | 需求 §1.1「由此得到的两条判据」② | 「业务上真实需要的场景 ∥ 生产上真实出过的问题」 | 设计席 ∥ 评审席 ∥ 收口判据 |
+
+本设计不新增名。
+
+### 13.11 判据面清点（逐处处置 · 运行面实测 2026-10-25）
+
+**扫描**（实测 2026-10-25）：
+
+- 词表 = `interaction between components` ∥ `between components` ∥ `component interaction` ∥ `touches neither` ∥ `crosses components`；另补 `components interact` ∥ `cross-component` ∥ `cross component` ∥ `interacts with other` ∥ `component boundary`。
+- 域 = `thincoder-core/prompts`（16 档）∥ `thincoder-core/tool-docs` ∥ `docs/core/requirements` ∥ `docs/core/design`，共 **182 档**（实存四目录；`docs/core/design/prompts` 不在盘，不计）。
+- 读数 = 运行面 4 档 10 行（下表逐行）；`thincoder-core/tool-docs` **0 命中**；其余 5 词除本设计档新文外 **0 命中**。
+
+| # | 坐标（现行） | 现文关键片段 | 判 |
+|---|---|---|---|
+| 1 | `thincoder-core/prompts/discipline-engineering.md:180` | `none` 判据首臂 `touches … the interaction between components` | **改**（落点 ③）——判据臂，与「组件 = 项目整体」相抵 |
+| 2 | 同档 `:182` | `combine components and test the **interaction between components**` | 留——集成测试定义句（KD-T5） |
+| 3 | `thincoder-core/prompts/persona-eng-designer.md:139` | RTM 行字段 `each row naming the interaction between components it evaluates` | 留——行字段答「一行写什么」（KD-T7） |
+| 4 | 同档 `:141` | `a change that alters an interaction between components or … names the cases it adds ∥ revises` | **改**（落点 ④）——设计席的触发臂 |
+| 5 | `thincoder-core/prompts/advisor-design.md:54` | RTM 行字段 `each row names the interaction between components each evaluates` | 留（KD-T7） |
+| 6 | 同档 `:57` | `a change that touches neither an interaction between components nor …` | **改**（落点 ⑤）——评审席的触发臂 |
+| 7 | 同档 `:58` | `Only one reason stands: … touches neither an interaction between components nor …` | **改**（落点 ⑤）——唯一成立的理由 |
+| 8 | 同档 `:59` | `Why: no other acceptance run evaluates the interaction between components …` | **改**（落点 ⑤）——why 换到业务结果面，与判据同轴 |
+| 9 | `thincoder-core/prompts/discipline-normal.md:192` | `combine components and test the **interaction between components**` | 留——定义句 |
+| 10 | 同档 `:194` | `a change that alters an interaction between components or a business-observable result … must revise them` | **改**（落点 ⑥）——普通侧的触发臂 |
+
+**复跑判据（落笔后一次读数）**：四档 `touches neither` = 0；单臂判据计数 ∥ `interaction between components` 余量 = 本档 §13.5 AC13-5 ∥ §13.12 复扫（D2——本节不复制数字）。
+
+**设计面同句处置**：`docs/core/design/PROMPT-SYSTEM.md` §6.50 的机制句与逐字块（B2 ∥ B6 ∥ B7 ∥ B9 ∥ B10 ∥ B11）∥ 本档 §11.17 ① 的触发行，本批同拍收到单臂 + 两入口（父侧 2026-10-25 23:03 裁定，落点与对账见 §13.12）。
+
+### 13.12 设计面同改（落点 ⑦–⑫ · 逐字对账 · 复扫）
+
+父侧 2026-10-25 23:03 裁定：判据一条，运行面与设计面同拍改——设计面仍写宽口径 ⇒ 设计档说的与提示词做的是两套（D2 相抵），而五份文本各写一遍同一判据、改四份漏一份正是误判的成因链。本节持设计面的落点与读数。
+
+**落点**
+
+| # | 坐标 | 动作 |
+|---|---|---|
+| ⑦ | `docs/core/design/PROMPT-SYSTEM.md` §6.50 节标题 ∥ 机制 1·2·3 | 机制句 = 单臂 + 两触发 + 两入口（与 B2 同源） |
+| ⑧ | 同节 B2 ∥ B6 ∥ B7 ∥ B9 ∥ B10 ∥ B11 逐字块 | 换成落点 ③ ∥ ⑥ ∥ ④ ∥ ⑤ ×3 的落笔后原文 |
+| ⑨ | §6.50 J1 处置格 ∥ §6.51 中文复核面 B3 ∥ §6.51 集成测试设计段 ∥ §6.50 A1 ∥ A3 ∥ A4 ∥ A6 ∥ 用例表 C1–C6 ∥ K1 ∥ K2 ∥ K4 | 随判据同改；三处坐标均在 `docs/core/design/PROMPT-SYSTEM.md`（J1 处置格 ∥ §6.51 中文复核面 ∥ §6.51 集成测试设计段） |
+| ⑩ | 同节 §6.51 B2 ∥ B3 ∥ B5 逐字块 | 回到现行盘面——B2 ∥ B5 与 §6.50 B8 ∥ B7 同文；B3 = 落点 ⑤ 第二行 |
+| ⑪ | 本节 §11.17 ① 触发行 ∥ ② 保留件注 | 换成落点 ④ 两行；保留件注改为现行行号与替换范围 |
+| ⑫ | 本节 §13.7 ∥ §13.11 的设计面待裁句 | 失效句删除，改记本裁定的落点 |
+
+**逐字对账（设计 ↔ 设计 · 本轮实读）**
+
+- 比对面 = `PROMPT-SYSTEM.md` §6.50 B1–B12 逐字块 ↔ 本节 §13.2 落点 ①–⑥ 逐字块 ↔ 运行面四档按落点替换后的原文（`node` 逐行模拟）。
+- 读数 = 设计档 **13 块 / 27 行**与模拟落笔后原文**逐行全等**（块集 = §6.50 B2 ∥ B6 ∥ B7 ∥ B8 ∥ B9 ∥ B10 ∥ B11 + §6.51 B2 ∥ B3 ∥ B5 + §11.17 ① ∥ ② ∥ ③；其中 B2 ∥ B10 各 +1 行 ⇒ 25 → 27）；**不一致 = 0 句 ∥ 0 行**（`node` 逐行比对，本轮实跑）。
+- 模拟落笔后行数 = 357 ∥ 315 ∥ 155 ∥ 143（工程 ∥ 普通 ∥ 设计席 ∥ 评审），逐行 ≤300、`>300 = 0`——与 AC13-6 ∥ AC13-7 同数（本轮 `node` 实跑）。
+- **运行面落笔后的同判** = 父侧收口轮实读（本席轮内运行面未落笔，故对账以模拟原文为面）。
+
+**复扫（判据面 · 本轮实读）**
+
+- 词表 = §13.11 的 5+5 词；域 = 实存四目录（`thincoder-core/prompts` ∥ `thincoder-core/tool-docs` ∥ `docs/core/requirements` ∥ `docs/core/design`）= **182 档**（§13.11 列的 `docs/core/design/prompts` 不在盘，读数按实存目录计）。
+- 运行面：`touches neither` 现盘 3 → 落笔后 0；`interaction between components` 落笔后仅余定义 ∥ 行字段四处（工程 1 ∥ 普通 1 ∥ 设计席 1 ∥ 评审 1）——判据臂不再携带该词。
+- 设计面：判据臂 0；`touches neither` 仅余扫描词表自身与「判据 0 命中」类验收句（引用该词以判读数，不构成判据臂）。
+- **需求面现行**：`docs/core/requirements/TESTING.md:212` F34 已是单臂 + 两触发（改动既有用例断言的业务可观察结果 ∥ 新增业务上真实需要的场景），收口行「集成场景无变化」只在两条都不成立时写下——三链（§2 ↔ 设计档 ↔ 需求档）同源。
 

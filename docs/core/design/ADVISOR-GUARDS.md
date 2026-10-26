@@ -433,7 +433,7 @@ export function outputReserve(provider, spec) {
 
 | # | 分支 | 判据 | 依据 |
 |---|---|---|---|
-| 1 | 相对形 | 基面 = **会话项目根** `projectRootView(cwd).root`（`thincoder-core/manifest-discovery.mjs:127`，归属 ∨ 发现）；`p = resolve(根, doc)`；`p` 越出根（`..` 逃逸）⇒ 拒（`outside-project`） | 用户 2026-10-25 11:41「不能要求写对吗？」——相对形只有唯一含义 = 项目根相对；根是基面不是起点 |
+| 1 | 相对形 | 基面 = **会话项目根** `projectRootView(cwd).root`（`thincoder-core/manifest-discovery.mjs:142`——`projectRootView` 的 `root` = `owningProject` 归属形的薄委托，`:108`；**仅归属命中**——发现读数只供 `workspace` 报明、不进 `root`）；`p = resolve(根, doc)`；`p` 越出根（`..` 逃逸）⇒ 拒（`outside-project`） | 用户 2026-10-25 11:41「不能要求写对吗？」——相对形只有唯一含义 = 项目根相对；根是基面不是起点 |
 | 2 | 相对形 ∧ 项目根解析不出 | `projectRootView` = `workspace` / `none` ⇒ 拒（`no-project-root`，文案报锚态 + 期望形） | 实景：本工作区锚 `D:\teamcode` 下辖两项目（`manifest read` 读数 `state=workspace`）——无唯一项目根，相对形确实无解，只能要求写对 |
 | 3 | 绝对形 | 照用（零根试探、零拼接）；**归属判定以会话锚为界**——`owningProject(p, cwd)` 出界 ⇒ `null` ⇒ 拒（`outside-project`） | `docs/core/requirements/ADVISOR-CONVERGENCE.md:48` F18「绝对形照用」+ **「不受理工作目录以外的文档」**（用户 2026-10-25 19:18「评审怎么可能受理别的项目的文档？」）——绝对形自带基面，但不取消「必须在当前项目内」这一条 |
 | 4 | 受理判据 | ① 现存普通文件；② 扩展名 `.md`（大小写不敏感）；③ 绝对形：`owningProject(p, cwd)` 非空（住在**当前项目**里）；相对形：分支 1 已限定在会话项目根内 | `criterion=scope-not-doc` 的指义 =「评审对象必须是文档」；本批放宽的是**位置**（`docRoot` 树内 → 项目内任意位置）——F18 边界句「不放开文件种类（非 `.md` 不受理——`scope-not-doc` 仍可达）」 |
@@ -441,9 +441,9 @@ export function outputReserve(provider, spec) {
 
 **拒因三值**（标识行恒 `criterion=scope-not-doc`——三值只作 `reason=`，不进 criterion 枚举）：`no-project-root`（相对形 ∧ 项目根解析不出）· `outside-project`（相对形越根 ∥ 绝对形不住在任何项目里）· `not-doc-file`（非现存普通文件 ∥ 非 `.md`）。
 
-**拒因命名三问**：`no-project-root` vs 既有失败码 `'no-project'`（`docs/core/design/MANIFEST.md:121` 入口决策树）= **有意区分**——`no-project` 说「决策树无项目可落」（写 / 建档面），`no-project-root` 说「相对形的基面 = 会话项目根解析不出」（评审读面）；场景与处置不同，合并会让两种拒因共用一个出口。
+**拒因命名三问**：`no-project-root` vs 既有态码 `'no-project'`（`docs/core/design/MANIFEST.md:124` 入口决策树）= **有意区分**——`no-project` 说「决策树无项目可落」（写 / 建档面），`no-project-root` 说「相对形的基面 = 会话项目根解析不出」（评审读面）；场景与处置不同，合并会让两种拒因共用一个出口。
 
-`outside-project` / `not-doc-file`：查过 `thincoder-core/**` 与 `MANIFEST.md` 失败码表，**none found**（无同义既有名可复用）。
+`outside-project` / `not-doc-file`：查过 `thincoder-core/**` 与 `MANIFEST.md` 态码表，**none found**（无同义既有名可复用）。
 
 **返回形**：`{ resolved: Map<输入原样, 绝对路径>, invalid: Array<{doc, resolved, reason}> }`——零 `ambiguous` / 零 `candidates`：候选试探与歧义归一退场，`criterion=scope-doc-ambiguous` 随之退场（判据不再可达）。
 

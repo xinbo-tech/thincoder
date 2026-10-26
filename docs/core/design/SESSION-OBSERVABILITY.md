@@ -15,8 +15,11 @@
 ## 2. 方案与理由
 
 **最接近先例**：事件通道已有单一实现 `thincoder-core/log.mjs:114` `export function logEvent(kind, fields = {})`（`{"ts","ev","seq",...fields}` 单行 JSON，字段名黑名单 + 字符串脱敏 + 512 字符收尾）。
+
 本批**复用**该函数，事件名沿用既有 `ns:event` 形（`thincoder-core/agent/dispatch-run.mjs:61` `tool:call`、`thincoder-core/provider/core.mjs:88` `llm:start`）；不新造事件总线、不新增日志文件、不加开关。
+
 **偏离**：无。四类事件走同一函数、同一命名形；`session-*.mjs` 侧只加 import 与调用点。
+
 **公开源勘察**：已查 `docs/core/design/LOGGING.md`（§6.1「统一入口 `thincoder-core/log.mjs`——`logEvent(kind, fields)`」）· `docs/core/design/SESSION.md`（§6.5 / §6.23 拒写与轮转）· `docs/cli/design/TUI.md` §7.4（会话标题段——本批的单行化不变式并入该节）。三处均与本批相关，无「无关」项。
 
 **新名三问（逐名）**：
@@ -30,7 +33,9 @@
 | 报明文案（§3.2 两行） | `none found:` 检索面 = 本仓 `**/*.mjs` 全量 grep `已批准设计凭证` / `随槽作废` 零命中。新名锚点 = 产品既有词「设计评审 / 已批准设计凭证」（`advisor` 工具描述同族），本档 §3.2 逐字固定 |
 
 **R1 理由**：槽轮转 / 落号 / 新建 / 拒写现在的唯一痕迹是 stderr 一行，stderr 不落盘、跨进程不可查、跑在 TUI 里还会被帧刷新覆盖。四类时点都是「事后要复盘」的时刻，事件落 `~/.thincoder/logs/agent-<date>.log` 后可 grep 可 tail。
+
 **R2 理由**：`/new` 与切槽让**已批准的设计凭证**离开当前会话——用户丢掉的是「已花钱走完的评审结果」。只报明不持久化：跨槽留活等于悄悄放大授权范围（一个槽里获批的设计在别的槽继续放行代码写），必须先由用户单独裁定，本批不做（§8）。
+
 **R3 理由**：状态栏按「一行」布局（`render-loop.mjs:111` 按行绝对定位差分重绘），标题里一个 LF 就是一次真实换行 ⇒ 滚屏 + 差分基准 `prevRows` 与物理行错位 ⇒ 旧行残留。清洗放显示入口与写出口两处：前者保语义（回退标题同规则），后者是唯一出口兜底。
 
 ## 3. 接口契约
@@ -47,9 +52,13 @@
 | `slot:refuse` | `thincoder-core/session-slots-manifest.mjs:145-149`（拒写）· `:163-164`（写后读回失败） | `reason` | `reason` ∈ `read-failed` / `parse-failed` / `shape-invalid` / `readback-failed` |
 
 **`unreadable` 与 `rotate-failed` 的判别式**（两者共用同一个 catch，`thincoder-core/session-slot-write.mjs:84-93`）：异常支按现场是否已保全分——`preserved === true` ⇒ `unreadable`（`:88` 已把现场改名 `.corrupted`，盘面坏档 / 半写档）；`preserved === false` ⇒ `rotate-failed`（`:86-91` 现场未保全：文件已不在盘 ∥ 改名失败，属轮转动作本身失败）。
+
 guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 不记改名成败（`:73-75` 吞异常）⇒ 本批在 `:73-75` 内补 `preserved` 标志（改名成功置 `true`），判别式与 write 侧同形。
+
 **硬约束（隐私）**：事件字段**不含用户输入原文、标题、消息内容、文件路径、cwd、token 值**。`slot` / `prevSlot` = 整数；`reason` / `via` = 上面枚举字面。理由：`logEvent` 的黑名单只按字段名挡 token 族，按「自带原文就永远挡不住」的口径，本批事件从字段集上就不带。
+
 **通道**：`import { logEvent } from "./log.mjs"`（`session-slot-claims.mjs` / `session-guard.mjs` / `session-slots-manifest.mjs` / `session-slot-write.mjs` / `session-lifecycle.mjs` 各加一行）。`logEvent` 是 fire-and-forget（写失败只置 `_dead`，主流程零影响），调用点不得 `await`、不得包 try 外抛。
+
 **负向锁**：读路径（`listSlots` / `loadSlotFile` / 状态查询）零事件——只在上面四个写时点发。
 
 ### 3.2 设计凭证离开会话的报明（R2）
@@ -63,13 +72,19 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 | `applySession(agent, data, opts)` | `thincoder-core/session-lifecycle.mjs:89` · 返回点 `:210` / `:214` | **中继契约变更**：返回值由布尔改为对象——`switched` = 今日 `return switched` 的原值（`:210`）∥ 未命中渠道支 `false`（`:214`）；`droppedDesignTokens` = `restoreEngTokens` 的返回值原样透出 | `{ switched, droppedDesignTokens }` |
 
 **N 的计数口径（两分支同判：离开集，不是集合大小差）**：`N` 只数「本会话内生效中且未过期」的凭证 id。
+
 `/new` = 重建前 Map 中 `!(typeof t === "string" && tokenExpired(t))` 的条目数；切槽 = 旧 Map 的未过期 id 里、不在新 Map 的那些（新 Map 已按 TTL 过滤，`thincoder-core/token-ttl.mjs:135`）。
+
 `tokenExpired` 走 `thincoder-core/session-lifecycle.mjs:42` 同行 import，不新增依赖方向。
+
 「已批准」与计数同一集合：Map 中的条目即评审签发的凭证，本批只剔除已过期者。
+
 理由：`restoreEngTokens` 是**整体替换**——`:132` `const map = new Map()` 重建、`:145` 覆盖 ⇒ 前后是两个不同 id 的集合，`before - after` 在两个槽都带凭证时恒为 0（A 槽 2 个 → B 槽 2 个），而这两个凭证确实已不在本会话生效，正是要报的那一刻（§7 C9b）。
 
 **`applySession` 调用面（实读 6 处，均不读返回值 ⇒ 契约变更零回归）**：`thincoder-cli/src/tui/cmd-session.mjs:122` · `thincoder-cli/src/command-interactive.mjs:143` · `thincoder-cli/src/acp/handlers-slots.mjs:112` / `:177`
+
 · `thincoder-desktop/src/main/session-io.mjs:29` · `thincoder-server/deploy/sandbox/member-shell/core-run.mjs:292`（`core.applySession`）。
+
 端壳取计数的唯一路径 = 读返回值（`/new` 读 `resetSessionState`，切槽读 `applySession`）。
 
 **报明文案（逐字，N 为十进制整数；两分支语义不同，不可互借）**：
@@ -117,7 +132,6 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 | `thincoder-cli/src/tui/render-frame.mjs` | 322 | ≤+2 | import + status 行兜底 |
 | `thincoder-cli/src/tui/cmd-new.mjs` | 39 | ≤+4 | 读返回值 + 警示行 |
 | `thincoder-cli/src/tui/cmd-session.mjs` | 140 | ≤+8 | `:122` 取返回值存局部量 + `:137` 之后警示行 |
-| `thincoder-cli/test/session-observability.test.mjs` | 新档 | 新档 | 纯函数断言（`singleLineTitle` / 两个返回值 / 事件字段组装） |
 
 行数为本档写作时 `read` 读数。**跨文件行数上限**：本仓单档 500 行口径；最大 `session-lifecycle.mjs` 404 → ≤422，`render-frame.mjs` 322 → ≤324，均无跨限，不需拆分计划。
 
@@ -182,8 +196,7 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 
 - **不做**设计凭证跨槽持久化 / 跨槽继承 / 授权范围变更（§5 D6）。
 - **不做** VSC 端报明：该端 `reconcileEngDesignTokens` 的 Map「永不复位清空」（`thincoder-vscode/src/agent/agent-state.mjs:51`），本批 before/after 度量形在该路径没有丢弃时点；从槽合入凭证时只增不减（`:118`）。
-- **不做**桌面端报明：`thincoder-desktop/src/main/session-io.mjs:29` 的 `applySession` 前置态（装配出的 agent 的 `_engDesignTokens` 是否非空）本批未勘察 ⇒ 不猜打印点。
-- 两端报明随 VSC / 桌面面另批统一接（主 agent 记台账）。
+- **不做**桌面端报明：`thincoder-desktop/src/main/session-io.mjs:29` 的 `applySession` 前置态已勘察——装配面每次出全新 agent（`thincoder-desktop/src/main/agent-assemble.mjs:116` `coreAssemble`），该处 `_engDesignTokens` 为空 ⇒ `thincoder-core/token-ttl.mjs:155` 的离开集恒 0，无丢弃时点；另一调用面重载同一槽（`agent-host.mjs:264`），前后 id 集相同。
 - **不做**事件的可视化面板、聚合统计、告警阈值；只落文件行。
 - **不改** `logEvent` 的字段黑名单、脱敏、512 字符收尾语义（通道单源不动）。
 - **不改**标题生成面与上游截断（§5 D11）；**不改** VSC / 桌面顶栏、会话清单的标题显示值。
@@ -202,4 +215,5 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 | I4 | 两个槽各带 2 个已批准凭证，从 A 切到 B，看会话流 | 恰一行「2 个已批准设计凭证在本槽不再生效（切回原槽可恢复）」，会话照常继续 | R2 |
 
 **C5（`slot:allocate`）的制造路径**：临时 `sessions` 目录 + 与槽数等量的活进程——启 K 个 `node -e "setTimeout(()=>{},600000)"`，把各 pid 写进该目录 `manifest.json` 的 `slotSessions`（槽 1..K），再在该目录下起第 K+1 个进程触发落号 ⇒ `liveClaimed` 全真 ⇒ 走分支 3，日志得 `all-slots-live`。
-**单元面**：`thincoder-cli/test/` 有可用收集器 `run.mjs`（收 `test/*.test.mjs` 与 `test/integration/*.test.mjs`，`thincoder-cli/test/run.mjs:3`；当前零用例即绿）与 `test/slow.mjs`（纯别名）。本批新增常驻文件 `thincoder-cli/test/session-observability.test.mjs`：`singleLineTitle` 控制字符集与宽度守恒、两个返回值、事件字段组装。该文件随 `npm test` 常驻，不作「用后即删」。
+
+**单元面**：`thincoder-cli/test/` 有可用收集器 `run.mjs`（收 `test/*.test.mjs` 与 `test/integration/*.test.mjs`，`thincoder-cli/test/run.mjs:3`；当前零用例即绿）与 `test/slow.mjs`（纯别名）。本批的单元测试档（`singleLineTitle` 控制字符集与宽度守恒、两个返回值、事件字段组装）已按 `docs/core/requirements/TESTING.md` §1.1 用毕即删——跑过即删、零留存。

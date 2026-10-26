@@ -168,10 +168,10 @@
 | BR-36 | 正常 | 主 agent `§1 status({value:"进行中", note:"暂缓 · 复核条件 = …"})` | 状态行 = `进行中（暂缓 · 复核条件 = …）`；gate 放行（含「进行中」）；暂缓扫描（§5.1 L8）命中该档 |
 | BR-37 | 正常 | 复启：同工具 `status({value:"进行中"})`（note 缺省） | 括注清空（行 = `进行中`）；扫描不再命中；§2 ∕ §3 ∕ §5 写入照常（gate 零变） |
 | BR-38 | 边界 | note 含状态词表关键字（如「实施完成」）∥ 含换行（**射程 = 非重开径**——即 §4.9 状态行流转） | 拒（note 校验既有判据——改写条件句 ∕ 单行化；「暂缓」本身非关键字）；**重开径不取该判据**（§4.18-B 理由校验 = 单行 + 非空、允许携词表关键字——理由常写「误标已收口」，而追记行非状态行形态、不参与 gate 判读） |
-| BR-39 | 正常 | 工作区锚 + create 显式目标（`<下辖项目>/docs/batches/<x>.md`——所属 ∈ 下辖集） | 落该候选项目基底（按用点解析——§4.15 条 5） |
-| BR-40 | 错误 | 工作区锚 + create 无所属目标（裸 `docs/batches/<x>.md` ∥ 非下辖项目路径） | 报明事实 + 可执行下一步（下辖项目全列 + 显式路径指引——不静默落锚；**文案 = 条 5 逐字**——机检锚 `belongs to no project`） |
+| BR-39 | 正常 | 多根工作区锚 + create 显式目标（`<下辖项目>/docs/batches/<x>.md`——所属 ∈ 下辖集） | 落该候选项目基底（按用点解析——§4.15 条 5） |
+| BR-40 | 错误 | 多根工作区锚（下辖有已注册项目：1 ∥ ≥2 同判）+ create 无所属目标（裸 `docs/batches/<x>.md` ∥ 非下辖项目路径） | 报明事实 + 可执行下一步（下辖项目全列 + 显式路径指引——不静默落锚；**文案 = 条 5 逐字**——机检锚 `belongs to no project`） |
 | BR-41 | 正常 | 工作区锚 + 读面 ∥ spawn 门相对串（在档于下辖项目基底内） | 解析成功（补齐下辖——**次序单源** = 条 5：下辖按名排序序内首个可读） |
-| BR-42 | 边界 | `ok`（锚有项目）∥ `none`（无项目）两态 → create / 读面 | 零改（既有候选序 ∥ 兜底——回归锚 BR-27–BR-35） |
+| BR-42 | 边界 | `ok`（锚有项目）∥ `none`（空目录 ∥ **锚自身**为裸仓——`.git` 无档、下辖无已注册项目）两态 → create / 读面 | 零改（既有候选序 ∥ 兜底——回归锚 BR-27–BR-35）；零带档 ∧ 下辖裸仓 ≥1 ⇒ `workspace` ⇒ 条 5 报明（不在本行） |
 | BR-43 | 正常 | create + 串 `docs/batches/<x>.md`（基底自有项目根相对形）且基底**不落 cwd 项目根下**（跨仓声明面基底——#942 残留场景） | 落基底**自有项目根**形（`resolve(owningProject(基底), p)`——恰一落点）；**不二次拼接**（原静默嵌 `<基底>/docs/batches/docs/batches/…` ⇒ 收正） |
 | BR-44 | 错误 | create + 同形串且基底自有项目根形落点 **≥2**（多基底同形） | **显式拒**（列候选落点——不静默取首个；文案 = §4.15 条 6 逐字） |
 | BR-45 | 错误 | create + **多段**相对串（含 `/`）且各候选无落点（如 `archive/<x>.md` 不落基底内 ∥ BR-35 形） | 通用 fail-closed 拒（`resolves outside…` 文案逐字——**不二次拼接**）；单段文件名仍收基底相对形（条 6 ④——回归零变） |
@@ -305,6 +305,8 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 **参数**：`path`（目标批次档——同 depth-0 append/status 取值规则，见 §4.1 / D-BR21）。
 **动作**：§1 段内状态行 →「已收口 <YYYY-MM-DD>」；此后该档 append / status 全拒（冻结判据唯一真值 = §1 行——与 §4.9 一致，零语义变；**唯一例外 = 重开合取**，§4.18-B）。**文档机检门**：§6 非空门之后、状态行改写之前跑 gate——`REFUSED` ∥ `ERROR` ⇒ throw（不落「已收口」；§4.9 ④）。
 
+**设计凭证消费（工程模式）**：同一收口在状态行改写之前还要消费本批已签发的设计凭证，消费失败 ⇒ 拒 close（档零字节变）；口径单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10，本档不复述。
+
 **身份判据**：仅 depth-0 放行。**不替代**：台账核销事务 / 前批遗留核对（收口链主面仍是 §6 写入 + 台账动作——close 只收**机械收口**：状态行 + 冻结；不代写 §6 内容）。
 **收口前置（本批）**：写盘前过**链完整性门**（§4.18-A）——§6 非空判据在本门内、口径单源（`sectionContentState`）；**§6 为唯一缺段时拒串逐字不变**（不降级）。
 
@@ -319,27 +321,32 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 
 ### 4.15 相对路径解析序与防嵌套（2026-09-25 批）
 
-**契约（单源 = `agent-tools/batch-paths.mjs`；四处调用点全部经它——create / append·status·close / 评审门 / spawn 门）**。**矩阵 cwd 四形** = 项目根 / 项目内子目录 / 项目根的上级目录 / 非项目目录（无 manifest）——用例 BR-27–BR-35 以此四形为准：
+**契约（单源 = `agent-tools/batch-paths.mjs`；四处调用点全部经它——create / append·status·close / 评审门 / spawn 门）**。**矩阵 cwd 四形** = 项目根 / 项目内子目录 / 项目根的上级目录 / 非项目目录（无 manifest）——用例 BR-27–BR-35 以此四形为准。
+
+**末形再分两判**：多根工作区锚（`projectRootView` 报 `workspace`——直接子目录带档 ≥1 ∥ 零带档时下辖裸仓 ≥1）⇒ 条 5 报明；`none`（空目录 ∥ 锚自身为裸仓——`.git` 无档且下辖无已注册项目）⇒ 兜底 `resolve(cwd)`：
 
 1. **候选序（相对路径）**：① `resolve(cwd, p)` → ② `resolve(项目根, p)` → ③ 逐基底 `resolve(基底, p)`（**create 面候选序与收窄**见条 2 / 条 6；**基底取值两段**：**声明面** = manifest `docRoot.batches`；**缺省回退默认值** = 声明面为空时 `resolve(docRootBase(cwd), "docs/batches")`（docRootBase = 项目根 ?? cwd））。
    **取面分野（基底分支）**：**create / 在飞扫描 / 锚定面**取「声明面 + 缺省回退」合体（`batchDocBases(cwd)`——恒非空）；**读面 ③ 分支只取声明面**（无 manifest ⇒ **无基底分支**——读面零回归）。
 
-   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属 ∨ 发现两段——`thincoder-core/manifest.mjs` `resolveProjectRoot`；`no-project` / 无 manifest ⇒ `resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`docs/core/design/LEDGER.md` §6.1 口径 2）；
+   **「项目根」取根单源** = `resolveProjectRoot(cwd) ?? resolve(cwd ?? ".")`（归属形单源——`thincoder-core/manifest-discovery.mjs` 的 `owningProject`（经 `manifest.mjs` 转口）取根臂 = 仅归属命中；发现读数只供 `workspace` 报明、不进 `root`；调用方 `?? resolve(cwd ?? ".")` 兜底；同式 = 库键式的同一子表达式，`docs/core/design/LEDGER.md` §6.1 口径 2）；
 
-**工作区锚**（`projectRootView` `workspace`——下辖 ≥2 项目）⇒ 专用条 5（不静默回退）。
+**多根工作区锚**（`projectRootView` 报 `workspace`——下辖有已注册项目，1 ∥ ≥2 同判）⇒ 专用条 5（不静默回退）。
    **单值**——基底可多根，项目根不受基底数影响（多基底不产生多项目根）。
 2. **判据分野（唯一差异）**：**读面**选候选序中**首个可读文件**（判据仍「参数在 + 路径可读」逐字不变）；**create** 选候选序中**首个落在基底根内**者（新档不存在，可读性无判别力）。
    **create 候选序补全（#942——逐候选判据 = 条 6）**：锚定分支后依次 = ① cwd 形 → ② 项目根形 → ③ 逐基底**自有项目根**形 → ④ **基底相对形（限单段文件名）**。
 3. **防嵌套（锚定规则）**：`p`（归一 `/`）以**任一基底的「项目根相对前缀」**（如 `docs/batches`）打头**且前缀后为路径段边界（`/` 或串尾）** ⇒ **只解析项目根形**（候选②，跳过 ①③）——已含基底相对前缀的串不再二次拼接；项目根形不落基底内 ⇒ fail-closed 带提示。**前缀可判限定**：基底不落 cwd 项目根下（跨仓 ∥ 声明面他仓基底）时前缀**不可判** ⇒ **不锚定**——其无仓前缀形见条 6③（BR-43）。
    **段边界例**：`docs/batches-old/<x>.md`（前缀同形、`-` 非段边界）⇒ **不锚定**（不触发锚定分支文案，BR-32 射程不变）；照候选序解析，create 多段串无落点 ⇒ 通用 fail-closed 拒（BR-35 收正——不静默建嵌套树）。
 4. **零变面**：绝对路径照旧取用（create 仍过越基底判据）；「参数在 + 路径可读」判据句、冻结门、段白名单、错误文案（spawn 门逐字 / `resolveBatchDocPath` 逐字）全部零变。
-5. **工作区锚检查（多项目并存 = 常态——2026-10-02 · #828；2026-10-15 收正）**：会话锚无唯一项目（`projectRootView` `workspace` 态——下辖 ≥2 项目）⇒ **不静默回退锚基底**。
+5. **多根工作区锚检查（多项目并存 = 常态——2026-10-02 · #828；2026-10-15 · 2026-10-25 收正）**：会话锚不归属任何项目（`projectRootView(锚).state === 'workspace'`——下辖有已注册项目，1 ∥ ≥2 同判）⇒ **不静默回退锚基底**。
    create：目标**所属项目**（`owningProject`——用点路径 → 最近带档祖先）∈ 锚下辖项目集 ⇒ 基底 = 该项目声明面（落其基底内；越出 ⇒ 既有 fail-closed）；无所属 ⇒ **报明事实 + 可执行下一步**（下辖项目全列 + 显式路径指引——如 `thincoder/docs/batches/<x>.md`；**文案 = 逐字——见下**；**不得写 `ambiguous` / 「锚歧义」**——2026-10-15 收正）。
 
    读面：候选追加各候选项目的项目根形 ∥ 声明基底形（仍取首个可读——**候选间次序单源** = 候选**按名排序**（同 `discoverProjects` / `projectView` 契约），并集**保序**）。在飞扫描 / 写门基底集：候选项目基底**并集**（唯一在飞批照取 / ≥2 照列）。
-   **`ok`（锚有项目）∥ `none`（无项目）两态零改**（#827 ⑤ 语义保持——跨仓 create 照拒）。
 
-**工作区锚文案（逐字）**：`batch: create target "<raw>" belongs to no project — the session anchor is a workspace holding <N> projects: <c1>, <c2>. Pass an explicit path under a project (e.g. "<candidate>/docs/batches/<file>.md").`（机检锚 = `belongs to no project`；下辖项目 = 按名排序全列——绝对路径）。
+   **`ok`（锚有项目）∥ `none`（空目录 ∥ 锚自身为裸仓——`.git` 无档且下辖无已注册项目）两态零改**（#827 ⑤ 语义保持——跨仓 create 照拒）；锚下辖有项目（带档者 ≥1 ∥ 零带档时裸仓 ≥1）即 `workspace` ⇒ 条 5 报明（无「子格」之分）。
+
+**多根工作区锚文案（逐字）**：`batch: create target "<raw>" belongs to no project — the session anchor holds <N> project(s) below it: <c1>, <c2>. Pass an explicit path under a project (e.g. "<c1>/docs/batches/<file>.md").`
+
+机检锚 = `belongs to no project` ∧ `Pass an explicit path under a project`；下辖项目 = 按名排序全列——绝对路径；单句对 1 ∥ ≥2 皆真（不按项目数换文案）。
 
 6. **基底自有项目根形与基底相对形收窄（#942 残留收正——2026-10-05 批）**：create 在锚定分支 / ①② 形后补两形、并收窄基底相对形（条 2 候选序补全的判据）。**判据 = 无仓前缀相对形 ⇒ 正确落点或显式拒——不得静默建嵌套树**；回执（create `batch: created <abs>`）随落点取值——落点收正即回执不再照写错路径（拒面无回执）。
    - **③ 基底自有项目根形**：逐基底 `resolve(owningProject(基底), p)`（`owningProject` 不可判者跳过）——落基底内且**恰一落点** ⇒ 收（已含任一基底自有项目根相对前缀的串**不再二次拼接**）；**落点 ≥2 ⇒ 显式拒**（列候选落点——不静默取首个）。收正面 = 基底不落 cwd 项目根下（跨仓 ∥ 声明面他仓基底）时 `docs/batches/<x>.md` 原静默嵌 `<基底>/docs/batches/docs/batches/…`。
