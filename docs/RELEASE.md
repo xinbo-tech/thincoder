@@ -146,6 +146,7 @@
 - [ ] CLI 干跑（P2——时点见干跑注①）
 - [ ] VSC 干跑（P2——物化后，时点见干跑注②）
 - [ ] registry ∕ 市场现状已读（P1-3；时点 = 定号前——§4.2 备料；市场面 = `npx @vscode/vsce show xinbo-tech.thincoder-vscode --json`）
+- [ ] **发布凭证已在环境变量**（`ALIYUN_KEY` ∥ `ALIYUN_SECRET`——本机已设；时点 = 桌面上传前。**先查，不问用户要**；值不写进命令行）
 - [ ] 各端 CHANGELOG `[Unreleased]` 段就绪（§5.2 步骤 2；时点 = bump 前）
 - [ ] 三产品（CLI ∕ VSC ∕ 桌面）依赖声明与本次核号对齐（P1-4；时点 = 定号后——§5.2 步骤 4）
 - [ ] ✋ 用户：定号 + 发布授权（发布动作 = 用户门）
@@ -297,11 +298,13 @@ node scripts/dev-link.mjs --force && node scripts/dev-link.mjs --check   # 自�
 ```
 
 **步骤 4 · 上传（OSS 托管 · feed 三件）**：键形 = `downloads/` 前缀——**Windows**：`ThinCoder-Setup-<号>.exe` ∥ 同名 `.blockmap` ∥ `latest.yml`（feed 三件——单源 = `docs/desktop/design/PACKAGING.md` §2.8.3）。
-  上传 = 站点仓独立小件 `thincoder.com/scripts/upload-download.mjs`（站点小件——规格 = 同档 §2.9.7；凭证只走环境变量，N6）：
+  上传 = 站点仓独立小件 `thincoder.com/scripts/upload-download.mjs`（站点小件——规格 = 同档 §2.9.7）：
+
+  **凭证口径（2026-10-26 定）**：`ALIYUN_KEY` ∥ `ALIYUN_SECRET` 就在环境变量里（本机已设）——直接跑，不往命令行写值（写进去就进了 shell 历史与会话记录），也不问用户要。先查再跑（`[Environment]::GetEnvironmentVariable('ALIYUN_KEY')`） ⇒ 有就直跑；真的未设才停下上报。**曾因没先查而向用户要过一次凭证**——用户原话：「凭证不一直就在环境变量里吗！」
 
 ```bash
 cd thincoder.com
-ALIYUN_KEY=… ALIYUN_SECRET=… node scripts/upload-download.mjs <exe> <blockmap> <latest.yml>   # 键形 = downloads/<文件名>；顺序 = exe → blockmap → latest.yml（latest.yml 末传）
+node scripts/upload-download.mjs <exe> <blockmap> <latest.yml>   # 键形 = downloads/<文件名>；顺序 = exe → blockmap → latest.yml（latest.yml 末传）
 ```
 
 **判据**：三件取回（HTTP 200 ∥ 字节数 = 本地一致）+ **`latest.yml` 对盘**（`version` = 本次号 ∥ `files[0].sha512` = 本地 exe 实算）；同号重传 ⇒ URL 核验加查询串绕缓存（`?v=…`）。
@@ -329,12 +332,14 @@ ALIYUN_KEY=… ALIYUN_SECRET=… node scripts/upload-download.mjs <exe> <blockma
 
 **步骤 2 · 站点更新**：① 版本面（about 页「当前版本」行 · download 页系统要求三行——首行 = 桌面版，单源 = `docs/desktop/design/PACKAGING.md` §2.9.3）；② changelog 页（页头「截至最新发布」句 + 本次条目插到本节顶部）。口径 = §6.1–§6.3。
 
-**步骤 3 · 部署**（在站点仓内执行；凭证只走环境变量、值零入库——N6）：
+**步骤 3 · 部署**（在站点仓内执行）：
+
+**凭证口径（同上）**：`ALIYUN_KEY` ∥ `ALIYUN_SECRET` 在环境变量里，直接跑、不写值、不问用户要；先查再跑，真未设才停下上报。
 
 ```bash
 cd thincoder.com
 DRY_RUN=1 node scripts/deploy-oss.mjs                 # 预演（零凭证可跑）——先核上传清单
-ALIYUN_KEY=… ALIYUN_SECRET=… node scripts/deploy-oss.mjs    # 实传（凭证名 = ALIYUN_KEY / ALIYUN_SECRET——脚本只读此名）
+node scripts/deploy-oss.mjs                           # 实传（脚本只读环境变量名 ALIYUN_KEY / ALIYUN_SECRET）
 ```
 
 **完成判定**（判据全文与比较归一 = §6.5）：① 三处版本面 = registry / 市场最新号；② changelog 页**各端分节**顶部条目 = 该端本次号；③ 取回线上页面含本次号。
