@@ -6,7 +6,7 @@
  * 原档 `conventions.mjs` 经 `export { … } from` 转口保名（消费面 / 单元测试档 import 面零改）。
  */
 import { existsSync, readdirSync, statSync } from "node:fs"
-import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path"
+import { basename, dirname, isAbsolute, join, parse, relative, resolve } from "node:path"
 import { DEFAULT_MANIFEST, MANIFEST_REL, docRootPaths, manifestFilePath, onManifestInit, owningProject, readManifest } from "./manifest.mjs"
 import { isSkippedRelPath } from "./memory/file-walk.mjs" // 面⑦ 子目录扫描的跳过段谓词单源（零环：file-walk 不引本档）
 import { logEvent } from "./log.mjs"
@@ -365,7 +365,7 @@ export function loadProjectDeclaration(cwd) {
  * @returns {Readonly<object>|null} 所属项目的声明对象 / null = 出辖
  */
 export function declarationForTarget(targetAbs) {
-  const root = owningProject(targetAbs)
+  const root = owningProject(targetAbs, parse(targetAbs).root) // 取根面的界 = 目标所在盘根（与 `projectRootView` 同一口径）
   if (!root) return null
   return loadProjectDeclaration(root)
 }

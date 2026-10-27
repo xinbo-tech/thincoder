@@ -7,10 +7,13 @@
 import { DESC, truncate, resolveInCwd } from "./shared.mjs"
 import { readdir, stat } from "node:fs/promises"
 import { join, basename, extname } from "node:path"
+// 排除名单单源（零依赖叶档 `skip-dirs.mjs`——2026-10-27 四份名单合一）：本档不再持本地副本。
+// 两项旧值随之退场：`turbo`（无点，笔误——另三份都是 `.turbo`）、`bin`（`thincoder-cli/bin/**`
+// 是 CLI 入口、产品代码，不该从任何面上被剪掉）。
+import { SKIP_DIRS } from "../skip-dirs.mjs"
 
 const MAX_ENTRIES = 200
 const DEFAULT_DEPTH = 3
-const SKIP_DIRS = new Set(["node_modules", "bin", "obj", "dist", "build", "coverage", "turbo", ".git", ".thincoder", ".vs", ".venv", "__pycache__", ".idea"])
 const BINARY_EXTS = new Set([".exe", ".dll", ".png", ".jpg", ".jpeg", ".gif", ".pdf", ".docx", ".xlsx", ".pptx", ".zip", ".7z", ".mp3", ".mp4", ".woff", ".woff2", ".ico"])
 
 // ─── cwd 归一注入缝（#56——「cwd 归一开关按端注入」，形态参 §2.13.5 注入缝）─────────

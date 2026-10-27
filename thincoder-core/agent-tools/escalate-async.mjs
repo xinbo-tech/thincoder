@@ -62,7 +62,7 @@ function overlapPaths(parent, launchSeq, childTouched) {
   const sinceKeys = new Set(since.map(key))
   const hits = childTouched.filter((p) => sinceKeys.has(key(p)))
   // relative display form (touchedFilesNote precedent)
-  const cwd = parent?.cwd ?? process.cwd()
+  const cwd = parent?.cwd
   return hits.map((p) => {
     const r = relative(cwd, p)
     return r && !r.startsWith("..") && !isAbsolute(r) ? r : p
@@ -74,7 +74,7 @@ function childTouchedDisplay(child, cwd) {
   const touched = child?._touchedFiles ?? []
   if (touched.length === 0) return "(none recorded)"
   const shown = touched.map((f) => {
-    const r = relative(cwd ?? process.cwd(), f)
+    const r = relative(cwd, f)
     return r && !r.startsWith("..") && !isAbsolute(r) ? r : f
   })
   return shown.join(", ")
@@ -85,7 +85,7 @@ function touchedFilesNote(child, cwd) {
   const touched = child?._touchedFiles ?? []
   if (touched.length === 0) return ""
   const shown = touched.map((f) => {
-    const r = relative(cwd ?? process.cwd(), f)
+    const r = relative(cwd, f)
     return r && !r.startsWith("..") && !isAbsolute(r) ? r : f
   })
   return `\nTouched files: ${shown.join(", ")}`

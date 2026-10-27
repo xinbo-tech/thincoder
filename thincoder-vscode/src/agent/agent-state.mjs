@@ -10,6 +10,9 @@
 // = 核语义：门禁格式拒、不主动删）。`extractTokenUUID` 核无同名导出 ⇒ 本地一行式（uuid 段）。
 import { tokenExpired } from "@thincoder/core/token-ttl.mjs"
 import { clearPlanMode } from "@thincoder/core/agent-tools/plan.mjs"
+// §6.17.1 链二端面③：校准样本读回面单源 = 核 `restoreTokenSample`（四条校验与 CLI `applySession`
+// 同一函数，不分叉；不合格 ⇒ 回到未校准档、不抛——槽档是盘上用户数据）。
+import { restoreTokenSample } from "@thincoder/core/token-window.mjs"
 // W16：traces 默认值 = 核 DEFAULTS.traces（单一来源——原 config-io TRACES_DEFAULTS 随删旧退场）。
 import { DEFAULTS } from "@thincoder/core/config.mjs"
 
@@ -82,11 +85,14 @@ export function reconcileEngDesignTokens(existing, slotTokens, legacyToken) {
  * planMode → agent._planMode（B 类每轮重指；engineering 真值优先 ⇒ 恒 false——FR31 ③；
  * 非工程态 opts.planMode 覆盖优先）；
  * engDesignTokens → reconcile（C 类永不清空）。restore=true（factory 新建——首轮/destroy
- * 重建同路径）→ 会话级槽字段回填 tasks/goal/pendingReminders（11.2.1/AC3）。
+ * 重建同路径）→ 会话级槽字段回填 tasks/goal/pendingReminders（11.2.1/AC3）+ 估算校准样本
+ * `slot.estimateSample` 读回（§6.17.1 链二端面③）。
  * @param cfg config.json 解析产物（agent.config 由此整建——AC7 每轮拾取外部变更）。
+ * @param provider 第三参对象新增键：样本的 key 同源校验用它（`agent._provider` 在本调用点之后
+ *  才落 ⇒ 取不到 agent 上的 provider）；缺省 ⇒ 校验③恒不符 ⇒ 比 1、不抛（退化到未校准档）。
  * @returns {{ engineering: boolean, droppedExpired: boolean }}
  */
-export function applySlotSessionState(agent, { slot, engState, planModeOverride }, { cfg, restore = false }) {
+export function applySlotSessionState(agent, { slot, engState, planModeOverride }, { cfg, restore = false, provider }) {
   const slotEng = slot?.engineering
   const engEnabled = engState?.enabled
   const engineering = slotEng != null ? slotEng === true
@@ -121,6 +127,9 @@ export function applySlotSessionState(agent, { slot, engState, planModeOverride 
     agent._tasks = Array.isArray(slot?.tasks) ? [...slot.tasks] : []
     agent._goal = slot?.goal ?? null
     agent._pendingReminders = Array.isArray(slot?.pendingReminders) ? [...slot.pendingReminders] : []
+    // §6.17.1 链二端面③：估算校准样本读回（与 CLI applySession 同函数、同四条校验）——
+    // 恢复会话后首请求即按学到的比值判，不再从 1 起步（链二要杀的死锁就在这一面）。
+    restoreTokenSample(agent, slot?.estimateSample, provider)
   }
   // ENG-PLAN-EXCLUSION（FR31 ③ / KD10——恢复点②·VSC）：工程模式 ⇒ 单点 `clearPlanMode` 复用
   // （除生效值外，摘除**槽恢复回填的未注入 plan 提示语**——`PLAN_EXIT_REMINDER` 否则会跨模式落地；

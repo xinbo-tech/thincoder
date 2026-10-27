@@ -14,7 +14,7 @@ import { ledgerDirPath } from "./ledger-db.mjs"
 /** 单次扫描（直驱面——timer 包装见 `startLedgerSurface`）。**async**（F-LX1：await 判活解析——
  *  LEDGER.md §7.3.1 ④ 读面不阻塞事件循环）。 */
 export async function runLedgerScan({ state, agent = null, anchor = null, render = () => {} } = {}) {
-  const base = anchor ?? agent?.cwd ?? process.cwd()
+  const base = anchor ?? agent?.cwd
   const family = discoverFamily(base)
   const scans = []
   for (const p of family.projects) {

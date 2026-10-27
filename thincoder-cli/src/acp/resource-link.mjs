@@ -60,7 +60,7 @@ export async function resolveResourceLink(block, { cwd } = {}) {
   } else {
     try { path = decodeURIComponent(raw) } catch { return marker(raw, "invalid percent-encoding") }
   }
-  path = resolvePath(cwd ?? process.cwd(), path) // 相对路径按 cwd；已在盘面形则归一平台原生分隔符
+  path = resolvePath(cwd, path) // 相对路径按 cwd；已在盘面形则归一平台原生分隔符
 
   // ③ 选区解析（仅 url.hash；非选区哈希 = 锚点 ⇒ 整文）
   let sel = null

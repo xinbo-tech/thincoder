@@ -80,7 +80,7 @@ export const engTool = {
       // **零副作用**（不清 token / 不重置 _advisorRuns / 不入列 ENG_ON_REMINDER /
       // 不动 _lastEngState / 不触镜像缝）；准 ⇒ 缺档格就地建档（writer:'main'）+
       // agent.manifest ← 结果（翻转面唯一赋值点——相位行当回合起活，§2.8 F2 放行行）。
-      const r = resolveEngineeringManifest(ctx.agent.cwd ?? ctx.cwd ?? process.cwd(), { writer: "main" })
+      const r = resolveEngineeringManifest(ctx.agent.cwd ?? ctx.cwd, { writer: "main" })
       if (!r.ok && r.code !== "workspace") {
         return `Error: cannot enter engineering mode — ${r.message} (mode unchanged)`
       }

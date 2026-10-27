@@ -30,18 +30,18 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 // 描述面 = `tool-docs/batch.md`（#15 描述外置统一——工厂形描述经 DESC 单一解析面，工厂调用期取值）
 import { DESC } from "../tools/shared.mjs"
-import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError } from "./batch-skeleton.mjs"
+import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError, ROUND_HEADING_RE, countRoundBlocks } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
-import { closeBatchRecord, createBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
+import { assertSectionFiveGate } from "./batch-closeout.mjs"
+import { createBatchRecord } from "./batch-ledger-bind.mjs"
+import { closeBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
 
 export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
 
 /** text 单次上限（BATCH-RECORD.md §4.1——超出引导分段追加，不承诺"不新盖戳"）。append 迁移域私有区常量
  *  （随执行体自 batch-segment.mjs 迁入——骨架档只住骨架/状态行单源，lifecycle 档头枚举口径）。 */
 export const MAX_TEXT_CHARS = 20000
-/** 工具写入的轮次节标题形态（N 计数口径 = 该形态行；`### 轮次与发现（…）` 骨架行不匹配）。 */
-const ROUND_HEADING_RE = /^### 轮次 \d+（评审子代理）/
 /** 凭证形态（`BATCH-RECORD.md` §4.1——三形）：`[DESIGN-TOKEN:…]` 闭括号形 ∥ `designId: …` 键形 ∥ 无标两段
  *  token 值形 `⟨uuid⟩:⟨epoch⟩`（与单源 `design-token.mjs` 判据对表）；裸 uuid 非凭证不剥（KD-7）。两字面勿
  *  合并：`CRED_RE` 走 `.replace()` 须 `/g` ∥ `CRED_TEST_RE` 逐行 `.test()` 须非 `/g`（lastIndex 有状态会漏剥）。 */
@@ -120,12 +120,6 @@ function sanitizeText(text, dropStamp) {
   return kept.join("\n")
 }
 
-/** §3 内工具写入的轮次行计数（N = 计数 + 1；收窄口径——只数工具戳形态）。 */
-function roundCount(src, headerMatch, endIdx) {
-  const body = src.slice(headerMatch.index + headerMatch[0].length, endIdx)
-  return body.split("\n").filter((l) => ROUND_HEADING_RE.test(l)).length
-}
-
 /** 段尾定位 + 插入（append-only：只在段尾插入，既有字节不变；返回新全文 + 本轮 N）。 */
 function insertIntoSection(src, seg, text) {
   const hdr = sectionHeaderRe(seg).exec(src)
@@ -137,7 +131,7 @@ function insertIntoSection(src, seg, text) {
   const next = nextRe.exec(src)
   const endIdx = next ? next.index : src.length
   // 来源戳（仅 §3）：工具生成标题 + N——调用方写不进自己的标题（sanitize 已丢弃同名行）。
-  const roundN = seg === 3 ? roundCount(src, hdr, endIdx) + 1 : 0
+  const roundN = seg === 3 ? countRoundBlocks(src, 3) + 1 : 0
   const payload = (seg === 3 ? `### 轮次 ${roundN}（评审子代理）\n\n` : "") + text
   const before = src.slice(0, endIdx)
   const after = src.slice(endIdx)
@@ -156,11 +150,12 @@ function insertIntoSection(src, seg, text) {
  *  - 目标定位（D-BR21）：depth-0 path 可选（缺省 = findInFlightBatch 唯一在飞批）；子代理/评审
  *    传 path ⇒ 拒，目标 = spawn/实例绑定；
  *  - 其余（gate / text 校验 / 剥凭证 / 骨架保护 / **死占位机检（F11-C）** / **文档机检门（§3.20 结构兜底 ①——
- *    子代理写 §2 / §5：REFUSED ⇒ 拒写，ERROR ⇒ 写 + 回执明示）** / 插入 / 记账 / 回执）逐字保持原语义。
+ *    **全部 append 同挂**（含 depth-0 与评审写 §3）：本次写入文本的命中 ⇒ 拒写，ERROR ⇒ 写 + 回执明示；
+ *    批档已落段命中只入回执）** / 插入 / 记账 / 回执）逐字保持原语义。
  */
 function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   const agent = ctx?.agent ?? {}
-  const cwd = agent.cwd ?? process.cwd()
+  const cwd = agent.cwd
   const depth0 = ctx?.depth === 0
   // 模式位执行期实读（§4.16——同款先例 = task.mjs execute 门；翻转即时生效——D-BR26）
   const engineering = !!agent?.config?.agent?.engineering
@@ -230,11 +225,15 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   // （段体引用豁免——判据可辨性收正，`TOOLS.md` §6.20；骨架枚举单源 = skeleton 档 TEMPLATE_PLACEHOLDERS）。
   const residues = findPlaceholderResidue(src)
   if (residues.length) throw new Error(placeholderResidueError(residues))
+  // §5 写入门（段序门 · 设计档 §2.6 `R-G2`）：实现发生在评审通过之后，序在这里判得出真假；
+  // 无评审的批由 §1 声明 `> 不适用：§3 —— <理由>` 放行（普通模式无设计评审）。轻通道不写 §5 ⇒ 不受影响。
+  if (n === 5) assertSectionFiveGate(src)
   // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、insertIntoSection / 写盘之前）：
-  // 只挂子代理写 §2 / §5（depth-0 与评审不检）；REFUSED ⇒ throw；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
-  const gate = !depth0 && !review && (n === 2 || n === 5)
-    ? runBatchGate({ abs, cwd, agent, scope: "writer" })
-    : null
+  // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；
+  // 强制集 = 本次写入文本 ∪ 写者触达账，批档已落段命中只入回执（不阻本次写）。
+  // `pending` = 本次段号与正文：门据此落同目录片段档判「你手里这段」，判法与批档本体逐字同源。
+  // REFUSED ⇒ throw（零字节落盘）；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
+  const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
   const { written, roundN } = insertIntoSection(src, n, body)
   writeFileSync(abs, written)
@@ -275,7 +274,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         value: {
           type: "string",
-          description: "status only — the new status-line value (single line; exactly one legal keyword of your section's STATUS_WORDS entry: §1 进行中/已收口 · §2 设计完成 · §3 评审完成 · §5 实施完成 — plus decoration only: surrounding symbols / a trailing ISO date / whitespace; prose goes to `note`).",
+          description: "status only — the new status-line value (single line; exactly one legal keyword of your section's STATUS_WORDS entry: §1 进行中/已收口 · §2 设计完成 · §3 评审通过 · §5 实施完成 — plus decoration only: surrounding symbols / a trailing ISO date / whitespace; prose goes to `note`).",
         },
         note: {
           type: "string",
@@ -291,11 +290,11 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         ledger: {
           type: "string",
-          description: "create only — optional: the ledger entry number for the header's 台账 line (e.g. \"#938\"; a leading # is added if missing). Passed together with board, it fills the header at creation; when omitted, the placeholder stays and must be filled by file edit before the record's first append/status.",
+          description: "create only — optional: an existing ledger entry number to take over (e.g. \"#1830\"; a leading # is optional). Omit it and create opens a NEW ledger row in the same call (status 在途 · task_book = this record · trigger 归批); pass an archived / settled / foreign-owned row and create is refused. create and the ledger row are one action — there is no separate registration step.",
         },
         board: {
           type: "string",
-          description: "create only — optional: the owning board for the header's 台账 line (e.g. \"core\"). See ledger — both fill the header at creation.",
+          description: "create only — optional: the owning board for the header's 台账 line (e.g. \"core\"). Given, the opened/taken-over row is a requirement and carries this board; omitted, the row is a tech_todo and the header 括注 shows 「—」.",
         },
         date: {
           type: "string",
@@ -310,7 +309,7 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
     },
     async execute(args, ctx) {
       const agent = ctx?.agent ?? {}
-      const cwd = agent.cwd ?? process.cwd()
+      const cwd = agent.cwd
       const bases = batchDocBases(cwd) // 歧义锚 ⇒ 候选项目基底并集（#828——create / 在飞 / 写门基底集同源）
       const onWritten = injectedOnWrite
       /** depth-0 目标定位（D-BR21）：path 传 ⇒ 可读性门；缺省 ⇒ 唯一在飞批（depth-0）/

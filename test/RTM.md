@@ -24,9 +24,8 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 2-1 | 主 agent 首次写产品源文件 | 该笔回执以一行 [pen check] 结尾、只出现一次、含两处键句；文件确实写入 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/unbooked-pen.test.mjs` |
-| 2-2 | 同一会话紧接着再写一个产品源文件 | 第二笔回执没有任何 [pen check] 行 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/unbooked-pen.test.mjs` |
-| 2-3 | 另一个会话先写文档，再写产品源文件 | 写文档那笔零提示、不消耗提醒；随后写产品码仍有提醒 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/unbooked-pen.test.mjs` |
+
+> **已退役（2026-10-27）**：本故事的三行由故事 12 接替——裁定 ⑤（无活批档不许改产品代码）之后，未立项写产品码**被拒**，原故事「提醒一次、之后不再打断」的前提不再成立（判据 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` 决策 8）。
 
 ### 3. 网页抓取的后端故障不外溢
 
@@ -78,8 +77,8 @@
 
 ### 7. 收口只判本批改过的档
 
-> 目的：收口门判的只是本批笔域集——范围外的脏档不拦收口，也不进回执。
-> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；四态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）。
+> 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执。
+> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append，不直调 `runBatchGate`）；八态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
@@ -87,6 +86,10 @@
 | 7-2 | 同一夹具，工作树里放一档范围外的档且含悬空指针，再收口 | 该档不入判、收口放行、回执零该档行（连档名都不出现） | **PASS** | 2026-10-25 | 父侧亲跑 | — | `test/integration/batch-close-gate.test.mjs` |
 | 7-3 | 同一夹具，本批笔域集内一档含悬空指针，再收口 | 收口被拒（throw），§1 状态行字节不变 | **PASS** | 2026-10-25 | 父侧亲跑 | — | `test/integration/batch-close-gate.test.mjs` |
 | 7-4 | 同一夹具，收口前在批档同目录放本批自己的单元测试档 `<批档名>.test.mjs`（另备前缀变体 `<批档名>-extra.test.mjs`，盘上无 `<批档名>-extra.md`），再收口 | 收口被拒（throw）：拒串点名该档绝对路径 + 修法（删）；§1 状态行字节不变；删档后同跑收口放行 | 待执行 | — | — | — | `test/integration/batch-close-gate.test.mjs` |
+| 7-5 | 夹具项目里放一档**嵌套围栏档**（外层四反引号包内层三反引号、内层代码合计 &gt;300 字）与一档同长度**无围栏正文**档，两者均入本批笔域集，跑一次 `batch` 收口 | 嵌套围栏档 0 命中（其内代码不入段）· 收口放行；对照档命中 1 条（`clazz` = 文字太长）· 收口被拒——两半都成立才算过 | 待执行 | — | — | 缺口来源 = 2026-10-27 围栏闭合判定缺陷（批档 `docs/batches/2026-10-27-fence-paragraph-gate.md`）；回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 · `docs/core/design/DOC-DISCIPLINE.md` §3.18「围栏行止」· §5 A-DD27 | — |
+| 7-6 | 夹具批档 §1 含裸档名（要求档写成了不带目录段的名字），跑一次 `batch close` | 收口被拒（throw）：拒串首行 `DOC-CHECK GATE: REFUSED`、命中行带 `§1（作者：主 agent）`；§1 状态行字节不变 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②（收口面含批档自身）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ③；用例号 = DD-129 | `test/integration/batch-close-gate.test.mjs` |
+| 7-7 | 同一夹具，批档干净、笔域集各档干净，跑一次 `batch close` | 收口放行；回执 `[doc-check gate] DOC-CHECK GATE: PASS · 范围 N 档`，N = 实判档数且 ≥ 1（批档自身在内） | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ④（判域恒非空）；用例号 = DD-135 | `test/integration/batch-close-gate.test.mjs` |
+| 7-8 | 子代理 append §2，本次写入文本把要求档写成不带目录段的名字；随后改成全路径再 append 一次 | 第一次被拒：命中行点名 `本次写入文本`，批档字节逐字不变（零字节落盘）；第二次落盘，前文零变 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ①（写段面强制集 = 本次写入文本）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ⑥；用例号 = DD-130 | `test/integration/batch-close-gate.test.mjs` |
 
 ### 8. 批次档建在项目里（工作区锚报明、不落锚目录）
 
@@ -110,25 +113,102 @@
 ### 10. 收口即清账（批档收口即消费该批设计凭证）
 
 > 目的：收口成功即该批凭证不再放行写产品码；收口被拒即凭证仍活、状态行未变。
-> 节注：回指 = docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md F-D7 ∥ F-D8（机制 = docs/core/design/DESIGN-TOKEN-SETTLEMENT.md §10）；交互组件 = `batch-lifecycle.mjs` 收口通路 ↔ `design-slots.mjs` 消费核 ↔ 槽文件 I/O；进入口 = 父侧经 `batch` 工具收口（工程模式）；三态（行序）= 10-1 正常 · 10-2 错误。
+> 节注：回指 = docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md F-D7 ∥ F-D8（机制 = docs/core/design/DESIGN-TOKEN-SETTLEMENT.md §10）；交互组件 = `batch-lifecycle.mjs` 收口通路 ↔ `design-slots.mjs` 消费核 ↔ 槽文件 I/O；进入口 = 父侧经 `batch` 工具收口（工程模式）；三态（行序）= 10-1 正常 · 10-2 错误 · 10-4 正常。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 10-1 | 工程模式夹具里，让一次设计评审的 `documents` 带上批档（签发一个槽），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
+| 10-1 | 工程模式夹具里，让一次设计评审以 `batchDoc` 带上批档（签发一个槽；夹具须让该评审把 §3 写进批档——轮次块 + 状态行 = `评审通过`，否则 §3 落地门挡住签发、本行断言不可达），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
+| 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽；夹具同上：该评审须把 §3 写进批档），再调 `subagent` `action:'design-slots'` | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
-| 10-3 | 工程模式夹具里造三行 `待核销`：a 行 `task_book` 指向「已收口 ∧ 槽内有归属」的批档；b 行指向「未收口」的批档；c 行指向「已收口但槽内无归属」的批档。三行各跑一次 `thincoder ledger close --id <行>` | a 行核销成功（`status = 已核销`，`closed_at` 非空）；b / c 行被拒，回执分别点名缺 ② ∥ 缺 ③，且两行 `status` 仍 `待核销`、`closed_at` 仍空 | 待执行 | — | — | — | `test/integration/ledger-close-proof.test.mjs` |
+| 10-3 | 工程模式夹具里造三行 `待核销`：a 行 `task_book` 指向「已收口 ∧ §3 = 评审通过」的批档（换会话核销，槽内无归属）；b 行指向「未收口」的批档；c 行指向「已收口但 §3 = 进行中」的批档。三行各跑一次 `thincoder ledger close --id <行>` | a 行核销成功（`status = 已核销`，`closed_at` 非空；槽内无归属也通过）；b / c 行被拒，回执分别点名缺 ② ∥ 缺 ③，且两行 `status` 仍 `待核销`、`closed_at` 仍空 | 待执行 | — | — | — | `test/integration/ledger-close-proof.test.mjs` |
 
 ### 11. 超窗守卫与内部阶段豁免（absent 档全档同判）
 
-> 目的：越窗时要么先压一次再发，要么带三实数当场报错——不把同一条超限请求丢给服务端吃 400。
-> 节注：回指 = `docs/core/design/CONTEXT-COMPACTION.md` §6.2 ∥ §6.17；交互组件 = `thincoder-core/agent/run-stages.mjs`（守卫）· `thincoder-core/provider/{core,anthropic,google,responses}.mjs`（净判）· `thincoder-core/provider/errors.mjs`（400 分类）；需求回指 = F-LX4 的上下文面（本批 §2 R1–R4）。
+> 目的：越窗时要么先压一次再发，要么带三实数当场报错——不把同一条超限请求丢给服务端吃 400；压缩只在压完能落到线下时发生——不为一次没有净减的摘要白付请求，用户照常拿到答复。
+> 节注：回指 = `docs/core/design/CONTEXT-COMPACTION.md` §6.2 ∥ §6.17；交互组件 = `thincoder-core/agent/run-stages.mjs`（守卫）· `thincoder-core/provider/{core,anthropic,google,responses}.mjs`（净判）· `thincoder-core/provider/errors.mjs`（400 分类）；需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md` §2.1（压缩线目标 60% ∥ 触发可达性门 ∥ F-CC2 主动压缩）∥ 台账 `#1833`；三态（行序）= 11-1 正常 · 11-2 错误 · 11-3 边界 · 11-4a 错误 · 11-4b 错误 · 11-5 边界 · 11-6 正常 · 11-7 边界 · 11-8 边界 · 11-9 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 11-1 | CLI 会话经 provider 桩跑到估算越线（显式压缩线 750,000 隔离阈值面），再发一条消息 | 压缩事件恰好 1（`mode:"summary"`）；压缩请求 1 · 回合请求 1；全 200 无 400；`max_tokens` 仍未发 | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
-| 11-2 | 同上，摘要桩回超长摘要使压后仍越线 | 错误带 prompt / `max_tokens not sent` / 窗口三实数；强压请求恰 1 · 回合请求 0；无 400 | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
-| 11-3 | `absent` 档（deepseek-flash 形状）两半段：越线 620,000 ∥ 未越线 100,000，另加退化档 `doubao-seed-2-1-turbo-260628` | 越线：强压 1 · 回合请求 1 · 零 400；未越线：零压缩 · 请求照发；退化档：零压缩 · 请求照发（地板不误伤） | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
-| 11-4 | provider 桩直接回 400 越窗报文 | 错误 `kind = "context_overflow"` · `retryable === false` · 不重试（请求恰 1 次） | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-1 | CLI 会话经 provider 桩跑到估算越线（显式压缩线 750,000 隔离阈值面），再发一条消息 | 压缩事件恰好 1（`mode:"summary"`）；压缩请求 1 · 回合请求 1；全 200 无 400；`max_tokens` 仍未发 | **PASS** | 2026-10-27 | 父侧亲跑 | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-2 | 同上，摘要桩回超长摘要使压后仍越线 | 错误带 prompt / `max_tokens not sent` / 窗口三实数；强压请求恰 1 · 回合请求 0；无 400 | **PASS** | 2026-10-27 | 父侧亲跑 | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-3 | `absent` 档（deepseek-flash 形状）两半段：越线 620,000 ∥ 未越线 100,000，另加退化档 `doubao-seed-2-1-turbo-260628` | 越线：强压 1 · 回合请求 1 · 零 400；未越线：零压缩 · 请求照发；退化档：零压缩 · 请求照发（地板不误伤） | **PASS** | 2026-10-27 | 父侧亲跑 | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-4a | provider 桩首回合回 400 越窗报文，重试回合回 200 | 压缩事件恰 1（自适应压一次）· 压缩请求 1 · 回合请求 2（首 400 + 重试）· 用户拿到答复而非错误 | **PASS** | 2026-10-27 | 父侧亲跑 | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-4b | 同一夹具，压缩后重试仍回 400 越窗（二次越窗） | typed 错误浮出（`kind = "context_overflow"` · `retryable === false`）· 压缩恰 1（不再压）· 回合请求恰 2（无第三次）· 不静默截断 | **PASS** | 2026-10-27 | 父侧亲跑 | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-5 | 恢复带样本的会话（槽带 `estimateSample`：`num 723_272` / `den 491_000` ⇒ 比 ≈ 1.473；provider `maxTokens: 393_216` ⇒ `limit` 606,784），发一条消息 | 首请求估算支 ≈ 723,272 > `limit` ⇒ 触发压缩而非吃 400；业务可观察 = 重启后继续大会话不再 400 | 待执行 | — | — | 缺口来源 = 2026-10-27 上下文预算低估批；回指 = `docs/core/requirements/CONTEXT-COMPACTION.md` F-CC7 · `docs/core/design/CONTEXT-COMPACTION.md` §6.17.1 链二 | — |
+| 11-6 | CLI 会话用 128,000 窗档（压缩线 76,800），provider 桩带巨型工具 schema 使 `system + tools` 估算 > 76,800、`history` 仅数条短消息（复刻 `#1833` 现场），发一条消息 | 压缩事件 0（`agent._lastCompressInfo` 未置位）· 摘要请求 0（`logCtx.stage === "compress"` 零发）· 回合请求 1 · 用户拿到答复 · 无 400 | 待执行 | — | — | 缺口来源 = 台账 `#1833`（压缩判据把固定开销算进被判定的一侧） | `test/integration/context-overflow-guard.test.mjs` |
+| 11-7 | 同一档，`history` 堆出足量可摘中段，使 `history − middle + 注记 + 占位 + 开销` 的估算 ≤ 76,800，再发一条消息 | 压缩事件恰 1（`agent._lastCompressInfo.mode === "summary"`）· 摘要请求恰 1 · 回合请求恰 1 · 回复引用工具结果 | 待执行 | — | — | 同上 | `test/integration/context-overflow-guard.test.mjs` |
+| 11-8 | CLI 会话里让模型主动调 `context{action:'compact'}`——用户说一句「压一下上下文」即进入该回合，且压后仍超压缩线 | 压缩仍执行恰 1——门只拦阈值面，`force` 全文豁免 | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
+| 11-9 | CLI 会话里粘一段超 `OVERSIZE_CONTENT_LIMIT` 的巨型日志发出去，且无中段可摘 | 走 `shrinkOversized`、体内出现截断标记；门不拦（零网络） | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
+
+### 12. 无活批档不许改产品代码
+
+> 目的：产品代码面 / 产品测试面的写，必须有活批档（档 §1 = 进行中 ∧ 台帐行 = 在途 ∧ 指针回指本档）；文档面 / 工程工具面 / 构建产物照写。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.2 ∥ §2.3 ∥ §2.10 ∥ §2.12；六态（行序）= 12-1 错误 · 12-2 正常 · 12-3 边界 · 12-4 错误 · 12-5 边界 · 12-6 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 12-1 | 工程模式父侧（有活设计槽、无活批档）用 `write` 写 `thincoder-core/agent/x.mjs` | 拒：拒文含 `write refused — no live batch record: a product-code write needs a live batch`；文件零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-2 | 同一会话写 docRoot 内 `.md` 与仓根 `scripts/*.mjs` | 照写；两档字节 = 写入内容 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-3 | 造两个活批档并存，再写产品码 | 产品码照写（锁只问存在否，不要求全局唯一） | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-4 | 台账库不可读（库位是目录），再写产品码 | 拒：拒文含 `no live batch record` 与 `ledger unreadable — `（带台账原始错误）；文件零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-5 | 无活批档时写 `thincoder-vscode/test/x.test.mjs`；再写 `node_modules/**` · `thincoder-cli/dist/**` · `test/integration/**` | 前者拒（拒文含 `a product test file needs a live batch too`，文件零改）；后三者照写 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-6 | 在 `vendor/` · `node_modules/` · `dist/` 各放一份含标记文本的 `.mjs`，用 `grep` 搜该标记；再在普通目录放同文本 | 首次零命中（名单合并后三处都被剪）；普通目录那份命中——证明剪枝生效而非搜索坏了 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+
+### 13. 建批档就有台账
+
+> 目的：`batch create` 一次调用同时成立「档」与「台账行」——不传号新建、传号接管；已归档 / 已结账 / 他批占用的行拒。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4；三态（行序）= 13-1 正常 · 13-2 正常 · 13-3 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 13-1 | 不传 `ledger` 建一档 | 台账 +1 行：`status = 在途` · `task_book` = 该档 · `trigger = 归批`；档头 `> 台账 = #N（… · 归批）` 写真实行号（无 `#<编号>` 占位） | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
+| 13-2 | 传一条 `待讨论` 行的号建一档 | 该行变 `在途`、指针回填本档；不新建行（行数不变） | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
+| 13-3 | 传一条 `已核销` 行的号建一档 | 拒（拒文含 `an archived row cannot carry a new batch record`）；档零落盘；行逐列零改 | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
+
+### 14. 评审过、收口清、重开回
+
+> 目的：`§5` 只在评审通过后开写；收口要 `§3 = 评审通过` 且把本批行推出 `在途`；核销判档面（换会话也成立）；重开把 `待核销` 行带回工作位。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.7 ∥ §2.11 ∥ §2.13；七态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 14-1 | `§3` 无结论（段体有内容）时以 eng-coder 绑定 append `§5`；再让评审写 `§3 = 评审通过` 后重试 | 第一次拒（拒文含 `§5 append refused`，§5 字节不变）；第二次写入成功 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-2 | `§3` 非 pass 时 `batch close` | 拒，拒文含 `§3 状态行 = …，须 = 评审通过`；§1 状态行字节不变 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-3 | 换一个会话（ctx 无槽 / 无 designId）用 `ledger close` 核销一条「已收口 ∧ §3 = 评审通过」的合格行 | 核销成功（`status = 已核销`）——③ 判档面，不再看槽内归属 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-4 | `batch close` 一个含 1 行 `在途` + 1 行 `待讨论` 的批 | 分别落 `待核销` / `条件`；回执两行（在途行 / 未动行）各一行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-5 | 同上夹具再读回执末行 | 含「本批 2 行由重锚默认推进，父侧未显式处置：#a, #b —— 做完的请在收口前 update → 待核销，没做完的 update → 条件 / 已废弃」 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-6 | 收口后 `batch status` 重开（`§1 → 进行中` + note） | 行回 `在途`、回执第一行点名 1 行；随后产品码写当场可写（该档又是活批档） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-7 | 同一批里一行 `待核销` + 一行 `已核销`，重开 | 前者 → `在途`、后者零改；回执两行（待核销行回收 / 已核销行不可回收逐 id 点名） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+
+### 15. 偶发空响应不打断会话
+
+> 目的：提供端瞬时吐空之后，用户照常拿到答复，而不是 `LLM returned empty response`；只有连续空才抛。
+> 节注：回指 = `docs/core/design/AGENT-LOOP.md` §6.5①（清零判据 ∥ 额度 ∥ 清零点）· `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.8（判空加宽）；缺口来源 = 用户 2026-10-27 报告「deepseek-flash 一直报 empty response，点 retry 又能继续」。三态（行序）= 15-1 正常 · 15-2 错误 · 15-3 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 15-1 | CLI 会话里发一条消息，provider 桩按序回：空 → 带正文且带工具调用 → 空 → 带正文（中间轮必须带工具调用——零工具调用的带正文响应会当场收束本 run） | 用户拿到两次正文答复；中间轮之后 `_emptyRetries` 读到 0（读点在下一轮取值之前）；全程不抛 `LLM returned empty response` | 通过 | 2026-10-27 | 父代理（收口实跑） | — | `test/integration/empty-response-retry.test.mjs` |
+| 15-2 | 同上，桩恒回空响应 | 第 3 次空响应当场抛 `LLM returned empty response`（文案带原错误）；前两次各注入一次空响应提醒 | 通过 | 2026-10-27 | 父代理（收口实跑） | — | `test/integration/empty-response-retry.test.mjs` |
+| 15-3 | 同上，桩按序回：空 → 带工具调用 → 空 → 空 → 带正文 | 不抛；工具轮复位后两次空各计 1 / 2、第三次空未发生 ⇒ 重试成功。**修前此行为红**（工具轮不清零，第 3 次空即抛）——「不抛」本身即判别点 | 通过 | 2026-10-27 | 父代理（收口实跑） | — | `test/integration/empty-response-retry.test.mjs` |
+
+### 16. 状态行百分比与压缩判据同尺
+
+> 目的：用户看到的上下文百分比就是压缩实际用的那把尺子——校准比生效，不是低报的裸估算。
+> 节注：需求回指 = `docs/core/requirements/CONTEXT-COMPACTION.md`（F-CC1 感知 `:34`「模型可查当前上下文的用量与构成」∥ 报面 `:57`「同名输出不得两个无名百分比并存」）；设计回指 = `docs/core/design/CONTEXT-COMPACTION.md`（stats 面「与状态行 ctx% 的单源关系」条：单源 = 核 `historyReading`）；交互组件 = 槽 `estimateSample` → 核 `sampleRatio` / `restoreTokenSample` → CLI 渲染缓存 `ctxCacheOf` → 状态行渲染（四组件）；进入口 = CLI 恢复带样本的会话，用户肉眼读状态行；三态（行序）= 16-1 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 16-1 | CLI 端恢复一个**带 `estimateSample`** 的会话（`num` / `den` ⇒ 比 > 1，如 1473 / 1000），读状态行的 `context X%` 段，同一回合再调 `context` 工具的 `stats` | 状态行显示的 X = 核 `historyReading(合并后机读线, provider, `sampleRatio` 出的比).pct`（与未校准读数不同）；`stats` 第 6 行同值——两处一个数 | 通过 | 2026-10-27 | 父代理（收口实跑） | — | `test/integration/context-percent-calibrated.test.mjs` |
+
+### 17. 评审没写进批档就不算过
+
+> 目的：判 pass 的评审必须已经把结论落进该批档 §3——不落地就不签发凭证，下游 spawn 拿不到授权（代价不落到实施席头上）。
+> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F-A13；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1 ∥ §1.3；交互组件 = 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；两态（行序）= 17-1 错误 · 17-2 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 17-1 | 带 `batchDoc` 的设计评审回 pass 但不写 §3 | 无 token、回执含 `review record incomplete`、同 designId 的 eng-coder spawn 被机械拒；补写 §3 后重评 ⇒ 签发（spawn 门放行） | 待执行 | — | — | — | `test/integration/advisor-record-gate.test.mjs` |
+| 17-2 | 不带 `batchDoc` 的设计评审回 pass | 照常签发（本门不适用——零回归的业务可观测面：spawn 门放行） | 待执行 | — | — | — | `test/integration/advisor-record-gate.test.mjs` |
 
 ## VS Code 端（thincoder-vscode）
 

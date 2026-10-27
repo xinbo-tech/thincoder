@@ -28,7 +28,7 @@ export async function runPreparedItem(item, agent, depth, signal, callbacks) {
       ? "Error: plan mode is active — only read-only tools are allowed. Exit plan mode first."
       : item.reason === "engineering design gate"
         ? `Error: design review required before any file modification. ${item.hint}`
-        : item.reason === "d5 freeze window" || item.reason === "cross-batch record write"
+        : item.reason === "d5 freeze window" || item.reason === "cross-batch record write" || item.reason === "no live batch record"
         ? `Error: ${item.hint}`
         : item.reason === "denied by user"
         ? "Error: permission denied by user"

@@ -105,7 +105,7 @@ export function docImpact({ changedFiles = [], changedSymbols = [], docsRoot, di
 }
 
 /** 薄 git 包装（子进程——归册）：`--base` 起 diff → 变更文件（`--files` 追加）+ 变更符号。 */
-export function gitChangedSurface({ base, extraFiles = [], cwd = process.cwd() }) {
+export function gitChangedSurface({ base, extraFiles = [], cwd }) {
   const run = (args) => {
     const r = spawnSync("git", args, { cwd, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     if (r.status !== 0) throw new Error(`git ${args.join(" ")} 失败：${String(r.stderr ?? "").trim()}`);

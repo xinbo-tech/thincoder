@@ -101,13 +101,13 @@ export function discoverRepos(cwd) {
  * 尾分隔符，`edge + sep` 直比会假阴）。
  * **覆盖位**（`_setProjectRootForTest` 在场）⇒ **头部短路**：直接返回覆盖值（不查档存在性）。
  * @param {string} [target] 目标路径（目录 / 文件）
- * @param {string} [boundary] 上溯上界（缺省 → 进程 cwd）
+ * @param {string} boundary 上溯上界（**必传**——取根面传目标所在盘根，台账面传会话锚）
  * @returns {string|null} 带档目录绝对路径 / null
  */
 export function owningProject(target, boundary) {
   if (_projectRootOverride) return resolve(_projectRootOverride)
   let dir = resolve(target ?? ".")
-  const edge = resolve(boundary ?? process.cwd())
+  const edge = resolve(boundary)
   // 界：target 在界外（含「target 是界的祖先」）⇒ 无归属——界由调用方定，越界不猜。
   if (!isInsideOrEqual(dir, edge)) return null
   const st = statSync(dir, { throwIfNoEntry: false })

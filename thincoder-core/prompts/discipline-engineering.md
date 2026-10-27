@@ -35,6 +35,8 @@ Judge the **change face** before acting — different faces, different authoriza
 | **Engineering-tools face** | `scripts/**` · `test/**`/`tests/**` · `.thincoder/tmp/**` · tool-config · CI · lockfiles | **a mechanical change** ⇒ direct edit (no spawn/designToken) + gate prevails + explicit commit; **a non-mechanical change ⇒ still goes through design** |
 | **Product-code face** | **default face** — every path not in the other two faces (fail-closed; incl. **product-text face**) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
+面判定机器单源 = thincoder-core/agent/write-face.mjs；本表与本行同义，冲突时以该档判据为准。
+
 - **Default classification (fills the enumeration gap)**: any path not listed under the engineering-tools and doc faces is treated as **product-code face** (fail-closed).
   Why: prefer walking the process — a misjudged direct edit skips the write gate and the review, and that round leaves no way back, while the conservative reading costs one extra process.
 - **The product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) **is singled out for a reason**.

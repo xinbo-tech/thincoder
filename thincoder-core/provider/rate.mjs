@@ -1,4 +1,4 @@
-/**
+﻿/**
  * provider/rate.mjs — TPM/RPM proactive throttling gate
  * Sliding-window accounting; pre-check budget before sending requests; sleep until window frees space when over budget.
  */
@@ -42,8 +42,16 @@ function rateKey(provider) {
   return `${base}|${provider.apiKey ?? ""}`
 }
 
+/** 估算口径（CONTEXT-COMPACTION.md §6.17.1 链一，**单源**）：ASCII `ASCII_CHARS_PER_TOKEN` 字符/token；
+ *  非 ASCII（CJK/emoji）1 字/token（保守方向，不动）。取 3 的依据 = 失败现场服务端报 723,272 in messages
+ *  ÷ 同刻状态栏 491k ≈ 2.7 字符/token ⇒ 旧值 `/4` 低报约 1.47 倍（余下由链二按模型自校准吸收）。 */
+export const ASCII_CHARS_PER_TOKEN = 3
+/** 估算口径版本位（§6.17.1 链二）：落槽的校准样本只在同版本内复用——改公式即自动弃旧样本。 */
+export const ESTIMATOR_VERSION = 1
+
 /** Rough estimate of text token count.
- *  ASCII ~4 chars/token; non-ASCII (CJK/emoji) ~1 char/token (conservative; measured BPE is 1.5-2.5 chars/token).
+ *  ASCII ~3 chars/token (`ASCII_CHARS_PER_TOKEN`); non-ASCII (CJK/emoji) ~1 char/token
+ *  (conservative; measured BPE is 1.5-2.5 chars/token).
  *  §2.5 #114 并入（token 估算取并集）：数组内容按 part 分派——text 走单串估算，
  *  image_url part 计 85 tokens（VSC 侧口径）。 */
 export function estimateText(s) {
@@ -62,7 +70,7 @@ export function estimateText(s) {
 function _estimateSingle(s) {
   let nonAscii = 0
   for (let i = 0; i < s.length; i++) if (s.charCodeAt(i) > 0x7f) nonAscii++
-  return Math.ceil((s.length - nonAscii) / 4) + nonAscii
+  return Math.ceil((s.length - nonAscii) / ASCII_CHARS_PER_TOKEN) + nonAscii
 }
 
 /** Estimated prompt tokens for this request */

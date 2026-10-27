@@ -197,12 +197,12 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     const refusal = (suffix = "") => new Error(
       `batchDoc is required for role='${role}' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); spawn refused without it.` + suffix)
     if (!given) throw refusal()
-    batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
+    batchDocAbs = resolveBatchReadPath(parent.cwd, given)
     if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
   } else if (role === "coder") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     if (given) {
-      batchDocAbs = resolveBatchReadPath(parent.cwd ?? process.cwd(), given)
+      batchDocAbs = resolveBatchReadPath(parent.cwd, given)
       if (!batchDocAbs) {
         throw new Error("batchDoc for role='coder' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); when provided it must resolve to a readable file (omit batchDoc to spawn without the §5 record-write binding).")
       }

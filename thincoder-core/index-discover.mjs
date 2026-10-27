@@ -16,6 +16,10 @@
 import { readdirSync } from "node:fs"
 import { join, relative } from "node:path"
 import { DEFAULT_DECLARATION, loadProjectDeclaration } from "./conventions.mjs"
+// 排除名单单源（零依赖叶档 `skip-dirs.mjs`——2026-10-27 四份名单合一）：本档不再持本地副本，
+// 同名再导出保既有 import 面（`SKIP_DIRS` 的旧消费面零改）。
+import { SKIP_DIRS } from "./skip-dirs.mjs"
+export { SKIP_DIRS } from "./skip-dirs.mjs"
 
 const CODE_EXTS = new Set([
   ".js", ".mjs", ".cjs", ".jsx", ".ts", ".tsx", ".py", ".rs", ".go", ".java", ".c", ".cpp", ".h", ".hpp",
@@ -25,7 +29,6 @@ const CODE_EXTS = new Set([
   ".scala", ".pl", ".pm", ".r", ".jl", ".zig", ".groovy", ".ps1", ".proto", ".graphql", ".tf", ".hcl",
 ])
 const DOC_EXTS = new Set([".md", ".markdown", ".txt", ".rst", ".adoc", ".mdx", ".org", ".wiki", ".tex"])
-export const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", ".turbo", "coverage", "__pycache__", ".next"])
 
 /** Lower-cased ".ext" of a path/name ("" when it has no extension). */
 function extensionOf(p) {

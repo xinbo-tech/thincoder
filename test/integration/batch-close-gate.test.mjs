@@ -1,15 +1,16 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-6 / 7-7 / 7-8（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
- * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门）。
+ * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
+ * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调 `runBatchGate`：
  * 本档要的是「收口这件事」的业务可观察结果（放行 ∥ 拒绝、回执行、§1 状态行落没落盘）。
  * 断言面 = 工具回执文本 + §1 状态行落盘字节（档全文逐字比较）。
  *
- * 笔域集（每例以两档干净档为底——7-3 再加一档含悬空指针的档）两条腿都做实：触达账（`agent._touchedFiles`）与提交 diff
- * （批档 §1 的 `批起 sha = <sha>` 记入行 ⇒ `git diff --name-only <sha> HEAD`）。每例先实读 diff 腿自证，
- * 否则「范围 N 档」只是空转读数。
+ * 笔域集（7-1 / 7-2 / 7-3 / 7-4 / 7-6 每例以两档干净档为底——7-3 再加一档含悬空指针的档）两条腿都做实：触达账（`agent._touchedFiles`）与提交 diff
+ * （批档 §1 的 `批起 sha = <sha>` 记入行 ⇒ `git diff --name-only <sha> HEAD`）；这五例先实读 diff 腿自证，否则「范围 N 档」只是空转读数。
+ * 7-7 不用 git 仓（笔域集只含批档自身，档数靠引擎实判数对拍）；7-8 只判写段面（不涉提交 diff 腿）。
  *
  * 夹具 = 系统临时域（项目根 + 真 git 仓 + 六段批档；`mkdtempSync`——零落仓、可并发）。收口后的台账重锚
  * 经测试缝 `_setLedgerDirForTest` 导向临时目录（不碰真实用户数据目录）。
@@ -34,6 +35,10 @@ const CLEAN_A = "docs/notes/clean-a.md"
 const CLEAN_B = "docs/notes/clean-b.md"
 const OUT_REL = "docs/notes/out-of-range.md" // 工作树内、范围外（不在触达账 ∧ 不在提交 diff）
 const DIRTY_REL = "docs/notes/dirty.md" // 笔域集内、含悬空指针
+/** 档头「一段一作者」映射（`batch` create 落骨架时写入）——收口面 `§N（作者：<角色>）` 的唯一来源。 */
+const MAPPING = "> 一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（eng-designer）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（eng-coder）· §6 验证与收口（父代理）"
+/** 裸档名（不带目录段）——仓根与批档同目录都没有它 ⇒ 锚`档缺`（7-6 / 7-8 的探针）。 */
+const BARE = "DOC-CHECK.md"
 const OWN_TEST_REL = "docs/batches/fixture.test.mjs" // 7-4：本批自己的单测档（同目录、批档名前缀）
 const OWN_VARIANT_REL = "docs/batches/fixture-extra.test.mjs" // 7-4：同前缀变体（盘上无 fixture-extra.md）
 
@@ -46,7 +51,10 @@ _setLedgerDirForTest(ledgerDir)
 
 /** depth-0 主 agent（`batch` 工具的 close 轨仅此身份放行）；`touched` = 父侧触达账。 */
 const parentCtx = (root, touched) => ({ depth: 0, agent: { cwd: root, _touchedFiles: touched, config: { agent: { engineering: true } } } })
+/** 子代理（`eng-designer` ⇒ §2），目标是 spawn 绑定的批档（无 path 参数）；触达账缺省空。 */
+const designerCtx = (root) => ({ depth: 1, agent: { cwd: root, _role: "eng-designer", _touchedFiles: [], config: { agent: { engineering: true } } } })
 const depth0 = batchTool(null)
+const asDesigner = batchTool(BATCH_REL)
 
 const projects = []
 
@@ -58,17 +66,19 @@ after(() => {
   rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
 })
 
-/** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；§2/§3/§4/§6 各有内容——close 的链门前置）。 */
-const record = (sha) => [
+/** 六段批档全文（`sha` ⇒ §1 落 `批起 sha = <sha>` 记入行；`sec1` = §1 正文（7-6 放裸档名）；
+ *  §2/§3/§4/§6 各有内容——close 的链门前置）。 */
+const record = (sha, { sec1 = "夹具讨论。" } = {}) => [
   "# 夹具批 · 收口门范围",
   "",
+  MAPPING,
   "> 编制：夹具 · 2026-10-25 · 来源 = 集成夹具。",
   "> 台账 = #1（夹具）。前情 = 无（独立批）。",
   "",
   "## §1 讨论（主 agent）",
   "**状态行**：🔄 进行中",
   "",
-  "夹具讨论。",
+  sec1,
   "",
   `**批起 sha = ${sha}**`,
   "",
@@ -78,6 +88,8 @@ const record = (sha) => [
   "夹具任务。",
   "",
   "## §3 设计评审（评审子代理）",
+  "**状态行**：评审通过",
+  "",
   "夹具评审。",
   "",
   "## §4 用户批准（主 agent）",
@@ -103,14 +115,14 @@ function makeProject(tag) {
 
 /**
  * 真 git 仓：空基提交 → 取基 sha → 写批档（§1 记入基 sha）+ 本批两档 → 提交。
- * 于是提交 diff 腿恒 = 批档（由 selfKey 过滤）＋ `CLEAN_A` ＋ `CLEAN_B`；触达账按例各自给
- * （7-1 一档 · 7-2 两档 · 7-3 两干净档＋脏档）。
+ * 于是提交 diff 腿恒 = 批档 ＋ `CLEAN_A` ＋ `CLEAN_B`（批档自身也在判域内，不再被滤掉）；触达账按例各自给
+ * （7-1 一档 · 7-2 两档 · 7-3 两干净档＋脏档 · 7-6 零档）。
  */
-function gitRepo(root) {
+function gitRepo(root, { sec1 } = {}) {
   git(root, "init", "-q")
   commit(root, "base")
   const sha = rev(root)
-  writeFileSync(join(root, BATCH_REL), record(sha))
+  writeFileSync(join(root, BATCH_REL), record(sha, { sec1 }))
   writeFileSync(join(root, CLEAN_A), CLEAN)
   writeFileSync(join(root, CLEAN_B), CLEAN)
   commit(root, "本批两档 + 批档")
@@ -125,10 +137,10 @@ const git = (cwd, ...argv) => execFileSync("git", [
 const commit = (cwd, message) => { git(cwd, "add", "-A"); git(cwd, "commit", "-q", "-m", message) }
 const rev = (cwd) => git(cwd, "rev-parse", "HEAD").trim()
 
-/** 提交 diff 腿实读（本批 `.md`、批档自身除外——判定面同款过滤：批档不是判据对象）。 */
+/** 提交 diff 腿实读（本批 `.md` 全部——**含批档自身**：批档在判域内，不再过滤）。 */
 const diffDocs = (root, sha) => git(root, "diff", "--name-only", sha, "HEAD")
   .split("\n").map((s) => s.trim())
-  .filter((f) => f.endsWith(".md") && f !== BATCH_REL)
+  .filter((f) => f.endsWith(".md"))
   .sort()
 
 /** 回执里的 **gate 段首行**（`[doc-check gate] <verdict> · 范围 N 档`）——RTM 那句「回执首行
@@ -142,9 +154,9 @@ const gateLineOf = (receipt) => {
 /** §1 状态行原文（拒收口 ⇒ 逐字不变；放行 ⇒ 已收口）。 */
 const statusLineOf = (root) => readFileSync(join(root, BATCH_REL), "utf8").split("\n").find((l) => l.startsWith("**状态行**："))
 
-/** 例前置：提交 diff 腿实读 = 本批两档（否则「范围 N 档」只是空转读数）。 */
+/** 例前置：提交 diff 腿实读 = 批档自身 + 本批两档（否则「范围 N 档」只是空转读数）。 */
 function assertBatchCommitted(root, sha) {
-  assert.deepEqual(diffDocs(root, sha), [CLEAN_A, CLEAN_B], "提交 diff 腿应恰含本批两档（批档自身由 selfKey 过滤）")
+  assert.deepEqual(diffDocs(root, sha), [BATCH_REL, CLEAN_A, CLEAN_B], "提交 diff 腿应恰含批档自身 + 本批两档")
 }
 
 test('7-1 正常 · 笔域集内各档零命中 ⇒ 收口放行、回执 DOC-CHECK GATE: PASS、范围行档数 = 笔域集档数', async () => {
@@ -152,11 +164,11 @@ test('7-1 正常 · 笔域集内各档零命中 ⇒ 收口放行、回执 DOC-CH
   const sha = gitRepo(root)
   assertBatchCommitted(root, sha)
 
-  // 触达账只落 1 档、提交 diff 2 档 ⇒ 笔域集 = 并集 2 档：「范围 2 档」因此能证明 diff 腿参与
-  //（若 diff 腿失效、仅触达账入判，范围会掉成 1 档）。
+  // 触达账只落 1 档、提交 diff 3 档（批档自身 + 本批两档）⇒ 笔域集 = 并集 3 档：「范围 3 档」因此能证明
+  // diff 腿参与（若 diff 腿失效、仅触达账 ∪ 批档自身入判，范围会掉成 2 档）。
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A)]))
 
-  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 2 档", `PASS 且范围 = 笔域集 2 档：${receipt}`)
+  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `PASS 且范围 = 笔域集 3 档：${receipt}`)
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
   assert.doesNotMatch(receipt, /基 sha 未定/, "§1 记入行在盘 ⇒ 取到基，无该明示行")
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
@@ -174,7 +186,7 @@ test('7-2 边界 · 工作树内范围外脏档 ⇒ 不入判、收口放行、�
 
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B)]))
 
-  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 2 档", `范围外档不入判、档数不变：${receipt}`)
+  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 3 档", `范围外档不入判、档数 = 笔域集 3 档：${receipt}`)
   assert.doesNotMatch(receipt, /out-of-range/, `回执零该档行（连档名都不出现）：${receipt}`)
   assert.doesNotMatch(receipt, /missing-page/, `回执零该档的命中行：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
@@ -234,4 +246,66 @@ test('7-4 错误 · 批档同目录留本批自己的单测档 ⇒ 收口被拒�
   assert.doesNotMatch(receipt, /本批批内单测档/, `放行零回执（本门不出回执段）：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 })
+
+test('7-6 错误 · 批档 §1 含裸档名 ⇒ 收口被拒（命中落在批档自身、点名 §1（作者：主 agent））、状态行字节不变', async () => {
+  const root = makeProject("r76")
+  const sha = gitRepo(root, { sec1: `夹具见 ${BARE} 的判据。` }) // 批档自身脏、其余档干净、触达账零档
+  assertBatchCommitted(root, sha)
+  const before = readFileSync(join(root, BATCH_REL), "utf8")
+
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [])),
+    (e) => {
+      assert.match(e.message, /文档机检门拒收口/, `拒串点名门位：${e.message}`)
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
+      assert.match(e.message, /✗ 锚·档缺 docs\/batches\/fixture\.md:\d+ `DOC-CHECK\.md`/, `命中行点名批档内该行：${e.message}`)
+      assert.match(e.message, /§1（作者：主 agent）/, `命中行答「谁该改」：${e.message}`)
+      return true
+    },
+  )
+  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
+  assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+})
+
+test('7-7 正常 · 批档干净且笔域集只含批档自身 ⇒ 放行、范围行档数 = 实判档数且 ≥ 1', async () => {
+  const root = makeProject("r77")
+  // 无 git 仓 + 触达账零档 ⇒ 笔域集 = 批档自身：范围「1 档」只能是「批档自身进了判域」的结果
+  writeFileSync(join(root, BATCH_REL), record("0".repeat(40)))
+
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  const line = gateLineOf(receipt)
+  assert.match(line, /^\[doc-check gate\] DOC-CHECK GATE: PASS · 范围 \d+ 档$/, `PASS + 范围行：${receipt}`)
+  const engine = runDocCheck(root, { mode: "gate", docs: [join(root, BATCH_REL)], docsSource: "explicit" })
+  assert.equal(Number(/范围 (\d+) 档/.exec(line)?.[1]), engine.checkFiles.length, `范围档数 = 引擎实判档数：${receipt}`)
+  assert.equal(engine.checkFiles.length, 1, `笔域集只含批档自身 ⇒ 实判 1 档：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "收口放行且落盘")
+})
+
+test('7-8 错误 · 子代理 append §2：本次写入文本含裸档名 ⇒ 拒（零字节）；改全路径后同调用 ⇒ 落盘、前文零变', async () => {
+  const root = makeProject("r78")
+  gitRepo(root)
+  const before = readFileSync(join(root, BATCH_REL), "utf8")
+
+  await assert.rejects(
+    () => asDesigner.execute({ action: "append", segment: "§2", text: `本段引 ${BARE} 的判据。` }, designerCtx(root)),
+    (e) => {
+      assert.match(e.message, /文档机检门拒写/, `拒串点名门位：${e.message}`)
+      assert.match(e.message, /REFUSED（命中 1 条——本次写入文本/, `强制集指向本次写入文本：${e.message}`)
+      assert.match(e.message, /✗ 锚·档缺 本次写入文本:\d+ `DOC-CHECK\.md`/, `命中行点名本次写入文本：${e.message}`)
+      return true
+    },
+  )
+  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒写 ⇒ 批档字节逐字不变（零字节落盘）")
+
+  // 改成全路径（解析序 ①）⇒ 同调用落盘；插在 §2 段尾，前后文逐字不变
+  const landed = `本段引 ${CLEAN_A} 的判据。`
+  const receipt = await asDesigner.execute({ action: "append", segment: "§2", text: landed }, designerCtx(root))
+  assert.match(receipt, /appended \d+ characters to §2/, `落盘回执：${receipt}`)
+  assert.match(gateLineOf(receipt), /DOC-CHECK GATE: PASS/, `落盘时门放行：${receipt}`)
+  const after = readFileSync(join(root, BATCH_REL), "utf8")
+  assert.equal(after.slice(0, before.indexOf("## §2")), before.slice(0, before.indexOf("## §2")), "§2 段头之前逐字不变")
+  assert.equal(after.slice(after.indexOf("## §3")), before.slice(before.indexOf("## §3")), "§3 之后逐字不变")
+  assert.ok(after.includes(landed), "本次文本已落盘")
+})
+
 

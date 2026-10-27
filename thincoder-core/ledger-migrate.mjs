@@ -98,9 +98,9 @@ function fromKeyRefusal(fromKeys, dir) {
   return null
 }
 
-/** 迁移计划（dry-run / confirm 共用）。cwd 口径 = 写门口径 2 同一子表达式（根推导单源 `resolveLedgerRoot(cwd)?.root` ∨ 兜底）——与实开库（`openLedger`）同源。 */
+/** 迁移计划（dry-run / confirm 共用）。cwd 口径 = 写门口径 2 同一子表达式（根推导单源 `resolveLedgerRoot(cwd, cwd)?.root` ∨ 兜底）——与实开库（`openLedger`）同源。界 = 目标自身（不再向上找——同 `findProject` 形）。 */
 export function planLedgerMigration(cwd, { fromKeys = [] } = {}) {
-  const projectRoot = resolveLedgerRoot(cwd)?.root ?? resolve(cwd ?? ".")
+  const projectRoot = resolveLedgerRoot(cwd, cwd)?.root ?? resolve(cwd ?? ".")
   const dir = ledgerDirPath()
   const targetKey = ledgerKey(projectRoot)
   const targetPath = join(dir, `${targetKey}.db`)
@@ -194,7 +194,7 @@ export function runLedgerMigrate(args, { cwd = process.cwd(), out = console.log,
   // 步 3 单事务迁入：BEGIN → 逐行 INSERT（重发新 id）→ 事务内读回核验 → COMMIT；失败 ⇒ ROLLBACK。
   const report = { version: 1, batch, at: now.toISOString(), projectRoot: plan.projectRoot, targetKey: plan.targetKey, targetPath: plan.targetPath, targetCreated: !targetExists, sources: [], skippedRows: [], flags: plan.flags, recycled: [], kept: [] }
   let db
-  try { db = openLedger(plan.projectRoot, { create: true }) } catch (e) { err(`Refused: 目标库不可开（${e.message}）。`); return 1 }
+  try { db = openLedger(plan.projectRoot, { create: true, boundary: plan.projectRoot }) } catch (e) { err(`Refused: 目标库不可开（${e.message}）。`); return 1 }
   try {
     db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.floor(busyMs))}`)
     const existing = readRows(db)
@@ -255,7 +255,7 @@ export function runLedgerMigrate(args, { cwd = process.cwd(), out = console.log,
 }
 
 /** ③ 审计（只读——零删改）：逐 `*.db` 出 `{键, 文件, 大小, mtime, 行数, 状态分布, 定性}`；归因 = **候选根集合**（锚项目 + `--root`）的变体键匹配（sha1 不可逆——只做候选生成）。 */
-export function auditLedgerDir({ cwd = process.cwd(), roots = [], dir = ledgerDirPath() } = {}) {
+export function auditLedgerDir({ cwd, roots = [], dir = ledgerDirPath() } = {}) {
   let names = []
   try { names = readdirSync(dir).filter((n) => n.endsWith(".db")).sort() } catch { /* 不可读 ⇒ 空报告 */ }
   const anchorKeys = new Set()

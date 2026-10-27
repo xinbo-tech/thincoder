@@ -15,7 +15,7 @@
  * 依赖（KD-4 单向）：本档为**叶档**——只 import `node:*` 与 `../manifest.mjs`；主档 re-export 保既有面。
  */
 import { existsSync, statSync } from "node:fs"
-import { isAbsolute, relative, resolve, sep } from "node:path"
+import { isAbsolute, parse, relative, resolve, sep } from "node:path"
 
 import { docRootBase, docRootPaths, owningProject, projectRootView, readManifest, resolveProjectRoot } from "../manifest.mjs"
 
@@ -26,7 +26,7 @@ function readableFile(abs) {
 
 /** 工作区锚候选（判定单点 = `projectRootView`——`workspace` 态 ⇒ 候选全列**按名排序**；余者 null）。 */
 function workspaceCandidates(cwd) {
-  const view = projectRootView(cwd ?? process.cwd())
+  const view = projectRootView(cwd)
   return view.state === "workspace" ? view.candidates : null
 }
 
@@ -44,7 +44,7 @@ export function batchProjectRoot(cwd) {
 
 /** manifest **声明基底**（声明面；manifest 缺失 / 非法 / 读错 ⇒ 空集——v1 单基底语义零变）。 */
 function declaredBases(cwd) {
-  const base = cwd ?? process.cwd()
+  const base = cwd
   let man = { ok: false }
   try { man = readManifest(base) } catch { /* 读错 → 按无 manifest 处理（回退默认基底） */ }
   return man.ok ? docRootPaths(man.manifest?.docRoot?.batches, base) : []
@@ -119,12 +119,12 @@ function workspaceReadLegs(cwd, p) {
 /**
  * **读面**解析（append / status / close 与评审门 / spawn 门共用）：首个**可读**候选胜；无 ⇒ null
  * （调用方各自抛既有文案）。锚定串只解析项目根形（跳过 ①③——已含基底相对前缀者不再二次拼接）。
- * @param {string} cwd 会话锚（缺省 → 进程 cwd）
+ * @param {string} cwd 会话锚
  * @param {string} given 参数原值（相对 / 绝对、`\` 与 `/` 混写均可）
  * @returns {string|null} 可读文件的绝对路径 / null
  */
 export function resolveBatchReadPath(cwd, given) {
-  const base = cwd ?? process.cwd()
+  const base = cwd
   const raw = typeof given === "string" ? given.trim() : ""
   if (!raw) return null
   const p = raw.replace(/\\/g, "/")
@@ -142,7 +142,7 @@ export function resolveBatchReadPath(cwd, given) {
  * 非空且可读 → 返回绝对路径（`\` 归一——照 `files` / `batchDoc` spawn 门先例）。错误文案逐字零变（零回归硬约束）。
  */
 export function resolveBatchDocPath(cwd, given) {
-  const base = cwd ?? process.cwd()
+  const base = cwd
   const raw = typeof given === "string" ? given.trim() : ""
   if (!raw) {
     throw new Error("batchDoc must be a non-empty path to the batch record — pass the batch record currently in flight, or omit the parameter entirely when no batch record is in flight.")
@@ -163,7 +163,7 @@ export function resolveBatchDocPath(cwd, given) {
  * @returns {string} 落位绝对路径
  */
 export function resolveBatchCreatePath(cwd, given, bases) {
-  const base = cwd ?? process.cwd()
+  const base = cwd
   const raw = String(given ?? "").trim()
   const p = raw.replace(/\\/g, "/")
   let roots = bases
@@ -189,7 +189,7 @@ export function resolveBatchCreatePath(cwd, given, bases) {
   // ③ 基底自有项目根形（#942 条 6）：owningProject 可判者逐基底取值；distinct 落点 ≥2 ⇒ 拒
   const owned = []
   for (const b of roots) {
-    const ownRoot = owningProject(b)
+    const ownRoot = owningProject(b, parse(b).root)
     if (!ownRoot) continue
     const abs = resolve(ownRoot, p)
     if (insideBases(abs, roots) && !owned.some((x) => samePath(x, abs))) owned.push(abs)

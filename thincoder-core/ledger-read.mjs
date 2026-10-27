@@ -34,28 +34,30 @@ function exportRow(r, full) {
 }
 
 /** 单项目读（**两开均只读态**——版本探针开 + 行集开，§2.3）：库不在 / 非台账库 ⇒ null（项目不出项）。
- *  不可读（坏档）⇒ 抛（单范围 = 读错转 exit 1；族范围 = 调用侧捕获跳过）。 */
-function readProject(root, full) {
-  const probe = openLedger(root, { readOnly: true })
+ *  不可读（坏档）⇒ 抛（单范围 = 读错转 exit 1；族范围 = 调用侧捕获跳过）。
+ *  `boundary` = 上溯上界（会话锚）——**必传**：缺值即当场失败（不再落 `process.cwd()`——那正是台账 #1834
+ *  的静默空账：进程 cwd 与目标项目不同时 `openLedger` 判越界 ⇒ 返回 null「该项目没有台账」，与真无库不可区分）。 */
+function readProject(root, full, boundary) {
+  const probe = openLedger(root, { readOnly: true, boundary })
   if (!probe) return null
   let schemaVersion
   try { schemaVersion = Number(probe.prepare("PRAGMA user_version").get().user_version ?? 0) } finally { probe.close() }
-  const rows = ledgerQuery({ cwd: root })
+  const rows = ledgerQuery({ cwd: root, boundary })
   return { root, name: basename(root), schemaVersion, rows: rows.map((r) => exportRow(r, full)) }
 }
 
 /** 统一序列化单源（N1——两出口共用；载荷 = §3.2 冻结形）。
  *  单范围 = 当前项目一项；`family=true` = 族内发现序逐项（不可读跳过——余者照常）。 */
 export function ledgerExport({ cwd, family = false, full = false } = {}) {
-  const anchor = cwd ?? process.cwd()
+  const anchor = cwd
   if (!family) {
-    const derived = resolveLedgerRoot(anchor)
-    const item = derived ? readProject(derived.root, full) : null
+    const derived = resolveLedgerRoot(anchor, anchor)
+    const item = derived ? readProject(derived.root, full, anchor) : null
     return { projects: item ? [item] : [] }
   }
   const projects = []
   for (const p of discoverFamily(anchor).projects) {
-    try { const item = readProject(p.root, full); if (item) projects.push(item) } catch { /* 不可读跳过 */ }
+    try { const item = readProject(p.root, full, anchor); if (item) projects.push(item) } catch { /* 不可读跳过 */ }
   }
   return { projects }
 }

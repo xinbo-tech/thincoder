@@ -222,11 +222,12 @@ export function recordChatTrace(provider, opts = {}, result = null, error = null
   const logCtx = opts.logCtx ?? {}
   if (!tracesEnabled(logCtx)) return
   // cwd/session 经 logCtx 增补（调用点传 agent.cwd / agent._sessionStart——
-  // D-TR3 的 cwdHash/命名与 D-TR1 的 session 字段所需）；无 agent 作用域的调用点
-  // 回退 process.cwd()——CLI 会话即工作区。该类点开关状态：distill 已含
+  // D-TR3 的 cwdHash/命名与 D-TR1 的 session 字段所需）；logCtx 未携 cwd（无 agent 作用域
+  // 的调用点）⇒ 该值缺失即失败，不回落进程 cwd（换界会静默写错会话目录）。
+  // 该类点开关状态：distill 已含
   // traces 开关（D-TR6 fix round1）；auto-think 已闭环（D-TS12——chat 调用点
   // logCtx 全字段补传：traces/session/cwd/role/depth/kind——无残留点）。
-  const cwd = logCtx.cwd ?? process.cwd()
+  const cwd = logCtx.cwd
   // D-TR3（fix round1）：分日按本地时区（_traceHooks.now——T-TR12 注入点）；
   // ts 与 dateStr 同源（同一时刻）——记录时间戳与目录日不撕裂。
   const now = _traceHooks.now()

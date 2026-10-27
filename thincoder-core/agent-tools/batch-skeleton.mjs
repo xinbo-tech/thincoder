@@ -2,7 +2,7 @@
  * agent-tools/batch-skeleton.mjs — 批次档骨架模板 + 状态行机械形态单源（KD-4 拆分档）。
  *
  * 本档是纯常量/纯函数单源（零副作用、零 fs）：`batch` 工具的 create 骨架、STATUS_WORDS
- * 分段词表、状态行形态与解析全部只住这里——其他档 import 消费，**不复制字面**
+ * 分段词表、状态行形态与解析、轮次块标题形态与计数全部只住这里——其他档 import 消费，**不复制字面**
  * （BATCH-RECORD.md §4.10 / §4.12 / D-BR19；轮 2 #8——骨架占位状态行由 STATUS_WORDS §1 项
  * 引用生成，全仓无第二份独立词表字面）。
  *
@@ -42,8 +42,16 @@ export function isBatchRecord(src) {
 export const STATUS_WORDS = Object.freeze({
   1: Object.freeze({ open: "进行中", closed: "已收口" }),
   2: Object.freeze({ open: "进行中", done: "设计完成" }),
-  3: Object.freeze({ open: "进行中", done: "评审完成" }),
+  3: Object.freeze({ open: "进行中", done: "评审通过" }),
   5: Object.freeze({ open: "进行中", done: "实施完成" }),
+})
+
+/** 段状态行**旧字面兼容别名表**（只用于**读侧**：写侧词表零别名——旧字面写不进去，词表外拒）。
+ *  §3 自 2026-10-27 起只留一个完成词 `评审通过`（只有 pass 叫完成；`changes-required` 不写状态词——
+ *  「评审没通过」= 评审未完成）。存量批档里的旧字面 `评审完成` 读侧等义于 `评审通过`（存量档**不回填**
+ *  ——已冻结档不改字节）。**退场条件**：盘上再无该字面（判据 = `grep -r '评审完成' docs/batches`）。 */
+export const STATUS_WORD_ALIASES = Object.freeze({
+  3: Object.freeze({ "评审完成": "评审通过" }),
 })
 
 /** 身份 → 可写段号（append 段白名单的**子代理面**——原 batch-segment.mjs 逐字迁移；主 agent
@@ -143,6 +151,37 @@ export function readBatchStatusLine(src) {
 }
 
 /**
+ * 段内状态行**单行改写**（status / close / 重开三处共用——append-only 的唯一豁免，域限状态行）：
+ * 定位 `## §N` 段（sectionHeaderRe 单源），段内逐行扫描 STATUS_LINE_RE 首命中行原位替换（行尾随命中行
+ * 自身）；缺失则标题行后偏移插入状态行 + 空行（插入块行尾 = 标题行自身行尾——锚行后首二字节判读）。
+ * 段界外字节零变（行切分 = /\r?\n/：EOL 形态无关）。段标题缺失 ⇒ throw（create 是骨架唯一权威入口）。
+ * 纯字符串变换（零 fs）——住在骨架档的理由与解析器同：状态行的**写形与读形**是同一份形态单源。
+ * @param {string} src — 档全文
+ * @param {number|string} seg — 段号
+ * @param {string} value — 状态行值（`**状态行**：<value>`）
+ * @returns {string} 改写后全文
+ */
+export function updateSectionStatusLine(src, seg, value) {
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (!hdr) {
+    throw new Error(`batch: the batch record has no "## §${seg}" section header — cannot update its status line (create is the skeleton's only authoritative entry; append/status never add one). Nothing was written.`)
+  }
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const endIdx = next ? next.index : src.length
+  const line = `**状态行**：${value}`
+  const parts = src.slice(hdr.index, endIdx).split(/(\r?\n)/) // 保留分隔符（奇数下标 = 行尾）——替换只动命中行
+  const idx = parts.findIndex((p) => STATUS_LINE_RE.test(p))
+  if (idx >= 0) { parts[idx] = line } else {
+    const eol = parts[1] === "\r\n" ? "\r\n" : "\n" // 缺行插入块行尾 = 标题行自身行尾
+    if (parts.length === 1) parts.splice(1, 0, eol, line, eol, "", eol, "")
+    else parts.splice(2, 0, line, eol, "", eol, "", eol)
+  }
+  return src.slice(0, hdr.index) + parts.join("") + src.slice(endIdx)
+}
+
+/**
  * §N 段状态词解析（read-data-interface 批——`batch/list` 读面单源，设计档 §2.5）：段头
  * （sectionHeaderRe）/ 状态行正则（STATUS_LINE_RE）/ 词表（STATUS_WORDS）全消费既有单源常量——
  * 与冻结门字面零漂移。`§1`–`§3` / `§5`：段内首个状态行的值按**终态词优先**（closed / done 先于
@@ -164,10 +203,38 @@ export function readSectionStatusWord(src, seg) {
   const m = body.split(/\r?\n/).map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)
   if (!m) return null
   const value = m[1].trim()
+  // 旧字面先映到规范词（读侧等义——写侧词表零别名）
+  for (const [alias, canonical] of Object.entries(STATUS_WORD_ALIASES[seg] ?? {})) {
+    if (value.includes(alias)) return canonical
+  }
   for (const w of [words.closed, words.done, words.open]) {
     if (w !== undefined && value.includes(w)) return w
   }
   return null
+}
+
+/**
+ * 轮次块标题形态（**写面与读面的单源正则**）：§3 的轮次块只由工具戳
+ * `### 轮次 N（评审子代理）` 标题——写入面 `batch.mjs` 丢弃调用方自带的同名行、按本形态计数
+ * 生成 N；读面（结算点 §3 落地门的轮次块计数）读同一形态。两份正则必漂，故只留这一处
+ * （`docs/core/design/ADVISOR-GUARDS.md` §1.1 判据 1）。`### 轮次与发现（…）` 骨架行不匹配。
+ */
+export const ROUND_HEADING_RE = /^### 轮次 \d+（评审子代理）/
+
+/**
+ * §N 段内轮次块计数（纯函数 · 零 fs）：段体逐行测 `ROUND_HEADING_RE`。段头缺失 ⇒ 0
+ * （无 §3 段 = 评审写不进 §3 ⇒ 结算面判 `no-section3-block`，不是「跳过」）。
+ * 消费点两处、同一形态：`batch.mjs`（写入面生成下一轮 N）∥ `design-token.mjs`
+ * （结算点判「§3 已被本轮写过」——块数 > 点火基线）。
+ * @param {string} src — 批档全文
+ * @param {number|string} [seg] — 段号（缺省 3——轮次块只落 §3）
+ * @returns {number} 段内轮次块数
+ */
+export function countRoundBlocks(src, seg = 3) {
+  if (typeof src !== "string") return 0
+  const lines = sectionBodyLines(src, seg)
+  if (lines === null) return 0
+  return lines.filter((l) => ROUND_HEADING_RE.test(l)).length
 }
 
 /**
@@ -212,14 +279,26 @@ export function sectionContentState(src, seg) {
   const lines = sectionBodyLines(src, n)
   if (lines === null) return "empty" // 段头缺失 = 空（骨架由 create 一次预写；缺失即无内容）
   if (lines.some((l) => NONEMPTY_RE.test(l) && !EXCLUDED_LINE_RE.test(l))) return "content"
-  // 段体无实质内容 ⇒ 查 §1 声明（仅 §2/§3/§4 可声明；理由非空——INAPPLICABLE_RE 的 (\S.*) 已保证）
-  if (INAPPLICABLE_SEGMENTS.includes(n)) {
-    for (const l of sectionBodyLines(src, 1) ?? []) {
-      const m = INAPPLICABLE_RE.exec(l)
-      if (m && Number(m[1]) === n) return "not-applicable"
-    }
-  }
+  if (sectionInapplicable(src, n)) return "not-applicable"
   return "empty"
+}
+
+/**
+ * §N 是否由 `§1` 声明**不适用**（`> 不适用：§N —— <理由>`；可声明段 = §2/§3/§4，§5 豁免、§6 不可声明）。
+ * 与 `sectionContentState` 共用同一条声明判据（本函数是它的可读面——收口门 / §5 段序门两处都判
+ * 「§1 声明 §3 不适用 ⇒ 放行」）。声明形不合由 `malformedInapplicableLine` 先拒，本函数只认合法形。
+ * @param {string} src — 档全文
+ * @param {number|string} seg — 段号
+ * @returns {boolean}
+ */
+export function sectionInapplicable(src, seg) {
+  const n = Number(seg)
+  if (!INAPPLICABLE_SEGMENTS.includes(n)) return false
+  for (const l of sectionBodyLines(src, 1) ?? []) {
+    const m = INAPPLICABLE_RE.exec(l)
+    if (m && Number(m[1]) === n) return true
+  }
+  return false
 }
 
 /** 非空白行谓词（空行排除）。 */
@@ -281,10 +360,9 @@ export function sectionHasStatusLine(src, seg) {
  * 编制行 + 台账/前情指针行）+ §1 段内**占位状态行**（含 gate 合法关键字「进行中」——建档即过
  * gate；整行不含「已收口」——gate 已收口优先，占位行不得携带冻结词）+ 各段模板子标题占位。
  * 已知实参替换：date / topic / **source** / prev（§4.11 参数面 + F11-B——source 必填、prev 传
- * 入值过幂等剥前缀，归一化在 lifecycle 面）；`ledger` / `board` = 可选参（2026-10-05 建即填——
- * 给则台账行实参化、未给保持占位字面；4 参旧调用形输出零变）。档头 `#<编号>` / `<板块>` 占位
- * 留存时（未给参）由主 agent 文件编辑填（台账登记 = 主 agent 既有义务，create 不代建——填充
- * 时点 = 建档后、本档首个 append/status 之前）。
+ * 入值过幂等剥前缀，归一化在 lifecycle 面）；`ledger` = **必填**（2026-10-27 起建档同拍建台账行——
+ * 真实行号由绑定事务回填，永不落回 `#<编号>` 占位）；`board` 可选（未给 ⇒ 括注写 `—`——`board` 是
+ * 分类不是身份，不拒）。
  * 本批改形删除（F11-B）：旧 `# …（<BATCH-ID>）` 后缀与 `来源 = <讨论来源>` 占位实参化。
  * 模式取形（§4.16——普通模式变体**四处替换**、余行逐字同；`mode` 缺省 = "engineering" ⇒
  * 工程产出逐字不变）：① 汇总行 §2/§5 标签；② `## §2` 段头；③ §2 状态占位句；④ `## §5` 段头。
@@ -297,7 +375,7 @@ export function batchSkeleton({ date, topic, source, prev, ledger = null, board 
     `# ${date} · ${topic}`,
     `> 六段 append-only，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（${designerSeat}）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（${implementerSeat}）· §6 验证与收口（父代理）。`,
     `> 编制：主 agent · ${date} · 来源 = ${source}。`,
-    `> 台账 = ${ledger ?? "#<编号>"}（${board ?? "<板块>"} · 归批）。前情 = ${prev}。`,
+    `> 台账 = ${ledger ?? "#<编号>"}（${board ?? (ledger ? "—" : "<板块>")} · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",
     `**状态行**：🔄 ${STATUS_WORDS[1].open}（…）`,
     "<§1 模板占位：本批条目 / 关键判据 / 授权口径>",

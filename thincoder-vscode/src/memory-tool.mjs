@@ -61,7 +61,7 @@ export const memoryTool = {
       return "Error: memory is unavailable on this host — the memory face is disabled (unsupported host runtime)"
     }
     const { memoryTools } = await loadMemoryFace()
-    const tools = memoryTools(memory, { cwd, projectDir: projectMemoryDir(cwd ?? process.cwd()), author: "unknown", team: null })
+    const tools = memoryTools(memory, { cwd, projectDir: projectMemoryDir(cwd), author: "unknown", team: null })
     // 按名取（核侧数组顺序变化 = 静默取错工具面——不依赖位置）
     const tool = tools.find((t) => t?.name === "memory") ?? tools[0]
     try {

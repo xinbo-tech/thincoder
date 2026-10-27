@@ -24,10 +24,10 @@ const ptrPath = (v) => {
 }
 
 /** 会话锚供值面（**单源**——`cwdOf` 的缺省起点与上溯上界（`boundary`）同一表达式）：
- *  `ctx.agent.cwd` > `ctx.cwd` > 进程 cwd。界 = 会话锚（设计档 §3.8「界（单源）· 两面两界」）——
+ *  `ctx.agent.cwd` > `ctx.cwd`（零进程缺省：工具面拿不到给值时当场失败，不换界）。界 = 会话锚（设计档 §3.8「界（单源）· 两面两界」）——
  *  工具面传给 `resolveLedgerRoot` / `openLedger` 的上界恒取本值，不取 `process.cwd()`（desktop / VSC
  *  宿主下两者不同：会话锚才是「不能跑到工作目录以外去」的那道界）。 */
-const anchorOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+const anchorOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd
 
 /** 工具 cwd 供值面：**起点 = 动作目标路径**（`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md:72`
  *  「参数按用点解析——动作作用于哪个项目的路径，就取那个项目的档」）。

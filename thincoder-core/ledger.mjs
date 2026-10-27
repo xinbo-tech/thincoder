@@ -154,7 +154,7 @@ export function detailScans(scans, current) {
 //    ——2026-10-07 批 ledger-tool 自本档迁入，公共面零变；`ledgerChildren` / `MAX_SIBLING_SCAN` / `resolveLedgerRoot`
 //    ——2026-10-16 批 ledger-root-derivation 随迁 / 新增，公共面形零改） ──
 export { AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_SOFT_LIMIT, MAX_SIBLING_SCAN, ledgerChildren, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER, _setLedgerDirForTest, _resetLedgerDirForTest, ensureColumn, ensureExecutorColumn } from "./ledger-db.mjs"
-export { ledgerAdd, ledgerBatchRows, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerEvidenceOversize, ledgerQuery, ledgerReanchorBatch, ledgerUpdate, ledgerUpdateBatch, overdueOf } from "./ledger-cmd.mjs"
+export { ledgerAdd, ledgerBatchRows, ledgerBindBatch, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerEvidenceOversize, ledgerQuery, ledgerReanchorBatch, ledgerReclaimBatch, ledgerUpdate, ledgerUpdateBatch, overdueOf } from "./ledger-cmd.mjs"
 export { ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool } from "./ledger-tools.mjs"
 export { runLedgerAudit, runLedgerMigrate } from "./ledger-migrate.mjs"
 export { resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest } from "./ledger-executors.mjs"

@@ -7,15 +7,19 @@
  */
 import { FILE_MUTATORS, toolTouchPaths } from "./helpers.mjs"
 import { runHooks } from "../hooks.mjs"
-import { isCodePath, declarationForTarget } from "../conventions.mjs"
+// 面判定单源（2026-10-27 三链统一批 · 设计档 §2.1）：设计门的面判据由 `isCodePath` 换成 `faceOf`——
+// 与写锁共用同一份判据（两道门各用一套必然漂移：设计门放的、写锁拦的各说各话）。`isCodePath` / `classifyPath`
+// 本体零改（其余六个消费面语义不变）；`declarationForTarget` 仍用来取出辖判定与提示指针。
+import { declarationForTarget } from "../conventions.mjs"
 import { manifestFilePath } from "../manifest.mjs"
+import { faceOf } from "./write-face.mjs"
 import { resolve, relative } from "node:path"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
 // F-LC5（LIGHT-CHANNEL §2.8 · 2026-10-09）：轻通道轮在盘谓词（代码笔通路——两件双在盘 ⇒ 父侧代码笔放行）。
 import { lightRoundOpen } from "./light-round.mjs"
 // M4 写权门禁（模块设计 §2.1#2）：冻结窗口判据组装（被审文件集 = 声明文档集 + 批次档
 // 的合流点）落 write-gate.mjs 单一权威源——本档只 import 消费（KD-M4-4 拆分点）。
-import { freezeWindowConflict, batchRecordWriteConflict } from "./write-gate.mjs"
+import { freezeWindowConflict, batchRecordWriteConflict, productCodeWriteConflict } from "./write-gate.mjs"
 // 门面谓词 ∕ 记账（2026-09-28 拆分外提——见头注）：动作级四谓词 + logToolError 住 ./dispatch-gates.mjs。
 import {
   logToolError, isSubagentConsumeDesignAction, isSubagentEscalateAction,
@@ -112,7 +116,8 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         if (typeof p !== "string" || p.trim() === "") { blocked = true; continue }
         const abs = resolve(agent.cwd, p)
         const conv = declarationForTarget(abs)
-        if (!conv || !isCodePath(abs, conv)) continue
+        if (!conv) continue // 出辖（祖先链无档）⇒ 放行（零改）
+        if (faceOf(abs) !== "product") continue // 面判单源（`write-face.mjs`）——产物目录 / 文档面 / 工具面皆放行
         blocked = true
         if (!noteConv && !conv.declared) noteConv = conv
       }
@@ -160,6 +165,14 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
           reason: "d5 freeze window",
           hint: `write refused — design review #${conflict.id} is in flight over ${relative(agent.cwd, conflict.path)} (D5 freeze window). A write now would settle it stale — no token for a pass (the round is lost). Wait for the report, or cancel the review first (subagent action:'cancel' id:'${conflict.id}') and re-launch after the change.`,
         })
+        continue
+      }
+      // 写锁（第三道 · 2026-10-27 三链统一批 · 设计档 §2.3）：产品代码面 ∧ 无活批档 ⇒ 拒。
+      // 位次 = 既有两道之后（既有拒因先报）；面判先行——放行面不读台账；台账读不到 ⇒ 拒（业务门）。
+      // 只在工程模式生效（`agent.config.agent.engineering`）∥ 只在 depth 0（子代理走既有 token 门）。
+      const noLiveBatch = await productCodeWriteConflict(agent, depth, absPaths)
+      if (noLiveBatch) {
+        prepared.push({ toolCall, tool, denied: true, reason: "no live batch record", hint: noLiveBatch.message })
         continue
       }
     }

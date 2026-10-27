@@ -80,7 +80,7 @@ export function buildEnvLines({ db, model = null, reasoning = null, cwd = null, 
       arch: process.arch,
       node: process.version,
       pid: process.pid,
-      cwd: cwd ?? process.cwd(),
+      cwd,
       model,
       reasoning,
     }))

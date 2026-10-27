@@ -10,7 +10,6 @@
  */
 import { ansi, C } from "./ansi.mjs"
 import { sliceByWidth, stringWidth } from "./render.mjs"
-import { providerSpec } from "@thincoder/core/config.mjs"
 import { t } from "@thincoder/core/i18n.mjs" // 停滞轻显形（TUI.md §7.7）：句式键 status.quiet——词面单源（CLI 直取）
 import { isRealUserMsg } from "@thincoder/core/history-window.mjs" // B6 回退链：首条真实 user 消息谓词（纯件单源）
 import { isYesNoModal } from "./interaction.mjs" // X8 跟进①：y/n-only 族判据单源
@@ -141,10 +140,10 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
     ? ` ${t("status.quiet", { s: Math.floor((Date.now() - lastOut) / 1000) })}`
     : ""
   const statusText = state.processing ? `${state.status}${toolHint}${elapsed}${quietHint}` : state.status
-  // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— providerSpec(null) 保守 128K 不抛错
-  // 2026-09-02 §15：context 窗口跟随 providers[].context 覆盖（T-C6——百分比基于覆盖后的窗口）
-  const modelContext = providerSpec(agent.provider).context
-  const ctxPct = Math.round((state.ctxCache.tokens / modelContext) * 100)
+  // 2026-09-02 Q1（SESSION.md §6.8）：provider 可为 null —— 核 `providerSpec(null)` 保守 128K 不抛错。
+  // 2026-09-02 §15 ∥ context-percent-parity：窗口 / 校准比 / 两值全在核 `historyReading` 内解析（`ctxCacheOf` 缓出）——
+  // 本段零自算式，只格式化核读数的两个返回值；零值不显示门 `ctxPct > 0` 留在端侧（空历史口径已登记）。
+  const ctxPct = state.ctxCache.pct
   const ctxTokensHint = state.ctxCache.tokens > 0 ? ` ${fmtK(state.ctxCache.tokens)}` : ""
   const ctxHint = ctxPct > 0
     ? ctxPct >= 80 ? ` │ ${ansi.reset}${C.warn}context ${ctxPct}%${ctxTokensHint}${ansi.reset}${ansi.dim}` : ` │ context ${ctxPct}%${ctxTokensHint}` : ""

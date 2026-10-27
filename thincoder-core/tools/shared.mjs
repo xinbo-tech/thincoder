@@ -24,7 +24,8 @@ export const MAX_OUTPUT_CHARS = 200_000
 const ENCODING_DETECT_MAX_TRIM = 3
 const SYNTAX_CHECK_TIMEOUT = 10000
 export const BASH_TIMEOUT_MS = 120_000
-export const IGNORED_DIRS = new Set(["node_modules", ".git", "dist", "build", ".turbo", "coverage"])
+// `IGNORED_DIRS` 退场（2026-10-27 四份名单合一）：单源 = `../skip-dirs.mjs` 的 `SKIP_DIRS`，
+// 消费面 `search.mjs` 直接引它（一词一物——同一集合不再两个名字）。
 
 /** SSRF guard: check if a hostname is private/internal. Shared by web.mjs and codemode.mjs.
  *  Returns TRUE for private hosts — callers block them. */

@@ -103,7 +103,7 @@ async function distillExplorations(history, start, provider, signal, agent, dept
       logCtx: {
         stage: "distill", child: agent?._logId ?? null, kind: "distill",
         role: agent?._role ?? null, depth: depth ?? null,
-        session: agent?._sessionStart ?? null, cwd: agent?.cwd ?? process.cwd(),
+        session: agent?._sessionStart ?? null, cwd: agent?.cwd,
         traces: agent?.config?.traces?.enabled !== false,
       },
     })

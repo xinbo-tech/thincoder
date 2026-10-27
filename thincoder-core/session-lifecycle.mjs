@@ -36,8 +36,8 @@ import { loadSlotFile } from "./session.mjs"
 // 与 VSC `newSlot` / `loadSlotForWrite` 全新分支同一构造器；环 import 同上，函数体内运行时使用）。
 import { newSlotData } from "./session-slot-write.mjs"
 import { mergeAdjacentAssistantEchoes } from "./context.mjs"
-// 打开态读数公式（§6.24 判据句 2——与 CLI 状态行 / VSC 同式；零新公式，只组合）。
-import { historyPercent } from "./token-window.mjs"
+// 打开态读数公式（§6.24 判据句 2——与 CLI 状态行 / VSC 同一实现点的投影；零新公式，只组合）。
+import { historyPercent, restoreTokenSample, sampleRatio } from "./token-window.mjs"
 import { scheduleSessionGC } from "./session-gc.mjs"
 import { restoreEngTokens, tokenExpired } from "./token-ttl.mjs"
 // 槽事件（docs/core/design/SESSION-OBSERVABILITY.md §3.1）：`slot:new` 走核日志单一通道。
@@ -210,10 +210,15 @@ export function applySession(agent, data, opts = {}) {
         agent.provider.reasoningEffort = data.effort
       }
     }
+    // §6.17.1 链二读面：估算校准样本随槽恢复——上行刚把 `provider` 按槽值落定，key 同源校验才有意义
+    // （四条校验在 `restoreTokenSample`：形状 / est 版本 / key 同源 / 下界 1；不合格 ⇒ 未校准档）。
+    restoreTokenSample(agent, data.estimateSample, agent.provider)
     return { switched, droppedDesignTokens: restored.droppedDesignTokens }
   }
   // ② 槽无 key ∥ 不在册 → D-S3 保留——静默保持现状（落 config 链：config 统一解析产物已是
   //    `agent.provider`；不报错不纠正——两方都无效由调用侧复验 validateProvider 弹重选）
+  // §6.17.1 链二读面（B 支出口同 A 支）：样本照旧随槽恢复（provider = config 链产物，key 同源校验照做）
+  restoreTokenSample(agent, data.estimateSample, agent.provider)
   return { switched: false, droppedDesignTokens: restored.droppedDesignTokens }
 }
 
@@ -401,7 +406,7 @@ export function slotOccupancy(cwd, slot) {
  *     ⇒ 落链）∥ 无槽模型 ⇒ 现行模型链回落（`defaultModel` 属本渠道 ⇒ 其模型段；两档皆无 ⇒ `null`——
  *     `resolveChannelModel`，2026-10-09 清除批：渠道单值模型退场，零静默回落）；未命中 ⇒ `fallback`
  *     （支 ②「静默保持现状」的装配口径 = `loadConfig().provider`）；
- *  ④ 公式 = `historyPercent`（`thincoder-core/token-window.mjs`——与 CLI 状态行 / VSC 同式）。
+ *  ④ 公式 = 核 `historyReading`（与 CLI ∥ VSC 同一实现点的投影）；第三参 = 槽样本经 `sampleRatio` 取的校准比。
  *  **零副作用**：`data` / `providers` / `fallback` / `defaultModel` 皆入参（不读盘、不写盘、不改任何进程态）；
  *  `data` 非对象 ⇒ `0`（与空历史同值——「非正 ⇒ 零节点」显示门归端侧，沿 `historyPercent` 空历史口径）。 */
 export function sessionReading(data, { providers, fallback, defaultModel } = {}) {
@@ -417,5 +422,5 @@ export function sessionReading(data, { providers, fallback, defaultModel } = {})
   const provider = entry
     ? { ...entry, model: slotModel ?? resolveChannelModel(entry, defaultModel ?? null) }
     : fallback
-  return historyPercent(line, provider)
+  return historyPercent(line, provider, sampleRatio(data.estimateSample, provider))
 }

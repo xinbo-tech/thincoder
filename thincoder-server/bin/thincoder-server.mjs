@@ -130,7 +130,7 @@ export const ROUTE_FAMILIES = [
     register: (routes, d) => registerMcpRoutes(routes, { db: d.db, config: d.config, log: d.log }) }, // MCP 管理面（server-mcp 批）
   // 管理面 chat（§2.8——selfBaseUrl 惰性读监听地址：listen 后才有值；通配/环回换算归 `chat.mjs` `selfBaseOf`）
   { name: "Chat", probe: { method: "GET", path: "/api/admin/agent/chats" },
-    register: (routes, d) => registerChatRoutes(routes, { db: d.db, log: d.log, deps: { runtime: d.providerRuntime, config: d.config, guard: d.guard, selfBaseUrl: () => d.getServer()?.address() ?? null } }) },
+    register: (routes, d) => registerChatRoutes(routes, { db: d.db, log: d.log, deps: { runtime: d.providerRuntime, config: d.config, guard: d.guard, cwd: process.cwd(), selfBaseUrl: () => d.getServer()?.address() ?? null } }) },
   { name: "MemberFace", probe: { method: "GET", path: "/api/me/chat/models" },
     register: (routes, d) => registerMemberFaceRoutes(routes, { db: d.db, config: d.config, log: d.log }) }, // 成员面 chat + 工作区写面 + git 凭据 + 盒接入面（§2.11/§2.12）
   // 项目面（§2.9）：成员面六 ∥ 管理面十 ∥ 接收面一（公开——验签门）；调度器单例（三径共锁——手动 ∥ 定时 ∥ 事件）

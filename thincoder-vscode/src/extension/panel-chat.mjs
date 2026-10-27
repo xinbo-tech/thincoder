@@ -175,7 +175,7 @@ async function runPanelChatImpl(panel, opts = {}) {
   slotStamp = stage.slotStamp
   const slotData = stage.slotData
 
-  const cwd = _cwd() || process.cwd()
+  const cwd = _cwd()
 
   // Sync the live mid-turn flag from the session slot (CLI parity — autoApprove is a
   // session-level slot field, not a VS Code setting). runAgent receives a GETTER: the

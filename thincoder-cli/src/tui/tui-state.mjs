@@ -36,7 +36,7 @@ export function createTuiState({ cols, rows, agent }) {
     tasks: agent.tasks ?? [], // task list from task tool (progress shown in status bar); carried over on session restore, auto-collapsed when all done
     dims: makeDimsState({ cols: startupCols, rows: startupRows }), // terminal dims single source (Windows ConPTY instability, 2026-08-30) — seeded pre-raw-mode, re-sampled by event hooks only (startup retry / resize / idle watchdog)
     tokens: { prompt: 0, completion: 0, cacheHit: 0, cacheMiss: 0, reasoningTokens: 0 }, // cumulative token usage (shown in status bar)
-    ctxCache: { len: -1, tokens: 0 }, // context utilization estimate cache (estimateTokens is O(n), only recompute when history grows)
+    ctxCache: { len: -1, tokens: 0 }, // context reading cache (core `historyReading`; estimateTokens is O(n)). Invalidation keys = len · ratio · window (`ctxCacheOf`, render-loop.mjs); `len: -1` never matches ⇒ the first frame fills ratio / window / pct
     reasoning: "", // thinking stream buffer (dimmed display)
     completion: null, // Tab completion state { candidates, index }
 

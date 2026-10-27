@@ -36,6 +36,10 @@ import { basename, dirname, resolve } from "node:path"
 import { inflightDesignReviewConflict, normAbs } from "../agent-tools/advisor-settle.mjs"
 // 批次档路径单源（叶档——`BATCH-RECORD.md` §4.15）：批次档写门基底集取 `batchDocBases`。
 import { batchDocBases } from "../agent-tools/batch-paths.mjs"
+// 面判定单源（写锁 · 2026-10-27）：`faceOf` = `classifyPath` + 三处修正——与设计门共用同一份判据（§2.1）。
+import { faceDetail } from "./write-face.mjs"
+// 活批档判定单源（同批新增）：判据与查找面与轻通道闸同形（`live-batch.mjs`）。
+import { liveBatchOpen } from "./live-batch.mjs"
 export { normAbs }
 // 2026-10-04（工具路径基面根治批 · #921 · KD-2 同名再出口）：REVIEW_ROOT_KEYS +
 // resolveReviewRootsFor 判定本体迁 `review-facts.mjs`（评审事实面——advisor-async 既有
@@ -56,7 +60,7 @@ import { resolveReviewRootsFor } from "../agent-tools/review-facts.mjs"
  * @returns {string[]} 评审目标目录的绝对路径（去重）
  */
 export function resolveReviewTargetPaths(agent) {
-  return resolveReviewRootsFor(agent?.cwd ?? process.cwd())
+  return resolveReviewRootsFor(agent?.cwd)
 }
 
 /**
@@ -151,7 +155,7 @@ export function batchRecordWriteConflict(agent, depth, absPaths) {
   if (typeof bound !== "string" || bound.length === 0) return null
   const wanted = (absPaths ?? []).filter((p) => typeof p === "string" && p.length > 0)
   if (wanted.length === 0) return null
-  const cwd = typeof agent?.cwd === "string" && agent.cwd.length > 0 ? agent.cwd : process.cwd()
+  const cwd = agent.cwd
   const bases = memoizedBatchBases(agent, cwd)
   const boundAbs = normAbs(bound, cwd)
   const boundKey = gateKey(boundAbs)
@@ -170,3 +174,50 @@ export function batchRecordWriteConflict(agent, depth, absPaths) {
   return null
 }
 
+// ─── 写锁（第三道门 · 2026-10-27 三链统一批 · 设计档 §2.3）────────────────────────────────
+
+/** 拒文（逐字 = 设计档 §2.3 / §2.10——机检可断言）：产品代码面与产品测试面同一条基串，测试面换首句与尾句。 */
+const NO_LIVE_BATCH_CODE = "write refused — no live batch record: a product-code write needs a live batch (record §1 = 进行中 ∧ its ledger row = 在途 ∧ that row's task_book points back to the record). Open one first: batch({action:\"create\", topic, source}) — it opens the ledger row in the same call. Nothing was written."
+const NO_LIVE_BATCH_TEST = "write refused — no live batch record: a product test file needs a live batch too (a test and the code it guards are reviewed in the same round). Open one first: batch({action:\"create\", topic, source}) — it opens the ledger row in the same call. Nothing was written."
+
+/**
+ * 写锁判据组装（**第三道门**——与跨批档写 / D5 冻结窗并列挂 `dispatch.mjs` Phase 1 同一块）：
+ * 目标在**产品代码面** ∧ 不存在活批档 ⇒ 冲突；否则 null。
+ *
+ * 与既有「工程模式父侧门」（`dispatch.mjs:99-132`，设计门）是**两件事**：前门问「设计做没做」，本锁问
+ * 「批开没开」。所以并列、不替换：有设计槽但没开批 ⇒ 本锁拒；开了批但设计门先看到没设计槽 ⇒ 前门拒。
+ *
+ * **判序 = 面判先行**（§2.3）：`faceOf` 判放行面（文档面 / 工程工具面 / `BUILD_ARTIFACTS` / 出辖）⇒
+ * **不读台账、直接放行**；只有目标判为产品代码面时才读台账。理由：出辖路径的祖先链无 manifest，台账根
+ * 同样不可推导——若先读台账，「读不到台账 ⇒ 拒」会把「出辖 ⇒ 放行」吃掉；先后定死，同一输入的成败才唯一。
+ *
+ * **业务门语义**：台账读不到（库不可开 / 根不可推导）⇒ **拒**，拒文点名台账的原始错误——读不到不等于放行。
+ * **只在工程模式生效**（开关 = `agent.config?.agent?.engineering`，与设计门同一枚）；普通模式按
+ * `docs/core/requirements/NORMAL-MODE.md` 的「纪律自持」不动。
+ *
+ * @param {Object} agent — 会话 agent（读 `config.agent.engineering` / `cwd`）
+ * @param {number} depth — 执行深度（只在 depth 0 生效；子代理走既有 token 门）
+ * @param {string[]} absPaths — 本次写将触碰的绝对路径集（调用方已 resolve）
+ * @returns {Promise<{target: string, message: string}|null>} 命中 = 拒文 + 首个产品代码面目标；否则 null
+ */
+export async function productCodeWriteConflict(agent, depth, absPaths) {
+  if (!agent?.config?.agent?.engineering) return null // 普通模式零改（纪律自持）
+  if (!(depth === 0)) return null // 子代理走既有 token 门
+  const wanted = (absPaths ?? []).filter((p) => typeof p === "string" && p.length > 0)
+  if (wanted.length === 0) return null
+  // 面判先行（放行面不读台账——出辖 / 文档面 / 工具面 / 产物目录）
+  let hit = null
+  for (const p of wanted) {
+    const detail = faceDetail(p)
+    if (detail.face !== "product") continue
+    hit = { target: p, test: detail.test }
+    break
+  }
+  if (!hit) return null
+  const live = await liveBatchOpen(agent)
+  if (live.open) return null // 有活批档 ⇒ 放行（多活合法——只问存在否）
+  const base = hit.test ? NO_LIVE_BATCH_TEST : NO_LIVE_BATCH_CODE
+  // 台账读不到 ⇒ 拒，并把原始错误点出来（业务门：读不到不等于放行）
+  const message = live.error ? `${base}\n(ledger unreadable — ${live.error})` : base
+  return { target: hit.target, message }
+}

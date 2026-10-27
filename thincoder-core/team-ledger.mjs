@@ -26,8 +26,8 @@ const READ_ACTIONS = ["query", "count"]
 /** 六态（服务端 CHECK 同集——ledger/LEDGER.md §3）。 */
 const STATUSES = ["待讨论", "待设计", "在途", "待核销", "已核销", "已废弃"]
 
-/** 工具 cwd 供值面（缺省 → 当前项目根）。 */
-const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+/** 工具 cwd 供值面（零进程缺省：`ctx.agent.cwd` > `ctx.cwd`；两者皆无 ⇒ 当场失败，不落 `process.cwd()`）。 */
+const cwdOf = (ctx) => ctx?.agent?.cwd ?? ctx?.cwd
 
 // ── 仓标记派生（§2.2） ───────────────────────────────────────────────────────
 

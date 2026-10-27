@@ -662,7 +662,9 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 
 任何改动动手前先判**变更面**：
 
-- **三分面**：产品代码面（`thincoder-core/**` · 两产品 `{src,bin,webview,test}/**` · 产品文本面）= 走全流程；工程工具面（`scripts/**` · `.thincoder/**` · `.github/**` · `package-lock.json`）= 父侧可直改；文档面 = 按写权矩阵（D1）。
+- **三分面**：产品代码面（`thincoder-core/**` · 四产品 `{src,bin,webview,test}/**` · 产品文本面）= 走全流程；工程工具面（**仓根** `scripts/**` · **仓根** `test/**` · `.thincoder/**` · `.github/**` · `package-lock.json`）= 父侧可直改；文档面 = 按写权矩阵（D1）。
+- **包内 `scripts/` 不在工具面**：工程工具面的 `scripts/**` 指**仓根**那一条；`thincoder-core/scripts/**` 等包内 `scripts/` 是随包发布的产品代码（现例：`thincoder-core/scripts/check-syntax.mjs`）。写「包内 `scripts/` 一律算工具面」会让包内脚本漏出锁外。
+- **两个 `test/` 不同待遇**：产品代码面的 `test` 指**包内** `thincoder-*/test/**`（与产品码同轮评审、同一份批档）；工程工具面的 `test/**` 指**仓根** `test/integration/**`（跨仓验证面，改它不开批）。
 - **默认归类（fail-closed）**：未列入两枚举的路径一律按产品代码面处理——宁可走流程，不得默认直改。
 - **直改三硬约束**：① 机械改 ⇒ 直改 + 改完实跑报读数 ② 改判据语义 ⇒ 仍走设计 ③ 凡直改 ⇒ 报告「父侧直接执行」+ 单笔可 revert。
 - **授权判据 ≠ 绕过门禁**：门禁判定为准；与分流不一致 ⇒ 停下上报。

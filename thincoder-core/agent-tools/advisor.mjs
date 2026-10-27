@@ -8,6 +8,8 @@
  * blocking review); depth>0 (eng-coder self-review) stays synchronous always.
  */
 import { runAdvisorReview, advisorIncompleteMarker, ADVISOR_LAUNCH_REFUSAL_PREFIX } from "../advisor/run.mjs"
+import { readFileSync } from "node:fs"
+import { countRoundBlocks } from "./batch-skeleton.mjs"
 import { resolveBatchDocPath } from "./batch.mjs"
 // 设计评审的文档受理面单源 = review-facts.mjs 的 resolveReviewDocPaths（判据正文 =
 // docs/core/design/ADVISOR-GUARDS.md §12：相对形按会话项目根 / 绝对形照用 / 受理 = 项目内现存 `.md`）。
@@ -30,6 +32,21 @@ import { DESC } from "../tools/shared.mjs"
 // them — no wrapper↔runner module cycle); validateDesignToken stays exported
 // here for the tests' import surface (implementation re-exported).
 export { validateDesignToken } from "./advisor-async.mjs"
+
+/**
+ * §3 点火基线（`docs/core/design/ADVISOR-GUARDS.md` §1.1 判据 1）：绑了批档 ⇒ 记下点火时该档 §3
+ * 已有的轮次块数（块计数单源 = `countRoundBlocks`）；未绑 / 读不到 ⇒ `null`——读不到不等于
+ * 「没有记录要验」，结算面的 §3 落地门据此判 `batch-unreadable`。每轮发起刷新：同一实例的修轮
+ * 是新的一轮，基线随之推进（否则上一轮留下的块会让本轮一字未写也过门）。
+ */
+function section3BlocksBaseline(batchDocAbs) {
+  if (typeof batchDocAbs !== "string" || !batchDocAbs) return null
+  try {
+    return countRoundBlocks(readFileSync(batchDocAbs, "utf8"), 3)
+  } catch {
+    return null
+  }
+}
 
 export const advisorTool = {
   name: "advisor",
@@ -161,6 +178,9 @@ export const advisorTool = {
     if (args.batchDoc !== undefined && args.batchDoc !== null) {
       resolved.run.batchDoc = resolveBatchDocPath(agent.cwd, args.batchDoc)
     }
+    // §3 点火基线（ADVISOR-GUARDS.md §1.1 判据 1）：结算面判「§3 已被本轮写过」需要「本轮之前有几块」
+    // 这个点——只在点火拍可得（结算时再读只能得到「现在有几块」）。两轨同源（`run` 由池条目透传）。
+    resolved.run.section3BlocksAtStart = section3BlocksBaseline(resolved.run.batchDoc)
     // Design token minted for EVERY design round — the reviewer echoes it only on
     // a clean pass; on pass it is slotted under the instance's designId at settle
     // (sync: right here; async: the settle callback — fix #2). A NEW instance

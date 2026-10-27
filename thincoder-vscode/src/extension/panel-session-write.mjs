@@ -107,6 +107,13 @@ export function saveLines(panel, fullHistory, contextHistory, extra = {}, slotOv
     // 保存**不触发清理**。内存空但槽有值（settle 已同步落盘而本回合内存未持有）→ 保留槽值，
     // 不钉 null（AC2）。槽清理只经三触发（consume-design 显式清 /new 空槽 /TTL 过期清）。
     engDesignTokens: engTokensMergeForSave("engDesignTokens" in extra ? extra.engDesignTokens : undefined, existing.engDesignTokens),
+    // §6.17.1 链二端面②（估算校准样本跨进程活过重启，与 CLI `saveSession` 的 `fields.estimateSample`
+    // 同源）：本函数逐键构造槽对象、无 `...extra` 泛 spread ⇒ 键必须显式接。
+    // 键在场（回合内带 agentState 的保存）⇒ 内存即权威：空样本 `null` 照写（与 CLI saveSession 同语义）；
+    // 键缺席（五处不携 agentState 的保存：abort / switch-model / suspension / timer-wake 等手里没 agent）
+    // ⇒ 保留槽值——写成 undefined 会因 full-overwrite 令键随序列化消失、槽内既有样本被抹。
+    // 跨模型的旧样本由核 `restoreTokenSample` 校验③（key 同源）自清。
+    estimateSample: extra.estimateSample !== undefined ? extra.estimateSample : (existing.estimateSample ?? null),
     pendingReminders: extra.pendingReminders !== undefined ? extra.pendingReminders : (existing.pendingReminders ?? []), sessionStart: existing.sessionStart ?? new Date().toISOString(),
     // 2026-09-01 会诊 kimi/qwen 🔴：sessionStart 是 F2 覆盖防护的会话身份——VS Code
     // 此前从不赋值（恒 null）→ diskStart 恒 null → F2 轮转条件永不触发（纯 VS Code

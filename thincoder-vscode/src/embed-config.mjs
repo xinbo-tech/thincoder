@@ -106,7 +106,7 @@ export function projectMemoryDir(cwd) {
     if (typeof v === "string" && v.trim()) p = v.trim()
   } catch { /* unreadable config → core default */ }
   p = expandHome(p) // 核 config 单点同形（`findProvider`）
-  return isAbsolute(p) ? p : join(cwd ?? process.cwd(), p)
+  return isAbsolute(p) ? p : join(cwd, p)
 }
 
 // ─── embedding 配置段（W16 迁入——原 config-io.mjs；#130 端侧消费面）────────────

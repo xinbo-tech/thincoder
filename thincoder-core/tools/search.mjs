@@ -6,8 +6,10 @@ import {
   splitGlobPatterns,
   compileGlobMatchers,
   normalizeEOL,
-  IGNORED_DIRS,
 } from "./shared.mjs";
+// 排除名单单源（零依赖叶档 `../skip-dirs.mjs`——2026-10-27 四份名单合一）：旧名 `IGNORED_DIRS`
+// 退场，本档三处直接引 `SKIP_DIRS`（一词一物）。
+import { SKIP_DIRS } from "../skip-dirs.mjs";
 import { readFile, readdir, stat, lstat } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -60,7 +62,7 @@ export const globTool = {
   },
 }
 
-/** Recursively traverse files, yield relative paths (skip IGNORED_DIRS) */
+/** Recursively traverse files, yield relative paths (skip SKIP_DIRS) */
 async function* walkFiles(dir, rel = "") {
   let entries
   try {
@@ -71,7 +73,7 @@ async function* walkFiles(dir, rel = "") {
   for (const e of entries) {
     // Skip ignored dirs AND symbolic links (symlinks to directories would cause infinite loops)
     if (e.isSymbolicLink()) continue
-    if (e.isDirectory() && IGNORED_DIRS.has(e.name)) continue
+    if (e.isDirectory() && SKIP_DIRS.has(e.name)) continue
     const relPath = rel ? `${rel}/${e.name}` : e.name
     if (e.isDirectory()) {
       yield* walkFiles(join(dir, e.name), relPath)
@@ -169,7 +171,7 @@ export const grepTool = {
         return
       }
       for (const e of entries) {
-        if (e.isDirectory() && IGNORED_DIRS.has(e.name)) continue
+        if (e.isDirectory() && SKIP_DIRS.has(e.name)) continue
         await walk(join(target, e.name), rel ? `${rel}/${e.name}` : e.name)
       }
     }

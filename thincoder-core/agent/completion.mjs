@@ -16,6 +16,18 @@ const MAX_ADVISOR_PUSHBACKS = 3
 const MAX_EMPTY_RETRIES = 2
 
 /**
+ * 响应「有实质」判据（单源——判空面与清零面读同一份；AGENT-LOOP.md §6.5① · D-AL28）：有非空正文
+ * **或** 有工具调用 ⇒ 实质，两种形都证明「刚才那次空是瞬时的」。此处也是唯一判空式，不另写
+ * `.trim() === ""`——两份一漂，判空与清零就不再是同一件事（判空加宽、清零面漏跟）。
+ * 「或」不是「且」：带工具调用但正文为空（提供端常见形态）必须判为实质——写成「且」，工具轮就不清零，
+ * 空计数跨轮累计，「中间成功过却照样抛」原样留存。
+ * @param {object} response - chat response with .content, .toolCalls（同下方 handleCompletion 的既有契约）
+ */
+export function isSubstantiveResponse(response) {
+  return String(response.content ?? "").trim() !== "" || response.toolCalls.length > 0
+}
+
+/**
  * Handle a model turn with zero tool calls. May push back (verify/advisor/pending tasks)
  * or accept the completion.
  *
@@ -29,7 +41,7 @@ const MAX_EMPTY_RETRIES = 2
  * @param {object} callbacks - { onTurnEnd, onSubTurnBreak }
  */
 export function handleCompletion(agent, response, depth, turn, guardPushbacks, honestReminderInjected, advisorPushbacks, callbacks) {
-  if (String(response.content ?? "").trim() === "") {
+  if (!isSubstantiveResponse(response)) {
     // Transient empty response (reasoning exhausted / output truncated): instead of
     // aborting the whole turn, inject a reminder and let the model respond again.
     // Bounded — after MAX_EMPTY_RETRIES consecutive empties, surface the original error.

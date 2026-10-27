@@ -20,7 +20,7 @@ const SEGMENTS = [1, 2, 3, 4, 5, 6]
 /** 批次档列举（只读）：`{ batches: [{ file, path, sections }] }`——`path` = 绝对路径（`/` 归一）、
  *  `file` = basename、`batches` 按路径升序；单档读错跳过（尽力面）。`bases` 缺省 = `batchDocBases(cwd)`。 */
 export function listBatchRecords({ cwd, bases } = {}) {
-  const base = cwd ?? process.cwd()
+  const base = cwd
   const roots = bases ?? batchDocBases(base)
   const files = new Set()
   for (const root of roots) for (const abs of collectMarkdownFiles(root)) files.add(abs.replace(/\\/g, "/"))

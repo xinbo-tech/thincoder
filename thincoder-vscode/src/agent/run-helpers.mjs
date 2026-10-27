@@ -9,6 +9,8 @@
  * `reinjectAfterCompaction`（核 `runCompactionCheck` 的 `ensureAutoReminder` 对位）——消费面随主循环退役。
  */
 import { pushReal as corePushReal } from "@thincoder/core/context.mjs"
+// §6.17.1 链二端面①：估算校准样本的取值面单源 = 核 `tokenSampleOf`（与 CLI `saveSession` 同函数）。
+import { tokenSampleOf } from "@thincoder/core/token-window.mjs"
 
 // ── 转口核（单源）──────────────────────────────────────────────
 export { FILE_MUTATORS, turnFrame, escapeXml } from "@thincoder/core/agent/helpers.mjs"
@@ -72,7 +74,9 @@ export function buildHeadTailPreview(text) {
 /** 会话槽持久化载荷（CLI session.mjs fields——`saveSession` parity；消费 = 端 onComplete ∕
  *  onDistilled 的 `_saveLines` spread）：engineering ∕ advisor.guard ∕ 多槽表 engDesignTokens
  *  （Map → JSON-safe 对象，空态 null——槽清否由 saveLines 的 D2 合并语义定）+ 会话级三字段
- *  tasks ∕ goal ∕ pendingReminders（快照拷贝——异步保存间后续回合的内存变更不得泄漏）。 */
+ *  tasks ∕ goal ∕ pendingReminders（快照拷贝——异步保存间后续回合的内存变更不得泄漏）
+ *  + 估算校准样本 estimateSample（§6.17.1 链二端面①：核 `tokenSampleOf`——空样本 null，
+ *  键恒在场 ⇒ 端槽写的「内存即权威」支可判；落槽见 saveLines）。 */
 export function agentState(agent) {
   return {
     engineering: agent.config?.agent?.engineering ?? false,
@@ -83,5 +87,6 @@ export function agentState(agent) {
     tasks: Array.isArray(agent._tasks) ? [...agent._tasks] : [],
     goal: agent._goal ? { ...agent._goal } : null,
     pendingReminders: Array.isArray(agent._pendingReminders) ? [...agent._pendingReminders] : [],
+    estimateSample: tokenSampleOf(agent),
   }
 }

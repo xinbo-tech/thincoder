@@ -67,7 +67,7 @@ export async function atComplete(panel, query, cwd, seq) {
       // 不覆盖新下拉。webview 防抖已挡连续输入风暴——seq 兜住防抖窗外的乱序返回。无 seq
       // （旧 webview）→ undefined 恒等——行为不变。
       panel._atSeq = seq
-      const base = cwd || _cwd() || process.cwd()
+      const base = cwd || _cwd()
       const pattern = query.startsWith("@") ? query.slice(1) : query
       const uris = await vscode.workspace.findFiles(
         `**/${pattern}*`,

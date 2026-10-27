@@ -91,11 +91,11 @@ export function ledgerChildren(dir) {
  *  `ancestor`（最近带档祖先）。「项目根报明 / 建档」由用点决定。
  *  **无自指**：本档不判库在盘（台账无第二定义——库在盘不算项目）。
  *  @param {string} [target] 动作目标路径（目录 | 文件则取其所在目录）
- *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`）
+ *  @param {string} boundary 上溯上界（会话锚——**必传**；缺则该值缺失即失败，不落 `process.cwd()`）
  *  @returns {{root: string, basis: 'self'|'ancestor'}|null} 项目根 + 判据来源 / 无根（`null`） */
 export function resolveLedgerRoot(target, boundary) {
   const start = resolve(target ?? ".")
-  const edge = resolve(boundary ?? process.cwd())
+  const edge = resolve(boundary)
   const root = owningProject(start, edge)
   return root ? { root, basis: root === start ? "self" : "ancestor" } : null
 }
@@ -106,10 +106,10 @@ export function resolveLedgerRoot(target, boundary) {
  *  锚态 = 工作区时追报下辖候选（报明面读数 = `projectRootView` 的 `workspace` 态——
  *  **只供报明，不参与取根**：取根仍以会话锚为界）。
  *  @param {string} start 起点（动作目标路径）
- *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`）——与 `resolveLedgerRoot` 同一缺省 */
+ *  @param {string} boundary 上溯上界（会话锚——**必传**）——与 `resolveLedgerRoot` 同一口径 */
 export const noRootMessage = (start, boundary) => {
   const view = projectRootView(start)
-  const edge = resolve(boundary ?? process.cwd())
+  const edge = resolve(boundary)
   const tail = view.state === "workspace" ? `；下辖候选项目：${view.candidates.join(" ∥ ")}` : ""
   return `台账：自 ${start} 未找到项目根（向上找到 ${edge} 为止）${tail}`
 }
@@ -117,12 +117,12 @@ export const noRootMessage = (start, boundary) => {
 /** 项目根 → 库路径（稳定键 = `ledgerKey` 前 16 位——路径唯一标识，不含分隔符）。
  *  **归单源**（2026-10-16 批 ledger-root-derivation）：根 = `resolveLedgerRoot(cwd, boundary)`——与读面 / 写面
  *  同一推导；无根 ⇒ 抛**同一**无根文案（键需根，不产第二答案）。
- *  `boundary` = 上溯上界（**会话锚**——设计档 §3.8「界（单源）」）：调用方知道锚就传；
- *  缺省 = `process.cwd()`（CLI / 进程锚 = 会话锚的调用面不必传）。
+ *  `boundary` = 上溯上界（**会话锚**——设计档 §3.8「界（单源）」）：由调用方指名（**必传**）；
+ *  进程工作目录不是界（CLI 的锚只是端 adapter 在装配期写入 `agent.cwd` 的取值）。
  *  v2 键归一（2026-09-25 批）：盘符本大写（CLI）⇒ 键恒等零变；小写盘符（VSC `uri.fsPath`）
  *  并入同键 ⇒ 同项目两端同库（收正前 = 同项目两键两库）。
  *  @param {string} [cwd] 动作目标路径
- *  @param {string} [boundary] 上溯上界（会话锚；缺省 = `process.cwd()`） */
+ *  @param {string} boundary 上溯上界（会话锚——**必传**） */
 export function ledgerDbPath(cwd, boundary) {
   const start = resolve(cwd ?? ".")
   const derived = resolveLedgerRoot(start, boundary)
@@ -154,12 +154,16 @@ export const EVIDENCE_SOFT_LIMIT = 300
  *  2 = `resume_when` 可空列（设计档 §3.4 P5）。 */
 export const LEDGER_SCHEMA_VERSION = 2
 
-/** 六态允许迁移表（ledgerUpdate 迁移前判，不在表内 → 拒——规格 ②.2；设计档 §2.1）。 */
+/** 六态允许迁移表（ledgerUpdate 迁移前判，不在表内 → 拒——规格 ②.2；设计档 §2.1）。
+ *  2026-10-27 批（三链统一）补两条边：
+ *  - `待讨论 → 在途`：建档事务的必经一步（新建行只能先 INSERT `待讨论`——`在途` 被 DDL 咬合 CHECK 强制
+ *    非空指针；落档后才迁 `在途` 并写指针。没有这条边，`batch create` 写不出来）；
+ *  - `待核销 → 在途`：重开回收（批档重开 ⇒ 行回工作位）。六态唯一的回退边，人面出路与机器径同一条。 */
 export const ALLOWED_MIGRATIONS = {
-  "待讨论": ["待设计", "已废弃"],
+  "待讨论": ["待设计", "在途", "已废弃"],
   "待设计": ["在途", "已废弃"],
   "在途": ["待核销", "已废弃"],
-  "待核销": ["已核销", "已废弃"],
+  "待核销": ["已核销", "在途", "已废弃"],
   "已核销": ["已废弃"],
   "已废弃": [],
 }
@@ -238,8 +242,8 @@ function markSchemaVersion(db) {
  *  **只读态**（readOnly=true——读面专用）：只读句柄 + 零 DDL / ALTER + items 探针（见 openReadOnly）；
  *  如实副作用：旧库（缺 executor 列）**读**不再自动补列——补列归写面开库；读出行缺列按 null 归一。
  *  「目录不存在」的真错照抛（fail-loud——先于推导，文案逐字零改）。
- *  `boundary` = 上溯上界（**会话锚**——设计档 §3.8「界（单源）」）：工具面传 `ctx.agent.cwd`；
- *  缺省 = `process.cwd()`（CLI / 进程锚 = 会话锚的调用面不必传）。 */
+ *  `boundary` = 上溯上界（**会话锚**——设计档 §3.8「界（单源）」）：工具面传 `ctx.agent.cwd`（**必传**；
+ *  缺则该值缺失即失败，不落 `process.cwd()`——进程工作目录不是界）。 */
 export function openLedger(cwd, { create = false, readOnly = false, boundary } = {}) {
   const start = resolve(cwd ?? ".")
   if (!existsSync(start)) {

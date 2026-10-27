@@ -67,6 +67,8 @@ export async function prepareRun(agent, input, callbacks, {
   // §6.17 估算自校准比（`_tok` / `_tokRatio`）**不在本处清**：本函数是每 run 的 pre-flight，
   // 而在每轮用户消息上归零会让池化比退化成单样本（R2 失效）。初值在 `agent.mjs` 构造字面量，
   // 清空点 = `/new`（`session-lifecycle.mjs`）∥ `key` 变自清（`token-window.mjs` `recordTokenSample`）。
+  // §6.17.1 链三自适应额度：run 级一次——本处复位（一次 = 全部额度；同一 run 内第二次独立越窗直接抛）。
+  agent._overflowRetried = false
   // Cumulative provider cache accounting (batch 2026-10-18-context-cache-visibility):
   // the service reports prompt_cache_hit/miss per response; the terminal faces each kept
   // their own tally, so the CORE had none and `context` could not report cache efficiency.

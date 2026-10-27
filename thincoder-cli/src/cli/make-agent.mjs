@@ -124,7 +124,7 @@ async function finalizeTools(baseTools, { cwd, config, excludeTools, warnings })
  * @param {{cwd?: string, slotData?: object|null}} [opts]
  * @returns {object|null} 附着后的 manifest / 非 ok 态与普通会话 null
  */
-export function attachManifest(agent, { cwd = process.cwd(), slotData } = {}) {
+export function attachManifest(agent, { cwd = agent.cwd, slotData } = {}) {
   const slotEng = slotData?.engineering
   const engineering = slotEng !== undefined ? slotEng === true : agent.config?.agent?.engineering === true
   if (!engineering) {

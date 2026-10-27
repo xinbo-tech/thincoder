@@ -245,7 +245,7 @@ function touchedFilesNote(child, cwd) {
   const touched = child?._touchedFiles ?? []
   if (touched.length === 0) return ""
   const shown = touched.map((f) => {
-    const r = relative(cwd ?? process.cwd(), f)
+    const r = relative(cwd, f)
     return r && !r.startsWith("..") && !isAbsolute(r) ? r : f
   })
   return `\nTouched files: ${shown.join(", ")}`

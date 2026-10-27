@@ -512,7 +512,7 @@ export async function runChatTurn({ db, chatId, content, images = [], emit = nul
     // 唤醒轮域文本（§15.1——核常量单源；**瞬态尾插不落库**——沿 §14.1 口径）∥ 环境块（§14.1/KD-SV-112——三活体行尾插；
     // **瞬态不落库**）：先收集，压缩后统一入装配（§17.3 A3——压缩面只见历史段）
     const wakeLine = wake === null ? null : { role: "user", content: wake.domain }
-    const envLines = buildEnvLines({ db, model: chat.model, reasoning: chat.reasoning ?? null, cwd: deps.cwd ?? process.cwd(), now, env: deps.env ?? process.env })
+    const envLines = buildEnvLines({ db, model: chat.model, reasoning: chat.reasoning ?? null, cwd: deps.cwd, now, env: deps.env ?? process.env })
       .map((line) => ({ role: "user", content: line }))
     // 工具面（§14.2）：注入面（deps.tools ∥ 模块级）优先；否则 = 管理面九件 + 环境六族八件 + MCP 面合并。
     const injectedFace = deps.tools ?? injectedTools ?? null
@@ -546,7 +546,7 @@ export async function runChatTurn({ db, chatId, content, images = [], emit = nul
     const pad = timerPadOf(chat.id)
     pad._recordStore = recordStoreOf(db, chat.id) // 本会话历史读面（`read_history` 记录面——§16.1）
     installSettleHook({ chatId: chat.id, db, deps, now, log, senderId })
-    const envCtx = { cwd: deps.cwd ?? process.cwd(), signal: controller.signal, agent: pad, depth: 0 }
+    const envCtx = { cwd: deps.cwd, signal: controller.signal, agent: pad, depth: 0 }
 
     // 模型出口装配（§16.2）：注册表缺位/引用缺位/凭据缺位/基址缺位 ⇒ 按「模型错误」收尾（五终态不外溢第三形）
     let modelExit
@@ -575,7 +575,7 @@ export async function runChatTurn({ db, chatId, content, images = [], emit = nul
       systemPrompt: CHAT_SYSTEM_BRIEF,
       tools: tools.schemas,
       signal: controller.signal,
-      cwd: deps.cwd ?? process.cwd(),
+      cwd: deps.cwd,
       coreCompact: deps.coreCompact ?? null,
       pad,
       chatId: chat.id,

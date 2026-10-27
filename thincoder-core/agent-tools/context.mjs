@@ -3,9 +3,9 @@
  * 单一工具三操作（用户定形 F-CC5）：`stats`（感知 F-CC1）· `prune`（噪声清理 F-CC3）· `compact`（主动压缩 F-CC2，携 focus + 自动附任务/目标 + 可回查锚——裁令 A/D）。
  * 描述外置（tool-docs/context.md——#15 统一面：文本单点 = tool-docs，DESC 加载）；装配面 = 登记册 `agent-tools.mjs`（#83）+ `agent/family-tools.mjs` 的 depth-0 段（`depthOnly`）——两端自动同表；**depth>0 不给**（§6.16.6）。
  * 本档同时是**注记文案 / 轻推行 / 回执文案的单源**（核与 VSC 的 run-stages 消费点经动态 import 取用——零新增静态边）。
- * 机械面：`stats` 不新增第三口径（首行主口径 = 窗口占用 total / window，压缩线以具名数值 + 距线呈现；第 4 行走 `historyPercent` 与状态行同式）；`prune` = 合格集（`token-window.mjs` 单源）+「原位换内容」应用面（`context.mjs`）；`compact` **当次零执行**（只登记 `agent._pendingCompact`，由下一安全点消费——§6.16.2）。
+ * 机械面：`stats` 不新增第三口径（首行主口径 = 窗口占用 total / window，压缩线以具名数值 + 距线呈现；状态行行（第 6 行）走核 `historyReading`——与 CLI ∥ VSC 同源：一个实现点，端侧零自算式）；`prune` = 合格集（`token-window.mjs` 单源）+「原位换内容」应用面（`context.mjs`）；`compact` **当次零执行**（只登记 `agent._pendingCompact`，由下一安全点消费——§6.16.2）。
  */
-import { contextUsage, estimateTokens, collectStaleToolOutputs, historyPercent, PRUNE_MIN_TOKENS } from "../token-window.mjs"
+import { contextUsage, estimateTokens, collectStaleToolOutputs, historyReading, tokenRatioOf, PRUNE_MIN_TOKENS } from "../token-window.mjs"
 import { requestBudget } from "../config.mjs"
 import { pruneStaleToolOutputs, COMPRESS_FAILURE_LIMIT } from "../context.mjs"
 import { slotPath } from "../session-slots.mjs"
@@ -89,6 +89,9 @@ function statsReport(agent) {
   const cacheLine = cacheTurns === 0
     ? "Cache: no provider usage readings yet (hit/miss arrive with the first response)"
     : `Cache: hit ${cacheHit} · miss ${cacheMiss} tokens (${Math.round((cacheHit / cacheTotal) * 100)}% hit) across ${cacheTurns} response(s)`
+  // 第 6 行 = 核读数投影（§6.16.4）：`pct` 与括号内的 `calibratedHistory` 是同一次调用的两个返回值——同屏两值同尺；
+  // 标记 `calibrated history estimate` 把它与 `Segments ≈` 行的裸估算 `history`（核 `estimateTokens`，未乘比）分名。
+  const statusReading = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent))
   return [
     `Context ≈${usage.total} tokens (${pct}% of ${usage.window} window); compaction line ${usage.threshold} (${toGo} to the line)`,
     // §6.16.4 字面单源（该行为唯一字面，逐字；预算面同源 requestBudget——不自算第二套）:
@@ -105,7 +108,7 @@ function statsReport(agent) {
     `Segments ≈: system ${usage.system} · tools ${usage.tools} · history ${usage.history} (basis: ${usage.basis})`,
     `History: tool outputs ${toolOut} tokens in ${toolCount} msgs · prunable stale ${stale.tokens} tokens in ${stale.indexes.length} msgs · protected tail ${stale.tailCount} msgs`,
     cacheLine,
-    `Status line: context ${historyPercent(agent?.history ?? [], agent?.provider)}% (${usage.history} history estimate / ${usage.window} window)`,
+    `Status line: context ${statusReading.pct}% (${statusReading.tokens} calibrated history estimate / ${statusReading.window} window)`,
     `Compaction so far: ${compaction} · failures ${agent?._compressFailures ?? 0}/${COMPRESS_FAILURE_LIMIT}`,
   ].join("\n")
 }

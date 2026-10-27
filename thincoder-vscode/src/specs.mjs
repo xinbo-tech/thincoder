@@ -7,12 +7,12 @@
  *  - `reasoningEffortDefault`（推理强度下拉默认档——CLI 规格行无此字段，端侧扩展；
  *    旧 `src/config.mjs` 规格表随 W16 删旧，该字段的数据面迁入本档覆盖表）；
  *  - `ctxPercentForModel`（面板上下文占比派生——面板消费面，随 config 面收拢入驻）；
- *  - `ctxPercentForHistory`（M2 · 显示面消差批：同标签双口径消差——分子改核 `estimateTokens(history)`，
+ *  - `ctxPercentForHistory`（M2 · 显示面消差批：同标签双口径消差——分子改核校准后的历史估算，
  *    与 CLI 状态行同源；`ctxPercentForModel` 保留给 provider 报告值消费面）。
  */
 import { specForModel as coreSpecForModel, providerSpec, assistantToolCallMessage } from "@thincoder/core/model-specs.mjs"
-// M2（显示面消差批）：分子 = 核 `estimateTokens`——与 CLI 状态行**同源同式**（零依赖纯函数，静态引入安全）
-import { estimateTokens } from "@thincoder/core/context.mjs"
+// M2 ∕ context-percent-parity：读数 = 核 `historyReading` 的投影（端侧零自算式；`token-window.mjs` 零顶层副作用，静态引入安全）
+import { historyReading } from "@thincoder/core/token-window.mjs"
 
 export { providerSpec, assistantToolCallMessage }
 
@@ -84,18 +84,17 @@ export function ctxPercentForModel(promptTokens, provider) {
 }
 
 /**
- * Context usage pair — CLI-parity ruler (显示面消差批 M2 ∕ I16a): numerator = core
- * `estimateTokens(history)`, the SAME estimate the CLI status line renders (
- * `inputBoxStyle` over the `createRenderLoop` ctxCache —— 分子分母两端同源),
- * denominator = the provider-aware window (`providerSpec(provider).context`). The provider-reported
- * `prompt_tokens` numerator (ctxPercentForModel above) double-reported: one session showed two
- * percentages under the same `context X%` label (端差 M2). `pct` = null when the estimate is 0；
- * `tokens` = 状态行 `Yk` 尾串源（#677 I16a——两值同点产出，单次估算）。
+ * Context usage pair — CLI-parity ruler (显示面消差批 M2 ∕ I16a ∕ context-percent-parity): both
+ * values = one core reading `historyReading` (校准后的历史估算 + 窗口），端侧零自算式——分母/分子不分家
+ * 声明。The provider-reported `prompt_tokens` numerator (ctxPercentForModel above) double-reported: one
+ * session showed two percentages under the same `context X%` label (端差 M2). `pct` = null when the
+ * estimate is 0（零值不显示门留在端侧）；`tokens` = 状态行 `Yk` 尾串源（#677 I16a——两值同点产出，
+ * 单次估算）。`ratio` = 该 agent 的估算校准比（宿主传 `tokenRatioOf(agent)`）——**无缺省**。
  */
-export function ctxUsageForHistory(history, provider) {
-  const tokens = estimateTokens(history ?? [])
-  return { tokens, pct: tokens ? Math.round((tokens / providerSpec(provider).context) * 100) : null }
+export function ctxUsageForHistory(history, provider, ratio) {
+  const { tokens, pct } = historyReading(history, provider, ratio)
+  return { tokens, pct: tokens ? pct : null }
 }
 
 /** 占比单值形（既有名面——设计档 `WEBVIEW.md` §4.6 派生单点）。 */
-export function ctxPercentForHistory(history, provider) { return ctxUsageForHistory(history, provider).pct }
+export function ctxPercentForHistory(history, provider, ratio) { return ctxUsageForHistory(history, provider, ratio).pct }

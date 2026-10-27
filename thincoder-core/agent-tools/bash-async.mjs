@@ -119,7 +119,7 @@ export async function launchBgTask(parent, ctx, { command, timeout = null, shell
   consumeSubagentToken(parent, id, "bash async launch", "bash")
   assertPoolKeyFree(pool, id, "bash")
   const logPath = join(dir, `${Date.now()}-bash-${id}.log`)
-  const cwd = ctx?.cwd ?? parent.cwd ?? process.cwd()
+  const cwd = ctx?.cwd ?? parent.cwd
   // UTF-8 码页前缀 = 同步径同款（win32 + 默认 shell）；解码走 `makeDecoder`（同源）。
   const effectiveCommand = process.platform === "win32" && !shell ? `chcp 65001 >nul && ${command}` : command
   const child = spawn(effectiveCommand, [], {

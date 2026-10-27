@@ -252,7 +252,7 @@ export async function compactTurnHistory({
   systemPrompt = null,
   tools = null,
   signal,
-  cwd = process.cwd(),
+  cwd,
   coreCompact = null,
   log = null,
   pad = null,

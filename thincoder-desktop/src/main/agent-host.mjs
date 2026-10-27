@@ -36,7 +36,7 @@
  * 文件枚举过滤 + `seq` 原样回携）；本档只留 import + 装配 ∕ 暴露两行（拆分评审结论 = 批档 §2.7 本档行）。
  */
 import { runAgent } from "@thincoder/core/agent.mjs"
-import { estimateTokens, historyPercent } from "@thincoder/core/token-window.mjs"
+import { historyReading, tokenRatioOf } from "@thincoder/core/token-window.mjs"
 // 会话键语义（`String(slot)` 单源）与端壳同档 —— 键面归一不造第二口径；偏好写面（`writeSlotPrefs`）同档。
 import { slotOfKey, writeSlotPrefs } from "./session-slots.mjs"
 // 选定写回单点（#880 —— `defaultModel` 同拍写回；判据句 6 ∕ `IPC.md` §2 项 8；零环：settings.mjs 不依本档）。
@@ -156,8 +156,8 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
   }
 
   /** 回合尾用量读数（`docs/desktop/design/IPC.md` §1 `ev:usage` 行 —— 产出方 = 宿主回合尾结算）：
-   *  载荷 = `{ key, ctxPct, ctxTokens, usage, timers }` —— `ctxPct` = 核 `historyPercent` 投影（**端侧零重算**，不假造）；
-   *  `ctxTokens` = 核 `estimateTokens(agent.history)` 投影（状态行 ⇒ CLI 补漏批增——与 `ctxPct` 同点产出）；
+   *  载荷 = `{ key, ctxPct, ctxTokens, usage, timers }` —— `ctxPct` = 核 `historyReading(...).pct` 读数投影（**端侧零重算**，不假造）；
+   *  `ctxTokens` = 同一调用的 `.tokens`（校准后的历史估算——与 `ctxPct` 同点产出）；
    *  **发门 = `usageFrameWanted`**（`pct > 0` ∨ 本帧携新读数（tokens ∕ timers）⇒ 发 · 否则不发——R3 端差① 修，
    *  2026-09-29 · 批 #673：取整 0 回合三读数照达（判据句）；单源 = `docs/render-core/design/RENDER-CORE.md`
    *  §9 R3 端差①；`ctxTokens` 0 ∕ 缺不抑事件，渲染面自持「非正 ⇒ 尾串缺席」）；
@@ -166,8 +166,8 @@ export function createAgentHost({ emit, run = runAgent, assemble = assembleFor, 
    *  **三径同点调用**：落盘之后、终局事件之前 · **不抛前提** = `agent.history` 恒数组
    *  （核装配缺省 `createAgent` · 接续恒置 `applySession`）⇒ 本读数不改结算链。 */
   function postUsage(key, agent) {
-    const ctxPct = historyPercent(agent?.history ?? [], agent?.provider)
-    const ctxTokens = estimateTokens(agent?.history ?? [])
+    // 一次核读数出两值（§2.1 单源）：`ctxPct` 与 `ctxTokens` 同一调用——同屏两值必须同尺（已乘校准比）。
+    const { pct: ctxPct, tokens: ctxTokens } = historyReading(agent?.history ?? [], agent?.provider, tokenRatioOf(agent))
     const timers = pendingTimers(agent)
     if (!usageFrameWanted(ctxPct, ctxTokens, timers)) return
     post("ev:usage", { key, ctxPct, ctxTokens, usage: { ...tokensOf(key) }, timers })

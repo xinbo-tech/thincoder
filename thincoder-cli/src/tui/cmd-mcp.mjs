@@ -187,7 +187,7 @@ Return ONLY the JSON object:`,
         logCtx: {
           stage: "mcp", kind: "mcp",
           role: agent?._role ?? null,
-          session: agent?._sessionStart ?? null, cwd: agent?.cwd ?? process.cwd(),
+          session: agent?._sessionStart ?? null, cwd: agent?.cwd,
           traces: agent?.config?.traces?.enabled !== false,
         },
       })

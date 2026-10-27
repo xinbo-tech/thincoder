@@ -13,7 +13,7 @@
 
 import { chat } from "./provider/index.mjs"
 import { buildCompressMessages } from "./compress-form.mjs"
-import { contextUsage, estimateTokens, keepTailSize, splitHistory, tailBudgetTokens } from "./token-window.mjs"
+import { contextUsage, estimateTokens, keepTailSize, splitHistory, SUMMARY_TOKEN_ESTIMATE, tailBudgetTokens } from "./token-window.mjs"
 import { COMPACTION_PLACEHOLDER, withPlaceholderPrefix } from "./context-echo.mjs"
 import { shrinkOversized } from "./context-degrade.mjs"
 
@@ -35,6 +35,18 @@ const COMPACTION_PREFIX =
   "[Context was automatically compacted. Below is a summary of earlier work. " +
   "Treat it as notes, not proof — trust its conclusions (don't redo what it reports as done) " +
   "but re-verify transient state with tools. Check memory search for any missing decisions.]\n\n"
+
+/**
+ * 注记 + 占位的估算（§6.17 可达性门的 `note` 项）：摘要正文取 `SUMMARY_TOKEN_ESTIMATE`（§6.9 的 ~1K 目标，常量单源 =
+ * `token-window.mjs`），注记前缀与占位句按 §6.3 估算式（`estimateTokens` 走同一 `estimateText`）——零新常数、零新算式。
+ * 残余方向：真实摘要超 1K 时本值低估 `post`（门可能放行一次压不到线下的压缩），不会反向误拦——守卫面仍抛三实数。
+ * 另：`applyCompression` 压完还会追加任务表回注与 plan 提醒（`agent.tasks` / `planMode` 非空时），本值同样不含——
+ * 同向低估（大任务表会话里 `post` 偏小），不会把本该压的格拦下。
+ */
+const NOTE_ESTIMATE = SUMMARY_TOKEN_ESTIMATE + estimateTokens([
+  { role: "user", content: COMPACTION_PREFIX },
+  { role: "assistant", content: COMPACTION_PLACEHOLDER },
+])
 
 /** After this many consecutive compaction summary failures, degrade to deterministic truncation (losing info is better than task-killing 400 errors) */
 export const COMPRESS_FAILURE_LIMIT = 3
@@ -150,7 +162,22 @@ function applyCompression(agent, headEnd, tailStart, note) {
 }
 
 /**
- * If history exceeds threshold, compact it. Returns whether compaction happened.
+ * 可达性门（CONTEXT-COMPACTION.md §6.17「压缩触发判据（可达性门）」）：压完之后 `total` 能不能落到阈值之下。
+ * `post` 按 `applyCompression` 实际留下的形态估——head（KEEP_HEAD = 0 ⇒ 恒空）+ 注记 + 占位 + tail；`middle` = 本次会摘掉的
+ * 那段（与本次压缩同一次 `splitHistory` 产出）。压缩后 `_lastPromptTokens` 失效 ⇒ 只有估算支可比，故走 estimated 支并乘同一
+ * `_tokRatio`（与 `contextUsage` 的估算支同尺）。
+ * 为什么要有它：`system + tools` 是固定开销、压不掉，把它算进判据左侧会让「固定开销本身逼近阈值」的会话反复触发压缩却压不出
+ * 任何东西——每触发一次白付一次摘要请求（台账 `#1833`）。
+ */
+function postCompactionTotal(agent, usage, middle) {
+  const ratio = agent?._tokRatio ?? 1
+  return Math.round((usage.history - estimateTokens(middle) + NOTE_ESTIMATE + usage.overhead) * ratio)
+}
+
+/**
+ * Compact when the prompt is over the threshold AND compaction can actually get back under it
+ * (CONTEXT-COMPACTION.md §6.17 reachability gate); `extras.force` skips both early-exit criteria.
+ * Returns whether compaction happened.
  * Only called at safe points in the loop (history ends with user or tool message — a complete exchange boundary).
  * Automatically re-injects task list state after compaction.
  * @param {object} agent
@@ -160,7 +187,8 @@ function applyCompression(agent, headEnd, tailStart, note) {
  *   internal mechanism, not a model reply); onCompressStart fires right before the summary call
  *   (§6.8 D-C1, compression lifecycle visibility — panel start state)
  * @param {object} extras - { systemPrompt?, tools?, force?, focus? } — 固定开销面（system + tools 估计）+
- *   模型主动压缩面（§6.16.2）：`force` **只跳过** `tokens <= threshold` 早退，其余全同；`focus` 追加在摘要指令尾段。
+ *   模型主动压缩面（§6.16.2）：`force` **跳过阈值面的全部早退判据**（`total <= threshold` 与 §6.17 可达性门的
+ *   `post > threshold` 两条），其余全同（同切分 / 同尾部预算 / 同摘要链 / 同回注 / 同基线失效）；`focus` 追加在摘要指令尾段。
  */
 export async function compressIfNeeded(agent, threshold, callbacks, extras = {}, signal) {
   const history = agent.history
@@ -178,6 +206,9 @@ export async function compressIfNeeded(agent, threshold, callbacks, extras = {},
   }
 
   const middle = history.slice(split.headEnd, split.tailStart)
+  // 可达性门（§6.17）：压完落不到线下 ⇒ 不压——不为一次没有净减的摘要白付请求。`force` 全文豁免（模型主动压缩 ∥
+  // 守卫强压：模型判定优先于阈值，压后仍超由守卫面抛三实数）。到不了线下的格仍由守卫 `enforceContextFit` 兜住。
+  if (!extras.force && postCompactionTotal(agent, usage, middle) > threshold) return false
 
   // Compression request form v2/v3 (§6.14 / D-CC20): continuation — same system + same tools declaration (the turn's own
   // array) + the middle's verbatim messages + one tail instruction. 首现即复用回合所建前缀 ⟺ 带 tools 声明（无 tool_choice）

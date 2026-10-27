@@ -27,6 +27,8 @@ import { digestTs } from "./session-slots-manifest.mjs"
 // F2 轮转守卫自 2026-09-08 迁至 session-guard.mjs（session-slots 再越 500 行硬限拆分）
 import { guardForeignSlotFile } from "./session-guard.mjs"
 import { engTokenSlotFields } from "./token-ttl.mjs"
+// §6.17.1 链二写面（估算校准样本随会话槽走）：本档只取写出值，读面在 `session-lifecycle.mjs`（applySession）。
+import { tokenSampleOf } from "./token-window.mjs"
 // TUI-OOM-ROOTCAUSE 批（SESSION.md §6.14）：人读线记录存储（磁盘为准 + 内存窗口）。
 // slimForDisplay/isLegacyTransient 迁入 store 模块（§6.14 记录存储）——本文件 re-export 保持
 // 既有 import 面（session-slots.mjs 引 isLegacyTransient）。依赖方向单向：store 零项目内依赖。
@@ -143,6 +145,9 @@ export function saveSession(agent, opts = {}) {
     advisor: agent.config?.advisor ?? null,
     pendingReminders: agent._pendingReminders ?? [],
     sessionStart: agent._sessionStart ?? null,
+    // §6.17.1 链二写面：估算校准样本 `{key,num,den,est}`——空样本落 null（不造空对象）；
+    // 只随回合尾保存走，不新增写路径、不逐样本落盘。
+    estimateSample: tokenSampleOf(agent),
   }
   // 2026-09-05 §6.10 D-4：首认领（_slot 为 null——如 /session 切换后首保存、“查看对方活槽 →
   // 保存 fork 新槽”的落盘槽跟随）写本端记录——marker = 端内最后认领者；粘性 _slot 期间

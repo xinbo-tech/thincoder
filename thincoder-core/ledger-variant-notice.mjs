@@ -35,7 +35,7 @@ export function _resetLedgerVariantNoticeForTest() { noticeChecked = false }
  * @param {{cwd?: string, dir?: string, locale?: string, exists?: (p: string) => boolean}} [opts]
  * @returns {string|null} 单行文案 / null
  */
-export function ledgerVariantNotice({ cwd = process.cwd(), dir = ledgerDirPath(), locale = "en", exists = defaultExists } = {}) {
+export function ledgerVariantNotice({ cwd, dir = ledgerDirPath(), locale = "en", exists = defaultExists } = {}) {
   if (noticeChecked) return null
   noticeChecked = true
   try {

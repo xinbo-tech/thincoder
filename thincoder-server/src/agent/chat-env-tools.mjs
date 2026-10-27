@@ -5,7 +5,7 @@
  * 三面同源；动载 `@thincoder/core/tools/*` + `@thincoder/core/agent-tools/*`——沿 `loadCoreChat` 先例）；本面只做 ① ctx 适配
  * ② 结果归一 ③ 限幅处置 ④ timer 挂表 ⑤ 投递汇落库 ⑥ 异步池宿主。**不收窄 schema**（端池参数运行期处置——§14.2）。
  *
- * ctx 适配（§14.2）：`{ cwd, signal, agent, depth: 0 }`——`cwd` = 相对路径基准（`deps.cwd ?? process.cwd()`——无围栏）∥
+ * ctx 适配（§14.2）：`{ cwd, signal, agent, depth: 0 }`——`cwd` = 相对路径基准（`ctx.cwd`——无围栏）∥
  * `signal` = 回合中止信号（透传 ⇒ bash 树杀）∥ `agent` = 会话垫片（`{ _pendingTimers, history, _recordStore }`——核 `timer` 工具直写
  * `_pendingTimers`；`history` = 核注入单点落点；`_recordStore` = 会话历史读面 `recordStoreOf`——§16.1 ∥ `depth: 0`。
  * **垫片即宿主**（§15.1 ∥ KD-SV-126——零自造池）：核 bash 异步径（见 `ctx.agent` ⇒ `launchBgTask`）的池/pending/唤醒栓逐字段落在垫片上
@@ -143,7 +143,7 @@ export async function createEnvTools({ coreTools = null } = {}) {
     if (refused !== null) return refused
     try {
       const output = await tool.execute(params, {
-        cwd: ctx.cwd ?? process.cwd(),
+        cwd: ctx.cwd,
         signal: ctx.signal,
         agent: ctx.agent ?? null,
         depth: 0,

@@ -78,7 +78,7 @@ function isInside(p, root) {
  *   三值只作 `reason=`）；`resolved` 项 = 解析后绝对路径（`no-project-root` 无基面 ⇒ `null`）。
  */
 export function resolveReviewDocPaths(documents, cwd) {
-  const view = projectRootView(cwd ?? process.cwd())
+  const view = projectRootView(cwd)
   const resolved = new Map()
   const invalid = []
   for (const doc of (documents ?? [])) {

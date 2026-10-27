@@ -94,7 +94,7 @@ export function attachManifest(agent, { cwd, slotData } = {}) {
     agent.manifest = null // 清残留附着（跨模式防陈旧——同 CLI）——普通会话不读 ∕ 不拒 ∕ 不建档
     return null
   }
-  const base = typeof cwd === "string" && cwd !== "" ? cwd : process.cwd()
+  const base = cwd
   const r = resolveEngineeringManifest(base, { writer: "main" })
   agent._projectView = { ...projectView(base), created: r.ok && r.created === true }
   agent.manifest = r.ok ? r.manifest : null

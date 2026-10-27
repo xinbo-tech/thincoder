@@ -11,8 +11,8 @@ import { specForModel, assistantToolCallMessage } from "../config.mjs"
 import { executeToolCalls } from "./dispatch.mjs"
 import { recordToolResults } from "./record-results.mjs"
 import { injectPostTurn } from "./post-turn.mjs"
-import { handleCompletion } from "./completion.mjs"
-import { runCompactionCheck, injectTurnReminders, injectResponseReminders } from "./run-stages.mjs"
+import { handleCompletion, isSubstantiveResponse } from "./completion.mjs"
+import { runCompactionCheck, enforceContextFit, injectTurnReminders, injectResponseReminders } from "./run-stages.mjs"
 import { recordTokenSample } from "../token-window.mjs"
 import { callModelTurn } from "./chat-call.mjs"
 import {
@@ -48,6 +48,28 @@ export async function runTurnLoop(agent, {
   // F-CC1（§6.16.4 阈值单源接线）：本回合压缩判定所用的阈值 + 固定开销面暂存——
   // `context` 工具的 stats 报**同一口径**（不自行重算第二口径；VSC checkAndCompact 同款暂存）。
   agent._ctxBasis = { threshold, overhead: compactionOverhead }
+
+  // §6.17.1 链三（越窗 400 自适应）：单回合调用外包一层 catch——服务端说越窗 ⇒ 强制压一次 + 重试同一回合一次。
+  // 排除面：`stage ∈ {compress, distill}` 的请求**不经本函数**（压缩机与蒸馏各自直调 `chat`，续写子请求的
+  // 失败已在 `provider/core.mjs` 折进 `_warnings`）⇒ 本 catch 只接回合请求的 typed 越窗，不存在「已流出再重放」。
+  const callTurn = async (turnCtx) => {
+    try {
+      return await callModelTurn(agent, turnCtx)
+    } catch (e) {
+      if (e?.kind !== "context_overflow") throw e
+      // 死循环守卫（批档 D6）：额度 = run 级一次（`agent/setup.mjs` 每 run 复位）——已用过 ⇒ 原 typed 错误透传
+      // （三实数 + `/compact` 提示已在报文体里）；同一 run 内第二次独立越窗不再自愈，用户 `/compact` 后可继续。
+      if (agent._overflowRetried) throw e
+      agent._overflowRetried = true
+      // 越窗 typed 错误有两个出口（同 kind，§6.17）：HTTP 400 分类 ∥ 本地发送面净判——两面都归本链处理，
+      // 故估算不再作门（估算恰恰低估才有本链），整压一次；压后仍超 ⇒ 抛三实数、不再压。
+      await enforceContextFit(
+        agent, { threshold, callbacks, compactionOverhead, recentCallSigs, signal }, { forceCompact: true },
+      )
+      // 重试恰一次：此行不在 try 内——二次越窗的 typed 错误原样上抛（不截断、不静默）
+      return await callModelTurn(agent, turnCtx)
+    }
+  }
 
   // SUBAGENT-UPSTREAM-CHANNEL（AGENT-LOOP-UPSTREAM.md §6.27.4 消费点）：子 → 父在飞消息的
   // 回合边界注入单点取用一次（模块缓存 ⇒ 每 run 一次代价）；动态 import = 零新增静态边
@@ -128,9 +150,16 @@ export async function runTurnLoop(agent, {
     // 2026-09-05 实践轮：plan cadence + eng 状态注入提为 injectTurnReminders（run-stages）
     await injectTurnReminders(agent, { depth })
 
-    const response = await callModelTurn(agent, {
+    const response = await callTurn({
       systemPrompt, toolSchemas, streamOutput, callbacks, signal, streamRuleFired, autoTurn, depth, turn,
     })
+
+    // 空响应预算复位（AGENT-LOOP.md §6.5① · D-AL28）：本轮响应**有实质** ⇒ 计数清 0（实质 = 有正文
+    // 或带工具调用；判据单源 = completion.mjs `isSubstantiveResponse`）。落位 = 本轮响应存在的第一处、
+    // 也是四支路（下方流规则 abort ∥ 用户中断 ∥ 工具批 ∥ 零工具）发散前的最后一处——落进任一分支都会漏其余三支。
+    // 与下方 `guardPushbacks = 0`（工具批执行处）分工：那处复位的是 verify ∥ advisor 推回预算、只看「有工具批」；
+    // 本处复位空响应预算、看「有实质」——正文本身已是实质，不必等工具批。
+    if (isSubstantiveResponse(response)) agent._emptyRetries = 0
 
     // §6.31.5 落痕（消化账务批 · 2026-10-05 · 台账 #930 ∥ #939 收正）：本 run 内**逐轮追加**——
     // 每模型轮返回即写（会话态）；首轮签收不为收口轮覆盖（见账取件读累积痕）。

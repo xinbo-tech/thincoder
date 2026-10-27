@@ -7,9 +7,9 @@
  *   数据源 = 槽文件权威表（`readEngTokensFromSlot`——无 TTL 过滤原样）∪ 内存 Map（并集去重，
  *   冲突以槽为准——D-S3 同源）；**零写**（不 reconcile 回写、不落盘）。列表面 = 逐槽一行
  *   （designId ∥ live/expired ∥ ageDays ∥ expiresAt ∥ 批 ∥ designToken（末位，恒携）；龄序 = 最老在前）
- *   + 计数尾行；「批」= 批次归属旁列（§10——settle 时按 `docSetKey` 的 `batches/` 段档落盘的绝对路径）
- *   取 basename，旁列缺失 ⇒ `_advisorRuns` 按 designId 命中 run 的 `docSetKey` 中 `batches/` 段档兜底
- *   （KD-SL2）；两者皆不可得 ⇒ `—`。
+ *   + 计数尾行；「批」= 批次归属旁列（§10——settle 时按 `batchAbsPathOfRun` 派生落盘的绝对路径）
+ *   取 basename，旁列缺失 ⇒ `_advisorRuns` 按 designId 命中 run 用**同一派生**兜底（`run.batchDoc`
+ *   优先、`docSetKey` 段档次之——KD-SL2）；两者皆不可得 ⇒ `—`。
  *   `designId` 过滤单槽（trim 精确匹配；空串视同缺省；未知 ⇒ 拒 + 列在场 id）；缺省 = 现行清点面逐字零变；零写同前。
  * 面二 `executeConsumeDesignAction`（`subagent` action `consume-design` 消费核——自
  *   `subagent-spawn.mjs` 迁入）：选择器恰一（`designId` ∥ `designIds` ∥ `expired` ∥
@@ -54,8 +54,9 @@ export function unionBatches(agent, { strict = false } = {}) {
 }
 
 /** 「批」列派生（KD-SL2）：批次归属旁列（§10）优先——取该绝对路径文件的 basename；旁列缺失
- *  （旁列启用前签发的旧槽）⇒ 会话内评审实例注册表 `_advisorRuns` 按 designId 命中的**最新** run
- *  ⇒ `docSetKey`（被审文档绝对路径集 JSON）中 `batches/` 段档取 basename；皆不可得（跨重启 /
+ *  （旁列启用前签发的旧槽）⇒ 会话内评审实例注册表 `_advisorRuns` 按 designId 命中的 run 逆序取
+ *  **最近一个能派生出批档的**（同一派生 `batchAbsPathOfRun`——`run.batchDoc` 优先、`docSetKey`
+ *  段档兜底；与 settle 写旁列同源：清点面不能拿另一个派生去读同一个事实）；皆不可得（跨重启 /
  *  模式重进 / 注册表回收）⇒ `—`（如实降级）。 */
 function batchOf(agent, designId, batches) {
   const fromSide = batches instanceof Map ? batches.get(designId) : undefined
@@ -64,8 +65,9 @@ function batchOf(agent, designId, batches) {
   const runs = advisorRuns(agent)
   if (!(runs instanceof Map)) return "—"
   for (const run of [...runs.values()].reverse()) {
-    if (run?.designId !== designId || typeof run.docSetKey !== "string") continue
-    const name = batchBasename(run.docSetKey)
+    if (run?.designId !== designId) continue
+    const abs = batchAbsPathOfRun(run)
+    const name = abs ? basenameOfPath(abs) : null
     if (name) return name
   }
   return "—"
@@ -77,23 +79,9 @@ function basenameOfPath(p) {
   return parts.length ? parts[parts.length - 1] : null
 }
 
-/** docSetKey（JSON 串）→ `batches/` 段档 basename（首命中）；不可解析 / 无命中 ⇒ null。 */
-function batchBasename(docSetKey) {
-  let list = null
-  try { list = JSON.parse(docSetKey) } catch { return null }
-  if (!Array.isArray(list)) return null
-  for (const p of list) {
-    if (typeof p !== "string") continue
-    const parts = p.split(/[\\/]/)
-    const i = parts.lastIndexOf("batches")
-    if (i >= 0 && i < parts.length - 1 && parts[i + 1]) return parts[i + 1]
-  }
-  return null
-}
-
-/** docSetKey（JSON 串）→ `batches/` 段档的**绝对路径**（与 `batchBasename` 同一 `lastIndexOf("batches")`
- *  判据）；不可解析 / 无命中 ⇒ null。settle 时刻的批归属派生单源（§10「批次标识的来源」——
- *  零新输入：判据与清点面同源）。`resolve` = 归一（分隔符 ∥ `.`/`..`）；落盘值即此形。
+/** docSetKey（JSON 串）→ `batches/` 段档的**绝对路径**（判据 = `lastIndexOf("batches")` 段序）；
+ *  不可解析 / 无命中 ⇒ null。批归属派生的**兜底源**（§10「批次标识的来源」第 2 源；上层
+ *  = `batchAbsPathOfRun` 的两源定序）。`resolve` = 归一（分隔符 ∥ `.`/`..`）；落盘值即此形。
  *  **归属不唯一 ⇒ 不猜**：文档集里出现**多份不同的**批档（收口消费以批为键，猜错 = 消费别批的
  *  授权）⇒ 返回 null（归属 = 无，与「不含批档」同一降级层——§10 同段「比留下一个可解释的
  *  滞留槽更坏」的排序）。同一档的两种写法（分隔符 / 大小写）去重，不算两份。 */
@@ -112,6 +100,18 @@ export function batchAbsPath(docSetKey) {
     if (!hits.some((h) => batchPathKey(h) === batchPathKey(abs))) hits.push(abs)
   }
   return hits.length === 1 ? hits[0] : null
+}
+
+/** 批归属派生（两源定序——单源，三处消费共用）：① `run.batchDoc`（评审实例的显式批档绑定，
+ *  `advisor.mjs` 落在实例上）优先；② 否则 `batchAbsPath(run.docSetKey)` 兜底（批档写进 `documents`
+ *  的调用形）。两源同时有值**不是取舍**——主源在手就不查兜底（派生不改写声明）。两者皆无 ⇒ `null`
+ *  （归属 = 无，不猜）。设计单源 = `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10「批次标识的来源」；
+ *  兜底源可得归属、而 §3 落地门只认 `run.batchDoc` 这一残余，登记在
+ *  `docs/core/design/ADVISOR-GUARDS.md` §1.2。 */
+export function batchAbsPathOfRun(run) {
+  const bound = run?.batchDoc
+  if (typeof bound === "string" && bound.trim()) return resolve(bound)
+  return batchAbsPath(run?.docSetKey)
 }
 
 /** 批档身份键（§10「匹配」）：两侧（旁列值 ∥ 收口目标 `abs`）都是 `node:path` 解析后的绝对路径；

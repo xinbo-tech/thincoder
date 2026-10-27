@@ -149,7 +149,7 @@
 > 🚄 VSC 同机制），本端为**独立原文**（不做逐字一致）；**VSC 端实现面** = 核单源（`thincoder-core/advisor.mjs` +
 > `advisor/*` + `agent-tools/{advisor,advisor-async}.mjs`）。
 
-### 8.1 功能性需求（F-A1 · F-A2 · F-A4–F-A12）
+### 8.1 功能性需求（F-A1 · F-A2 · F-A4–F-A13）
 
 | # | 需求 | 判定句（验收语义） | 范围边界（不做） |
 |---|---|---|---|
@@ -164,6 +164,7 @@
 | F-A10 | **轮次重置语义**：无 prior 且本 run 未改代码 → 轮次归零；改过代码 → 保留轮次 | 改码后再评审 → 轮次不重置（收敛预算不可刷）；未改码 → 重置 | 不做无条件重置 |
 | F-A11 | **guard 推回（可配，缺省 OFF）**：`advisor.guard=true` 且非工程模式且 depth0 且改码未评审 → 工具调用被推回；FILE_MUTATORS 重置评审标记 | 开启 guard + 改码未评审 → 推回串；FILE_MUTATORS 触发重置 | 缺省 OFF；工程模式不适用 |
 | F-A12 | **响应表纪律**：裁决表表头逐字 `\| # \| Action \| Detail \|`；Action 四值——提示词纪律，不驱动控制流 | 输出含合规表头；机制层零表解析 | 不做表解析驱动逻辑 |
+| F-A13 | **结算面已入档才放行**：绑了 `batchDoc` 的设计评审，结算时该档 §3 必须已被本轮写过；判 pass 时 §3 状态行必须为 `评审通过`——不满足则该轮判未完成、不签 token、回执点名缺项。**为什么必须在结算点**：§3 状态行是下游两门（`§5` 写入 ∥ 台账核销）的读据；在结算点不拦，错误就要等到实施席写 §5 才爆，代价落在与评审无关的人身上。证据 = `thincoder-core/agent-tools/advisor.mjs:245` ∥ `thincoder-core/agent-tools/advisor-settle.mjs:155`（两轨同调 `settleDesignReview`）· 定位判据单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.2 | 绑 `batchDoc` 且未写 §3 → 结算拒 + 回执点名；判 pass 而状态行非 `评审通过` → 拒且不签 token；补写后同轮放行 | 不改评审的 §3 写权（评审本就可写）；不改下游 §5 门与核销门；不解析评审正文判定 pass（只读状态行字面） |
 
 ### 8.2 非功能性需求（N-A1–N-A6）
 

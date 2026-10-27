@@ -51,7 +51,7 @@ export function normalizeFileList(files, cwd) {
     if (f.trimEnd().endsWith("/") || f.trimEnd().endsWith("\\")) { // 2.7 批：尾随空格目录声明（"test/ "）同拒
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
-    const abs = resolve(cwd ?? process.cwd(), f)
+    const abs = resolve(cwd, f)
     if (existsSync(abs) && statSync(abs).isDirectory()) {
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
@@ -79,7 +79,7 @@ export function filesOverlap(a, b) {
 
 /** 冲突文件的显示形态（优先相对 cwd——面板/返回文本可读）。 */
 function showFile(parent, key) {
-  const cwd = parent.cwd ?? process.cwd()
+  const cwd = parent.cwd
   const rel = relative(cwd, key)
   return rel && !rel.startsWith("..") && !isAbsolute(rel) ? rel : key
 }

@@ -14,11 +14,33 @@
  * so recomputing the frame each paint is cheap.
  */
 import { countConvLines, renderRows } from "./render-frame.mjs"
-import { estimateTokens } from "@thincoder/core/context.mjs"
+import { historyReading, tokenRatioOf } from "@thincoder/core/token-window.mjs"
+import { providerSpec } from "@thincoder/core/config.mjs"
 import { ansi, C } from "./ansi.mjs"
 import { isTuiActive } from "./tui-lifecycle.mjs" // F-2 渲染抑制守卫（RESIZE-MOUSE-LEAK-FIX）
 
 const MIN_RENDER_INTERVAL_MS = 16
+
+/**
+ * 上下文读数缓存（CONTEXT-COMPACTION.md §6.16.4 单源）：值全部来自核 `historyReading`，本档零自算式。
+ * 失效键三项 = `history.length` · `ratio` · 解析后的窗口——只按长度会留陈旧读数：校准比可在长度不变时变
+ * （槽样本恢复 / 口径版本切换），窗口可在切模型 ∥ 改人工声明时变。三项全等 ⇒ **原引用**（零重算）；
+ * 否则重取核读数。为何不每帧调核：`estimateTokens` 是全史线性扫描，每帧跑一次是渲染热路径的净开销。
+ * **三项覆盖不到的一类变化（登记）**：内容变而长度不变——`pruneStaleToolOutputs` 原位换掉 tool 内容
+ * （`thincoder-core/context-degrade.mjs:30`-35：数组长度不变、估算骤降）与 `applySession` 整体换机读线
+ * （`thincoder-core/session-lifecycle.mjs:119`：长度可与前一会话巧合相等）。这两时刻状态行沿用变化前的
+ * 百分比，直到下一次追回消息使 `len` 变；闭这项需要第四个内容版本键（机制变更，不自取）。
+ * 首帧：`state.ctxCache` 初值 `{ len: -1, tokens: 0 }`（`tui-state.mjs`）长度恒不等 ⇒ 必落重算支，
+ * 由此补齐 `ratio` / `window` / `pct`；未补齐前 `pct` = `undefined` ⇒ 状态行显示门（`ctxPct > 0`）为假，该段不显。
+ */
+export function ctxCacheOf(agent, prev) {
+  const history = agent?.history ?? []
+  const ratio = tokenRatioOf(agent)
+  const window = providerSpec(agent?.provider).context
+  if (prev && prev.len === history.length && prev.ratio === ratio && prev.window === window) return prev
+  const { tokens, pct } = historyReading(history, agent?.provider, ratio)
+  return { len: history.length, ratio, window, tokens, pct }
+}
 
 /**
  * Create the render loop closure. Returns { render, scheduleRender }.
@@ -86,9 +108,7 @@ export function createRenderLoop(state, agent, ctx, pushLine, write = (s) => pro
       // Clamp scroll (bookkeeping for the status-bar hint; renderConversation clamps internally too)
       state.scroll = Math.min(state.scroll, Math.max(0, countConvLines(state, dims.cols, dims.rows) - layout.panels.conversation.h))
 
-      if (state.ctxCache.len !== agent.history.length) {
-        state.ctxCache = { len: agent.history.length, tokens: estimateTokens(agent.history) }
-      }
+      state.ctxCache = ctxCacheOf(agent, state.ctxCache)
 
       // Deferred upgrade notice — pop when no overlay is active
       if (ctx.pendingNoticeReady(state)) {

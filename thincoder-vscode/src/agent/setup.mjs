@@ -194,7 +194,7 @@ export async function hydrateRun(agent, { provider, cwd, input, opts, depth, rol
     slot: sessionData,
     engState,
     planModeOverride: opts.planMode,
-  }, { cfg: cfgBag, restore })
+  }, { cfg: cfgBag, restore, provider })
   // #45（WEBVIEW-PROTOCOL.md §3.3 判据①）：`_engShown` = 已展示基线（槽应用之后取值）；
   // 工具驱动翻转的比对起点（写入面 = agent-state 同步 cell）。
   agent._engShown = agent.config?.agent?.engineering === true

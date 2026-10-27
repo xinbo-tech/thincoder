@@ -1,12 +1,15 @@
-/**
- * batch-close-token-consume.test.mjs — 集成用例 10-1 / 10-2（RTM CLI 端故事 10「收口即清账」；
- * 回指需求 F-D7（凭证带批归属）∥ F-D8（收口自动消费）；机制 + 判据单源 =
+/*
+ * batch-close-token-consume.test.mjs — 集成用例 10-1 / 10-2 / 10-4（RTM CLI 端故事 10「收口即清账」；
+ * 回指需求 F-D7（凭证带批归属）∥ F-D8（收口自动消费）∥ F-SL1（清点「批」列）；机制 + 判据单源 =
  * `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` §10）。
  *
  * 业务入口 = 真 `batch` 工具（`agent-tools/batch.mjs`）的 depth-0 `close` 轨——不直调
  * `consumeBatchDesignTokens`：本档要的是「收口这件事」的业务可观察结果——回执文本、§1 状态行
  * 落盘字节、槽在不在盘、同 designId 的 spawn 门解析还放不放行。
- * 前置（签发一枚带批归属的槽）= 真 settle（`settleDesignReview` + D1 当场落盘），与生产同路。
+ * 前置（签发一枚带批归属的槽）= 真 settle（`settleDesignReview` + D1 当场落盘），与生产同路：
+ * **批档走 `batchDoc`（生产形）**，且该轮评审把 `§3` 写进批档（轮次块 + 状态行 = `评审通过`）——
+ * 「§3 落地门」在 `run.batchDoc` 非空时生效（单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1）：
+ * 未落地则 settle 不签发，本档三行的断言均不可达。
  *
  * 10-2 的失败注入法：占住 `persistEngTokens` 的临时文件名（`${slotPath}.tmp` 落成目录）⇒
  * `writeSessionFile` 必抛 ⇒ `persistEngTokens` 抛在消费核的落盘步（与「注入必抛」同一抛出点，
@@ -22,6 +25,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 
 import { batchTool } from "../../thincoder-core/agent-tools/batch.mjs"
+import { countRoundBlocks } from "../../thincoder-core/agent-tools/batch-skeleton.mjs"
 import { executeDesignSlotsAction } from "../../thincoder-core/agent-tools/design-slots.mjs"
 import { settleDesignReview } from "../../thincoder-core/agent-tools/design-token.mjs"
 import { docSetKey } from "../../thincoder-core/agent-tools/review-facts.mjs"
@@ -36,8 +40,9 @@ const DESIGN_REL = "docs/core/design/DESIGN-FIXTURE.md"
 const DESIGN_ID = "design-10"
 const TOKEN = `20262026-2026-2026-2026-202620262026:${Date.now() + 3600 * 1000}`
 
-/** 六段批档（§2/§3/§4/§6 有内容 = close 链门前置；§1 = 进行中；不记基 sha ⇒ 机检门只认触达账）。 */
-const recordText = () => [
+/** 六段批档（§2/§3/§4/§6 有内容 = close 链门前置；§1 = 进行中；不记基 sha ⇒ 机检门只认触达账）。
+ *  `blocks` = §3 轮次块数——评审轮内写进批档的那部分（夹具模拟评审经 `batch` 写 §3 的产物）。 */
+const recordText = ({ blocks = 0 } = {}) => [
   "# 夹具批 · 收口即清账",
   "",
   "> 编制：夹具 · 2026-10-26 · 来源 = 集成夹具。",
@@ -53,8 +58,9 @@ const recordText = () => [
   "夹具任务。",
   "",
   "## §3 设计评审（评审子代理）",
-  "夹具评审。",
+  "**状态行**：评审通过",
   "",
+  ...Array.from({ length: blocks }, (_, i) => [`### 轮次 ${i + 1}（评审子代理）`, "", `夹具评审第 ${i + 1} 轮结论。`, ""]).flat(),
   "## §4 用户批准（主 agent）",
   "夹具批准。",
   "",
@@ -103,14 +109,30 @@ function fixture(tag) {
   return { root, agent }
 }
 
-/** 真 settle：评审文档集带批档 ⇒ 签发槽 + 记下批归属（+ D1 当场落盘，与生产同路）。 */
+/** 真 settle（生产形）：批档走 `batchDoc`（`documents` 只放设计档）；评审轮内把 §3 写进批档
+ *  （轮次块 + 状态行 = `评审通过`）——点火基线在写之前读，演的就是「本轮真写了一块」；
+ *  签发槽 + 记下批归属（+ D1 当场落盘，与生产同路）。 */
 function settleWithBatchDoc(root, agent) {
-  const run = { designId: DESIGN_ID, docSetKey: docSetKey([BATCH_REL, DESIGN_REL], root), open: true }
+  const batchAbs = resolve(root, BATCH_REL)
+  // 点火（生产：`advisor.mjs` 绑批档时读基线）——此刻 §3 尚无轮次块
+  const baseline = countRoundBlocks(readFileSync(batchAbs, "utf8"), 3)
+  // 评审轮内经 `batch` 写 §3 的产物（工具戳轮次块；状态行由 `status` 动作写为 `评审通过`）
+  writeFileSync(batchAbs, recordText({ blocks: baseline + 1 }))
+  const run = { designId: DESIGN_ID, batchDoc: batchAbs, docSetKey: docSetKey([DESIGN_REL], root), section3BlocksAtStart: baseline, open: true }
   const settled = settleDesignReview(agent, run, TOKEN, `评审正文\n[DESIGN-TOKEN: ${TOKEN}]\n\nVERDICT: pass`)
   assert.equal(settled.passed, true, `前置：评审应结算通过 — ${settled.output}`)
   persistEngTokens(agent)
-  assert.equal(agent._engDesignTokenBatches.get(DESIGN_ID), resolve(root, BATCH_REL), "前置：槽带批归属（旁列 = 批档绝对路径）")
+  assert.equal(agent._engDesignTokenBatches.get(DESIGN_ID), batchAbs, "前置：槽带批归属（旁列 = 批档绝对路径）")
+  return run
 }
+
+test("10-4 正常（生产形）· 以 `batchDoc` 起评审后，清点面「批」列显名（不是 —）", () => {
+  const { root, agent } = fixture("r104")
+  settleWithBatchDoc(root, agent)
+  const inventory = executeDesignSlotsAction({}, { agent })
+  assert.match(inventory, /batch=fixture\.md\b/, `清点「批」列应显示批档 basename：${inventory}`)
+  assert.ok(!/batch=—/.test(inventory), `「批」列不得是 —（今天 24 枚全 —）：${inventory}`)
+})
 
 test("10-1 正常 · 收口即清账：回执点名消费 1 枚、spawn 机械拒、清点面该槽不在", async () => {
   const { root, agent } = fixture("r101")
@@ -137,6 +159,8 @@ test("10-2 错误 · 消费落盘失败 ⇒ close 被拒、§1 字节不变、�
   const tool = batchTool(null)
   const before = readFileSync(join(root, BATCH_REL), "utf8")
   // 注入：占住 persistEngTokens 的临时名 ⇒ writeSessionFile 必抛 ⇒ 消费核落盘步抛
+  // （耦合：临时名形依赖 `session-slots.mjs` 的 `writeSessionFile` 非 `tmpUnique` 分支产 `${p}.tmp`；
+  //   若改用 `tmpUnique`，本注入失效——但失效是响亮的：`assert.rejects` 收不到抛、本例即红）
   const tmpBlocker = `${slotFileOf(agent)}.tmp`
   mkdirSync(tmpBlocker)
 

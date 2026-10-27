@@ -79,6 +79,14 @@ export function inCodeSpan(line, idx) {
  *  `exemptZones` 缺省 ∥ 空集 ⇒ 零豁免。`files`（必填）= **判定集**（调用方传入的档清单——本档不遍历
  *  任何目录；空集 ⇒ 零命中）。 */
 export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files = [] } = {}) {
+  // 配置缺失 = 硬错，不是静默不命中。
+  // `para.len > undefined` 恒 false ⇒ **永不命中 = 假绿**；而误报会被人发现，假绿不会。
+  // 实测来源：围栏批（2026-10-27）调试时把配置当第二参数传，一度以为修复无效——
+  // 两个阈值都是 undefined，门一路绿灯。
+  if (!Number.isFinite(paragraphMax) || !Number.isFinite(lineMax)) {
+    throw new Error(`checkParagraphs: paragraphMax ∥ lineMax 必须是有限数字（收到 ${paragraphMax} / ${lineMax}）。` +
+      "配置全在第一个参数：{ paragraphMax, lineMax, exemptZones, files }。阈值缺失时永不命中，读起来就是「全部过关」。")
+  }
   const zones = (Array.isArray(exemptZones) ? exemptZones : []).filter((z) => typeof z === "string" && z !== "")
   const hits = []
   for (const f of files) {

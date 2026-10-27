@@ -48,9 +48,9 @@ function refuse(action, reason) {
 }
 
 /** `target` 解析（先例 `eng.mjs` 的 `resolveEngineeringManifest` 缺省会话锚 ∥ `git.mjs` 的 `resolveBaseDir` 相对形归一）：缺省 = 会话锚
- *  （`ctx.agent.cwd ?? ctx.cwd ?? process.cwd()`）；显式相对形按会话锚归一（绝对形原样）。 */
+ *  （`ctx.agent.cwd ?? ctx.cwd`）；显式相对形按会话锚归一（绝对形原样）。 */
 function resolveTarget(args, ctx) {
-  const base = ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+  const base = ctx?.agent?.cwd ?? ctx?.cwd
   return args?.target ? resolve(base, String(args.target)) : resolve(base)
 }
 

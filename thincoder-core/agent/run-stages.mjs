@@ -1,7 +1,8 @@
 /**
  * run-stages.mjs — runAgent 主循环的阶段函数族（CLI，2026-09-05 实践轮：agent.mjs
  * runAgent 383 ≥300 按骨干—细节两层提取——VS Code 端同构文件（双端 parity——拆分
- * 两端同步））。本文件承载：回合压缩检查（runCompactionCheck）、回合注入组
+ * 两端同步））。本文件承载：回合压缩检查（runCompactionCheck）、越窗守卫 / 自适应共用原子
+ * （enforceContextFit——§6.17 守卫与 §6.17.1 链三共用一个压缩原子）、回合注入组
  * （injectTurnReminders——plan cadence + eng 状态）、回合收尾（finalizeAgentTurn——
  * consult 清理/async 池分流/guard 继承）与其收集器（collectSettledAsync——自
  * agent.mjs 迁入，agent.mjs 内无其他引用）。verbatim 迁移 + 签名化，语义零变。
@@ -73,6 +74,35 @@ export function injectResponseReminders(agent, response) {
   }
 }
 
+// ─── 压缩记账三件（§6.17 阈值面 ∥ 守卫面 ∥ §6.17.1 链三自适应面共用同一段，零复制）───
+
+/** 压缩成功记账：失败计数清零 / 计划提醒 cadence 复位 / 停滞检测计数复位 / 完成事件 / AUTO 提醒重注入。 */
+function bookkeepCompaction(agent, ctx) {
+  agent._compressFailures = 0
+  agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
+  ctx.recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
+  // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode, tokensFreed, elapsedMs } —
+  // the TUI panel renders it; callers that ignore the arg keep prior onCompress semantics.
+  ctx.callbacks?.onCompress?.(agent._lastCompressInfo ?? {})
+  ensureAutoReminder(agent)
+}
+
+/** 压缩失败记账——AbortError 必须透传（用户中止不得被当成压缩失败吞掉）。 */
+function noteCompressFailure(agent, ctx, compressError) {
+  if (compressError?.name === "AbortError" || ctx.signal?.aborted) throw compressError
+  agent._compressFailures = (agent._compressFailures ?? 0) + 1
+  // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
+  // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
+  ctx.callbacks?.onCompressFail?.(compressError)
+}
+
+/** 三连败降级（确定性截断——零网络，§6.5 D6）。 */
+function degradeIfCompressExhausted(agent, ctx) {
+  if (agent._compressFailures < COMPRESS_FAILURE_LIMIT) return
+  agent._compressFailures = 0
+  if (compressFallback(agent)) ctx.callbacks?.onCompress?.(agent._lastCompressInfo ?? {})
+}
+
 /**
  * 回合压缩检查（2026-09-05 实践轮——自 runAgent 主循环提取）：仅安全点（history 以
  * 完整交换结尾——user/tool 位）。成功：失败计数清零/计划提醒 cadence 复位/停滞检测
@@ -82,35 +112,12 @@ export function injectResponseReminders(agent, response) {
  * 模型主动压缩（`context` 工具）由本点消费（§6.16.2——取用即清槽；no-op 与失败各落一行注记）。
  */
 export async function runCompactionCheck(agent, ctx) {
-  const { threshold, callbacks, compactionOverhead, signal, recentCallSigs } = ctx
+  const { threshold, callbacks, compactionOverhead, signal } = ctx
   // F-CC2（CONTEXT-COMPACTION.md §6.16.2）：模型主动压缩（`context` 工具）在**本安全点**消费——
   // 取用即清槽（失败不重放；重发由模型再调）；`force` 只跳过阈值早退（模型判定优先于阈值），
   // 其余全同（同 splitHistory / 同尾部预算 / 同摘要链 / 同回注 / 同基线失效）。
   const pending = agent._pendingCompact
   agent._pendingCompact = null
-  // 成功记账（§6.17：成功记账段抽局部——阈值面与守卫面共用同一段，零复制）
-  const bookkeepCompaction = () => {
-    agent._compressFailures = 0
-    agent._planReminderAtLen = 0 // After compression history shrinks, reset cadence so reminders resume
-    recentCallSigs.length = 0 // After compression history is rebuilt, reset stall detection counter
-    // Completion info (CONTEXT-COMPACTION §7 D-C2): { mode, tokensFreed, elapsedMs } —
-    // the TUI panel renders it; callers that ignore the arg keep prior onCompress semantics.
-    callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-    ensureAutoReminder(agent)
-  }
-  // 压缩失败记账（两处共用：下面的阈值面 catch ∥ 下面的守卫面强制压缩）——AbortError 必须透传。
-  const noteCompressFailure = (compressError) => {
-    if (compressError?.name === "AbortError" || signal?.aborted) throw compressError
-    agent._compressFailures = (agent._compressFailures ?? 0) + 1
-    // Q3 (CONTEXT-COMPACTION §7 D-C1): a failed compression is surfaced to the panel;
-    // COMPRESS_FAILURE_LIMIT consecutive failures still degrade to compressFallback.
-    callbacks?.onCompressFail?.(compressError)
-  }
-  const degradeIfCompressExhausted = () => {
-    if (agent._compressFailures < COMPRESS_FAILURE_LIMIT) return
-    agent._compressFailures = 0
-    if (compressFallback(agent)) callbacks.onCompress?.(agent._lastCompressInfo ?? {})
-  }
   try {
     let compacted = await compressIfNeeded(
       agent, threshold, callbacks,
@@ -123,43 +130,57 @@ export async function runCompactionCheck(agent, ctx) {
       agent.history.push({ role: "user", content: compactNoopNote(), transient: true })
       compacted = await compressIfNeeded(agent, threshold, callbacks, compactionOverhead, signal)
     }
-    if (compacted) bookkeepCompaction()
+    if (compacted) bookkeepCompaction(agent, ctx)
   } catch (compressError) {
-    noteCompressFailure(compressError)
+    noteCompressFailure(agent, ctx, compressError)
     if (pending) {
       // 失败注记（§6.16.2 回执面②）：模型面告知缺口——既有失败链 / 面板面零改，仅补一行机器注记
       const { compactFailureNote } = await import("../agent-tools/context.mjs")
       agent.history.push({ role: "user", content: compactFailureNote(errText(compressError), agent._compressFailures), transient: true })
     }
-    degradeIfCompressExhausted()
+    degradeIfCompressExhausted(agent, ctx)
   }
 
   // 溢出守卫（CONTEXT-COMPACTION.md §6.17 / D-CC32——兜底，非主修；本缝 = catch 闭合后、返回前）。
+  // 判据 / 强压 / 再判 / 抛三实数 全住 `enforceContextFit`——与 §6.17.1 链三的自适应面**同一个原子**（零复制）。
+  await enforceContextFit(agent, ctx)
+}
+
+/**
+ * 越窗守卫 / 自适应共用原子（CONTEXT-COMPACTION.md §6.17 守卫 ∥ §6.17.1 链三自适应）：
+ * `requestBudget` 判 → 强压一次（`force`）→ 再判 → 抛三实数（不截断、不静默削输出）。
+ *
+ * `opts.forceCompact`（链三面）：**跳过前置估算判据**、直接强压——服务端已判越窗时估算准不准不再作门
+ * （本批要治的就是估算低估：死锁现场估 491K < limit 606,784，按估算开门会压 0 次、重试同一请求再吃 400）。
+ * 压后仍超的再判两面同判（压后仍越线说明压缩解不了，再压只是重复付费）。
+ * 返回是否走到了再判通过（守卫面估算未越线 ⇒ false、零动作；压后仍超⇒抛，不到达返回值）。
+ */
+export async function enforceContextFit(agent, ctx, { forceCompact = false } = {}) {
+  const { threshold, callbacks, compactionOverhead, signal } = ctx
   // 判据 = prompt 估算 > `budget.limit`（**无档次门**——absent 档 limit 取地板 max(window − reserve, threshold)，
   // 恒为正数、恒可判）。**判据不用 maxTokens**：未发时为 undefined ⇒ NaN ⇒ 守卫静默失效（§6.17）。
-  // 真 ⇒ 以 force 强制压缩一次（先压再判）；再估仍超 ⇒ 抛三实数、回合请求零发。不截断、不静默削输出。
   const budget = requestBudget(agent.provider)
   let usage = contextUsage(agent, compactionOverhead)
-  if (usage.total > budget.limit) {
-    // 强压一次：失败走与阈值面同一条记账 / 降级链（不把摘要错误当回合错误直抛——
-    // 记账后仍按「压后仍超」判：降级截断可能已把上下文压到线下）。
-    try {
-      const compacted = await compressIfNeeded(
-        agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
-      )
-      if (compacted) bookkeepCompaction()
-    } catch (compressError) {
-      noteCompressFailure(compressError)
-      degradeIfCompressExhausted()
-    }
-    usage = contextUsage(agent, compactionOverhead)
-    if (usage.total > budget.limit) {
-      const remedy = budget.limit < 0
-        ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
-        : "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
-      throw contextOverflowError(agent.provider, usage.total, budget, remedy)
-    }
+  if (!forceCompact && !(usage.total > budget.limit)) return false
+  // 强压一次：失败走与阈值面同一条记账 / 降级链（不把摘要错误当回合错误直抛——
+  // 记账后仍按「压后仍超」判：降级截断可能已把上下文压到线下）。
+  try {
+    const compacted = await compressIfNeeded(
+      agent, threshold, callbacks, { ...compactionOverhead, force: true }, signal,
+    )
+    if (compacted) bookkeepCompaction(agent, ctx)
+  } catch (compressError) {
+    noteCompressFailure(agent, ctx, compressError)
+    degradeIfCompressExhausted(agent, ctx)
   }
+  usage = contextUsage(agent, compactionOverhead)
+  if (usage.total > budget.limit) {
+    const remedy = budget.limit < 0
+      ? `max_tokens ${budget.maxTokens} alone exceeds the window — lower provider.maxTokens or switch to a larger-window model`
+      : "forced compaction ran but the prompt still exceeds the window; reduce the conversation (/compact or prune) before retrying"
+    throw contextOverflowError(agent.provider, usage.total, budget, remedy)
+  }
+  return true
 }
 
 /**

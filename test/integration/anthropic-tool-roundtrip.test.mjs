@@ -1,4 +1,4 @@
-/**
+﻿/**
  * anthropic-tool-roundtrip.test.mjs — 集成场景 G1–G3（设计：`docs/core/design/PROVIDER.md` §6.28）：
  * 配了 Anthropic 原生通道的会话，用过工具之后还能继续对话。
  * 生产现象（GitHub #20 ∥ Gitee IKKJEE）：带工具的多轮对话，第二轮必被上游
@@ -8,8 +8,8 @@
  * 「会话流」「多轮」「进程重开 + 历史从盘上回放」三项的用户入口（`chat` 一次性且不落会话，
  * TUI 需要真 TTY）；本档扮演 ACP 客户端（NDJSON JSON-RPC）。
  *
- * 模型侧 = 本地脚本化假 Anthropic 端点（零外网、零付费端点）：按 Messages API 回
- * 「tool_use 回合」与「文本回合」两态；文本由本进程实际收到的 tool_result 拼成，
+ * 模型侧 = 本地脚本化假 Anthropic 端点（零外网、零付费端点）：按 Messages API 回**三态**——
+ * 「tool_use 回合」·「文本回合」·「摘要回合」（压缩链路，按请求内容认，不按请求序号）；文本由本进程实际收到的 tool_result 拼成，
  * 因此「模型看见过工具结果」「历史是否回放」都落在回复文本里——断言不必窥探内部形态。
  *
  * 可证伪点（G1–G3 同一判据）：`messages[].role` 只收 user / assistant——出现其它 role
@@ -27,6 +27,9 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
+
+import { estimateText } from "../../thincoder-core/provider/rate.mjs"
+import { requestBudget } from "../../thincoder-core/config.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const CLI_ENTRY = join(HERE, "..", "..", "thincoder-cli", "bin", "thincoder.mjs")
@@ -90,9 +93,26 @@ const textEvents = (text) => [
 ]
 
 /**
+ * 摘要请求的识别锚 = `SUMMARIZE_PROMPT` 首句（`thincoder-core/context.mjs:20` 起那段指令的唯一开局句）。
+ * 压缩摘要在压缩前不存在，只能按**请求内容**认——不用序号：压缩随时可能插在某次对话之前，
+ * 「第 1 个请求必是对话」这一序号假设曾把产品的红伪装成夹具的红（`#1833` 失真链）。
+ */
+const SUMMARY_SIG = "The conversation above is our work log so far"
+
+/** 末条消息含 `SUMMARIZE_PROMPT` 首句 ⇒ 摘要请求（`content` 可能是字符串，也可能是 Anthropic 的 text 块数组）。 */
+const isSummaryRequest = (messages) => {
+  const last = messages.at(-1)
+  const text = typeof last?.content === "string"
+    ? last.content
+    : blocksOf(last).filter((b) => b?.type === "text").map((b) => String(b.text)).join("\n")
+  return text.includes(SUMMARY_SIG)
+}
+
+/**
  * 起本地假 Anthropic 端点，返回 `{ port, requests, rejections, close }`。
- * `calls` = **首个模型请求**派发的工具调用；其后一律文本回合（一回合一个请求，不重派）。
- * 回合上限是有意为之：若转换层退化成「角色合法、但 assistant 的 tool_use 没了」，这里直接回文本，
+ * `calls` = **首个对话请求**派发的工具调用；其余对话请求一律文本回合（一回合一个请求，不重派），
+ * 摘要请求（`summary: true`）一律回一段摘要文本。
+ * 对话回合上限是有意为之：若转换层退化成「角色合法、但 assistant 的 tool_use 没了」，这里直接回文本，
  * 回复里没有工具结果，断言当场给出可读失败，而不是反复派工具直到超时。
  */
 function fakeAnthropic({ calls = [] } = {}) {
@@ -108,8 +128,10 @@ function fakeAnthropic({ calls = [] } = {}) {
       } catch {
         return jsonReply(res, 400, { type: "error", error: { type: "invalid_request_error", message: "request body is not valid JSON" } })
       }
-      requests.push({ url: req.url, body })
       const messages = Array.isArray(body.messages) ? body.messages : []
+      // 分类先于内容应答：摘要请求 = 压缩链路，不是对话回合（`#1833`：按内容认，不按序号）
+      const record = { url: req.url, body, summary: isSummaryRequest(messages) }
+      requests.push(record)
       // 上游语义：messages 只收 user / assistant 两种 role（`role:"tool"` 在此被拒）
       const offending = messages.find((m) => m?.role !== "user" && m?.role !== "assistant")
       if (offending) {
@@ -117,7 +139,9 @@ function fakeAnthropic({ calls = [] } = {}) {
         rejections.push(message)
         return jsonReply(res, 400, { type: "error", error: { type: "invalid_request_error", message } })
       }
-      if (calls.length > 0 && requests.length === 1) return sseReply(res, toolUseEvents(calls))
+      if (record.summary) return sseReply(res, textEvents("SUMMARY: earlier work compressed."))
+      const dialogueRequests = requests.filter((r) => !r.summary).length
+      if (calls.length > 0 && dialogueRequests === 1) return sseReply(res, toolUseEvents(calls))
       return sseReply(res, textEvents(replyText(messages, toolResultTexts(messages))))
     })
   })
@@ -287,6 +311,19 @@ async function say(cli, sessionId, text) {
 
 // ---------- G1 正常 / G2 边界 / G3 边界 ----------
 
+/**
+ * 夹具前提（不是被测行为）：本档这一配置的**固定开销估算越过自动压缩线**——§6.17 的可达性门要挡的正是这一格。
+ * 不锁这条，下面那句「零摘要请求」在系统提示 / 工具 schema 缩水到线下后会由 `tokens <= threshold` 早退保持绿，
+ * 等于什么都没测到（假绿）。估算法与 `contextUsage` 同式：`system` ∥ `tools` 各按 `estimateText` 估。
+ */
+function assertFixedOverheadOverLine(endpoint) {
+  const turn = endpoint.requests.find((r) => !r.summary)
+  assert.ok(turn, "至少一发对话请求（本档的会话确实发过话）")
+  const fixed = estimateText(String(turn.body.system ?? "")) + estimateText(JSON.stringify(turn.body.tools ?? []))
+  const threshold = requestBudget({ model: "claude-fake-1" }).threshold
+  assert.ok(fixed > threshold, `夹具前提：固定开销估算 ${fixed} 应越过压缩线 ${threshold}`)
+}
+
 test('1-1 正常：一次工具调用后继续对话 —— 会话流有调用与结果，模型回复引用结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
   const s = await scene(t, {
     files: { "note.txt": "PINEAPPLE-42\n" },
@@ -307,6 +344,8 @@ test('1-1 正常：一次工具调用后继续对话 —— 会话流有调用�
   assert.match(reply, /PINEAPPLE-42/, `模型下段回复应引用工具结果，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length, 0, `上游无 role 类 400（本档证伪点）：${s.endpoint.rejections.join("｜")}`)
   assert.ok(s.endpoint.requests.length >= 2, "工具回合之后还有下一回合（会话确实继续了）")
+  assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
+  assertFixedOverheadOverLine(s.endpoint)
 })
 
 test('1-2 边界：一轮两个工具调用后继续对话 —— 两个结果都回到模型，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
@@ -331,6 +370,8 @@ test('1-2 边界：一轮两个工具调用后继续对话 —— 两个结果�
   assert.match(reply, /BETA-2/, `模型回复应引用第二个结果，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length, 0, `上游无 role 类 400（本档证伪点）：${s.endpoint.rejections.join("｜")}`)
   assert.ok(s.endpoint.requests.length >= 2, "多工具回合之后还有下一回合（会话确实继续了）")
+  assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
+  assertFixedOverheadOverLine(s.endpoint)
 })
 
 test('1-3 边界：关进程重开同一会话，历史从盘回放后继续 —— 回复引用上一程的工具结果，无 400', { timeout: SCENE_TIMEOUT_MS }, async (t) => {
@@ -361,4 +402,6 @@ test('1-3 边界：关进程重开同一会话，历史从盘回放后继续 —
   assert.match(reply, /what did the file say\?/, `模型应看见本程的新问题，实际：${reply}`)
   assert.equal(s.endpoint.rejections.length - rejectionsBefore, 0, `第二程无 role 类 400：${s.endpoint.rejections.slice(rejectionsBefore).join("｜")}`)
   assert.ok(s.endpoint.requests.length > requestsBefore, "第二程确实向模型发了请求（回放的历史 + 新问题）")
+  assert.equal(s.endpoint.requests.filter((r) => r.summary).length, 0, "两程零摘要请求——固定开销吃掉压缩线时不白付一次压缩（§6.17 可达性门）")
+  assertFixedOverheadOverLine(s.endpoint)
 })

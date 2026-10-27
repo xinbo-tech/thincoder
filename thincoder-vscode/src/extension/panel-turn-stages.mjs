@@ -185,7 +185,7 @@ export async function enterSuspensionTurn(panel, { turnSlot, distillSlot, histor
     const enter = releaseWindow && panel._panel
       && poolLive(history) && !panel._abortController?.signal.aborted
     if (enter) {
-      const cwd = _cwd() || process.cwd()
+      const cwd = _cwd()
       const runTurn = async ({ text: tText, modelOverride: tModel, reasoning: tReasoning, providerName: tProvider, images: tImages, autoTurn: tAuto, upstreamTurn: tUp, timerTurn: tTimer, fromBusyQueue: tFromQueue, visionReader: tVisionReader }) => {
         // C-B2-6 细则⑥（fix 轮 2026-09-22）：入槽项（来源标记 `fromBusyQueue`）送达前同过 F-1
         // 降级判定——纯挂起既有路径（无标记）零改；窗内 `_turnState` = susp（判决函数静挂面
@@ -241,7 +241,7 @@ async function deliverBusyQueued(panel, busyQueued, runChat) {
   const { item, merged } = takeQueuedBatchItem(busyQueued)
   if (!item) return // 空队防御支（首动作恒可消费——环守卫在先）——零动作
   pushBusyQueued(panel, merged ?? undefined) // C-B2-6 细则①：消费即清（webview 镜像 + 标记面）
-  const d = await downgradeNonVisionImages(panel, { text: item.text, images: item.images, providerName: item.providerName, modelOverride: item.modelOverride, cwd: _cwd() || process.cwd(), visionReader: item.visionReader })
+  const d = await downgradeNonVisionImages(panel, { text: item.text, images: item.images, providerName: item.providerName, modelOverride: item.modelOverride, cwd: _cwd(), visionReader: item.visionReader })
   await runChat(panel, { text: d.text, modelOverride: item.modelOverride, reasoning: item.reasoning, providerName: item.providerName, images: d.images })
   if (d.visionAbort?.signal.aborted) panel._abortRequested = true // A12（随迁）：窗内被 Stop ⇒ 置闩
 }

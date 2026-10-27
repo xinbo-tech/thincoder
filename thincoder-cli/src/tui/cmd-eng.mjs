@@ -42,7 +42,7 @@ export async function handleEngCommand(ctx) {
   // （模式未翻 / token 未清 / `_advisorRuns` 未重置 / 提醒未入列 / 槽未写）。
   // 准 ⇒ 缺档格就地建档（writer:'main'）+ `agent.manifest` ← 结果（相位行当回合起活）。
   if (!agent.config.agent.engineering) {
-    const r = resolveEngineeringManifest(agent.cwd ?? process.cwd(), { writer: "main" })
+    const r = resolveEngineeringManifest(agent.cwd, { writer: "main" })
     if (!r.ok && r.code !== "workspace") {
       pushLine(`Engineering mode not enabled — ${r.message} (mode unchanged)`, C.warn)
       return

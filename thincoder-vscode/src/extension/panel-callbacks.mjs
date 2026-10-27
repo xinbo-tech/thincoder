@@ -11,6 +11,8 @@
  */
 
 import { ctxUsageForHistory } from "../specs.mjs"
+// 取比单源：该面板 agent 的估算校准比（§6.17——`tokenRatioOf` 是 `_tokRatio` 的唯一读出点）
+import { tokenRatioOf } from "@thincoder/core/token-window.mjs"
 // X6（显示面消差批 §2.2）：sync 完成注记锚（turn-cap / stopped-by-user）——核零依赖叶
 // （`child-marks.mjs`；静态引入安全：该叶零 import ⇒ 端壳静态闭包不达 node:sqlite——W8 契约②）。
 import { TURN_CAP_MARK, STOPPED_MARK } from "@thincoder/core/agent/child-marks.mjs"
@@ -226,9 +228,10 @@ export function buildPanelCallbacks(panel, deps) {
       totalUsage.prompt_cache_hit_tokens += u.prompt_cache_hit_tokens ?? 0
       totalUsage.prompt_cache_miss_tokens += u.prompt_cache_miss_tokens ?? 0
       totalUsage.reasoning_tokens += u.reasoning_tokens ?? 0 // C-12#6：✦ 段（transports 映射补全）
-      // M2（§2.1）：分子 = 核 `estimateTokens(history)`（与 CLI 状态行同源同式——`inputBoxStyle`）。
+      // M2（§2.1）：两值 = 核 `historyReading` 的一次读数（与 CLI 状态行同源——`inputBoxStyle`）。
       // I16a（#677）：`ctxTokens` 同点产出——webview `context X% Yk` 尾串源（两值单次估算）。
-      const { tokens: ctxTokens, pct: ctxPct } = ctxUsageForHistory(history, p)
+      // 第三参 = 该面板 agent 的校准比（`panel._agent` 未绑定 ⇒ `tokenRatioOf` 回 1 = 未校准档——显式取比，不靠默认值蒙过）。
+      const { tokens: ctxTokens, pct: ctxPct } = ctxUsageForHistory(history, p, tokenRatioOf(panel._agent))
       // §6.30.11（协议 §3.2 行 18）：timer 计数随载荷（webview `⏰N` 段源——核 `_pendingTimers` 活读投影）
       const timers = panel._agent?._pendingTimers ?? []
       const expired = timers.filter((x) => x.expiresAt <= Date.now()).length

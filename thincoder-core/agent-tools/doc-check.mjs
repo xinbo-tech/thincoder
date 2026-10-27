@@ -31,7 +31,7 @@ export const docCheckTool = {
   },
   readonly: true,
   execute(args, ctx) {
-    const anchor = ctx?.agent?.cwd ?? ctx?.cwd ?? process.cwd()
+    const anchor = ctx?.agent?.cwd ?? ctx?.cwd
     const target = args?.target ? resolve(anchor, String(args.target)) : resolve(anchor)
     const mode = args?.mode === undefined ? "report" : String(args.mode)
     if (mode !== "report" && mode !== "gate") return `doc_check: unknown mode "${mode}" — use "report" (a report over the documents you list) or "gate" (this round's documents).`

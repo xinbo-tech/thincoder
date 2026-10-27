@@ -41,32 +41,11 @@ export const CODE_EXTS = new Set([
 // Doc index: markdown / plain text (separate index makes it easier for LLM to distinguish "design specs" from "existing code")
 // Same declaration rule as CODE_EXTS (index.docExtensions).
 export const DOC_EXTS = new Set([".md", ".mdc", ".mdx", ".txt", ".rst", ".adoc", ".org", ".wiki", ".tex"])
-// Directory names skipped during code/doc indexing — family split (§6.14 面④ · 台账 #1081): junk/product
-// family (`SKIP_DIRS_FOLD`) folds on win32 (that filesystem is case-insensitive — `Node_Modules` must
-// still prune); position family (user/system dirs) stays exact on every platform; POSIX is exact
-// throughout. `.git` is covered by the dot-segment rule (file-walk.mjs) — it belongs to no family.
-export const SKIP_DIRS = new Set([
-  "node_modules", ".git", "dist", "build", ".turbo", "coverage",
-  "__pycache__", ".venv", "venv", "target", ".next", ".nuxt", ".svelte-kit",
-  // Windows user profile directories (never contain project code)
-  "AppData", "Application Data", "Desktop", "Documents", "Downloads",
-  "Music", "Pictures", "Videos", "OneDrive", "Contacts", "Favorites",
-  "Links", "Saved Games", "Searches",
-  // User-home common items (Library = macOS user dir; go = Go workspace) — basename match at any depth (false-prune face accepted)
-  "Library", "go",
-  // Other common non-code directories
-  "Program Files", "Program Files (x86)", "Windows", "$Recycle.Bin",
-  // Generic ecosystem names (§6.14 面④ — exact basename, any depth; `bin` deliberately NOT included)
-  "vendor", "Pods", "bower_components", "third_party", "obj", "out",
-])
-/** Junk/product family full list (the win32 fold subset — matched only via `isSkippedRelPath`). */
-export const SKIP_DIRS_FOLD = new Set([
-  "node_modules", "dist", "build", ".turbo", "coverage",
-  "__pycache__", ".venv", "venv", "target", ".next", ".nuxt", ".svelte-kit",
-  "vendor", "Pods", "bower_components", "third_party", "obj", "out",
-])
-/** Directory-name prefixes (Bazel convenience dirs `bazel-<workspace>` — the workspace name rules out enumeration). */
-export const SKIP_DIR_PREFIXES = ["bazel-"]
+// 目录剪枝名单**单源外提**（2026-10-27 四份名单合一 · 零依赖叶档 `../skip-dirs.mjs`）：本档不再持
+// 副本，同名 re-export 保 `memory.mjs:7` 的导出面逐字零变。名单 = 42 项精确集 + win32 折叠族（18）
+// + 前缀族（`bazel-`）；判定形状（折叠 / 前缀 / 点段）仍在本包 `file-walk.mjs`（只合名单，不合判定）。
+import { SKIP_DIRS, SKIP_DIRS_FOLD, SKIP_DIR_PREFIXES } from "../skip-dirs.mjs"
+export { SKIP_DIRS, SKIP_DIRS_FOLD, SKIP_DIR_PREFIXES } from "../skip-dirs.mjs"
 // Files larger than these limits are skipped during bulk indexing
 // (minified bundles, test fixtures, generated code, etc.)
 export const MAX_CODE_FILE_BYTES = 1024 * 1024   // 1 MB
