@@ -141,7 +141,7 @@ export async function chat(provider, { messages, tools, onToken, onReasoning, on
     { signal, onWait, buildMessage: (status, text) => `Gemini API error ${status}: ${text}` },
   )
 
-  const result = await parseGeminiStream(response, { onToken, onReasoning, signal, idleMs: effectiveBodyIdleMs(provider) })
+  const result = await parseGeminiStream(response, { onToken, onReasoning, signal, idleMs: effectiveBodyIdleMs(provider), firstChunkMs: effectiveFetchTimeoutMs(provider) })
   recordRate(provider, estimated, result.usage)
 
   const usage = result.usage
@@ -175,7 +175,7 @@ function mapGeminiFinishReason(reason) {
  * Parse Gemini SSE stream.
  * Format: data: {...}\n\n (each line is a complete JSON object)
  */
-async function parseGeminiStream(response, { onToken, onReasoning, signal, idleMs = DEFAULT_BODY_IDLE_MS }) {
+export async function parseGeminiStream(response, { onToken, onReasoning, signal, idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs }) {
   const result = { content: "", reasoning: "", toolCalls: [], usage: null, finishReason: null }
   const decoder = new TextDecoder()
   let buffer = ""
@@ -222,21 +222,31 @@ async function parseGeminiStream(response, { onToken, onReasoning, signal, idleM
 
   if (!response.body) throw new Error("No stream response body")
   // 2026-09-01 读侧 idle 超时（同 sse.mjs）：body 有数据流动即不超时；连续 `idleMs` 无新 chunk 判死
+  // （首 chunk 之前改用首 chunk 窗，见下）
+  // 首 chunk 两态臂（TIMEOUT-DIGEST.md §2.4）：首个 body 字节前用 `firstChunkMs`，之后每次重挂用 `idleMs`
   let idleTimer = null
   let idleError = null
+  let gotFirstChunk = false
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
+    // 同 sse.mjs：首挂窗缺省取 `idleMs`，相位文案按态取（未传者仍报既有 `google-sse-idle`）
+    const firstArm = !gotFirstChunk
+    const ms = firstArm ? (firstChunkMs ?? idleMs) : idleMs
+    const firstChunkPhase = firstArm && firstChunkMs != null
     idleTimer = setTimeout(() => {
       // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道；
-      // proxy 形回落 destroyBody（原契约）。相位串 = 本分支专属 google-sse-idle。
-      idleError = timeoutError(`SSE idle timeout: no data for ${idleMs / 1000}s`, "provider", "google-sse-idle")
+      // proxy 形回落 destroyBody（原契约）。
+      idleError = firstChunkPhase
+        ? timeoutError(`SSE first-chunk timeout: no data for ${ms / 1000}s`, "provider", "google-sse-first-chunk")
+        : timeoutError(`SSE idle timeout: no data for ${ms / 1000}s`, "provider", "google-sse-idle")
       try { terminateBody(response, idleError) } catch { /* already gone */ }
-    }, idleMs)
+    }, ms)
     idleTimer.unref?.()
   }
   armIdle()
   try {
     for await (const chunk of response.body) {
+      gotFirstChunk = true
       armIdle()
       if (signal?.aborted) {
         throw abortError(signal, "provider", "transport-google")

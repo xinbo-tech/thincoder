@@ -90,7 +90,7 @@ function finalizeToolCalls(result) {
   }
 }
 
-export async function readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns: sharedFired, idleMs = DEFAULT_BODY_IDLE_MS }) {
+export async function readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns: sharedFired, idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs }) {
   // Early intercept: non-SSE responses — either error bodies (HTTP >= 400) or
   // valid single-chunk JSON completions (some APIs return JSON despite stream:true).
   const contentType = response.headers.get("content-type") || ""
@@ -198,23 +198,34 @@ export async function readSSE(response, { onToken, onReasoning, rules, signal, f
   // 2026-09-01 读侧 idle 超时（根因修复）：原实现靠 fetch 层的 600s 绝对墙钟兜底——长上下文子代理
   // 单次生成（或上游排队）超 10 分钟即被腰斩（"The operation was aborted due to timeout" 直透）。
   // 现改为：读侧空闲超时——body 只要有数据流动就永不超时，连续 `idleMs` 无新 chunk 才判死
-  // （`idleMs` 由 provider/core.mjs 的 effectiveBodyIdleMs 算好传入，缺省 DEFAULT_BODY_IDLE_MS）。
+  // （首 chunk 之前改用首 chunk 窗，见下；`idleMs` 由 provider/core.mjs 的 effectiveBodyIdleMs 算好传入）。
   // 直连 fetch 与 proxyFetch 统一走这里（proxy 的 _bodyIdleMs 语义与之等价，双保险）。
   let idleTimer = null
   let idleError = null
+  // 首 chunk 两态臂（TIMEOUT-DIGEST.md §2.4）：首次挂用 `firstChunkMs`，收到第一个 body 字节后
+  // 每次重挂改用 `idleMs`——翻转不可逆（流中途不会退回「等首 chunk」态）。
+  let gotFirstChunk = false
   const armIdle = () => {
     if (idleTimer) clearTimeout(idleTimer)
+    // 窗与文案同源（`N` = 该相位实际生效的窗值）：首挂窗缺省取 `idleMs`（入参缺省 = 老行为），
+    // 相位文案按态取——真传了首 chunk 窗才是分窗使用者（未传者仍报既有 `sse-idle`，逐字零变）。
+    const firstArm = !gotFirstChunk
+    const ms = firstArm ? (firstChunkMs ?? idleMs) : idleMs
+    const firstChunkPhase = firstArm && firstChunkMs != null
     idleTimer = setTimeout(() => {
       // #878：断流单点分流——直连 fetch（web 流）走 `IDLE_ABORT` 内部 abort 通道，
       // proxy 形回落 destroyBody（原契约）。
-      idleError = timeoutError(`SSE idle timeout: no data for ${idleMs / 1000}s`, "provider", "sse-idle")
+      idleError = firstChunkPhase
+        ? timeoutError(`SSE first-chunk timeout: no data for ${ms / 1000}s`, "provider", "sse-first-chunk")
+        : timeoutError(`SSE idle timeout: no data for ${ms / 1000}s`, "provider", "sse-idle")
       try { terminateBody(response, idleError) } catch { /* already gone */ }
-    }, idleMs)
+    }, ms)
     idleTimer.unref?.()
   }
   armIdle()
   try {
     for await (const chunk of response.body) {
+      gotFirstChunk = true
       armIdle()
       if (signal?.aborted) {
         throw abortError(signal, "provider", "stream-read")

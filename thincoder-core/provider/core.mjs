@@ -262,7 +262,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
   await rateGate(provider, estimated, onWait, signal)
 
   const response = await requestWithRetry(provider, body, signal, onWait)
-  const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns, idleMs: effectiveBodyIdleMs(provider) })
+  const result = await readSSE(response, { onToken, onReasoning, rules, signal, firedPatterns, idleMs: effectiveBodyIdleMs(provider), firstChunkMs: effectiveFetchTimeoutMs(provider) })
   // §6.17 自校准采样：同一个 estPrompt 随 result 返回（den 与净判同口径）
   result.estimated = estPrompt
   recordRate(provider, estimated, result.usage)
@@ -282,7 +282,7 @@ async function chatImpl(provider, { messages, tools, onToken, onReasoning, onWai
       await sleepInterruptible(3000, signal)
     }
     const retryResponse = await requestWithRetry(provider, body, signal, onWait)
-    const retryResult = await readSSE(retryResponse, { onToken, onReasoning, idleMs: effectiveBodyIdleMs(provider) })
+    const retryResult = await readSSE(retryResponse, { onToken, onReasoning, idleMs: effectiveBodyIdleMs(provider), firstChunkMs: effectiveFetchTimeoutMs(provider) })
     recordRate(provider, estimated, retryResult.usage)
     if (retryResult.finishReason !== "insufficient_system_resource") {
       // Merge any partial content from the failed attempt (streaming already showed it)
