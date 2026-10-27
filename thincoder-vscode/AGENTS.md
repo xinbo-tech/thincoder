@@ -2,7 +2,9 @@
 
 ## Project Overview
 
-VS Code extension wrapping the ThinCoder AI coding agent. Provides a side-panel chat UI with full agent capabilities — multi-turn tool-calling loop, subagents, plan mode, task tracking — all inside the editor. Shared mechanisms live in the core package `@thincoder/core` (single source — the same one the CLI consumes); this tree keeps the VS Code shell / assembly face.
+VS Code extension wrapping the ThinCoder AI coding agent. Provides a side-panel chat UI with full agent capabilities — multi-turn tool-calling loop, subagents, plan mode, task tracking — all inside the editor.
+
+Shared mechanisms live in the core package `@thincoder/core` (single source — the same one the CLI consumes); this tree keeps the VS Code shell / assembly face.
 
 Design docs in `docs/_archive/design/` (migration-period reference — retained, not maintained). The authoritative Chinese design docs for the shared core live at the repo root `docs/core/design/`.
 
@@ -12,7 +14,7 @@ Design docs in `docs/_archive/design/` (migration-period reference — retained,
 - ESM (`.mjs`) throughout — `package.json` declares `"type": "module"`.
 - LLM calls go through native `fetch` with SSE streaming, same as thincoder core.
 - Tool implementations are adapted for VS Code context (workspace root = cwd; no directory restriction on tools since 2026-09-02 — paths resolve relative to cwd, approval gate is the guard).
-- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 16 档槽位 + `thincoder-core/tool-docs/` 24 档工具描述）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（2 锚 VSC 取值表）注入端取值。
+- **提示词面（核内唯一副本——2026-09-15 修订）**：运行期提示词/工具描述 = 核内落地（`thincoder-core/prompts/` 槽位档 + `thincoder-core/tool-docs/` 工具描述目录——两者档数按目录实读，不写死数字）——本端自持提示词 / 工具描述镜像已删（F9 零残留）；中文设计档（人读正本）= 仓根 `docs/core/design/prompts/*.md`。装配 = 核单点（`@thincoder/core/prompt-overlays.mjs`）+ 本端 `src/prompt-injections.mjs`（2 锚 VSC 取值表）注入端取值。
 
 
 ## Key Conventions
@@ -34,7 +36,7 @@ Design docs in `docs/_archive/design/` (migration-period reference — retained,
 - **Dogfooding feedback (must report)**: using thincoder to build *other* projects (e.g. thinworker) is itself a deep test of thincoder. When you find a thincoder bug, an unusable/awkward tool, or a workflow defect during such work, **report it proactively** — never silently work around it or fix-and-forget. Report routing: **functional bug / tool doesn't fit** → open a Gitee issue (thincoder or thincoder-vscode repo, label `bug`/`feature`; write mode via `thincoder-issues/check-gitee-issues.mjs`, needs `GITEE_TOKEN` env var); **doc flaw / minor polish** → thincoder `docs/TODO.md`. Fixing the bug then follows thincoder's own engineering flow (design doc → review → eng-coder → release).
 - **Checkpoint 事故恢复（快照机制）**：与 CLI 完全一致——权威文档 `../docs/core/design/CHECKPOINT.md`（本端引用不复制）。要点：① 快照时机 = git 工具破坏性操作前自动快照（checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）+ bash guard（`gitGuardSnapshot` 宽匹配，先快照后放行）+ 手动 `checkpointAction=create`；② 恢复 = `checkpointAction=list` → `cat` → `rewind checkpointId=<id> path=<文件>`；③ 快照是"操作前状态"而非"良好状态"备份（编码损坏内容 cat 作重建参照）；④ commit 成功后该项目 checkpoint 清空（commit = 新安全基线）；⑤ 存储 = `~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，盘符大写归一化——与 CLI 同目录同格式，快照跨端互通；实现 = 核 `@thincoder/core/git/checkpoint.mjs`——本端自持镜像已删，W5）；⑥ **存量 stash 快照不迁移**（不再支持工具 rewind，用户可手动 `git stash drop`）。**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底。
 
-**模块图 = 概览——权威见 [`ARCHITECTURE.md`](../docs/core/design/ARCHITECTURE.md) §3（模块地图当前态 · VSC 壳层装配地图 = §3.1）——此处只列主要项（**非穷尽**）**：
+**模块图 = 概览——权威见 `../docs/core/design/ARCHITECTURE.md` §3（模块地图当前态 · VSC 壳层装配地图 = §3.1）——此处只列主要项（**非穷尽**）**：
 
 ```
 （机制本体 = `@thincoder/core`（prompts / provider / mcp / memory / checkpoint / tools / tool-docs / traces / advisor / agent-tools 族）——本端只列端壳 / 装配面；已删的自持镜像不再列行）
@@ -94,13 +96,13 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 | extension → webview | `sessions` | `{ sessions: [{ name, title, count, active, updated }], active, ledger? }` — `ledger` = session-ledger anomaly notice (`{ refused, reason, scene }`, carried only when anomalous — `../docs/vsc/design/WEBVIEW-PROTOCOL.md` §2) |
 | extension → webview | `historyPage` | `{ messages: [{ kind, text, name?, timestamp, idx }], hasOlder, older }` — lazy history: first paint sends the LAST page (`older=false`); scroll-back pages come via `loadOlder` (`older=true`, prepended with scroll compensation). Restored assistant messages are FRAME containers: `{ kind, text, reasoning?, turnStart, tools: [{ id, name, args, result }] }` — nested finished tool cards (SESSION-RESTORE-PARITY); a `tool`-kind message is a true-orphan fallback card only |
 | webview → extension | `loadOlder` | `{ before }` — `before` = earliest rendered global idx (from `data-idx`), the older page ends just before it |
-| extension → webview | `question` | `{ question, options, promptId }` — inline question-tool card (option buttons or free-text input + submit/cancel), NOT a native VS Code popup; card carries a host-generated monotonic `promptId` — `questionResponse` matches by it (C1, WEBVIEW.md §8) |
-| webview → extension | `questionResponse` | `{ answer, promptId }` — null = cancelled → tool returns "(user cancelled)"; host resolves the queue entry BY promptId (never an unconditional head shift — C1, see WEBVIEW.md §8) |
-| extension → webview | `questionCancelled` | `{ promptId }` — an unanswered question card was released by abort/Stop; the webview removes the matching card (C1, see WEBVIEW.md §8) |
+| extension → webview | `question` | `{ question, options, promptId }` — inline question-tool card (option buttons or free-text input + submit/cancel), NOT a native VS Code popup; card carries a host-generated monotonic `promptId` — `questionResponse` matches by it (C1, `docs/vsc/design/WEBVIEW.md` §8) |
+| webview → extension | `questionResponse` | `{ answer, promptId }` — null = cancelled → tool returns "(user cancelled)"; host resolves the queue entry BY promptId (never an unconditional head shift — C1, see `docs/vsc/design/WEBVIEW.md` §8) |
+| extension → webview | `questionCancelled` | `{ promptId }` — an unanswered question card was released by abort/Stop; the webview removes the matching card (C1, see `docs/vsc/design/WEBVIEW.md` §8) |
 | extension → webview | `secretInput` | `{ payload, promptId }` — inline secret-input card（核注入缝 `ctx.onSecretInput`——凭据 / 秘密输入；设计单源 = `docs/core/design/TOOLS.md` §6.22 ⑧）：`payload = { kind, sessionId, host, user, port, fields: [{ name, masked, required, prefill }], keys: { title, prompt } }`——词面 = i18n 键（端投影走本端字典）；**值只走返回路**（卡面零日志 ∥ 零状态留存；掩码字段 `type=password` 渲染） |
 | webview → extension | `secretInputResponse` | `{ values: { <name>: <值> } \| null, promptId }` — null = cancelled（工具侧得可读句——不挂起 ∥ 不重弹）；host 按 `promptId` 精确匹配队列条目（非无条件 shift——迟到 / 错序响应不误 resolve） |
 | extension → webview | `secretInputCancelled` | `{ promptId }` — an unanswered secret-input card was released by abort/Stop; the webview removes the matching `.secret-card`（`questionCancelled` 同构） |
-| extension → webview | `turnState` | `{ state, counts? }` — single busy-state broadcast: `state` ∈ `idle`/`running`/`susp`; `counts` = `{ running, queued, pending, done }` background-pool numbers riding the susp publishes (C2 — authoritative prose in WEBVIEW.md §8, mirrored here without duplication) |
+| extension → webview | `turnState` | `{ state, counts? }` — single busy-state broadcast: `state` ∈ `idle`/`running`/`susp`; `counts` = `{ running, queued, pending, done }` background-pool numbers riding the susp publishes (C2 — authoritative prose in `docs/vsc/design/WEBVIEW.md` §8, mirrored here without duplication) |
 | extension → webview | `userMessage` | `{ text }` (history replay; also the quick-input `sendMessage` command echo) |
 | extension → webview | `clearMessages` | — |
 | webview → extension | `queuedUserMessage` | `{ text, model, reasoning, provider, images }` — busy 期排队注入上行（队列载体两态 · 容量 8；本地气泡先行 + `busyQueued` 镜像回撑） |
@@ -133,5 +135,5 @@ webview/index.html   Webview shell (referenced by ChatPanel._html())
 - **Integration set**: business-voice scenarios asserting observable results — they run inside `npm test`（`test/integration/` + 其清单 `test/integration/files.mjs`，统一 runner `test/run.mjs` 驱动）。**2026-09-28 全清重置**：集成清单现为空（`export default []`）——重建按业务设立（窗口 50–100）。
 - **Release gate**: `vscode:prepublish` = `npm run lint && npm test` (runs automatically on `vsce package` / bare `vsce publish`).
 - **Doc check (not a gate step)**: `npm run doc:check` — repo-root domain; same command as the CI docs job.
-- **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` 16 + `tool-docs/` 24 — names + sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
+- **Packaging assertion**: `postpackage` = `node scripts/check-vsix.mjs` (runs automatically after `npm run package`) — unpacks the produced vsix and asserts the embedded core + version literal equality + prompt-face completeness (`prompts/` + `tool-docs/` 全档——档数硬等 `EXPECT`（`scripts/check-vsix.mjs`）+ 档名集合 + 逐档 sha256); fail-closed (a core-less vsix exits 1, though vsce itself exits 0).
 - After modifying agent loop or tools: test with a simple file operation (read + write) and a multi-turn conversation.

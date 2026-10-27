@@ -2,12 +2,17 @@ Run a built-in documentation-discipline check on a project and report its findin
 Read-only. In the default `report` mode it is non-gating: it reports, it never blocks, never sets an exit code, and its output is never a reason to refuse a task or a user instruction.
 
 What it checks — exactly two criteria, both built into the engine:
-- Anchors — every documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
+- Anchors — a documentation pointer (a `*.md` token, optionally carrying directory segments, optionally followed by a section
   indicator `§N` / `§N.M` / `§N.M.K`) must resolve: the file must exist on disk (`档缺` when it does not), and when a section
   indicator is given the target file must carry a heading numbered with it (`节缺` when it does not). Line-number coordinates
 
   (`<doc>:12`) are not section references and are not judged as such. Files inside fenced code blocks and executable lines
   (command / pattern code spans) are skipped whole.
+- **The reach is what survives extraction, not every `.md` token.** Three name families are never extracted, so they are never
+  judged: **conventional file names** used to say which files get read (`AGENTS.md`, `SKILL.md`, `project_rules.md`, `todo.md`
+  and the rest of that closed set), **placeholder stems** (single letters plus the usual sample words — `x.md`, `file.md`,
+  `foo.md`, `example.md`), and — on the prompt face only — the seven operand names the `Operand names` block below
+  lists. A `.md` token outside those families is judged even when misspelled: a wrong name reports `档缺`, never a pass.
 
 ~~~text
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On

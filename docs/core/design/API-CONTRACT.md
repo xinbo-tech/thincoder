@@ -4584,12 +4584,11 @@
 | `VSC_PROMPT_INJECTIONS` | `thincoder-vscode/src/prompt-injections.mjs:34` | `const` |
 | `buildSummary` | `thincoder-vscode/src/repomap.mjs:129` | `fn` |
 | `repoOutlineTool` | `thincoder-vscode/src/repomap.mjs:201` | `const` |
-| `providerSpec, assistantToolCallMessage` | `thincoder-vscode/src/specs.mjs:17` | `named` |
-| `specForModel` | `thincoder-vscode/src/specs.mjs:62` | `fn` |
-| `effortEnumForModel` | `thincoder-vscode/src/specs.mjs:71` | `fn` |
-| `ctxPercentForModel` | `thincoder-vscode/src/specs.mjs:81` | `fn` |
-| `ctxUsageForHistory` | `thincoder-vscode/src/specs.mjs:94` | `fn` |
-| `ctxPercentForHistory` | `thincoder-vscode/src/specs.mjs:100` | `fn` |
+| `providerSpec, assistantToolCallMessage` | `thincoder-vscode/src/specs.mjs:16` | `named` |
+| `specForModel` | `thincoder-vscode/src/specs.mjs:61` | `fn` |
+| `effortEnumForModel` | `thincoder-vscode/src/specs.mjs:70` | `fn` |
+| `ctxUsageForHistory` | `thincoder-vscode/src/specs.mjs:83` | `fn` |
+| `ctxPercentForHistory` | `thincoder-vscode/src/specs.mjs:89` | `fn` |
 | `*` | `thincoder-vscode/src/tools.mjs:5` | `star` |
 | `codeSearchTool` | `thincoder-vscode/src/tools/code.mjs:27` | `const` |
 | `docSearchTool` | `thincoder-vscode/src/tools/code.mjs:46` | `const` |

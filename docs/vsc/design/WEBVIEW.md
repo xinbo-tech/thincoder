@@ -199,9 +199,9 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
 - **单一判据**：`context X%` 分子 = 核 `historyReading(...).tokens`（校准后的历史估算——`thincoder-core/token-window.mjs`），分母 = 同一次调用带出的 `historyReading(...).window`——**与 CLI 状态行同源**；`providerSpec(provider).context` 只在核单点出现，端侧不二次派生同一个量。
 
   - **CLI 面同源坐标**：`thincoder-cli/src/tui/render-loop.mjs:111` 缓存 → `thincoder-cli/src/tui/status-line.mjs:146`-`149` 渲染；端侧零自算式。
-  - **派生单点** = `thincoder-vscode/src/specs.mjs:94` `ctxUsageForHistory(history, provider, ratio)`——委托核 `historyReading`，三参无缺省；返 `{ tokens, pct }`，`tokens` 为 0 ⇒ `pct` = `null`。消费点 = 宿主 `panel-callbacks.mjs:234` `onUsage`。
+  - **派生单点** = `thincoder-vscode/src/specs.mjs:83` `ctxUsageForHistory(history, provider, ratio)`——委托核 `historyReading`，三参无缺省；返 `{ tokens, pct }`，`tokens` 为 0 ⇒ `pct` = `null`。消费点 = 宿主 `panel-callbacks.mjs:234` `onUsage`。
 
-  - **名字分工**：`ctxPercentForHistory`（同档 `:100`）= 该件的 `.pct` 薄转口（名面保留，非第二实现点）；`ctxPercentForModel` 保留给 provider 报告值消费面——本段不取。
+  - **名字分工**：`ctxPercentForHistory`（同档 `:89`）= 该件的 `.pct` 薄转口（名面保留，非第二实现点）。**本段不设第二个百分比算式**：provider 报告的 `prompt_tokens` 不入本段——同一会话在同标签下读到两个百分比，正是两式并存造出来的差。
   - **消差本体**：同一会话不得在同标签下读到两个百分比——单口径消的是「provider 报告值 `prompt_tokens` ∥ CLI 估算」两式并存面。
   - **刷新路径**：状态行唯一载体 = `S._lastCtxPct`（`thincoder-vscode/webview/status-bar.js`），消费面 = `usage` 消息驱动 + 1 s 拍（`running` 门内）⇒ 两路径同值；渲染句 = `context X% Yk`（`Yk` 绝对数随补——对齐 CLI 形）+ ≥80 警示色。
 - **边界**：不改 CLI；不改 ≥80 阈值；不引入核改动。
@@ -731,7 +731,7 @@ tail 行数消费缝 = 核 `configureActivityView({ tailLines })`——**缺省�
 | D-W30 | `onToolResult` 第 4 参（`_subagentKey`——核 `agent/dispatch-run.mjs:154`）**端侧消费** ⇒ sync 子代理块终态落定；仅 sync 路径带该参（`subagent.mjs:380-390`）⇒ async 零误冻 |
 | D-W31 | 心跳射程 = **池条目**；sync spawn 出生面由出生闸承担（不在心跳射程） |
 | D-W32 | 工具卡「已结算」= 卡对象 `done` 旗标（**唯一写点** = `finishToolCard` 首行；建卡 `addTool` 置 `done:false`）+ 回合尾**无条件**清扫未结算卡（`webview/streaming.js` `sweepUnsettledToolCards`——`finish()` 内 complete / aborted 两路径同规）（M1） |
-| D-W33 | `context X%` **单口径**：分子 = 核 `historyReading(history, provider, ratio).tokens`（校准后的历史估算；`ratio` = `tokenRatioOf(agent)`）∥ 分母 = 同一次调用带出的 `historyReading(...).window`（与 CLI 状态行**同源**；`providerSpec(provider).context` 只在核单点——派生单点 = `thincoder-vscode/src/specs.mjs:94` `ctxUsageForHistory`，委托核 `historyReading`；`ctxPercentForHistory`（`:100`）= 其 `.pct` 薄转口）（M2） |
+| D-W33 | `context X%` **单口径**：分子 = 核 `historyReading(history, provider, ratio).tokens`（校准后的历史估算；`ratio` = `tokenRatioOf(agent)`）∥ 分母 = 同一次调用带出的 `historyReading(...).window`（与 CLI 状态行**同源**；`providerSpec(provider).context` 只在核单点——派生单点 = `thincoder-vscode/src/specs.mjs:83` `ctxUsageForHistory`，委托核 `historyReading`；`ctxPercentForHistory`（`:89`）= 其 `.pct` 薄转口）（M2） |
 | D-W34 | 对象 chunk（核 sync 评审 `{kind, text}`）在**端边界归一**为串（`thincoder-vscode/src/extension/panel-callbacks.mjs` `onToolOutput`——**CLI 逐字先例** `thincoder-cli/src/tui/tool-events.mjs:326`）（M3） |
 | D-W35 | digest 起跑携 `tier` ∈ `ask` / `digest`（**按因两档**——判据与 CLI 同源：ask 因优先；ask 档同携 `from` / `msg` 问题摘要）；计数元素随 **`n > 0`**（两档同规；`n = 0` ⇒ 零元素、end 侧零兜底——禁幻影计数行）（M4 · F-UC8） |
 | D-W36 | advisor 卡头 / 状态行轮次标签 = **端侧单源** `advisorRoundTag`（字面 = CLI `roundTag` 逐字 `(round N · model)`；无 `model` ⇒ `(round N)`；非 advisor 零字段）（X2） |
