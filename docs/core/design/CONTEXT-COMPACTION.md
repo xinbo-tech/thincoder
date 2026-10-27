@@ -651,7 +651,7 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
   判据 = 实施后 `config.mjs` ≤ 500 软线（预测 **≈418**，余量 82 行）。两块同拆的理由：单拆归一族只剩 ≈486（余量 14 行），而 `DEFAULTS` 每加一键 +1 行、`loadConfig` 每加一归一分支 +3~5 行 ⇒ 下一批再越线。
 
 - **体量档（结构性结论，非读数副本）**：`thincoder-core/context.mjs` 拆分已落（§6.16.8）；`thincoder-core/token-window.mjs` 与 `thincoder-core/agent-tools/context.mjs` 均已落；上述各档与 `thincoder-core/agent/run-stages.mjs`（VSC 侧同构件已并入核，端侧引用同指本档）均落 ≤500 软线内；读数 = 本节上行，档位与拆分立场以本档内口径为单源。
-- **CLI 侧无独立实现面**：`context` 工具经核装配自动可见（§6.16.6 注册单源）；`tool-docs/` 档族 24 档不变。
+- **CLI 侧无独立实现面**：`context` 工具经核装配自动可见（§6.16.6 注册单源）；本批不增删 `tool-docs/` 档族（档数按目录实读——2026-10-28 = 54 档）。
 - **不触面**：`docs/core/requirements/**`（需求档 = 主 agent 笔）· `docs/TODO.md` / 台账（主 agent 笔）· 提示词档（`prompts/**`、`tool-docs/**` 内容权 = 主 agent）· 版本号 / 发布面。
 
 **6.16.10 用例表（判定句 ①–⑤ + 裁令 A/D 逐条落用例）**
@@ -689,7 +689,7 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
 | RG1 | 注册单源（core） | `assembleFamilyTools({depth:0})` / `{depth:1, role:'explore'}` | depth-0 含 `context` **恰一次**；depth>0 各角色零含（含 consult） | 判定⑤ / 裁令 D |
 | RG2 | 双端表（VSC） | `hydrateRun` 生产形状 | `toolByName.has("context")` ∧ 表内名唯一（宿主工具已名 `ide`）∧ `context` 唯一来源 = 核家族段 | 判定⑤ |
 | RG3 | 三操作可达 | schema + 逐 action 调用 | enum = `["stats","prune","compact"]` 三项 ∧ 各返回确定回执（无 `unknown action`） | 判定⑤ |
-| RG4 | 零回归 | `assembleBuiltinTools` 名集 / `tool-docs` 计数 / 压缩形态与回声两面的批内定向单测（收口随批删） | 名集 = 24+8 不变；`tool-docs` 24 档不变；两面用例全绿（无 focus ⇒ 请求体逐字节不退） | 边界 |
+| RG4 | 零回归 | `assembleBuiltinTools` 名集 / `tool-docs` 计数 / 压缩形态与回声两面的批内定向单测（收口随批删） | 核内建工具名集零增删（口径 = `assembleBuiltinTools({cwd})` 的 `name` 集合；2026-10-28 实读 31 名）；`tool-docs/` 档族零增删（2026-10-28 实读 54 档）；两面用例全绿（无 focus ⇒ 请求体逐字节不退） | 边界 |
 
 **6.16.11 边界（本面不改）与退化面**
 

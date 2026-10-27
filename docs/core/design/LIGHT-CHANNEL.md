@@ -106,7 +106,7 @@
 
 | 文件 | 现量 | Δ（估值） | 形态 / tier |
 |---|---|---|---|
-| `thincoder-core/ledger-cmd.mjs` | 431 行 | +~12（两共函数各一判 + import + 头注句）→ ~443 | 判据新增（结构零改）；低于 500 硬线（`docs/core/requirements/ENGINEERING-MODE-V2.md:647`）⇒ 不触发拆分评审；超 300 软线 = 既有存量，非本批新增 |
+| `thincoder-core/ledger-cmd.mjs` | 431 行 | +~12（两共函数各一判 + import + 头注句）→ ~443 | 判据新增（结构零改）；低于 500 顾问线（`docs/core/requirements/ENGINEERING-MODE-V2.md:653` F12：>300 软线 = 触发拆分评审 · >500 硬线 = 超限档本批拆，两线只约束程序代码）⇒ 不触发拆分评审；超 300 软线 = 既有存量，非本批新增。**两条口径各管各的面**（500 顾问线 / 800 硬线 = 全仓通用；650 = 仅 `batch-lifecycle.mjs` 的单点拆分触发）= `docs/core/design/LEDGER.md` §3.5「两口径管辖面」段（本处不重述——D2） |
 | `thincoder-core/ledger-db.mjs` | 266 行 | +3（`ROUND_MARKER` 常量 + 注释）→ ~269 | 常量区增员 |
 | `thincoder-core/ledger.mjs` | 159 行 | ±0（re-export 行内增名） | 公共面形零改 |
 | `thincoder-core/agent/light-round.mjs` | 67 行 | −3 / +1（删本地常量、动态 import 解构增名）→ ~65 | 消费面改源 |
@@ -257,7 +257,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 | 文件 | 现量 | Δ（实现读数） | 形态 | tier |
 |---|---|---|---|---|
 | `thincoder-core/agent/unbooked-pen.mjs` | 62 行 | 新档 | 谓词叶（`PEN_TOOLS` ∥ `unbookedPenText()` ∥ `unbookedPenNotice()`） | 新档——免拆分 |
-| `thincoder-core/agent/record-results.mjs` | 199 行（挂接点 `:29-30` ∥ `:87-90`） | +5 | 结构不变（不拆函数、不增导出） | 低于 300 软线 ∥ 500 硬线（`docs/core/requirements/ENGINEERING-MODE-V2.md:647`）⇒ 不触发拆分评审 |
+| `thincoder-core/agent/record-results.mjs` | 199 行（挂接点 `:29-30` ∥ `:87-90`） | +5 | 结构不变（不拆函数、不增导出） | 低于 300 软线 ∥ 500 顾问线（`docs/core/requirements/ENGINEERING-MODE-V2.md:653` F12）⇒ 不触发拆分评审 |
 | `thincoder-core/test/unbooked-pen.test.mjs` | 112 行 | 新档（8 例） | 单元测试档（收口删除——测试纪律） | 新档——免拆分 |
 | `test/integration/unbooked-pen.test.mjs`（仓根） | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——与上一行是两个对象：单元档随批删、集成档常驻 | 新档——免拆分 |
 

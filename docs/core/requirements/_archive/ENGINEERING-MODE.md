@@ -1,12 +1,16 @@
-# 工程模式（Engineering Mode）— 需求
+# 工程模式（Engineering Mode）— 需求（**已归档**）
+
+> **本档已退役**：内容为 2026-09 的旧口径，**不代表现行规则**。现行需求单源 = `docs/core/requirements/ENGINEERING-MODE-V2.md`。
+>
+> **为何要读这一句**：本档正文里仍有已被推翻的条文（例如 §1.6「纯文档维护不走设计评审链」）。它在 `_archive/` 目录里，但读起来与活档同形，检索也不会自动跳过它 —— 所以这行必须写在最前面，否则下一个读者会重踏同一个坑（2026-10-28 父侧就因 §1.6 漏开了两批的评审链）。
 
 > 板块：工程模式——thincoder 的严格方法论工作流：design-before-code、纪律层槽位提示词驱动、双门禁（设计评审 + 代码评审）。
 > 定位（FR10）：工程模式是**面向任意项目的产品功能**，不是本仓自用工作流。
 > 本档为**架构级机制需求文档**：功能性需求含**用户故事**（§1.2）+ **FR 机制约束表**（§1.3）；非功能性需求完整（§1.4）。
 > **机制面需求**（批次记录档 §1.12 · 需求池 §1.13 · 文档更新纪律 §1.15 · 段写入工具 §1.16 · VSC 镜像 §1.17 · 台账可见面 §1.18 · 各仓自持 §1.19 · 文档↔实装对账 §1.20）
-> = 兄弟档 `requirements/ENGINEERING-MODE-MECHANISM.md`（**节号沿用**，指针按该档引用）。
-> 设计层指针：工作流本体 = `design/ENGINEERING-MODE.md` · 批次档与段写入 = `design/BATCH-RECORD.md` · 台账机制 = `design/LEDGER.md` ·
-> 各仓自持 = `design/LEDGER-SELF-CONTAINED.md` · 文档纪律与机检对账 = `design/DOC-DISCIPLINE.md` · 评审收敛 = `design/ADVISOR-CONVERGENCE.md`。
+> = 兄弟档 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md`（**节号沿用**，指针按该档引用）。
+> 设计层指针：工作流本体 = `design/` 下的工程模式设计档（已被 V2 取代，不在盘） · 批次档与段写入 = `docs/core/design/BATCH-RECORD.md` · 台账机制 = `docs/core/design/LEDGER.md` ·
+> 各仓自持 = `docs/core/design/LEDGER-SELF-CONTAINED.md` · 文档纪律与机检对账 = `docs/core/design/DOC-DISCIPLINE.md` · 评审收敛 = `docs/core/design/ADVISOR-CONVERGENCE.md`。
 > 归属与命名判据 = `docs/core/design/DOC-SYSTEM.md` §5.1（P1–P5）· §6；本档不重述（D2 单一权威源）。
 
 ## 0. 铁律（发起权与批准权归用户——2026-08-24 决策）
@@ -65,25 +69,25 @@
 | FR5 | 评审时机 | **设计评审仅由用户发起**（agent 呈递就绪并提醒，不自行调 advisor）；打回后每轮呈递发现 + 修复建议、用户逐条拍板；**交付 code review 流程节点自动**（eng-coder 内部协议默认承担，不问用户）；advisor 失败停止重试 |
 | FR6 | 范围约束 | **A 裁定**：去掉“文件清单外不可改”硬约束——清单外改动**允许**（交付必要），但**必须逐项报告中说明**（透明）；审计“out-of-list”判据 = “**改了且未报告 = 偏差**（静默越权）”；已报告 = 透明可接受；父代理不得修改设计文档外的范围；超范围停下提出设计更新 |
 | FR7 | 待办管理 | 技术待办统一在 `docs/TODO.md`，不落入设计文档（避免触发重新 doc review） |
-| FR8 | 多任务并行 | 相互独立的设计可**并行推进**，上限 ≤4 并发（提示词纪律——无机械门禁）。**调度器条款**：spawn 声明 `files`+`dependsOn`——冲突/顺序交调度器自动处理（重叠域 queued、依赖链自动顺序、同步冲突报错），不再手动串行；锚句 “overlapping domains are queued by the scheduler, never hand-serialized”（`design/AGENT-LOOP.md` §10）；未声明 files 不参与冲突检测。token 按 designId 隔离互不覆盖；发起权不变（FR5） |
+| FR8 | 多任务并行 | 相互独立的设计可**并行推进**，上限 ≤4 并发（提示词纪律——无机械门禁）。**调度器条款**：spawn 声明 `files`+`dependsOn`——冲突/顺序交调度器自动处理（重叠域 queued、依赖链自动顺序、同步冲突报错），不再手动串行；锚句 “overlapping domains are queued by the scheduler, never hand-serialized”（`docs/core/design/AGENT-LOOP.md` §10）；未声明 files 不参与冲突检测。token 按 designId 隔离互不覆盖；发起权不变（FR5） |
 | FR9 | **角色三段链**（用户裁定） | **主 agent = 产品经理（会话面）**：收集/登记/澄清/与已有需求文档对账 + **批次式记录**（`docs/batches/`）+ 编排/确认/核验 + 设计判断权；<br>**eng-designer = 设计与需求成文（写稿面）**：依批次登记需求、**维护需求文档体系的整体性**，需求成文后再写设计；自勘察；无 token；不发起评审；eng-coder = 实现。<br>定位：设计 = 对需求的检验；撞问题 → 停下报告交回主 agent。见 §1.6 与 §1.5。 |
-| FR16 | **批次记录机制**（机制见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.12） | 工程模式任务以**批次**为流转单元：一批一份 `batches/<批>-<主题>.md`，**六段 append-only、一段一作者**；**§2 即 eng-coder 任务书本体**；随件传递、子代理自写己段；整档冻结 |
+| FR16 | **批次记录机制**（机制见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.12） | 工程模式任务以**批次**为流转单元：一批一份 `batches/<批>-<主题>.md`，**六段 append-only、一段一作者**；**§2 即 eng-coder 任务书本体**；随件传递、子代理自写己段；整档冻结 |
 | FR17 | **交界面契约**（机制见 §1.11） | 环节间传递只有三类（对话 / 参数 / 文档路径）；**五条界面铁律**（产物落盘消息只报告 / 凭证走参数 / 澄清必经主 agent / 三方条目一致 / 批次档随件传递、各写己段）；B1–B14 交界面逐项定义传什么/怎么传/产出什么/怎么放 |
-| FR18 | **需求池指针台账**（机制见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.13） | 条目 = **一行指针**（需求句 → 需求档节 + 任务书 §2 + status）；**不展开任务细节**（重述 = 漂移源）；状态机**六态**，**在途起任务书指针必填**；两池不混（需求池 / 技术待办）；**记录 + 状态推进 + 物理落笔 = 主 agent**，提交 designer 时必须带上本批 todo 项 |
+| FR18 | **需求池指针台账**（机制见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.13） | 条目 = **一行指针**（需求句 → 需求档节 + 任务书 §2 + status）；**不展开任务细节**（重述 = 漂移源）；状态机**六态**，**在途起任务书指针必填**；两池不混（需求池 / 技术待办）；**记录 + 状态推进 + 物理落笔 = 主 agent**，提交 designer 时必须带上本批 todo 项 |
 | FR19 | **设计要求（eng-designer 产出要求）**（内容见 §1.8） | 产出物两件：**批次任务**（独立产物，落批次档 §2）+ **设计档**（8 项：选型对比 / 接口契约 / 受影响文件带行数+拆分计划 / 决策记录 / 验收标准逐条回指 / 用例表 / 边界 / UI 决策落档）；合格判据 = **advisor 设计评审八维**（权威源 `thincoder-core/prompts/advisor-design.md`）；设计边界五条（不发明需求 / 不过度设计 / 不写实现 / 不碎片化 / 不静默改语义） |
 | FR20 | **失败与异常路径有定义**（**九条清单见 §1.14**） | ①L2 不过 → **fix round** ②轮次用尽 → **用户裁决** ③评审不收敛 → **用户裁决** ④否决设计 → **补需求**（同批继续）⑤撤回/废弃 → **批次档标状态 + 同步需求池** ⑥退出模式 → **纯操作开关** ⑦token 过期 → **再次评审拿新 token** ⑧依据缺失 → **必传 `batchDoc` + 执行者拒收** ⑨崩溃 → **报告，用户决策** |
-| FR21 | **文档更新纪律**（机制见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.15） | 写权矩阵（文档类→唯一作者）· 单一权威源（一处详述、其余引用）· 计数/枚举与列表同改 · 指针形态 `文档:节`（行号只作 as-of）· **冻结窗口** · **回读核对** · 变更留痕 + **核销同步清单**；机械校验最小集 V1/V2（段引用可解析 / 计数与列表一致），快层可跑、零假阳才常驻 |
-| FR22 | **批次档段写入工具**（目标与澄清见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.16） | 一个**无路径参数**的专用工具（目标档由 spawn 注入 + 门禁）：**角色×段白名单**（designer→§2 · 设计评审→§3 · coder→§5）· **append-only** · **凭证行由工具剥除** · **只对设计评审开**（代码评审保持纯只读）· 写入失败**明示 + 父侧代写打标**；机械校验 **V3**（§3 非空 + 含轮次行） |
-| FR23 | **VSC 端镜像**（目标与澄清见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.17） | 工程模式机制（batchDoc 门 · eng-designer 角色+行为纪律 · 文档更新纪律 V1/V2/V3 · `batch_segment` 工具）**完整落到 VSC 端**；**语义同源、原文自持**（两端各自实现，不共用代码）——终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档** |
-| FR24 | **台账提醒与可见面**（机制见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.18） | 两池**分显不合计**：状态行极简标记 `台账 <需求池数>·<技术待办数>`（当前项目 · 老化>0 警示色）· 明细行三面（启动 / 批次收口 / 变化）落会话流（可回看）· 变化行**一次性去重**（老化首次越线 / 需求池达阈值）· **数字单源**（解析/计数/老化/阈值一处实现）· VSC = 状态栏 item + 原生 tooltip 增量。**否决在案（不得复活）**：`/todo` 命令 · 触发字段回填+机检强制 · 点击面板 · 状态行合计/多行 |
-| FR25 | **文档体系各仓自持**（机制见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.19） | 台账只收本仓条目 · 明细见该档 §1.19 |
-| FR26 | **文档↔实装对账**（机制见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.20） | 现行档内的事实锚（用例号 / 文件路径 / 符号）**能机械地对上实装**——悬空的锚当场报红（阈值 0）；机器判不了的语义句**有归属、有周期**；明细见该档 §1.20 |
+| FR21 | **文档更新纪律**（机制见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.15） | 写权矩阵（文档类→唯一作者）· 单一权威源（一处详述、其余引用）· 计数/枚举与列表同改 · 指针形态 `文档:节`（行号只作 as-of）· **冻结窗口** · **回读核对** · 变更留痕 + **核销同步清单**；机械校验最小集 V1/V2（段引用可解析 / 计数与列表一致），快层可跑、零假阳才常驻 |
+| FR22 | **批次档段写入工具**（目标与澄清见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.16） | 一个**无路径参数**的专用工具（目标档由 spawn 注入 + 门禁）：**角色×段白名单**（designer→§2 · 设计评审→§3 · coder→§5）· **append-only** · **凭证行由工具剥除** · **只对设计评审开**（代码评审保持纯只读）· 写入失败**明示 + 父侧代写打标**；机械校验 **V3**（§3 非空 + 含轮次行） |
+| FR23 | **VSC 端镜像**（目标与澄清见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.17） | 工程模式机制（batchDoc 门 · eng-designer 角色+行为纪律 · 文档更新纪律 V1/V2/V3 · `batch_segment` 工具）**完整落到 VSC 端**；**语义同源、原文自持**（两端各自实现，不共用代码）——终局判据 = **VSC 会话可 spawn eng-designer 并令其自写 §2/设计档** |
+| FR24 | **台账提醒与可见面**（机制见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.18） | 两池**分显不合计**：状态行极简标记 `台账 <需求池数>·<技术待办数>`（当前项目 · 老化>0 警示色）· 明细行三面（启动 / 批次收口 / 变化）落会话流（可回看）· 变化行**一次性去重**（老化首次越线 / 需求池达阈值）· **数字单源**（解析/计数/老化/阈值一处实现）· VSC = 状态栏 item + 原生 tooltip 增量。**否决在案（不得复活）**：`/todo` 命令 · 触发字段回填+机检强制 · 点击面板 · 状态行合计/多行 |
+| FR25 | **文档体系各仓自持**（机制见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.19） | 台账只收本仓条目 · 明细见该档 §1.19 |
+| FR26 | **文档↔实装对账**（机制见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.20） | 现行档内的事实锚（用例号 / 文件路径 / 符号）**能机械地对上实装**——悬空的锚当场报红（阈值 0）；机器判不了的语义句**有归属、有周期**；明细见该档 §1.20 |
 
 > **FR3 注（授权链细则）**：designId 为**同 scope 实例恒定**（复审沿用同 id，旧 token 存活至 TTL 保留）；不锚定文档路径/内容（“文档锚失效”路线已否决）。spawn 单设计时 designId 可省略。
-> token 随会话 slot 持久化跨进程（**TTL 7 天 fail-closed**）。**链终核销由父侧 consume-design 消费**（细则 = `design/ENGINEERING-MODE.md` §「Token 生命周期」）。
+> token 随会话 slot 持久化跨进程（**TTL 7 天 fail-closed**）。**链终核销由父侧 consume-design 消费**（细则 = `design/` 下的工程模式设计档（已被 V2 取代，不在盘） §「Token 生命周期」）。
 
 > **FR16 注（批次记录机制细则）**：六段 = §1 讨论 / §2 批次任务 / §3 设计评审 / §4 用户批准 / §5 实施记录 / §6 验证与收口（**一段一作者**）；
-> **它是全链路唯一贯穿的档**；**§2 即 eng-coder 任务书本体**（spawn 传路径，**不另写副本**）；子代理自写、不经父侧转述；**§6 验收归父代理**；模板骨架固定（agent 只填不定位）；整批做完整档冻结。细则权威 = `requirements/ENGINEERING-MODE-MECHANISM.md` §1.12。
+> **它是全链路唯一贯穿的档**；**§2 即 eng-coder 任务书本体**（spawn 传路径，**不另写副本**）；子代理自写、不经父侧转述；**§6 验收归父代理**；模板骨架固定（agent 只填不定位）；整批做完整档冻结。细则权威 = `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.12。
 
 ### 1.4 非功能性需求（技术标准）
 
@@ -98,7 +102,7 @@
 
 > **NFR3 注（存量旧格式拒绝——活机制）**：旧 3 段格式 token（`uuid:expiresAt:HMAC` 形态——HMAC 指历史防伪层签名段，已删，此处仅作拒绝判定的格式描述）即使 TTL 内也**格式即判错** → fail-closed 拒绝 → 需重新设计评审。
 
-### 1.5 角色重定义裁定清单（FR9 澄清产物——用户逐条确认；设计见 `design/ENGINEERING-MODE.md`）
+### 1.5 角色重定义裁定清单（FR9 澄清产物——用户逐条确认；设计见 `design/` 下的工程模式设计档（已被 V2 取代，不在盘））
 
 | # | 事项 | 裁定 |
 |---|---|---|
@@ -112,7 +116,7 @@
 | 8 | 提示词文件编写权 | **主 agent 内容权**（提示词的逐字文本由主 agent 定，它就是设计的一部分）；**落笔仍走正常链**（设计评审 → 用户批准 → eng-coder）——提示词档**仍是产品代码**（FR1 口径不变） |
 | 9 | 设计确认门 | **A⊃B**：用户反馈驱动的迭代改稿路径存在，且 advisor 设计评审是必经节点 |
 | 10 | **文档写权分工** | **主 agent = 批次档**（§1/§4/§6）；**eng-designer = 需求档 + 设计档**（**含修订**，写稿权唯一）；提示词 = 主 agent 内容权 + eng-coder 落笔（#8） |
-| 11 | **文档更新纪律** | 单靠“写稿权唯一”不够，需配套纪律（见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.15） |
+| 11 | **文档更新纪律** | 单靠“写稿权唯一”不够，需配套纪律（见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.15） |
 | 12 | **勾销归属** | 验收勾销/逐条验收结论/需求池核销落**批次档 §6**；**设计档内不写勾销状态** |
 
 **差异面收口（RF-1–RF-6；三方一致锚**：本清单 = 批次档 §2 条目表 = 设计档对应节，AC 回指 = 设计档验收标准）：
@@ -131,6 +135,8 @@
 **一句话**：人按批次提需求；主 agent 收、对、问；需求清爽且人点头后，才交给设计者；设计者**先把需求文档整合干净，再写设计**。
 
 **适用范围**：**纯文档维护同样是需求**——它**入口走需求侧**（登记进需求池 → 澄清/收口），**但不需要走代码侧的后续流程**：
+
+> **⚠ 下表已被推翻（2026-10-28 实核）**：现行判据要求**任何批**的批档 §3 必须评审通过才能核销（`thincoder-core/ledger-close-proof.mjs:54-55` 逐字：「批档 §3 未通过评审 … 须 = 评审通过」）。纯文档维护批同样要走设计 → 评审 → 批准，否则台账核销不掉。用户 2026-10-27 15:40 原话：「我设计这个模式的目的就是堵死这个漏洞，不走设计核销不掉就对了！」下方表格保为历史记录。
 
 | | 代码变更 | **纯文档维护** |
 |---|---|---|
@@ -178,7 +184,7 @@
 | # | 主 agent 的动作 | 关键点 |
 |---|---|---|
 | 1 | **复述确认** | 用自己的话把用户的表述复述一遍——**只复述，不加工**（不排序、不补全、不揣测言外之意） |
-| 2 | **落批次记录** | 写进 `docs/batches/<批>-<主题>.md` §1——**按模板骨架填槽**（骨架见 `requirements/ENGINEERING-MODE-MECHANISM.md` §1.12） |
+| 2 | **落批次记录** | 写进 `docs/batches/<批>-<主题>.md` §1——**按模板骨架填槽**（骨架见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` §1.12） |
 | 3 | **与已有需求文档对账** | 去 `docs/core/requirements/` 逐条比：冲突 / 重复 / 语义打架 → 记下；相关不冲突 → 增量；全新 → 新板块 |
 | 4 | **把对账结果回给用户** | 有冲突/含糊/缺边界的**一次问一个**（不连珠炮）；**不自己挑一个解释** |
 | 5 | **问缺** | 追边界（不做什么）、验收怎么算过、与既有条款怎么共存 |
@@ -351,10 +357,10 @@
 | 头部状态行与逐批指针行 | 「来源：2026-09-10 自设计档抽取」「第 13/14/20 批」「角色重定义批」等逐批建档注 | 一次性建档材料；批次轨迹归 `docs/batches/`（时序日志）+ git 历史 |
 | §1.5 过渡例外块 | 「本需求自身的设计稿按 a 案（主 agent 破例代行）产出」 | 过渡期安排——**已关闭**（eng-designer 已落地） |
 | §1.5 角色重定义批收口块（逐条对账明细） | 「已实落 9 · 部分 4 · 未落 0」逐项表 | 一次性对账快照；判定句已并入本档 §1.5（现行态） |
-| 机制面需求的逐批块与勘察快照（§1.12–§1.20） | 逐批声明与勘察时点表述 | **已随机制面拆出**——见 `requirements/ENGINEERING-MODE-MECHANISM.md` 的不并项节 |
+| 机制面需求的逐批块与勘察快照（§1.12–§1.20） | 逐批声明与勘察时点表述 | **已随机制面拆出**——见 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md` 的不并项节 |
 | §1.11 表格中的历史段号（B12 §4→§5 等） | 段号修正流水 | 形态已规范；修正流水归批次档 |
 
 ## 变更记录
 
-- 2026-09-15（**迁移批 · 第 4 批 · 大档拆分实迁** · eng-designer）：自 `thincoder-cli/docs/requirements/ENGINEERING-MODE.md`（1003 行）按 B 式重建并拆分入 `docs/core/requirements/`——落点判据 = `design/DOC-SYSTEM.md` §5.1 P1；
-  本档承载工作流本体需求（§0 铁律 + §1.1–§1.9 + §1.11 交界面 + §1.14 失败路径 + §2 可移植性 + §3 边界）；机制面（§1.12 / §1.13 / §1.15–§1.20）切出为 `requirements/ENGINEERING-MODE-MECHANISM.md`（节号沿用）；跨层指针改 R2 形态；头部状态行与逐批块入「不并项与历史沿革」。
+- 2026-09-15（**迁移批 · 第 4 批 · 大档拆分实迁** · eng-designer）：自 CLI 产品侧的工程模式需求档（该树已归档，不在盘）（1003 行）按 B 式重建并拆分入 `docs/core/requirements/`——落点判据 = `docs/core/design/DOC-SYSTEM.md` §5.1 P1；
+  本档承载工作流本体需求（§0 铁律 + §1.1–§1.9 + §1.11 交界面 + §1.14 失败路径 + §2 可移植性 + §3 边界）；机制面（§1.12 / §1.13 / §1.15–§1.20）切出为 `docs/core/requirements/_archive/ENGINEERING-MODE-MECHANISM.md`（节号沿用）；跨层指针改 R2 形态；头部状态行与逐批块入「不并项与历史沿革」。

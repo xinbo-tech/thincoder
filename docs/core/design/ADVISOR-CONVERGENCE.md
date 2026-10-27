@@ -218,7 +218,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 | # | file:line | 现形态（末句） | 处置 |
 |---|---|---|---|
 | P1 | `thincoder-core/prompts/discipline-normal.md` | 现行句 `No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | **已落**——§3.1 逐字句 |
-| P2 | `thincoder-core/prompts/persona-engineering.md:121` | 现行句（轮次衰减条）：`No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | 同上（已落） |
+| P2 | `thincoder-core/prompts/persona-engineering.md:288` | 现行句（轮次衰减条）：`No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | 同上（已落） |
 | P5 | `thincoder-core/prompts/persona-engineering.md:50` | §5 修正轮上限 5 轮 / §3「cap 豁免」/ >3 轮停止判据 | **同族 · 未落**——§3.5 行 1 / 行 2（待用户裁）；已登记 |
 | P6 | `thincoder-core/prompts/persona-eng-coder.md:22` | `self-fix (max 5 correction rounds)` | **同族 · 未落**——§3.5 行 3（非本面射程） |
 

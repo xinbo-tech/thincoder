@@ -175,7 +175,7 @@
   本纪律只述实现形态，✗ 不构成差异保留依据；差异登记面 = 记录已裁的宿主能力例外项。
 - **端特有段（现体）**：提示词面**现余 0**——三示例段（池规则 / Multi-Task / 实现纪律）内容现体均在核内（`thincoder-cli/src/prompt-injections.mjs:9-11` ∥ VSC 端同形——提示词面注入锚全消），逐段落点：
   `thincoder-core/prompts/persona-engineering.md`「Parallel dispatch & multi-task」（`:186` 起——多任务派发 + `agent.poolLimits` 池规则同节 `:190`）·
-  `thincoder-core/prompts/persona-eng-coder.md` 实现纪律（`:17` 不得静默降级 / `:23` 收尾自审）。
+  `thincoder-core/prompts/persona-eng-coder.md` 实现纪律（`:23` 不得静默降级 / `:29` 收尾自审）。
 - **遗留注入锚（工具面 2 锚）**：`bash-terminal-face` · `question-ui-face`（锚位 = `thincoder-core/tool-docs/bash.md:15` ∥ `thincoder-core/tool-docs/question.md:11`；
   取值表 = `thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs` ∥ `thincoder-desktop/src/main/prompt-injections.mjs`——三端面枚举齐：CLI ∥ VSC ∥ 桌面）。
   `bash-terminal-face` 处置 = **已激活**（运行时执行器身份声明，机制单源 = 本层 `BASH-EXECUTOR-FACE.md`）；

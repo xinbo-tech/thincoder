@@ -756,7 +756,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 | 面 | 契约（v2） |
 |---|---|
 | **归档** | **软删除**——`ledgerClose` 只 UPDATE `status`（已核销/已废弃）+ `closed_at`（撤回路径另置 `executor = NULL`——§3.1 ④），**不 DELETE 行**（物理行保留作外部记忆）；「已核销/已废弃」= 状态值（`docs/TODO-archive.md` 为历史档不再追加） |
-| **触发字段** | `trigger` 三枚举 CHECK：`归批` / `条件` / `认账不排期`（合法选项，区别于遗忘）；取值非三枚举 → INSERT 即拒（CHECK）。`NULL` → 未标注（出口面 `unlabeled` 桶——`trigger IS NULL` ∧ 行龄 > `AGING_DAYS` ⇒ §3.7 判红）——**该半句 = 目标态（未落地在册）** |
+| **触发字段** | `trigger` 三枚举 CHECK：`归批` / `条件` / `认账不排期`（合法选项，区别于遗忘）；取值非三枚举 → INSERT 即拒（CHECK）。`NULL` → 未标注（出口面 `unlabeled` 桶——`trigger IS NULL` ∧ 行龄 > `AGING_DAYS` ⇒ §3.7 判红；判点 = `thincoder-core/ledger-cmd.mjs:87`） |
 | **老化报告（审计模式）** | 行龄源 = SQLite 时间戳（`created_at`/`updated_at` 距今 > `AGING_DAYS`=30 天；SQLite 路径无 md 行、时间戳可靠）。**查询面逐行标记 `aged`**（未决四态 ∧ >30 天） |
 | **归属与落笔** | 写命令仅**主 agent** 装配（`family-tools.mjs` depthOnly 分支——子代理装配面不挂写命令，fail-closed）；台账档不入任何子代理 `files` |
 | **触发字段·归批**（§6.2） | `trigger=归批` ⇒ `task_book` **必点名**（非空）；**本笔新写** `trigger=归批` ∥ `task_book` ⇒ 该值可解析 ∧ 在盘（写入时点门）；批档此后被清 = 读数（§7.1）不阻账务；批名不再只活在 `evidence` 散文里 |

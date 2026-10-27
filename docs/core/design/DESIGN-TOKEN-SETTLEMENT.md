@@ -148,7 +148,7 @@
 - **动作面**：`subagent` 工具只读 action `design-slots`（第九动作——动作表 = `AGENT-LOOP-SUBAGENT.md` §6.7.2）；工程模式父侧（depth-0）限定（与 consume-design 同门）；分类 = 只读（planMode 放行 / 免审批 / digest 放行——同 `status` / `observe`）。
 - **数据源**：槽文件权威表（`readEngTokensFromSlot`——无 TTL 过滤原样）∪ 内存 Map（并集去重，冲突以槽为准——D-S3 同源）；**零写**（不 reconcile 回写、不落盘）。
 - **列表面（逐槽一行；龄升序——最老在前）**：`designId`（全串）∥ 状态（`live` / `expired`——`tokenExpired` 单源）∥ 时龄 `ageDays`（= now − (expiresAt − `effectiveTokenTtlMs`) 派生；TTL 配置曾改时为近似——如实注）∥ `expiresAt`（精确）∥ 批 ∥ `designToken`（末位——见「令牌直读」）；尾行 = 计数行（总数 ∥ live ∥ expired）。
-- **「批」列来源**：槽文件批次旁列（§10——settle 时按评审实例的批档绑定落盘：`run.batchDoc` 优先、`docSetKey` 的 `batches/` 段档兜底）优先；旁列缺失（旁列启用前签发的旧槽）⇒ 会话内评审实例注册表（`_advisorRuns`）按 designId 命中 run，走**同一派生**（`batchAbsPathOfRun`）取批档绝对路径再取 basename；两者皆不可得 ⇒ `—`。
+- **「批」列来源**：槽文件批次旁列（§10——settle 时按评审实例的批档绑定落盘：`run.batchDoc` 优先、`docSetKey` 的 `batches/` 段档兜底）优先；旁列缺失（旁列启用前签发的旧槽）⇒ 会话内评审实例注册表（`_advisorRuns`）按 designId 命中 run（同一 designId 多 run 时取哪一枚 = §10「清点面的取源序」），走**同一派生**（`batchAbsPathOfRun`）取批档绝对路径再取 basename；两者皆不可得 ⇒ `—`。
 - **输出形**：行文本（紧凑——同 consume 面风格）；字段 / 序 / 降级标记 = 契约，行内措辞 = 实现面。
 
 **F-SL1 令牌直读（token 不藏）——需求 F-SL3**：
@@ -289,7 +289,9 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 **写面（settle 同拍，`thincoder-core/agent-tools/design-token.mjs:176-182`）**：派生（`batchAbsPathOfRun(run)`——两源定序见上）有值 ⇒ 写该 designId 的旁列行；派生为无 ⇒ **删**该 designId 的既有旁列行。分支出处 = 同一 designId 的复评：评审实例关后（`design-token.mjs:188` `run.open = false`）再用不同 `documents` 评审同一 designId，旧归属若不删，新槽会继承上一轮的批次 ⇒ 收口消费掉本不该消费的授权。
 
-**分支出处（「不含批档 ⇒ 归属 = 无」）**：该降级今天已在生产走——清点面 `batchOf`（`thincoder-core/agent-tools/design-slots.mjs:60`）对无批档的 run 返回 `—`，需求 F-SL1 边界逐字登记（`docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md:25`）。
+**分支出处（「不含批档 ⇒ 归属 = 无」）**：该降级今天已在生产走——清点面 `batchOf`（`thincoder-core/agent-tools/design-slots.mjs`）对无批档的 run 返回 `—`，需求 F-SL1 边界逐字登记（`docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md:25`）。
+
+**清点面的取源序（登记——不留给实现注释）**：全序（旁列优先 → 注册表 → `—`，含降级三层）单源 = 同档 F-SL1「批」列来源行。本节只登记该序在清点侧的一步细则：注册表路径**逆序取最近一个能派生出批档的** run——派生函数与 settle 写旁列**同一枚** `batchAbsPathOfRun`（清点面不能拿另一个派生去读同一个事实）。
 
 复现：以单份设计档为 `documents` 跑一次设计评审，`subagent` `action:'design-slots'` 该槽行 `batch=—`。
 

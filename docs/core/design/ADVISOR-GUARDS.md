@@ -54,7 +54,7 @@
 **判据（两条，第二条只在签发路径上判）**：
 
 1. **§3 写进了本轮的轮次块**（**无条件**——两种判决都判）——§3 段内轮次块数 **> 点火基线**。基线 = 评审实例绑定批档时读该档记下的 `run.section3BlocksAtStart`；块计数与模板正则单源 = `countRoundBlocks(src)` ∥ `ROUND_HEADING_RE`（`thincoder-core/agent-tools/batch-skeleton.mjs` 导出；写入面 `thincoder-core/agent-tools/batch.mjs` 的私有 `ROUND_HEADING_RE` ∥ `roundCount` 改取同一导出）。块数不增 ⇒ 本轮一字未写进 §3。**changes-required 轮同判**：打回的评审，其发现正是修正轮的输入——比 pass 轮更需要落在档上。
-2. **§3 状态行 = `评审通过`**（只在签发路径上判——裁定闸判 pass 之后）——读**段级**状态行 `readSectionStatusWord(src, 3)`（`batch-skeleton.mjs:194`；词表 `STATUS_WORDS[3].done`，旧字面 `评审完成` 经 `STATUS_WORD_ALIASES[3]` 等义——同档 `:42-55`）。**读面与写面同形**：状态行只有段级一处写面（`updateSectionStatusLine`，同档 `:164-182`——段内首个 `**状态行**：` 行原位改写，缺则插在段头之后；评审经 `batch` 的 `status` 动作写入），轮次块只由工具戳 `### 轮次 N（评审子代理）` 标题、块内无状态行落点 ⇒ 读「块内状态行」是读一行没人写的字，判据会退化成永假。该段级读也**正是下游判据读的那一处**（`§5` 写入门 `thincoder-core/agent-tools/batch-closeout.mjs:105`）——另读一处即成第二真源（D2）。
+2. **§3 状态行 = `评审通过`**（只在签发路径上判——裁定闸判 pass 之后）——读**段级**状态行 `readSectionStatusWord(src, 3)`（`batch-skeleton.mjs:194`；词表 `STATUS_WORDS[3].done`；旧字面 `评审完成` **只在读侧等义**（`STATUS_WORD_ALIASES[3]`——`batch-skeleton.mjs:49` 注释：写侧词表零别名，旧字面写不进去、词表外拒）——同档 `:42-55`）。**读面与写面同形**：状态行只有段级一处写面（`updateSectionStatusLine`，同档 `:164-182`——段内首个 `**状态行**：` 行原位改写，缺则插在段头之后；评审经 `batch` 的 `status` 动作写入），轮次块只由工具戳 `### 轮次 N（评审子代理）` 标题、块内无状态行落点 ⇒ 读「块内状态行」是读一行没人写的字，判据会退化成永假。该段级读也**正是下游判据读的那一处**（`§5` 写入门 `thincoder-core/agent-tools/batch-closeout.mjs:105`）——另读一处即成第二真源（D2）。
 
 **判定位置**：`settleDesignReview`（`thincoder-core/agent-tools/design-token.mjs:141`）——**两次评估、一次读档**。
 
@@ -67,7 +67,10 @@
 ```text
 评审记录不合格——token 未签发 (review record incomplete — no design token was issued; reason: no-section3-block | status-not-passed | batch-unreadable)
 补写该批档 §3（发现 + VERDICT + 状态行 = 评审通过）后重跑设计评审；未补写不得按已核处理。
+证据：{evidence}
 ```
+
+**第三行条件在**——`evidence` 非空才出（单源 `thincoder-core/agent-tools/design-token.mjs:136` `REVIEW_RECORD_MARK`）；空 ⇒ 整行不出。各判据的证句：`no-section3-block` = 「§3 轮次块 N 块、点火基线 M 块——本轮未写进 §3」（`:209`）· `batch-unreadable` = `批档读不到: <code>`（`:197`）或「点火基线缺失（批档在点火时不可读）」（`:203`）· `status-not-passed` 同形携当前状态词。
 
 槽零写、`run.open` 不翻（补写后可重评）。`settlementCriterion`（§7）不新增判据值——本闸与裁定闸同形：标记即回执，不进失败结论块。**两拒的射程**：`no-section3-block` 与 `batch-unreadable` 落在裁定闸之前 ⇒ changes-required 轮也会拿到它们；`status-not-passed` 只在签发路径上出现。
 
@@ -121,15 +124,18 @@
 
 **受影响文件（本笔）**——行数口径 `split("\n").length − 1`，本轮实测：
 
-| # | 文件 | 现量 | 预计 Δ | 改动面 |
+| # | 文件 | 现量（落地前） | 实落（2026-10-28 实读） | 改动面 |
 |---|---|---|---|---|
-| 1 | `thincoder-core/agent-tools/design-token.mjs` | 200 | +34 | 读档 + 判据 1（回显闸后、裁定闸前）+ 判据 2（裁定闸后）+ 标记常量 |
-| 2 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 367 | +24 | 导出 `ROUND_HEADING_RE` ∥ `countRoundBlocks`（读侧单源） |
-| 3 | `thincoder-core/agent-tools/batch.mjs` | 349 | −6～0 | 私有正则 / 计数改取 skeleton 导出（写入面语义零变） |
-| 4 | `thincoder-core/agent-tools/advisor.mjs` | 260 | +6 | 绑批档时读点火基线（`run.batchDoc` 落点 `:161-163` 同拍；读不到 ⇒ `section3BlocksAtStart = null`） |
-| 5 | `docs/batches/2026-10-27-advisor-face-fixes.test.mjs` | 0 | 新建（收口即删） | U-1–U-12 |
+| 1 | `thincoder-core/agent-tools/design-token.mjs` | 200 | **267** | 读档 + 判据 1（回显闸后、裁定闸前）+ 判据 2（裁定闸后）+ 标记常量 |
+| 2 | `thincoder-core/agent-tools/design-slots.mjs` | — | **305** | `batchAbsPathOfRun` 两源定序导出 · 清点面 `batchOf` 改取同一派生 |
+| 3 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 367 | **391** | 导出 `ROUND_HEADING_RE` ∥ `countRoundBlocks`（读侧单源） |
+| 4 | `thincoder-core/agent-tools/batch.mjs` | 349 | **343** | 私有正则 / 计数改取 skeleton 导出（写入面语义零变） |
+| 5 | `thincoder-core/agent-tools/advisor.mjs` | 260 | **280** | 绑批档时读点火基线（`run.batchDoc` 落点同拍；读不到 ⇒ `section3BlocksAtStart = null`） |
+| 6 | `docs/batches/2026-10-27-advisor-face-fixes.test.mjs` | 0 | 新建（收口即删） | U-1–U-12 |
+| 7 | `test/integration/batch-close-token-consume.test.mjs` | 既有 | 改（10-1 夹具改写 + 10-4 新增） | 集成宿主 |
+| 8 | `test/integration/advisor-record-gate.test.mjs` | 0 | 新建（17-1 ∥ 17-2） | 集成宿主 |
 
-500 软线：四档产品码改后最大 `batch-skeleton.mjs` ≈391，均未触线。
+500 软线：五档产品码落地后最大 = `batch-skeleton.mjs` **391**，均未触线（口径 = `split("\n").length − 1`）。
 
 ## 2. 凭证链启动 / 全程守卫（B 族）
 

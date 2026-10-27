@@ -532,10 +532,10 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | T-TW12 | 边界·子代理隔离 | depth-1 agent 在途两条 · 主 agent 在途零条 ⇒ 主标记 | 零 `⏰`（读对象 = 主 agent 单对象——构造性零泄漏） |
 | T-TW13 | 边界·attention 除外 | 主 agent 在途 timer 一项——`userNeededAtTurnEnd` 直驱（两档：`agent.timerWake` 开 / 关） | 开 ⇒ `false`（不计 awaiting——自动续跑在途）；关 ⇒ `true`（照常置位）；零在途 ⇒ 既有语义不回归 |
 
-**用例宿主**（评审轮 1 #7 收正——先例 = 同档 §6.20.6 落点行）：T-TW1 / T-TW2 / T-TW7 → `thincoder-core/test/timer-wake.test.mjs`（核侧）；
-T-TW9 两档分属——核新档 = 选择面（`timerTurn` ⇒ `TIMER_TURN_DOMAIN` 选中），`thincoder-core/test/turn-domain-mode.test.mjs` = 模式三元回归（`upstreamTurn` 优先 / AUTO 档零注入）；
+**用例宿主**（评审轮 1 #7 收正——先例 = 同档 §6.20.6 落点行）：T-TW1 / T-TW2 / T-TW7 = 该批开发期用例（随批收口删除，无留存宿主）；
+T-TW9 两档分属——核侧 = 选择面（`timerTurn` ⇒ `TIMER_TURN_DOMAIN` 选中）＋ 模式三元回归（`upstreamTurn` 优先 / AUTO 档零注入）；
 
-T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-wake.test.mjs`（端侧）；T-TW11 → `thincoder-cli/test/cmd-timers.test.mjs`。
+T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13（端侧）与 T-TW11（`/timers` 列表）同属该批开发期用例（随批收口删除，无留存宿主——`thincoder-cli/test/` 实读无这两档，2026-10-28）。
 
 ### 6.30.8 验收标准（逐条回指）
 
@@ -630,9 +630,9 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13 → `thincoder-cli/test/timer-w
 | T-TW26 | 正常·VSC 域文本 | `timerTurn`（手动档）⇒ 组合点 | 选中核 `TIMER_TURN_DOMAIN`；`upstreamTurn` 优先不回归 |
 | T-TW27 | 边界·VSC 开关关 | `agent.timerWake = false` ⇒ 闩面 `sync` | 零注册 / 已注册者撤闩（与桌面 T-TW17 后半同判） |
 
-**用例宿主**：T-TW14–T-TW16 → `thincoder-core/test/suspension.test.mjs`（原址补例；**修正轮补两桩**（非新号）：`clear` 先到先得用例 ∕ timer 轮中止容纳（±两反例用例））；T-TW17–T-TW21 → 新档 `thincoder-desktop/test/timer-wake.test.mjs`（T-TW21 亦落 `test/agent-host.test.mjs` 驱动面）；
+**用例宿主**：T-TW14–T-TW16 = 该批开发期用例（随批收口删除，无留存宿主）；现盘 `thincoder-core/test/` 实读无该档（2026-10-28）；**修正轮补两桩**（非新号）：`clear` 先到先得用例 ∕ timer 轮中止容纳（±两反例用例）；T-TW17–T-TW21 = 同一批开发期用例（随批收口删除——`thincoder-desktop/test/` 实读无这两档，2026-10-28）；
 
-T-TW22 → `thincoder-vscode/test/agent-lifecycle-singleton.test.mjs`（原址改例）；T-TW23–T-TW26 → 新档 `thincoder-vscode/test/timer-wake.test.mjs`（T-TW25 状态行面亦落 `test/status-line.test.mjs`；T-TW27 → 同档）；
+T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`thincoder-vscode/test/` 实读无这些档，2026-10-28）；
 
   **修正轮补三桩**（非新号——随补注登记）：开关真链（`config.json` ⇒ 生产者真链 · 评审 🟡1）· 窗内 timer 轮中止容纳（`AbortError` ∧ 会话未停 ⇒ 容纳并重入 · ±两反例用例 · 评审 🟡2）· 触发落流（`timer { status:"fired", text }`——协议 §3.2 行 19）。
 
