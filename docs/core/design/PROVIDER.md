@@ -96,11 +96,24 @@ Provider 层把模型能力差异收敛到一张**规格表**（`MODEL_SPECS`）
 - 重试常量：`MAX_RETRIES = 3`；`RATE_LIMIT_BACKOFF_MS = [15_000, 30_000, 60_000]`；`RETRYABLE_STATUS = {408, 409, 425, 429, 500, 502, 503, 504}`。
 - **429**：尊重 `Retry-After` 头（上限 300s），无头 / 非法则退避表取档；**5xx / 408 / 409 / 425**：指数退避；**不重试**（`isNonRetryableError`）：401 / 403 认证、400 级非 429、429 但 body 含余额 / 配额特征（中文「余额不足」类 + `insufficient_quota` 类 + GLM billing code `1113` / `1114`）。耗尽后按 lastStatus 分类报错，cause 解包拼进文案。
 - **去重（单一实现）**：`parseRetryAfter` 唯一实现住 errors.mjs（retry.mjs 导入）；`sleepInterruptible` 唯一实现住 core.mjs；429 配额判定统一为 errors.mjs 双判版（删 retry.mjs 纯正则版——规则漂移消）。依赖单向（errors / retry 均独立、均 import rate；core 依赖 errors）。
+- **400 级失败的发送次数（可复核读数）**：普通 400 不重发——`isNonRetryableError`（`thincoder-core/provider/errors.mjs:37`）判死后 `chat()` 直接抛出，该回合上游只收到 1 个请求。**400 之后仍会再发的情形只有两处**，各有前置条件：
+
+  ① **图像拒绝自愈**（机制单源 = §6.26）：两判据任一成立即重发一次——**T1 首撞**（HTTP 400 ∧ 命中图像语义词表 ∧ 历史含 image part）∥ **T2 同态重复**（本回合 4xx 非 429 ∧ 上一回合同类失败 streak ≥ 1 ∧ 历史含 image part）。两判据都要求历史含 image part：历史无图的 400 不重发。
+
+  ② **越窗 400 自适应**（机制单源 = `doc:CONTEXT-COMPACTION.md:§6.17`）：压缩一次 + 重发一次；二次越窗不再压、也不再发。
+
+  两处之外不存在「同一请求重发」的隐式路径。**读法**（上游该回合收到的请求数）：普通 400 = 1 ∥ 越窗 400 = 3（摘要 1 + 首请求 1 + 重试 1；回合请求 2）∥ 图像自愈 = 2（首请求 + 剥图重发）。
+
+> **来源**：台账 `#1809`（三次 400 各 ≈ 一份报告量的 token 增量，疑 400 后新开发送）——本行是该现象的发送面清点结论，读法即复核口径。
 - **401 / 403 诊断**：Kimi 双平台提示（`sk-kimi-` 前缀 key 或 `api.kimi.com` 端点 → 说明 Moonshot 与 Kimi For Coding 两平台 key 不互通）+ 通用诊断回显 `[auth diag: baseURL=… key=… status=…]`（key 前 6 位掩码）。
 - **413 可操作化（D-PR32）**：请求体超限（HTTP 413——长会话图片累积的高频形态）⇒ 错误文本携带处置提示（`/compact` 压缩历史 ∥ 移除历史图片；图片累计预算机制见 §6.7）——从裸 HTTP 码变为可执行指引。
 - **400 图像语义 = 剥除自愈（非「立抛」）**：HTTP 400 ∧ 错误文本命中图像语义词表 ∧ 历史含 image part ⇒ 不就此收束——剥除历史图像 + 机读注记 + **重发一次**（触发 / 处置全文 = §6.26——本行不重述）；既有 `isNonRetryableError` 判据零改（自愈发生在错误已抛至 agent 层之后，由 agent 层承接）。
 - **超时语义（废弃绝对墙钟）**：**响应头阶段**用 `fetchTimeoutMs`（默认 600s，`agent.fetchTimeoutMs` 可配，`effectiveFetchTimeoutMs(provider)` 计算；四 transport 经 opts `_headerTimeoutMs` 携带）——**消费面 = 代理分支**（`proxyFetch` 两分支：https 目标 `tunnelHttps` ∥ http 目标 `tcpConnectProxy`+`streamHttpResponse`）；
-  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）；**body 阶段**用读侧**空闲**超时 `agent.bodyIdleTimeoutMs`（默认 120s，`effectiveBodyIdleMs(provider)` 计算，八处消费点同源；有数据流动就永不超时，连续无新 chunk 才判死；机制单源 = `docs/core/design/TIMEOUT-DIGEST.md` §2.1）；`AbortError` 透传（用户 Ctrl+I 取消，不吞）。
+  **直连面（无 `proxyUri`）无本仓头阶段超时**（纳入 = 设计轮面——在册）。**body 阶段分两个窗**（机制单源 = `docs/core/design/TIMEOUT-DIGEST.md` §2.1 ∥ §2.4）：
+
+  - 首 chunk 之前：`effectiveFetchTimeoutMs(provider)`（默认 600s，`agent.fetchTimeoutMs` 可配，语义 = 等上游 prefill）。
+  - 首 chunk 之后：读侧**空闲**超时 `agent.bodyIdleTimeoutMs`（默认 120s，`effectiveBodyIdleMs(provider)` 计算；有数据流动就永不超时，连续无新 chunk 才判死）。
+  - `AbortError` 透传（用户 Ctrl+I 取消，不吞）。
 - **abort / 超时来源标注**：超时 / 中止产生点的错误对象自带结构化 `abortInfo`（trigger / layer / detail）——词汇表与判定归 AGENT-LOOP 板（本档只指针）。
 - **body 终止守卫（崩溃族）**：读侧空闲断流（`readSSE` ∥ `parseGeminiStream`）经单点 `terminateBody` 以错误终止 body——可 destroy 形态走 `destroyBody`（先挂永久兜底 `'error'` 监听者，防未处理 `'error'` 杀进程）；
   **web `ReadableStream`（直连 fetch）走内部 abort 通道**（`IDLE_ABORT`——建设点 = `proxyFetch` 直连分支单点〔两条流式直连链同经〕；看门狗不再 no-op）。机制单源 = `doc:PROXY.md:§2`。消费面语义零变（含 google 的 partial 保留径）。
@@ -1318,10 +1331,27 @@ tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normali
 | G2 | 一轮多个工具调用后继续（边界 · R9 ∥ R10 历史形） | 同一会话里让模型一轮发起 ≥2 个工具调用，结果回灌后继续对话 | 两个工具的结果都出现在会话流里，模型下一段回复正常；无 400 | #20 ∥ IKKJEE |
 | G3 | 用过工具的会话重开后继续（边界 · 持久历史回放） | 关掉 CLI 进程、重开同一会话（历史从盘上回放），再发一句话 | 会话接上原上下文继续，回复正常；无 400 | #20 ∥ IKKJEE |
 
-**夹具（确定性）**：模型侧 = 本地脚本化假 Anthropic 端点，按 Messages API 回两个回合（第一回合 `tool_use`、第二回合文本），并对「请求体含 `role:"tool"`」按上游语义回 `400 Unexpected role "tool"`。
+**夹具（确定性）**：模型侧 = 本地脚本化假 Anthropic 端点，按 Messages API 回三态——`tool_use` 回合（派给**首个非摘要的对话请求**）∥ 文本回合 ∥ 摘要回合；对「请求体含 `role:"tool"`」按上游语义回 `400 Unexpected role "tool"`。
 该拒收规则是 G1–G3 的可证伪点：请求体残留 `role:"tool"` 即红。零外网、零付费端点；真端点 smoke 不属本套件。
 
+**摘要请求的识别（夹具侧规则）**：按**请求内容**认——末条消息的文本含 `SUMMARIZE_PROMPT` 首句（`thincoder-core/context.mjs:20` 那段指令的开局句）即为摘要请求；`content` 为字符串或 text 块数组皆判。
+
+**不按请求序号**：压缩随时可能插在某次对话之前，「第 1 个请求必是对话」的假设会让夹具把摘要请求当对话而派工具，后续判定全乱——产品的 `tool_use` 从未丢失，红却是夹具自己的（失真链 `#1833`）。
+
+**夹具本体的位置**：`test/integration/fixtures/anthropic-endpoint.mjs`（三个集成场景所在的那一档 import 它）。识别谓词随之住同档，可脱离 CLI 场景单独驱动——原因是压缩支在本套件配置下不触发（见下条），住在场景档里就读不到。
+
+**搬迁范围（逐字搬、语义零变）**：`fakeAnthropic` ∥ `isSummaryRequest` ∥ `SUMMARY_SIG` ∥ SSE 与块助手（`jsonReply` / `sseReply` / `blocksOf` / `toolResultTexts` / `lastQuestion` / `replyText` / `messageStart` / `toolUseEvents` / `textEvents`）。场景档只删本地副本、改 import，三例断言一字不改。
+
+**覆盖现状（如实）**：G1–G3 三例都断言「零摘要请求」（本配置的固定开销吃掉压缩线 ⇒ 压缩支不触发），故该识别谓词在现行集成用例里从不走真支。它的判别读数由当轮一次性单测给出、按零留存纪律随批删除；夹具内部记账不是业务可观察结果，故不立常驻集成行。
+
 **落点**：`test/integration/anthropic-tool-roundtrip.test.mjs`（仓根常驻档），由仓根 `test/run.mjs` 的单层 glob 收集（`test/integration/*.test.mjs`）随发布门跑——不是批内单测档（单元与集成两类永不互转）。
+
+**先例与公开来源**：
+
+- **最近先例（夹具形态）**：`existing: test/integration/context-overflow-guard.test.mjs:162-163 · name: "compressCalls ∥ turnCalls" · consumers: 该档 11-1–11-9 各行`。**对齐** = 本地脚本化假端点、零外网、请求按类分列计数（摘要请求 ∥ 回合请求）、断言只落业务可观察结果；**偏离** = 本节的分类判据按**请求内容**认——越窗桩的请求种类由调用相位决定，打个标记就够，不需要内容识别。
+- **先例（夹具层级）**：同档 §6.27 的单元层用例表（T-1–T-16）与本节分工——**对齐** = 两层不重复持有同一断言（内部形态归单元层，业务结果归本节 G1–G3）；**偏离** = 本节把夹具本体从用例档提为独立档：识别谓词要脱离 CLI 场景单独驱动。
+- **公开来源核查**：本节不引入新的上游请求形态，无新增外部源；§6.27 已核的 Messages API 请求体形态（`content` 为字符串 ∥ text 块数组）沿用，本档不重述。核查面 = 仓根 `test/integration/` 实读 19 档（夹具一律内联在用例档，无 `fixtures/` 子目录）+ 全仓 `*.mjs` 路径含 `fixtures` 者零命中。
+- **三问行（既有件核对）**：`test/integration/fixtures/anthropic-endpoint.mjs` = `none found`（上面两面实测零命中）⇒ 新建，文件名沿内容命名惯例（同族 `anthropic-tool-roundtrip.test.mjs`）；搬迁符号 `fakeAnthropic` ∥ `isSummaryRequest` ∥ `SUMMARY_SIG` 名不改——一个概念一个名字。
 
 **边界**：只落 CLI 实例（本档持有的业务入口）；VSC ∥ desktop 的实例化按 F14 各端原文自持，不在本档单源。
 R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报过的场景，集成层不复制。
@@ -1337,7 +1367,7 @@ R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报�
 | D-PR3 | **发送前净化而非改历史** | 历史是模型上下文真相；净化只作用于线上载荷、可逆 |
 | D-PR4 | 429 **双通道**（闸门 + 退避） | 闸门防患于未然，退避兜底（未配置预算也安全） |
 | D-PR5 | 流规则 abort 后**重试**（注入提醒让模型自修正） | 比事后清洗更可靠——内容合规是硬需求 |
-| D-PR6 | 超时拆两段（响应头 `fetchTimeoutMs` + body 读侧空闲 `agent.bodyIdleTimeoutMs`，默认 120000） | 原绝对墙钟 600s 会把长上下文子代理腰斩；废弃绝对墙钟 |
+| D-PR6 | 超时拆三窗（响应头 `fetchTimeoutMs` · 首 chunk 窗同值 · 流中途读侧空闲 `agent.bodyIdleTimeoutMs`，默认 120000） | 原绝对墙钟 600s 会把长上下文子代理腰斩；而单一空闲旋钮会把「等首 chunk」与「流中途停摆」绑在一起——长上下文 prefill 达数分钟即被误杀（本地 spark 现场） |
 | D-PR7 | prefix 续写**精简历史**（过滤工具链消息，保留最近 8 条非工具文本） | 网关约束的直接解法 |
 | D-PR8 | 续写 400 **失败可见**（注入 `_warnings`，不静默吞） | 静默吞 = 长回合期间 deepseek 直接报错飞出的表象源 |
 | D-PR9 | **escape v5 双层**（发送前 sanitize + 源头 safeSliceUTF16） | 孤立代理是 400 根因；只做一层会在其他截断点复发 |
