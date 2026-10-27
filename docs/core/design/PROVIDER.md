@@ -1344,6 +1344,10 @@ tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normali
 
 **覆盖现状（如实）**：G1–G3 三例都断言「零摘要请求」（本配置的固定开销吃掉压缩线 ⇒ 压缩支不触发），故该识别谓词在现行集成用例里从不走真支。它的判别读数由当轮一次性单测给出、按零留存纪律随批删除；夹具内部记账不是业务可观察结果，故不立常驻集成行。
 
+**判别的输入取自产物提示词本体**：核对 `isSummaryRequest`（`test/integration/fixtures/anthropic-endpoint.mjs:76`）时，输入用 `thincoder-core/context.mjs` 导出的 `SUMMARIZE_PROMPT` 拼（字符串形与 text 块形各一），不用手抄的 `SUMMARY_SIG` 当输入——手抄时判断者与判据是同一条字面，用例自证，提示词改了也照绿。以产物提示词驱动，提示词一改该用例即红，红在真问题（夹具认不出真摘要请求）上。
+
+**反支两形不得省**：末条只有 `tool_result` 文本块、以及 `messages` 为空数组——二者在夹具的调用路径上真实可达（`test/integration/fixtures/anthropic-endpoint.mjs:104` 把非数组兜成 `[]`，`:106` 逐请求调用），只写真支等于断言一个恒真谓词。
+
 **落点**：`test/integration/anthropic-tool-roundtrip.test.mjs`（仓根常驻档），由仓根 `test/run.mjs` 的单层 glob 收集（`test/integration/*.test.mjs`）随发布门跑——不是批内单测档（单元与集成两类永不互转）。
 
 **先例与公开来源**：
