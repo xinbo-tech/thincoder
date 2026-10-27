@@ -308,4 +308,38 @@ test('7-8 错误 · 子代理 append §2：本次写入文本含裸档名 ⇒ �
   assert.ok(after.includes(landed), "本次文本已落盘")
 })
 
+// 工具描述面（`thincoder-core/tool-docs/**`）只判锚、不判段长（-1849）——
+// 400 字符单行在该面零命中（行判据只服务提示词面、段判据在该面被跳过），而裸档名照常命中「锚·档缺」。
+test('7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸档名）⇒ 收口被拒且拒因只点名锚', async () => {
+  const TOOLDOC_REL = "thincoder-core/tool-docs/probe.md"
+  const TOOLDOC = "# 探针\n\n" + "长".repeat(400) + "\n\n见 `NO-SUCH-DOC.md`。\n"
+  const root = makeProject("r79")
+  const sha = gitRepo(root)
+  mkdirSync(join(root, "thincoder-core/tool-docs"), { recursive: true })
+  writeFileSync(join(root, TOOLDOC_REL), TOOLDOC)
+  commit(root, "工具描述面探针档")
+  const before = readFileSync(join(root, BATCH_REL), "utf8")
+
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B), join(root, TOOLDOC_REL)])),
+    (e) => {
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串应恰 1 条（该面段零命中、仅锚 1 条）：${e.message}`)
+      assert.match(e.message, /✗ 锚·档缺 thincoder-core\/tool-docs\/probe\.md:\d+/, `拒串点名锚与该档行号：${e.message}`)
+      assert.ok(!/文字太长/.test(e.message), `同档 400 字符段应零命中（该面只判锚）：${e.message}`)
+      return true
+    },
+  )
+  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
+  assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+
+  // 对照半：同一份 400 字符内容放到 `docs/**` 面（不受面豁免）⇒ 段判据必须命中。
+  // 无此半，「零命中」就证明不了是**面豁免**在起作用（夹具漏写也能得 0）。
+  writeFileSync(join(root, "docs/notes/long.md"), "# 对照\n\n" + "长".repeat(400) + "\n")
+  const r = runDocCheck(root, { docs: ["docs/notes/long.md"] })
+  assert.ok(
+    r.hits.paragraph > 0,
+    `对照半：同 400 字符内容在 docs 面必须命中段判据（否则本例的零命中解释不了）—— 实得 ${JSON.stringify(r.hits)}`,
+  )
+})
+
 

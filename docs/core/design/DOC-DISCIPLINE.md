@@ -156,7 +156,7 @@
 
 1. **机制**（段判据）：表格行**不入段**——谓词 = **表行形态**（行首可选空白 + `|` 起 + `|` 收），与 V2 同源；**单源化**（扫描函数内跳过 + 主流程改调用该函数，删除内联重复扫描——防两处规则漂移）。
 2. **规范**：一致性检查的运行说明里落笔规则 1 的豁免句（**表格行豁免**：markdown 表格行结构性不可折行，不计入段判据——建议就近折行或表下补充，非阻断）。
-3. **影响面**：表格行零报告；**其余段落照判**；V1/V2/V3 与基线**零接触**（段判据面无基线机制）。
+3. **影响面**：表格行零报告；**其余段落照判**（`docs/**` 面——工具描述面不判段长，射程 = 条 7）；V1/V2/V3 与基线**零接触**（段判据面无基线机制）。
 
 4. **残余登记**：豁免谓词 = **裸表行形态判定**——其他 `|…|` 形态（非真表格）的行会被一并判作表行而不入段（罕例——fail-open 方向）；不影响选型（规范侧以「建议就近折行」兜底）。代码围栏内行不入段（§3.18 口径条 1——围栏不计且断段）。
 
@@ -953,11 +953,33 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 3. **名字说出问题本身**：常量 `paragraphMax` / `lineMax` · 模块 `paragraph.mjs` · 报面命中类「文字太长，难于阅读 / 行太长」——「行宽」二字从引擎与报面消失。依据：判据的名字是写作者唯一会记住的部分；名字指排版，人就去调排版。
 4. **阈值 300 字符**（一段 ∥ 一行同一值；用户 2026-10-22 12:12：「一段 300 字其实已经挺长的了」）。
 
-5. **不分域**：判据对所有段落一视同仁，命中即拒（用户 2026-10-24 裁定——覆盖 FR45 原判据 4）。代价如实登记：当前盘上超 300 字符的段实测 1,992 段 / 333 档（2026-10-22，需求档 §13.23 载）⇒ 落地后每一处命中都拒写，直到清完；清账另批、按板块分批。
+5. **不分域（文档面之间）**：在文档面上，判据对所有段落一视同仁，命中即拒（用户 2026-10-24 裁定——覆盖 FR45 原判据 4）；读者面另论——工具描述面不判段长（条 7）。代价如实登记：当前盘上超 300 字符的段实测 1,992 段 / 333 档（2026-10-22，需求档 §13.23 载）⇒ 落地后每一处命中都拒写，直到清完；清账另批、按板块分批。
 
 6. **一处单源**：实现单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）；手跑入口（`scripts/doc-check.mjs`）汇总只报这一条口径——口径行 = `FAIL(文字太长，难于阅读): N 段——重新组织语言重写` ∥ `OK(文字太长，难于阅读)`，提示词面命中单列 `FAIL(行太长)`。
 
-**谓词面**：单源 = `thincoder-core/doc-check/paragraph.mjs`，十名——`isTableRow` / `fenceMark` / `isFenceClose` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem`（`^\s*(?:[-*+]|\d+[.)、])\s`）/ `isPromptFace`。可执行行在段判据里不豁免（段 = 读者所见，码段渲染后仍在段内）——旧判据的可执行行豁免到此为止。
+7. **面分层（判据按适用面收射程）**：段判据**不判工具描述面**（`thincoder-core/tool-docs/**`）；该面只判锚。
+
+   - **分层判据（三条全中才分层——后来者改判据时照此套用）**：① 该判据的理由句说的是**某一类读者的负担**（「文字太长，难于阅读」= 人读不动；「行太长」= 模型读原始文本，一块太长）；② 该面的读者**不是那个读者**——工具描述档注进 tool 定义，读者是模型（挑哪个工具、填什么参），不是人；③ 该判据在该面上**不产生保护值**——它要防的那个害在这个面上不存在，且这害不因此失去唯一的把关处（描述面篇幅另有报告线与预算表，见下「射程的代价」——只报告、不阻断）。
+
+   - **不分层的判据**：理由句说的是**事实可解析性 ∥ 事实一致性**（锚 = 指针解析不到，读者会照着猜；计数与实读不符）——这类害跟读者是谁无关，任何会照这段文字动作的读者都受害，模型尤其（它照着解析不到的路径去猜）。**行为 / 业务不变量同理，永不分层。**
+
+   - **与 ⑤「不分域」的关系**：⑤ 管的是**文档面之间**（`docs/core` 与 `docs/cli` 同一判据，不因板块放宽）；本条管的是**读者面**——同一条判据在一个读者面上没有理由，不等于给某个板块开后门。两者不冲突，且本条**不缩小 ⑤ 对任何文档面的射程**。
+
+   - **面谓词**：`isToolDocFace`（实现 = `paragraph.mjs`）= `/(?:^|\/)thincoder-core\/tool-docs\//i`，**判定前先归一**：`String(abs).replace(/\\/g, "/")`——Windows 下 `path.join` 出的路径带反斜杠，不归一则该面在 Windows 上静默不生效（先例 `isPromptFace` 同写法）。**取目录不取档清单**：新增一档工具描述自动继承，写窄的风险由此消掉；**带 `thincoder-core/` 前缀**：`docs/**` 下任何同名目录不被误豁免。内容特征（「被注入 tool 定义」）不作判据——档内没有可机判的标记，按内容判会漂且不可复核。第二个工具描述面（别的包 / 别的语言）出现时再扩谓词，此前照判（fail-closed）。
+
+   - **最近先例**：`isPromptFace`（实现 = `thincoder-core/doc-check/paragraph.mjs:48`；设计 = 本条 2「提示词面量行」；来源 = FR46 提示词面逐行判）——同形同式（路径归一 + 前缀锚定 + 取目录不取档清单），**偏离为零**：只有谓词字面不同（面路径），其余照抄。
+
+   - **可移植立场**：谓词把本仓目录形写进随包发布的引擎（同 `isPromptFace`）。非本仓布局的消费方该谓词恒不命中 ⇒ 该面照全判（段判据仍生效，方向 fail-closed，不会被误豁免）；第二个描述面出现时再参数化。
+
+   - **两条通路一处落**：`doc_check` 工具与 batch 门的 gate 同取 `checkParagraphs`，分层落在引擎，两处同时生效；**判域组装零改**（判谁 = 触达账，仍按原口径）。
+
+   - **射程的代价（如实）**：该面从此无段长约束。**不补兜底阈值**：盘上 54 档实测最长一段 = 1,662 字符（`thincoder-core/tool-docs/timer.md`），37 条命中里没有一条是「天然要几千字符、拆不开」的段——补一个 2,000 字符的帽子等于给一个不会出现的输入开门；而描述面的篇幅另有报告线与预算表：单档 8,000 字符的报告线（超线须逐档给由，读数源 = `scripts/tool-schema-size.mjs:72`——`scripts/**` 是零判据角色的手跑面，**不阻断任何写入**）。如实说：**该面无强制篇幅上限**，只有这条报告线与预算表把关。将来若出现该面确实要长段的**实读**，先报再补，不预先建支。
+
+   - **本批受影响文件**：`thincoder-core/doc-check/paragraph.mjs`（+≈8 行：`isToolDocFace` + `checkParagraphs` 的跳过支）· `scripts/doc-check-paragraph.mjs`（+`isToolDocFace` 一名再出口）· `thincoder-core/tool-docs/doc_check.md`（+1 句：该面只判锚，不判段长）· 改面单元测试档（随批删）。
+
+**谓词面**：单源 = `thincoder-core/doc-check/paragraph.mjs`，十一名——`isTableRow` / `fenceMark` / `isFenceClose` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem`（`^\s*(?:[-*+]|\d+[.)、])\s`）/ `isPromptFace` / `isToolDocFace`。
+
+可执行行在段判据里不豁免（段 = 读者所见，码段渲染后仍在段内）——旧判据的可执行行豁免到此为止。
 
 **围栏行止（一条语义 · 三处消费 + 一处文档内复现）**：`fenceMark(line)` = 行首可选空白后的反引号 ∥ 波浪号标记串（≥3 字符）⇒ `{ ch, len }`（标记字符 + 标记串长度），非围栏行 ⇒ `null`；`isFenceClose(mark, fence)` = **同字符 ∧ 关闭长度 ≥ 开启长度**（CommonMark 围栏闭合语义）——块外遇标记行即开启，块内遇满足该式的标记行即闭合。
 
@@ -965,9 +987,11 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
 区带机制随迁改名 `paragraphExemptZones`（机制保留、内置恒空；删它超出 FR45 射程）。
 
-**既有件三问**：existing: 谓词族 + 扫描骨架（标题栈 ∥ 围栏状态机）= `thincoder-core/doc-check/paragraph.mjs`（实现单源）· name: 上列十名 · consumers: `thincoder-core/doc-check/anchors.mjs:20`（`fenceMark` / `isFenceClose` / `isExecutableLine` / `isPromptFace`）· `scripts/doc-check-paragraph.mjs`（再出口缝）。
+**既有件三问**：existing: 谓词族 + 扫描骨架（标题栈 ∥ 围栏状态机）= `thincoder-core/doc-check/paragraph.mjs`（实现单源）· name: 上列十一名 · consumers: `thincoder-core/doc-check/anchors.mjs:20`（`fenceMark` / `isFenceClose` / `isExecutableLine` / `isPromptFace`）· `scripts/doc-check-paragraph.mjs`（再出口缝）。
 
-none found: 段合并逻辑——全仓该面 grep `paragraph` 零命中（查过面 = `thincoder-core/doc-check/**` 与 `scripts/doc-check*.mjs`），段合并为本批新写。
+**`isToolDocFace` 三问（per-name · 面不同不可复用）**：existing but unusable: `isPromptFace`（`thincoder-core/doc-check/paragraph.mjs:48`）· name: 现有名逐字 `isPromptFace` · failed on: 它判的面是 `thincoder-core/prompts/**`（逐行裸判），照它判工具描述面只会落回段判据；可照抄的只有形态（归一 + 前缀锚定），谓词字面必须另立。
+
+**面跳过支（本批唯一新增逻辑）**：existing: `checkParagraphs` 内的面分派支（`thincoder-core/doc-check/paragraph.mjs:95-101`——`isPromptFace` 命中 ⇒ 走该面判法 ⇒ `continue`）· name: 逐字 `checkParagraphs` · 偏离为零（面判 → 该面判法 → 跳过，同形照抄）。段合并逻辑 = 同档既有 `flush()`（`paragraph.mjs:106`），本批零触。as-of 2026-10-27 实读。
 
 **受影响文件全清单（行数 = 2026-10-24 当笔读数，非现态；拆分门 = 500 行）**：
 
@@ -983,7 +1007,7 @@ none found: 段合并逻辑——全仓该面 grep `paragraph` 零命中（查�
 
 **用例表**：DD-115 正常（900 字符分三段 ⇒ 0 命中）· DD-116 边界（段中插换行 ⇒ 判定不变；提示词面档一行 301 ⇒ `行太长` 1 条）· DD-117 错误（一段 400 字符 ⇒ `文字太长，难于阅读` 1 条，定位 = 段首行号）· DD-118 错误（命名残留 ⇒ `行宽` / `lineWidth` grep 非零即红）· DD-121 边界（嵌套围栏 = 外层四反引号包内层三反引号、内层十条命令行各约 40 字 ⇒ 0 命中；对照 = 同长度无围栏正文 ⇒ 1 命中）。
 
-**验收（回指）**：= §5 A-DD27（七条，修正轮就地重写——覆盖 FR45 验收 ①②③；④ 读数由实施轮实测登记）。**集成测试**：batch 工具两机械点既有用例（DD-92–DD-99）通路零改，无新集成用例。
+**验收（回指）**：= §5 A-DD27（七条，修正轮就地重写——覆盖 FR45 验收 ①②③；④ 读数由实施轮实测登记）。**集成测试**：条目 Q 的集成面 = RTM 故事 7 的 7-9（工具描述面：段不拦、锚仍拦、收口拒因只点名锚）——既有 7-1–7-8 零改；口径条 1–6 本身通路零改，无集成面。
 
 **边界（不做）**：不改锚判据 · 不动 FR46 重写面 · 不清当前盘上超段（另批）· 不动 batch-gate 的判定范围（范围 = 本批笔域集单集，与本节被裁的「新旧」分域是两件事）。
 
@@ -1105,7 +1129,7 @@ none found: 段合并逻辑——全仓该面 grep `paragraph` 零命中（查�
 | # | 判据 | 判据句（可机验 · 命中即入报告集） |
 |---|---|---|
 | ① | **锚** | 文档指针 = 档 token（含 `.md`，可带目录段）± 节指示（紧随 `§` + 编号）；**档不在盘** ⇒ `档缺`；带节指示 ∧ **节不在盘** ⇒ `节缺`。行号坐标（`:N`）**不作节指示**——行号不作引用 |
-| ② | **段长** | 一段字符数 > 阈值 ⇒ 命中（段 = §3.18 口径条 1——相邻非空正文行合并；表格 / 标题 / 列表 / 引用 / 围栏 / 区带断段不计）；提示词面档逐行裸判（口径逐字 = §3.18 条目 Q） |
+| ② | **段长** | 一段字符数 > 阈值 ⇒ 命中（段 = §3.18 口径条 1——相邻非空正文行合并；表格 / 标题 / 列表 / 引用 / 围栏 / 区带断段不计）；提示词面档逐行裸判（口径逐字 = §3.18 条目 Q）。**面射程**：工具描述面（`thincoder-core/tool-docs/**`）只判判据 ①，不判本条——分层判据与面谓词 = §3.18 条 7（本节不重述） |
 
 **① 锚判据——抽取面与解析面（判据句的实现口径）**：
 
@@ -1468,7 +1492,7 @@ DOC-CHECK GATE: REFUSED（锚 A 条 · P 段文字太长，难于阅读 · L 行
 
 **产品档位（实现面）**：
 
-- `thincoder-core/doc-check/paragraph.mjs`——谓词 + 段判据（**口径单源 = §3.18 条目 Q**：谓词族九名 + `[...line].length` 段长度量）；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（见本条「实装现状」）。
+- `thincoder-core/doc-check/paragraph.mjs`——谓词 + 段判据（**口径单源 = §3.18 条目 Q**：谓词族十一名 + `[...line].length` 段长度量）；本仓 `scripts/doc-check-paragraph.mjs` = 再出口缝（见本条「实装现状」）。
 
 - `thincoder-core/doc-check/anchors.mjs`——指针抽取 + 解析序 + 节在盘判定（起步判据 ① 的实现面）。
 - `thincoder-core/doc-check/index.mjs`——引擎入口：范围判定（传入清单）+ 判据 + 两种问法的报面行（纯函数——**不阻断、零退出码**；范围收窄面 = `docs` 给定的被判档）。
@@ -2104,6 +2128,7 @@ V5-B: /(?<![A-Za-z0-9-])((?:T-[A-Z]{1,5}\d{1,3}(?:-\d{1,3})?|T-\d{1,3}|T[A-Z]?\d
 | A-DD32 | 条目 S 的解析序（两级 + 点查）判据六条齐（判据 ①–⑥ 见下） | §3.20 条目 S · 判据 ①「解析序」 |
 | A-DD33 | 条目 T（行号引判据式）判据五条齐（判据 ①–⑤ 见下） | §3.21 条目 T · 台账 #1564 |
 | A-DD34 | 条目 S 的报告态档集（`report` + `docs`）判据七条齐（判据 ①–⑦ 见下） | DOC-CHECK F10 / AC-8 · §3.20「报告态档集」 |
+| A-DD35 | 条目 Q 条 7（判据适用面分层）判据五条齐（判据 ①–⑤ 见下） | §3.18 条 7 |
 
 **A-DD26 判据（机器可验 · §4.5 批档可删性清账）**：
 
@@ -2317,12 +2342,12 @@ node -e "const s=require('fs').readFileSync('docs/core/design/DOC-MIGRATION.md',
 
 **A-DD27 判据（机器可验 · 条目 Q = 段判据口径）**：
 
-1. **口径六条在册（D3）**：§3.18 含六条口径行 ∧ §3 标题括注枚举 ∧ 档头枚举**均**含「段判据口径」（枚举与条目同轮改）。
+1. **口径七条在册（D3）**：§3.18 含七条口径行 ∧ §3 标题括注枚举 ∧ 档头枚举**均**含「段判据口径」（枚举与条目同轮改）。
 2. **折行失效（FR45 验收 ②）**：夹具一段 301 字符中插换行 ⇒ 判定不变（`文字太长，难于阅读` 1 条）——过判据的办法只剩**重新组织语言重写**（折行、切段、缩短都不是重写）。
 3. **拆段有效（FR45 验收 ③）**：夹具 900 字符分三段（每段 ≤ 300）⇒ 0 命中。
-4. **提示词面逐行裸判**：夹具提示词面档（`thincoder-core/prompts/**` 形态）一行 301 字符 ⇒ `行太长` 1 条（无结构豁免）；文档面同长一行 ⇒ 按段判。
+4. **提示词面逐行裸判**：夹具提示词面档（`thincoder-core/prompts/**` 形态）一行 301 字符 ⇒ `行太长` 1 条（无结构豁免）；`docs/**` 面同长一行 ⇒ 按段判；工具描述面（`thincoder-core/tool-docs/**`）同长一行 ⇒ 段判据 **0 命中**（射程 = 条 7）。
 
-5. **谓词单源 + 旧档零在盘**：谓词族单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`（十名；枚举 = 本档 §3.18 谓词面——本条不复制）；`thincoder-core/doc-check/width.mjs` 与 `scripts/doc-check-width.mjs` **零在盘**；`scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）。
+5. **谓词单源 + 旧档零在盘**：谓词族单源 = 产品档位 `thincoder-core/doc-check/paragraph.mjs`（十一名；枚举 = 本档 §3.18 谓词面——本条不复制）；`thincoder-core/doc-check/width.mjs` 与 `scripts/doc-check-width.mjs` **零在盘**；`scripts/doc-check-paragraph.mjs` = 再出口缝（薄档 · 零逻辑 · 逐名再出口）。
 
 6. **单元测试档（判据改动词必配）**：单元测试档（名随批、随批归档；载体 ∕ 复跑口径 = §7 单元测试档）⇒ 跑绿 · 零落仓 · 并发免疫（用例 = §3.18 用例表——本条不复制枚举）。
 
@@ -2477,6 +2502,16 @@ console.log('II tok=%d docs=%d uniq=%d multi=%d zero=%d | doc %d code %d',
 
 7. **解析面不缩（report 面反证）**：DD-106 绿——清单档以同目录裸名引用未入清单的同目录档 ⇒ 零 `档缺`；「把解析基线一并收窄到清单」这一失效模式必红（假阳来源由此关住）。
 
+**A-DD35 判据（机器可验 · 条目 Q 条 7 = 判据适用面分层）：**
+
+1. **段判据在该面零命中（同时是路径归一的回归读数）**：夹具 = `mkdtempSync(join(tmpdir(), …))` 根下 `join(root, "thincoder-core", "tool-docs", "a.md")` 一档 400 字符单段，**路径按 `path.join` 原样传给 `checkParagraphs`（夹具不换斜杠）** ⇒ 命中 **0**；同一份内容放 `join(root, "docs", "core", "design", "a.md")` ⇒ 命中 1 条（判据在文档面仍在效——分层不溢出）。Windows 下前一半只有谓词内部归一才过——该判据同时锁住归一化。
+
+   **两半先落盘、再断言在盘**：`checkParagraphs` 对读不到的档 `catch { continue }`（`thincoder-core/doc-check/paragraph.mjs:93-94`）⇒ 夹具漏写该档时「命中 0」照样成立、分层未被证；故两半各 `readFileSync` 读回非空后才判，且受检半 0 条 ∧ 对照半 1 条**同时取读**才算过。
+2. **锚判据在该面照判**：同档含一个解析不到的裸档名 ⇒ `checkAnchors` **1 条 `档缺`**——分层只收 ②，不收 ①。
+3. **`docs/**` 面零回归**：`docs/**` 形态夹具在分层前后命中集逐字相等（同一函数同参数两读）；`doc_check` 报告态 / gate 报面句形零改。
+4. **面谓词边界两读（反证）**：`…/docs/core/tool-docs/a.md`（非核包目录）⇒ **照判段判据**（谓词带 `thincoder-core/` 前缀，不按目录名豁免）；`…/thincoder-core/tool-docs/<新增>.md`（不在任何清单里）⇒ 自动继承不判——取目录不取档清单。
+5. **模型可见契约同拍**：`thincoder-core/tool-docs/doc_check.md` 含该面射程一句（该面只判锚）——描述面与实际行为不得相抵。
+
 **用例表（正常 / 边界 / 错误）**：
 
 | # | 类 | 输入 | 期望输出 |
@@ -2508,6 +2543,10 @@ console.log('II tok=%d docs=%d uniq=%d multi=%d zero=%d | doc %d code %d',
 | DD-36 | 边界 | 条目 J 夹具：B 类行（行内带 `2026-09-11` 类时点锚 / as-of 谓词） | **零 diff**（A-DD19 ⑥）——史实保留 |
 | DD-37 | 正常 | 条目 J 夹具：计数句（`tool-docs` + `<N> 档`，N ≠ 实读档数） | 收正后声明值 = 实读档数（A-DD19 ④——判据不含数字）；B 类读数档行照留 |
 | DD-38 | 错误 | 条目 J 夹具：坐标改指到已删档（死名全路径形态） | 判**违规**——§3.9 形态纪律：死名只作**裸名**书写（不带目录段 / 坐标尾） |
+| DD-137 | 正常 | 临时域 `thincoder-core/tool-docs/a.md` 一档 400 字符单段 | 段判据 **0 命中**（工具描述面不判段长） |
+| DD-138 | 正常 | 同档含一个解析不到的裸档名 | 锚判据 **1 条 `档缺`**（分层只收段判据） |
+| DD-139 | 边界 | 同一 400 字符段放临时域 `docs/core/design/a.md` 形态档 | 段判据 **1 条**（文档面不受分层影响） |
+| DD-140 | 错误（反证） | 临时域 `docs/core/tool-docs/a.md` 形态档（目录同名、不在核包） | **照判段判据** 1 条——面谓词带 `thincoder-core/` 前缀，不按目录名豁免 |
 
 > **条目 J 的逐条处置用例 = `DD-39`–`DD-50`**（本档 §3.9 用例表——**单一权威源，本表不复制**；编号承上表序）。
 
@@ -2546,7 +2585,7 @@ console.log('II tok=%d docs=%d uniq=%d multi=%d zero=%d | doc %d code %d',
 - `doc-check.mjs`（入口 / 域驱动 / 报告）：`main` + `formatReport`。
 - `doc-check-anchors.mjs`（单锚引擎）：`checkAnchors` / `extractAnchors` / `scanDocAnchors`——判据同源 = 本档 §4 V5 判据。
 
-- `doc-check-paragraph.mjs`（**再出口薄缝**——见下「再出口缝」条）：逐名再出口产品档位的谓词与判据函数，名单以缝档 `export` 面为准（当前含 `isTableRow` / `fenceMark` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem` / `isPromptFace` / `checkParagraphs` / `DOC_CLASS`；`checkParagraphs` opts 增 `exemptZones`——区带豁免口径 = §3.15；谓词口径 = §3.18 谓词面）。
+- `doc-check-paragraph.mjs`（**再出口薄缝**——见下「再出口缝」条）：逐名再出口产品档位的谓词与判据函数，名单以缝档 `export` 面为准（当前含 `isTableRow` / `fenceMark` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem` / `isPromptFace` / `isToolDocFace` / `checkParagraphs` / `DOC_CLASS`；`checkParagraphs` opts 增 `exemptZones`——区带豁免口径 = §3.15；谓词口径 = §3.18 谓词面）。
 
 - `doc-check-targets.mjs`（采集面）：`collectSourceDomain` / `collectTestTrees`（域根下**全部 `test` 树**发现——`scripts/doc-check-targets.mjs:61-78`；§4.2.2）/ `collectCaseTitles`（注册调用首参字面量——其树集 = 上项）/ `collectCodeTokens`。
 
