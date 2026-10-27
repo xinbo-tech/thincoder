@@ -303,7 +303,7 @@ export async function finalizeAgentTurn(agent, ctx) {
   // 恒达窗 = 正常 ∥ Abort-continue ∥ 异常抛三径同达；会话停止径不判（清场语义归 finishSuspension）。
   if (isDigestRound({ autoTurn, upstreamTurn, timerTurn }) && carrierField(agent, "_daSession") === true
       && !(signal?.aborted && !signal?.reason?.interrupt)) {
-    accountDigestRound(agent)
+    await accountDigestRound(agent) // async（§6.31.5 升级支 ④ 终局披露复用注入器）
   }
   agent._inAutoTurn = false
   // AGENT-LOOP-ASYNC-POOL.md §6.8 D-S6: auto-turn guard marks survive into the next USER run (restored at its

@@ -23,8 +23,8 @@
 **四要素明细**
 
 - **#42 `log.mjs`**（同路径 · j 0.9290 · sha `388222697c48` / `ab12c7f0f694` · 195 / 196 行）
-  - 左端读数（CLI）：差异 = 5 行注释——指针 `docs/design/LOGGING.md`（CLI 侧该档存在）+ `§18.6` 等注记。
-  - 右端读数（VSC）：6 行注释——指针 `docs/requirements/LOGGING.md`（VSC 侧该档存在——两仓文档约定不同，各自局部正确）+ 镜像注记（「CLI log.mjs redactSecret 同实现——双端语义同构」）。
+  - 左端读数（CLI）：差异 = 5 行注释——指向本仓 LOGGING 档的指针（`docs/design/LOGGING`——CLI 侧该档存在）+ `§18.6` 等注记。
+  - 右端读数（VSC）：6 行注释——指向该仓需求层 LOGGING 档的指针（`docs/requirements/LOGGING`——VSC 侧该档存在，两仓文档约定不同、各自局部正确）+ 镜像注记（「CLI log.mjs redactSecret 同实现——双端语义同构」）。
   - 建议归一形态：取一侧 + 镜像注记删除、指针按仓约定订正（非语义）。
   - 影响面：无（仅注释；须用户裁 = —）。
 
@@ -70,20 +70,22 @@
 - **`child:spawn` / `child:done` / `child:error`** —— 子代理 spawn / settle（`thincoder-core/agent-tools/*`）；字段 role / id / ms / kind（ok/partial）。
 - **`susp:enter` / `susp:exit` / `digest:start` / `digest:end`** —— 挂起态迁移；字段 pendingN / poolN / ms / reason。
 - **`ev:settled` / `ev:stopped` / `ev:cancelled`** —— settle 回调分流 + **中止清池 `ev:stopped`**（正常回合内 settle 由 child:done 覆盖不另发）；字段 id / kind / poolN / where。
-  **`ev:cancelled` 三个写点**：① `settleAsyncEntry` cancelled 分支（running 取消——经 settle 三连）；
-  ② **queued 取消出队点直记**（`advisor-async.mjs` / `subagent-async.mjs` 的 queued 分支——出队即终态、不经 settle ⇒ 不走 ①）；
-  ③ **sync 定向取消提交点直记**（`subagent-async.mjs` `cancelSyncChild`——sync 块 ⏹ 唯一入口；机制条 = `AGENT-LOOP-SUBAGENT.md` 的 §6.7.2「日志面」）。
-  三写点字段同形：`id` = `<role>#<id>`（评审族 = `advisor#<id>`）；**同一次取消恰一条**（写点互斥：queued 走 ②、running 走 ①、sync 走 ③——三种 child 形态各恰一条）。
-- **`ev:unsettled`** —— 消化账务升级留痕（`thincoder-core/agent/digest-account.mjs`（已落）——消化轮见账三次未覆盖 ⇒ 升级单点；恰一条/批）；字段 n / ids（机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31）。
+  - **`ev:cancelled` 三个写点**：
+    - ① `settleAsyncEntry` cancelled 分支（running 取消——经 settle 三连）；
+    - ② **queued 取消出队点直记**（`advisor-async.mjs` / `subagent-async.mjs` 的 queued 分支——出队即终态、不经 settle ⇒ 不走 ①）；
+    - ③ **sync 定向取消提交点直记**（`subagent-async.mjs` `cancelSyncChild`——sync 块 ⏹ 唯一入口；机制条 = `AGENT-LOOP-SUBAGENT.md` 的 §6.7.2「日志面」）。
+  - 三写点字段同形：`id` = `<role>#<id>`（评审族 = `advisor#<id>`）；**同一次取消恰一条**（写点互斥：queued 走 ②、running 走 ①、sync 走 ③——三种 child 形态各恰一条）。
+- **`ev:unsettled`** —— 消化账务升级留痕（`thincoder-core/agent/digest-account.mjs`——同一条目积满 `DA_MISS_LIMIT`（= 4）个未签收消化轮 ⇒ 升级单点；恰一条/批）；字段 n / ids（机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31.5）。
+- **`ev:unsettled-disclose-failed`** —— 升级终局披露失败留痕（`thincoder-core/agent/digest-account.mjs`——披露逐条 try/catch，单条失败不拦余下条目：账本与提醒已先落 ⇒ 可见性降级、不静默）；字段 id / err（≤200）（机制 = 同档 §6.31.5）。
 - **`ev:finish-missing`** —— 结束信号缺席留痕（`thincoder-core/agent/run-stages.mjs`——`finishReason` 缺席（clean ∧ 非 partial）与同面提醒同点；F-DA5）；字段 turn / auto / child（机制 = 同档 §6.31.7）。
 - **`ev:subagent-block-revived`** —— 墓碑存活闸**复活分支**留痕（`thincoder-cli/src/tui/subagent-blocks.mjs` `ensureSubTaskKey`——墓碑命中但条目**池内存活（在池 ∧ 非 done / 非 cancelled）** ⇒ 摘墓碑 + 重建块；**每次复活记一条（无去重状态）**）。
 - **`ev:queued-paint-failed`** —— 排队块刷新 relay 异常留痕（`thincoder-core/agent-tools/subagent-scheduler.mjs` `refreshQueuedTokens` catch——池状态不被破坏）。
 - **`err:internal`** —— 未分类异常（回合包装器 catch——带消息 200 截断 + 栈位置）；字段 msg / where。
 - **`err:provider`** —— provider 失败面的原文余行（CLI 回合循环 `thincoder-cli/src/tui/agent-turn.mjs` 非中止 catch 分支——X8 跟进 ②）；字段 `err`（脱敏首行，≤200）· `head`（余行合单行——**同过脱敏管道**〔`[endpoint]`；§6.3 D-LG4「URL 不入事件」〕后自限 ≤200——合字段上限后单行仍 <512）；余行缺 ⇒ 字段缺省（**不传空串**）；写点唯一；表面零膨胀（不增 UI 行）。
 
-**写入点落位**（在既有节点 emit，不新造总线）：回合包装器与 digest / suspension 面（`thincoder-cli/src/tui/agent-turn.mjs`）· `llm:*` 统一落 `chat()`（单点全覆盖——未来新增调用点自动覆盖）·
-`tool:*` 在 dispatch `runOne` · `child:*` / `ev:*` 在子代理族 spawn / settle 分流点（另两新条目见 §6.2——`ev:subagent-block-revived` 落显示层复活分支 ·
-`ev:queued-paint-failed` 落排队刷新 catch） · 中止清池（runAgent finally + suspension abort）→ `ev:stopped`。
+**写入点落位**（在既有节点 emit，不新造总线）：回合包装器与 digest / suspension 面（`thincoder-cli/src/tui/agent-turn.mjs`）· `llm:*` 统一落 `chat()`（单点全覆盖——未来新增调用点自动覆盖）。
+
+其余落点：`tool:*` 在 dispatch `runOne` · `child:*` / `ev:*` 在子代理族 spawn / settle 分流点（另两新条目见 §6.2——`ev:subagent-block-revived` 落显示层复活分支 · `ev:queued-paint-failed` 落排队刷新 catch）· 中止清池（runAgent finally + suspension abort）→ `ev:stopped`。
 
 **存储**：目录 `~/.thincoder/logs/`（与 sessions/ 同域）；文件名 `agent-YYYY-MM-DD.log`（按日——两端同写同文件追加）；**轮转** = 每进程每日首次写事件时清超龄 `agent-*.log`（机会式）；**写入** = `appendFileSync` 小写（每事件一次——事件频率低——开销可忽略——失败静默降级，进程内首次失败置死——不逐事件空转）。
 

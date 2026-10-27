@@ -128,9 +128,9 @@ string / 对象双分支在 payload 构造处统一推导（对象载荷字段�
 | 34 | `secretInputCancelled`（**新消息**——host → webview） | `{ promptId }`——abort（Stop）释放未答凭据卡（`questionCancelled` 同构：按 `promptId` 精确移除；无 `promptId`（旧 host）⇒ 移除全部凭据卡） | `src/extension/panel-callbacks.mjs:93`（`makeAskSecretInPanel` onAbort） | `webview/chat-messages.js:210` `case`（摘 `.secret-card`） |
 | 35 | `saveProviderModelContext` ∥ `providerContextSaved`（**新消息对**——上行 webview → host ∥ 下行 host → webview 回执） | 上行 `{ name, model, k }`——`k` = K 单位正整数；空 ∥ `null` = 清除（有已声明值时先过确认层）。下行 `{ name, model, k, kText }`——保存成功受理回执（`kText` = 宿主经核 `formatDeclaredContextK(k)` 出词——`128K` / `1M`；拒径零回执 ⇒ 拒因走既有 `providerError`；语义单源 = `SETTINGS.md` §2.21） | `webview/settings-provider-dialog.js`（表单保存上发；入口 = `webview/settings-providers.js:120` `Context…`） | `src/extension/panel-messages.mjs:318` `case` → `panel-messages-settings.mjs:130-151` → `src/extension/provider-context.mjs`；回执消费 = `webview/chat-messages.js:170` → `webview/settings-providers.js:76-90` |
 
-纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–35 即全部在案增量；表外增量不入）。发射 / 接收落点：
-`thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` ·
-`thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
+纪律 = **只增不改**（不新增消息类型族、不改既有字段语义）——**新增 / 变更一律入本节登记表**（行 1–35 即全部在案增量；表外增量不入）。
+
+发射 / 接收落点：`thincoder-vscode/src/extension/panel-callbacks.mjs:169`（statusText）· `:170`（turnFrame）· `thincoder-vscode/src/extension/panel-index.mjs:29` · `thincoder-vscode/webview/chat.js:260` · `thincoder-vscode/webview/status-bar.js:27-30/46`。
 
 ### 3.3 工具驱动的模式 / 参数变更 → 端显示同步（#45）
 
@@ -148,9 +148,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 
 - **零新增消息类型**（§3.2「只增不改」纪律保持）：两侧都复用既有 `agentSettings` 快照消息——**发射点 / 载荷 / 消费位三面零变**，§12 对表**零改**（机检口径 = 顶级判别式集与发射点集，两者均不动）。
 - **判据两条（同在工具批后单点）**：
-  ① **模式侧** —— `agent.config?.agent?.engineering !== agent._engShown`；`_engShown` 在 `hydrateRun` 按槽应用处**置为当前基线**（`agent._engShown = agent.config?.agent?.engineering === true`）——「**已展示基线**」语义，
-  **非** `undefined` / `null`（后者会让每 run 首个工具批无条件重推一次快照——设计评审轮 1 发现 9 定值）；
-  ② **参数侧** —— `agent._settingsTouched` 标记（端侧 settings 工具包装在 `execute` 返回处置位；同步点读后复位——置位不做「成功」判定，快照重推幂等）。
+  - ① **模式侧** —— `agent.config?.agent?.engineering !== agent._engShown`；`_engShown` 在 `hydrateRun` 按槽应用处**置为当前基线**（`agent._engShown = agent.config?.agent?.engineering === true`）——「**已展示基线**」语义，**非** `undefined` / `null`（后者会让每 run 首个工具批无条件重推一次快照——设计评审轮 1 发现 9 定值）。
+  - ② **参数侧** —— `agent._settingsTouched` 标记（端侧 settings 工具包装在 `execute` 返回处置位；同步点读后复位——置位不做「成功」判定，快照重推幂等）。
 - **用户路径不对称**：用户点击（`setEngineeringEnabled` / `setPlanMode`）走既有**直推**（`thincoder-vscode/src/extension/panel-messages.mjs:347-348`）——与本机制的 sink **同源**（`_pushSettingsLight` / `planMode` 消息），不构成第三条路径。
 - **CLI half = 不进推送链**：状态行每帧 recompute 已是「变更 → 显示」的最短路径。本档登记该**结构性**属性：CLI 侧**不得**为模式再引入缓存副本（引入即须自建失效链——本机制的 CLI 面因此天然免维护）。
 - **深度 > 0 不涉及**：子代理循环的 `callbacks` 无该两键 ⇒ `?.` 调用恒为 no-op（零注入、零推送）。
@@ -160,9 +159,8 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 ### 4.1 回合入口秩序
 
 - `userMessage` / `retry` / `sendMessage` 命令直发（quick-input / Ask ThinCoder）共用**单一入口** `routeUserTurn`（`thincoder-vscode/src/extension/panel-messages.mjs:102`）。
-- 回合执行中（`_turnState === "running"`）的消息**一律排队受理**（C-B2-6）：队列载体两态（容量 8）——无会话 ⇒ host 队列 `panel._busyQueued`；
-  会话在飞（`panel._susp`）⇒ 会话队列 `susp.pendingInput`（webview 侧 = **零本地气泡**（待发送带在输入区上沿）+ `queuedUserMessage` 上行；满队（第 9 条）⇒ 提交不出泡 / 不清框 / toast——二次提交守卫）。
-  送达 = 四支（**步边界 pickup（主——用户回合在飞：端壳循环头同址回调）** / driver 步骤 1 输入优先消费 / `enterSuspensionTurn` 预填 / idle 归位续发；会话退出兜底 = 残余直注入，零丢失）。契约单源 = `WEBVIEW-INPUT.md` §1 C-B2-6。
+- 回合执行中（`_turnState === "running"`）的消息**一律排队受理**（C-B2-6）：队列载体两态（容量 8）——无会话 ⇒ host 队列 `panel._busyQueued`；会话在飞（`panel._susp`）⇒ 会话队列 `susp.pendingInput`（webview 侧 = **零本地气泡**（待发送带在输入区上沿）+ `queuedUserMessage` 上行；满队（第 9 条）⇒ 提交不出泡 / 不清框 / toast——二次提交守卫）。
+- 送达 = 四支（**步边界 pickup（主——用户回合在飞：端壳循环头同址回调）** / driver 步骤 1 输入优先消费 / `enterSuspensionTurn` 预填 / idle 归位续发；会话退出兜底 = 残余直注入，零丢失）。契约单源 = `WEBVIEW-INPUT.md` §1 C-B2-6。
 - `abort` / `interrupt` 等**控制消息永不排队、直通**（延迟红线——杀 Stop 即失败）。
 - `sendMessage` 回显（`userMessage` postMessage）**只在真回合**：idle 直发 ⇒ 回显先于路由（现形保留）；**忙态（`turnBusy()` = running ∨ susp）⇒ 零 `userMessage` post**——排队面 = 待发送带（快照驱动），消费时刻出块（C-B2-6 ③⑦——外部入口同判据同槽）。webview 端同规：核件 `hooks.onUserEcho` 忙态返回 `null`（零本地气泡）。
 
@@ -278,7 +276,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 键 | zh | en |
 |---|---|---|
 | `digest.turnLabel` | 自动回合：消化已完成的子代理报告… | [auto-turn: digesting finished subagent reports…] |
-| `digest.residue` | 有 ${n} 份后台报告未销账——将自动重投 | ${n} background report(s) not accounted — they will be re-delivered |
+| `digest.residue` | 有 ${n} 份后台报告未销账——不再自动重投，未签收满额即升级 UNSETTLED | ${n} background report(s) not accounted — no automatic re-delivery; escalates to UNSETTLED |
 | `digest.turnLabelAsk` | 自动回合：答复 ${from}：${msg} | [auto-turn: answering ${from}: ${msg}] |
 | `digest.capAuto` | 自动回合：越过轮次上限，继续推进… | [auto-turn: continuing past turn cap…] |
 | `digest.capStop` | 自动回合在 ${turns} 轮处停止——部分消化；已完成的报告保留在历史中 | [auto-turn stopped at ${turns} turns — partial digest; finished reports stay in history] |

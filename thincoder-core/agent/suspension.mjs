@@ -240,7 +240,7 @@ export function startSuspension(ctx) {
   const done = (async () => {
     carrier._suspended = true
     // §6.31.2 会话标记（消化账务批 · 2026-10-05 · 台账 #930）：挂起会话期 true——投递留容器 /
-    // 见账 / 重投回路的唯一判据；退出（finally）置 false ⇒ 会话外回 fallback 语义。
+    // 见账的唯一判据；退出（finally）置 false ⇒ 会话外回 fallback 语义。
     carrier._daSession = true
     hooks.onCounts?.(backgroundCounts(carrier))
     let aborted = false

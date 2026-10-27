@@ -30,7 +30,7 @@ import { unsettledRow, unsettledRows } from "../agent/digest-account.mjs"
  * - id omitted → { overview: { running: [...], queued: [...], done: [...],
  *   unsettled: [{id, role, state, attempts, preview?}] } } — live queue positions (index in
  *   _asyncQueue + 1); the unsettled section lists every entry still awaiting settlement
- *   (awaiting-digest / retrying) plus the upgraded ledger (§6.31.6).
+ *   (awaiting-digest / unaccounted) plus the upgraded ledger (§6.31.6).
  * AGENT-LOOP-SUBAGENT.md §6.7.2: running 条目带 touched files 摘要（touchedFiles 前 5 + touchedMore 超出
  * 计数——相对查询方 cwd；0 改动 → touched 占位）；queued 条目带 touched 占位
  * "—（未启动）"；done/error/取消条目无 touched 字段（round3 #9）。

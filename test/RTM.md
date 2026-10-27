@@ -211,6 +211,15 @@
 | 17-1 | 带 `batchDoc` 的设计评审回 pass 但不写 §3 | 无 token、回执含 `review record incomplete`、同 designId 的 eng-coder spawn 被机械拒；补写 §3 后重评 ⇒ 签发（spawn 门放行） | 待执行 | — | — | — | `test/integration/advisor-record-gate.test.mjs` |
 | 17-2 | 不带 `batchDoc` 的设计评审回 pass | 照常签发（本门不适用——零回归的业务可观测面：spawn 门放行） | 待执行 | — | — | — | `test/integration/advisor-record-gate.test.mjs` |
 
+### 18. 一条后台报告只投递一次，未签收时才升级
+
+> 目的：一条后台报告在会话里出现一次之后**不再被注入**——空回合不把它再推一遍；未签收累积到上限才升级（终局披露一次 + 一条 UNSETTLED 提醒），此后零自动投递。
+> 节注：回指 = `docs/core/requirements/AGENT-LOOP.md` §4.15（F-DA1 / F-DA2 / F-DA3 · N2 / N4）；机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31.5（判定两支 ∥ 未签收上限 ∥ 升级支）∥ §6.31.11（A-DA3 / A-DA9）；交互组件 = 会话链路（`createAgent` + `runAgent` 消化轮）⟷ 见账 pass（`accountDigestRound`——含升级终局披露）⟷ 会话流与 status 面；进入口 = CLI 会话里一条后台报告被投递之后的连续消化轮；三态（行序）= 18-1 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 18-1 | CLI 会话里一条后台报告被投递之后的连续消化轮：置 `_daSession`，把一条**未投递**条目放进 `_pendingAsyncResults`（report = 可检索标记串，不预置 `_daDelivered`），逐轮 `runAgent(agent, "", {}, { autoTurn: true })`——前 4 轮桩恒回空响应（该轮抛 `LLM returned empty response`，调用面 catch 后继续），第 5 轮桩回任意正文 | 第 1 轮后报告正文出现 1 次（首投）；第 1–3 轮后会话流零 UNSETTLED 提醒、条仍在容器、注入计数 = 1、`report` 未释放；第 4 轮后 `_unsettledDigests` 恰 1 条（`missRounds = 4`）、UNSETTLED 提醒恰 1 条、正文出现 2 次（首投 + 终局披露）、`unsettledCount === 0`（条已离容器）；第 5 轮后零新注入。**修前红**：第 2、3 轮各再注入一次（正文出现 3 次）、第 3 轮即出 UNSETTLED 提醒 | 通过 | 2026-10-27 | eng-coder（实施席实跑） | — | `test/integration/digest-empty-round.test.mjs` |
+
 ## VS Code 端（thincoder-vscode）
 
 **尚无集成用例**——本端集成层尚未建立；故事节随首个用例设立（编号先行：先定 RTM 编号，再落用例标题 `test('<编号> …')`）。

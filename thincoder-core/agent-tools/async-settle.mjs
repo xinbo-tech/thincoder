@@ -139,7 +139,7 @@ export function parkAsyncPending(parent, entry) {
 
 /**
  * §6.31.5 升级账本写助手（消化账务批）：`_unsettledDigests` 追加一行
- * （`{ id, role, failures, report, at }`）。载体吸收（父字段优先 / history 借用——形态同
+ * （`{ id, role, missRounds, report, at }`）。载体吸收（父字段优先 / history 借用——形态同
  * `parkAsyncPending`）；行序 = 升级序（读面 = `digest-account.mjs` `unsettledRows`）。
  */
 export function appendUnsettledDigest(parent, row) {
@@ -187,7 +187,7 @@ export function releaseSettledEntry(entry) {
 
 /**
  * §6.31.4 投递面（消化账务批 · 2026-10-05 · 台账 #930）：会话态注入后**仅**释放 `childAgent`——
- * `report` 保留至销账 / 升级（重投需原文；驻留增量以报告量级 ∥ 重投上限封顶）。fallback 面零调用
+ * `report` 保留至销账 / 升级（升级终局披露需原文；驻留增量以报告量级 ∥ 未签收条数封顶）。fallback 面零调用
  * （既有 `releaseSettledEntry` 逐字沿用——注入即释放）。
  */
 export function releaseChildHold(entry) {

@@ -508,7 +508,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **起跑数行**：标签行之后、`runAgentTurn` 之前 `pushLine(t("digest.start", { n: pend0 }), C.dim)`——规则 = **`pend0 > 0`**（`pend0 = pendingFamilyCount(agent)` 取数前置，与收尾行同源；ask-only 轮零此行）。
 - **收尾行（X9）**：轮尾 `pushLine` 一行 dim（**到达序追加于当刻流末**——终态行；零就地换文 ∥ 不动原起跑行）——完成 ⇒ `digest.done`（`已消化 N 份后台报告（Xs）`）/ 中止与失败 ⇒ `digest.aborted`（`消化中断（Xs）`）；
   **`pend0 > 0` 守卫**（ask-only 轮零收尾行——done / aborted 两形态同判）；**文案单源 = 核 i18n 容器**（`t()` 取值——CLI 侧首个核 i18n 消费点）；**计数口径 = 起跑数**（与 VSC 端同源——消费数另计会引入双口径）；秒位 = `toFixed(1)`（与 VSC 同式）。
-  **`unsettled` 残余行**：消化轮收尾后本轮仍有未销账条目（`_daFailures > 0` 的在途条目数 > 0）⇒ 终态行之后再落一行 dim（`t("digest.residue", { n })`——核字典新键，逐字 = 核容器）；**两行同屏口径**：终态行 N 仍按起跑数（不扣减）∥ 未销账数由残余行承载（两行各表其一）；
+  **`unsettled` 残余行**：消化轮收尾后本轮仍有未销账条目（`_daMissRounds > 0` 的在途条目数 > 0）⇒ 终态行之后再落一行 dim（`t("digest.residue", { n })`——核字典新键，逐字 = 核容器）；**两行同屏口径**：终态行 N 仍按起跑数（不扣减）∥ 未销账数由残余行承载（两行各表其一）；
   零未销账 ⇒ 零此行（零噪音）；记录面 `digestEndRecord` 同携 `unsettled`（重建同调——`lifecycle-records.mjs`）。判据 / 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.31。
 - **边界**：`digest:start` / `digest:end` 日志事件零改（LOGGING 面）；消化轮机制 / 计数语义零改（编排面 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8；可见面口径单源 = `docs/core/design/AGENT-LOOP-UPSTREAM.md` §6.27.12.13 ①–③——本节 = CLI 侧落地形态）。
 - **行出即留（显示面）**：行 = 流内事件，**出即留**——起跑行 ∥ 计数行 ∥ cap 行 ∥ 终态行：**不改 ∥ 不删 ∥ 不退场**（零清理机器：无终态摘除 ∥ 无换代删旧 ∥ 无复列截点）；新轮起跑 = **追加**（旧轮行留置原位）；

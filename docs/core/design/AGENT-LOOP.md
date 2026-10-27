@@ -521,7 +521,7 @@ Stop 置于收尾链**首部**（后续收尾步骤的任何异常不得吞掉�
 - **子代理人读线窗口**：子代理创建时置 `child._historyWindow = RECORD_WINDOW_MESSAGES`（200——常量单源同主 agent 窗口；机制 = `thincoder-core/context.mjs` `pushReal` 驱逐）。
 - **捕获截断（滞后水位）**：捕获闭包改 `appendCappedText(output, t, CAPTURE_CAP_OPTS)` 后赋值 `child._capturedOutput`——`CAPTURE_CAP_OPTS = { hard: 131_072, head: 16_384, tail: 49_152, marker: "… [captured output truncated: N chars omitted] …" }`（超 hard → 裁至头 16K + 标记 + 尾 48K；续跑同闭包累积，语义一致）。
 - **释放点**：`releaseSettledEntry(entry)`（`async-settle.mjs`）——`entry.childAgent = null; entry.report = null`（幂等）；**三消费点**注入完成后调用（回合尾收集 / run 起始 pending 注入 / 挂起残差）——**fallback 面**（无挂起驱动）逐字沿用；池内与挂起未消化窗口**零变化**（报告仍到达、status / observe 可读）。
-  **会话态（报告保留至销账）**：挂起会话态（`_daSession === true`）注入后改调 `releaseChildHold(entry)`——**仅释放 `childAgent`**；`report` 保留至销账 / 升级（重投需原文；驻留增量以报告量级封顶、以重投上限封顶）。机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31.4（KD-DA7）。
+  **会话态（报告保留至销账）**：挂起会话态（`_daSession === true`）注入后改调 `releaseChildHold(entry)`——**仅释放 `childAgent`**；`report` 保留至销账 / 升级（升级终局披露需原文；驻留增量以报告量级封顶、以未签收条数封顶）。机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31.4（KD-DA7）。
 - **纯函数单源**：`capText` / `appendCappedText` 本体 = `thincoder-core/text-budget.mjs`（TUI 面 `display-budget.mjs` 与 agent 面共用）。
 - **轨迹面**（单遍序列化 / 额度双层 / 在途上界 / 序号缓存）→ 属**轨迹存储**板块（`TRACES.md`）。
 
@@ -626,7 +626,7 @@ VSC 侧**接线**面（端装配 / 面板 / webview 呈现）——机制本体�
 | D-AL20 | digest 预算 = **共享叶子模块单源** + 四族全接线 | 常量 / 判超 / 记账 / 落盘四处合一 |
 | D-AL21 | 子代理窗口复用主 agent 机制（`_historyWindow`） | 不另造第二套窗口实现 |
 | D-AL22 | 捕获 = 滞后水位截断（头 16K + 标记 + 尾 48K） | 消费面读 2K / 4K——头尾保真覆盖 |
-| D-AL23 | 释放点 = 注入完成后置空（三消费点同点 + 幂等守卫）——**fallback 面**（无挂起驱动）逐字沿用；会话态见右列 | 池内窗口语义零变。会话态 = 注入后仅释放 `childAgent`（`releaseChildHold`），`report` 保留至销账 / 升级（理由 = 重投需原文）——机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31.4 / KD-DA7。 |
+| D-AL23 | 释放点 = 注入完成后置空（三消费点同点 + 幂等守卫）——**fallback 面**（无挂起驱动）逐字沿用；会话态见右列 | 池内窗口语义零变。会话态 = 注入后仅释放 `childAgent`（`releaseChildHold`），`report` 保留至销账 / 升级（理由 = 升级终局披露需原文）——机制 = `AGENT-LOOP-ASYNC-POOL.md` §6.31.4 / KD-DA7。 |
 | D-AL24 | VSC 侧接线面 = **只登记接线事实、不复制机制本体**（挂起 / 协议 / 呈现 / 权限门回指既有节） | 机制权威已单源（§2.3 / SUBAGENT 档 / WEBVIEW 档 / 工程模式板）——平行档 / 重复叙述 = 漂移源 |
 | D-AL25 | child permission gate **按现状并入**（C-2 契约——非「无此状态」） | 发现「审批态已实装」（activity-view.js ⏸ + 等待审批）——活档口径按现状（VSC 源档为参照历史） |
 | D-AL26 | auto-think 分类 = **可关思考守卫 + 关思考小预算请求 + 失败一次可见** | 思考型模型上分类调用 100% 失败（思考吃光 `maxTokens: 10` + 无思考开关守卫；catch 静默 ⇒ 功能失效无感知）。修法：`thinkOffPath(spec)` 假 ⇒ 不调用（+ 一次 warn）；真 ⇒ `thinking = thinkOffShape(spec)` + `reasoningEffort` 清空 + `maxTokens = 32`；失败一次可见 warn（回退 null 语义不变）。 |
