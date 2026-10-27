@@ -5,7 +5,7 @@
 
 ## 1. 方案与理由
 
-**closest-precedent（最近的先例）**：头部超时已是可配项——`effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs:72-74`）读 `provider.fetchTimeoutMs`，由 `thincoder-core/config.mjs:350-352` 从 `agent.fetchTimeoutMs` 提升而来。
+**closest-precedent（最近的先例）**：头部超时已是可配项——`effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs:73-75`）读 `provider.fetchTimeoutMs`，由 `thincoder-core/config.mjs:350-352` 从 `agent.fetchTimeoutMs` 提升而来。
 
 - **对齐**：body 空闲超时照同一形——配置键在 `DEFAULTS.agent`，装载期提升为 `provider.*`，再经同名式 helper 解析。同一条链上的两个超时从此同构。
 - **偏离**：默认值的家 = `config-defaults.mjs` 的 DEFAULTS 表，不是只住常量。理由：`settings list` 展平的是活配置对象（`thincoder-core/agent-tools/settings.mjs:269-272`），未登记进 DEFAULTS 的键在 `list` 里看不见，判据「`settings list` 能看到该键」就无法满足；`fetchTimeoutMs` 正因此至今不可见（本轮不改它，见 §7）。
@@ -17,7 +17,7 @@
 
 四处都只记现状，与本批目标不冲突；其中两处事实被本批改写，已就地更新并指回本档。
 
-**closest-precedent（首 chunk 分窗的最近先例）**：响应头阶段超时已按「等上游」语义取 `effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs:72-74`），`thincoder-core/provider/core.mjs:428` 把它作为 `_headerTimeoutMs` 传入；`thincoder-core/proxy-transport.mjs:234` 已有「头阶段 ∥ body 阶段」两段计时。
+**closest-precedent（首 chunk 分窗的最近先例）**：响应头阶段超时已按「等上游」语义取 `effectiveFetchTimeoutMs`（`thincoder-core/provider/core.mjs:73-75`），`thincoder-core/provider/core.mjs:428` 把它作为 `_headerTimeoutMs` 传入；`thincoder-core/proxy-transport.mjs:234` 已有「头阶段 ∥ body 阶段」两段计时。
 
 - **对齐**：首 chunk 窗复用同一个 `effectiveFetchTimeoutMs` 值——两处都在等上游开口，一个值一个语义，零新配置键。
 - **偏离**：不把 body 的 `idleMs` 调大（那正是要修的病：它把两种失败模式绑在一个旋钮上）；也不立 `agent.firstChunkTimeoutMs` 新键——现无「首 chunk 窗要与头阶段窗不同」的现场，多一个键多一个用户要学的旋钮。
@@ -54,7 +54,7 @@
 | 写面 | `settings set agent.bodyIdleTimeoutMs <ms>`（数值叶子自动派生类型，无需形状表行）；手写 `config.json` 同效；`null` = 删键回退默认 |
 | 生效时机 | 下一回合（回合边界键） |
 
-`effectiveBodyIdleMs(provider)` 住 `thincoder-core/provider/core.mjs:79-82`，与 `effectiveFetchTimeoutMs`（`:72-74`）相邻：
+`effectiveBodyIdleMs(provider)` 住 `thincoder-core/provider/core.mjs:80-83`，与 `effectiveFetchTimeoutMs`（`:73-75`）相邻：
 
 ```js
 export function effectiveBodyIdleMs(provider) {
@@ -126,11 +126,11 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 | 面 | 接口形 |
 |---|---|
-| 读侧 OpenAI 形 | `readSSE(response, { idleMs, firstChunkMs = idleMs })`（`thincoder-core/provider/sse.mjs:93`）：循环体收到 chunk 即置 `gotFirstChunk`（`:217-218`），`armIdle()`（`:205-214`）按态取窗与文案 |
-| 读侧 Gemini 形 | `parseGeminiStream(response, { idleMs, firstChunkMs = idleMs })`（`thincoder-core/provider/google.mjs:178`）：同形（`:227-236` 两态臂、`:239-240` 收到 chunk 即翻转） |
+| 读侧 OpenAI 形 | `readSSE(response, { … idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs })`（`thincoder-core/provider/sse.mjs:93`）：未传 `firstChunkMs` ⇒ 首挂窗取 `idleMs`（体内 `firstChunkMs ?? idleMs` 兜住）；循环体收到 chunk 即置 `gotFirstChunk`（`:228-229`），`armIdle()`（`:207-224`）按态取窗与文案 |
+| 读侧 Gemini 形 | `parseGeminiStream(response, { … idleMs = DEFAULT_BODY_IDLE_MS, firstChunkMs })`（`thincoder-core/provider/google.mjs:178`）：同形（未传 `firstChunkMs` ⇒ 首挂窗取 `idleMs`，体内 `firstChunkMs ?? idleMs` 兜住；`:230-245` 两态臂、`:249-250` 收到 chunk 即翻转） |
 
 - **入参缺省 = 老行为**：`firstChunkMs` 缺省取 `idleMs`，未传者零变化（`thincoder-core/provider/list-models.mjs:33` 只传 `_bodyIdleMs: LIST_TIMEOUT_MS`，不吃读侧定时器）。
-- **读取链**：`agent.fetchTimeoutMs` → `loadConfig` 提升 `provider.fetchTimeoutMs`（`thincoder-core/config.mjs:370-372`）→ `effectiveFetchTimeoutMs(provider)`（`thincoder-core/provider/core.mjs:72-74`）→ 两条读侧路径传 `firstChunkMs`。零新配置键。
+- **读取链**：`agent.fetchTimeoutMs` → `loadConfig` 提升 `provider.fetchTimeoutMs`（`thincoder-core/config.mjs:370-372`）→ `effectiveFetchTimeoutMs(provider)`（`thincoder-core/provider/core.mjs:73-75`）→ 两条读侧路径传 `firstChunkMs`。零新配置键。
 
 **本机制新增的传参面（调用点与 §2.1 表同一批）**：
 
@@ -139,14 +139,14 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 | `thincoder-core/provider/core.mjs:265` / `:285` `readSSE` | `firstChunkMs: effectiveFetchTimeoutMs(provider)`（主路径 / 重试路径） |
 | `thincoder-core/provider/google.mjs:144` `parseGeminiStream` | `firstChunkMs: effectiveFetchTimeoutMs(provider)` |
 
-**读侧面无 `≤0` 门，也不需要**：`armIdle()` 现形恒挂定时器（`thincoder-core/provider/sse.mjs:205-214` 没有 `idleMs > 0` 判式），两条读侧路径传入的值都来自 `effectiveFetchTimeoutMs` / `effectiveBodyIdleMs`——两者恒为正（非法值回退默认），没有「窗被静默关掉」的路径。代理传输面的 `bodyIdleMs > 0` 门（`thincoder-core/proxy-transport.mjs:104`）不在本批（§4 D8）。
+**读侧面无 `≤0` 门，也不需要**：`armIdle()` 现形恒挂定时器（`thincoder-core/provider/sse.mjs:207-224` 没有 `idleMs > 0` 判式），两条读侧路径传入的值都来自 `effectiveFetchTimeoutMs` / `effectiveBodyIdleMs`——两者恒为正（非法值回退默认），没有「窗被静默关掉」的路径。代理传输面的 `bodyIdleMs > 0` 门（`thincoder-core/proxy-transport.mjs:104`）不在本批（§4 D8）。
 
 **超时文案与相位串按相位分**（三面并列：文案 ∥ 相位串）：
 
 | 面 | 首 chunk 相位（新） | 流中途相位（不变） |
 |---|---|---|
-| 读侧 OpenAI 形（`thincoder-core/provider/sse.mjs:210`） | `SSE first-chunk timeout: no data for Ns` ∥ `sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `sse-idle` |
-| 读侧 Gemini 形（`thincoder-core/provider/google.mjs:232`） | `SSE first-chunk timeout: no data for Ns` ∥ `google-sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `google-sse-idle` |
+| 读侧 OpenAI 形（`thincoder-core/provider/sse.mjs:218-220`） | `SSE first-chunk timeout: no data for Ns` ∥ `sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `sse-idle` |
+| 读侧 Gemini 形（`thincoder-core/provider/google.mjs:239-241`） | `SSE first-chunk timeout: no data for Ns` ∥ `google-sse-first-chunk` | `SSE idle timeout: no data for Ns` ∥ `google-sse-idle` |
 
 `N` = 该相位实际生效的窗值（`firstChunkMs / 1000` ∥ `idleMs / 1000`）——与现形同口径（超时文案用实际值）。
 
@@ -154,7 +154,7 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 | 新名 | 三问答复 |
 |---|---|
-| 相位串 `sse-first-chunk` ∥ `google-sse-first-chunk` | `existing but unusable:` `sse-idle` / `google-sse-idle`（`thincoder-core/provider/sse.mjs:210` ∥ `google.mjs:232`）· failed on: 分不出「流断了」与「还没开始」——正是本次报障的表述缺口 |
+| 相位串 `sse-first-chunk` ∥ `google-sse-first-chunk` | `existing but unusable:` `sse-idle` / `google-sse-idle`（`thincoder-core/provider/sse.mjs:218-220` ∥ `google.mjs:239-241`）· failed on: 分不出「流断了」与「还没开始」——正是本次报障的表述缺口 |
 | 文案 `SSE first-chunk timeout: no data for Ns` | `existing but unusable:` `SSE idle timeout: no data for Ns`（同上两处）· failed on: 同上——用户拿到的文案看不出卡在哪一相位 |
 | 入参 `firstChunkMs`（`readSSE` ∥ `parseGeminiStream`） | `none found:` 查了 `thincoder-core/**/*.mjs`（grep `firstChunkMs|first-chunk` 零命中）——无同名 ∥ 同义入参可复用 |
 
@@ -167,23 +167,25 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 | 文件 | 当前行数 | 本层 Δ | 改动 |
 |---|---|---|---|
 | `thincoder-core/config-defaults.mjs` | 100 | +3 | `DEFAULT_BODY_IDLE_MS = 120000` 单源常量（`:17`）；`DEFAULTS.agent.bodyIdleTimeoutMs` 登记（`:30`） |
-| `thincoder-core/config.mjs` | 453 | +4 | `:361-363` 提升 `provider.fetchTimeoutMs`；`:366-367` 提升 `provider.bodyIdleTimeoutMs` |
-| `thincoder-core/provider/core.mjs` | 495 | 0（两行改写） | `:79-82` `effectiveBodyIdleMs` 唯一解析点；`:265` / `:285` / `:429` 三处读它；`:265` / `:285` 另传 `firstChunkMs` |
-| `thincoder-core/provider/sse.mjs` | 301 | +6 / −2 | `:93` `readSSE` 收 `idleMs` + `firstChunkMs = idleMs`；`:203-218` `gotFirstChunk` 两态臂（窗 / 文案 / 相位串按态取） |
-| `thincoder-core/provider/google.mjs` | 299 | +5 / −1 | `:139` 读 `effectiveBodyIdleMs`；`:144` `parseGeminiStream` 收 `idleMs` + `firstChunkMs`；`:178` 形参缺省单源；`:227-240` 两态臂 |
-| `thincoder-core/provider/anthropic.mjs` | 362 | +1 / −1 | `:225` 代理分支 `_bodyIdleMs` |
-| `thincoder-core/provider/responses.mjs` | 307 | +3 / −3 | `:248` / `:267` / `:285` 三条传输分支 `_bodyIdleMs` |
+| `thincoder-core/config.mjs` | 462 | +4 | `:371-372` 提升 `provider.fetchTimeoutMs`；`:375-376` 提升 `provider.bodyIdleTimeoutMs` |
+| `thincoder-core/provider/core.mjs` | 494 | 0（两行改写） | `:80-83` `effectiveBodyIdleMs` 唯一解析点；`:265` / `:285` / `:429` 三处读它；`:265` / `:285` 另传 `firstChunkMs` |
+| `thincoder-core/provider/sse.mjs` | 311 | +6 / −2 | `:93` `readSSE` 收 `idleMs = DEFAULT_BODY_IDLE_MS` + `firstChunkMs`；`:207-224` `gotFirstChunk` 两态臂（窗 / 文案 / 相位串按态取） |
+| `thincoder-core/provider/google.mjs` | 308 | +5 / −1 | `:139` 读 `effectiveBodyIdleMs`；`:144` `parseGeminiStream` 收 `idleMs` + `firstChunkMs`；`:178` 形参缺省单源；`:230-245` 两态臂 |
+| `thincoder-core/provider/anthropic.mjs` | 367 | +1 / −1 | `:229` 代理分支 `_bodyIdleMs` |
+| `thincoder-core/provider/responses.mjs` | 317 | +3 / −3 | `:252` / `:271` / `:289` 三条传输分支 `_bodyIdleMs` |
 | `thincoder-core/proxy.mjs` | 54 | +2 / −1 | `:52` 缺省 `DEFAULT_BODY_IDLE_MS` |
 | `thincoder-core/proxy-transport.mjs` | 300 | +3 / −2 | `:43` 形参缺省 + `:234` 读 `opts?._bodyIdleMs`，均落 `DEFAULT_BODY_IDLE_MS` |
 | `thincoder-core/agent/helpers.mjs` | 500 | +5 / −3（净 +2） | `:157` `offloadToolResult` 收 `{ force }`；`:158-173` 渲染二分 + 写盘失败两形态（§2.2 表） |
 | `thincoder-core/agent-tools/subagent-async.mjs` | 485 | +3 / −2 | `:388-389` 两条路都落盘 + 缝取值 |
 | `thincoder-core/agent-tools/digest-budget.mjs` | 78 | +1 | `:62` `_digestOffloadDirForTest()` 无参读取面 |
-| `thincoder-core/agent/completion.mjs` | 159 | +2 / −1 | `:65` 合取 `!poolLive(agent)`；`:11` import 自 `suspension.mjs` |
-| `docs/core/design/PROVIDER.md` | 1408 | 0 | §6.3 的 body 阶段超时值来源指本档 §2.1（`agent.bodyIdleTimeoutMs`） |
-| `docs/core/design/AGENT-LOOP.md` | 520 | 0 | §9 第 2 条 pending tasks 提醒以 `!poolLive` 为前置判据 |
+| `thincoder-core/agent/completion.mjs` | 171 | +2 / −1 | `:77` 合取 `!poolLive(agent)`；`:11` import 自 `suspension.mjs` |
+| `docs/core/design/PROVIDER.md` | 1411 | 0 | §6.3 的 body 阶段超时值来源指本档 §2.1（`agent.bodyIdleTimeoutMs`） |
+| `docs/core/design/AGENT-LOOP.md` | 636 | 0 | §9 第 2 条 pending tasks 提醒以 `!poolLive` 为前置判据 |
 | `docs/core/design/TIMEOUT-DIGEST.md`（本档） | — | — | 本档自身：§1–§9 |
 
-本批复核并更新的三行 = `provider/core.mjs` / `provider/sse.mjs` / `provider/google.mjs`；其余行的行数与坐标 = 上一轮实读（本批未触碰这些文件）。
+**行数口径**：本表每个行数 = `wc -l` 实读（项目统一口径，`docs/core/design/MODEL-SPECS.md:261`）；`split('\n').length` 会把末尾空串多算一行，本档不采用该口径。
+
+**复核面**：机制改动面本批复核的三行 = `provider/core.mjs` / `provider/sse.mjs` / `provider/google.mjs`；全表行数与坐标按同一轮盘面实读。
 
 单文件最大 = `thincoder-core/agent/helpers.mjs` 500 行，位于 500 行咨询档上沿，不越档、不拆分。若该档继续增长越档，拆点 = 把 offload / 预览族整块外移为 `thincoder-core/agent/offload.mjs`（原档保留 re-export，消费面零改），仅此一处。
 
