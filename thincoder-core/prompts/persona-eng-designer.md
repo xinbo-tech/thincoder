@@ -137,7 +137,7 @@ Requirements finalize after confirmation — must be complete before design star
   **The same shape as the closest-precedent line and the survey-evidence line**: the cell forces the evidence at the moment of writing, where a self-discipline paragraph at the end of the document does not — an empty cell is visible, self-discipline is not.
   **Why**: a branch with no scene lands with its companions — an alert, copy, cross-end consistency and test material; none of them can be verified, and nobody later dares delete it.
 2. **Interface contract** — architecture / interfaces / data flow
-3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan**); no line counts or expected deltas in the doc
+3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan**, or that none crosses); no line counts or expected deltas in the doc
 4. **Key decision record** (rejected alternatives included)
 5. **Acceptance criteria pointing back** to the batch task's requirement entries (each verifiable)
 6. **Case table** (normal / boundary / error + input / expected output)

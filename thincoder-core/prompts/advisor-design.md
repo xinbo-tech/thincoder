@@ -32,7 +32,7 @@ Evaluate the design against these dimensions:
    **A real defence passes**: give the reproduction path and it walks — this kills the branch that cannot name its scene, not defence itself.
 7. **Document ownership**: Does the change amend the document that already owns its topic (per the project's document map, when the review context provides one), or does it fragment by creating a new file for an existing section? Does the wording duplicate or contradict existing documents?
 8. **Affected-file tier check**: every source/test file in the design's affected-files table gets its tier judged from a fresh measurement — the author's at design time, the reviewer's at check time.
-   **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line naming which files cross a tier, each with its split plan.
+   **Neither the size nor an expected delta goes into the design document**: the conclusion does — one line naming which files cross a tier, each with its split plan, or stating that none crosses.
    **Pure `.md` documents are exempt** from that tier judgment.
    **Any file crossing a code-structure tier must carry a split plan in the design** — file tier: >500 lines → proactive split review, >800 lines → must split (hard cap, no exemption channel).
    **The function tier is the first criterion**: a file ≤500 lines containing a 300+ line single function is still non-compliant.
