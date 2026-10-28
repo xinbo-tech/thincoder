@@ -117,13 +117,13 @@
 
 ### 2.3 现行态认账（「认账为骨架」）
 
-> 本块 = 入口空集语义与现量读数的**唯一权威陈述面**（D2——包级文档引本块、不各自重述）；「认账」= 显式接受现状并使之可读、可见——**非**「测试已就绪」的宣称；**空集不读作绿**（§10 F5）：无集成用例 ⇒ 入口非零退出并说明。
+> 本块 = 入口空集语义的**唯一权威陈述面**（D2——包级文档引本块、不各自重述）；「认账」= 显式接受现状并使之可读、可见——**非**「测试已就绪」的宣称；**空集不读作绿**（§10 F5）：无集成用例 ⇒ 入口非零退出并说明。
 
-**入口读数（复跑命令 = 各包 `node test/run.mjs`；cli ∥ 核为 2026-10-24 实测）**：
+**入口读数（复跑命令 = 各包 `node test/run.mjs`）**：
 
 | 包 | 启动期检查 | 读数形 |
 |---|---|---|
-| cli | 收集面反查（`test/` 下 `.test.mjs` 只许住 `test/integration/`）+ 软链目录拒绝 | 现量 5 档 / 15 例 ⇒ `ℹ tests 15` · `pass 15` · `fail 0` + exit 0；集成目录空 ⇒ `✖ no integration test set …` + exit 1 |
+| cli | 收集面反查（`test/` 下 `.test.mjs` 只许住 `test/integration/`）+ 软链目录拒绝 | `ℹ tests N` · `pass N` · `fail 0` + exit 0；集成目录空 ⇒ `✖ no integration test set …` + exit 1 |
 | core | 收集面反查（零目标集合——任何 `test/**/*.test.mjs` 均判错位）+ 软链目录拒绝 | 常态 = `✖ no integration test set — … (requirement N20) …` + exit 1（不跑用例）；**非门**——发布钩 ∥ CI 走语法门（§10.3） |
 | vscode ∥ desktop ∥ render-core | 各自收集面自检（显式清单 ∥ 单层 glob ∥ 包面自检） | **旧空集直通（exit 0）**——空集守卫未落**这三面**（面差登记 = §10.3 三行） |
 
@@ -132,7 +132,7 @@
 **认账 ≠ 库存**：单元测试档按**零留存**结算（用毕即删——§3.1）——清单只指**批内件**（`docs/batches/*.test.mjs`，随批删）；件数随批流动、不落固定读数（复算口径 = 逐档计数，命令 `ls docs/batches/*.test.mjs`）。本批自己的单测档仍在盘 ⇒ 收口被拒——判据与拒面 = §3.5 收口门。
 件内自持标注随件（**无「再跑旧档」面**）；本认账**零处置动作**（零移 ∥ 零改注——删件属各批收口动作）。
 
-**集成测试现量**：cli = 5 档 / 15 例（2026-10-24 实测：`ℹ tests 15` · `pass 15` · `fail 0`）；vscode ∥ desktop = 集成目录在、零例档；核仓按需求 §3 N20 不设集成测试域（其 `npm test` 非零并说明——§10.3）。守闸读数（现集成数 ∥ 窗口 50–100）随收口测试行 ②半带出（需求 F9）。
+**守闸读数**（现集成数 ∥ 窗口 50–100）随收口测试行 ②半带出（需求 F9）。
 
 ## 3. 测试生命周期（三层来源）
 
@@ -216,9 +216,9 @@
 
 相关 = 本档 §2 ∥ §3.1 ∥ §3.3 ∥ `docs/core/design/BATCH-RECORD.md` §4.13 ∥ `docs/core/design/DOC-DISCIPLINE.md` §3.20（结构兜底的判据句）。`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（实读）⇒ 外部公共源无相关。
 
-**受影响文件**（行数本轮实测）：`thincoder-core/agent-tools/batch-unit-test-gate.mjs` 0 → ≈ 60（新）· `thincoder-core/agent-tools/batch-lifecycle.mjs` 613 → ≈ 622。
+**受影响文件**（表级尺寸档位结论：`.md` 零行数义务；两处代码档 = 一处新建、一处就地改，未触发拆分计划）：`thincoder-core/agent-tools/batch-unit-test-gate.mjs`（新档）· `thincoder-core/agent-tools/batch-lifecycle.mjs`。
 
-设计 ∥ 索引档：`docs/core/design/TESTING.md` 1248 → +≈ 66（本节含在内）· `docs/core/design/BATCH-RECORD.md` 687 → 689 · `test/RTM.md` 162 → 163 · `test/integration/batch-close-gate.test.mjs` 200 → ≈ 240。
+设计 ∥ 索引档（表级尺寸档位结论：`.md` 一段零尺寸档位义务、无拆分计划）：`docs/core/design/TESTING.md`（本节含在内）· `docs/core/design/BATCH-RECORD.md` · `test/RTM.md` · `test/integration/batch-close-gate.test.mjs`。
 
 **用例表（正常 ∥ 边界 ∥ 错误）**：
 
@@ -771,22 +771,22 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 ### 11.8 受影响文件
 
-| 文件 | 现（行） | Δ | 本批 |
-|---|---|---|---|
-| `docs/core/design/TESTING.md`（本档自身） | —（行数随本节改笔变化，不落固定读数） | +§11.15–§11.17 三节；§11.1 ∕ §11.2 ∥ §11.4 ∥ §11.8 ∥ §11.10–§11.12 ∥ §11.14 改笔 | 设计轮落 |
-| `docs/core/requirements/TESTING.md` | —（父侧笔） | F29 的名称 ∥ 路径定死；N22 去「待裁 O-1」⇒ 已裁 = 每端一份（**2026-10-25 已推翻 ⇒ 仓内一份——见 §12 ∥ N22 现文**） | 父侧落 |
-| `thincoder-core/prompts/persona-eng-designer.md` | 152 | 第 9 项（现 137–138 行）替换开篇口径、`#87` 字段句与注解逐字保留 ⇒ 2 行 → 5 行（+3） | 实施轮落 |
-| `thincoder-core/prompts/advisor-design.md` | 140 | 第 12 条（现 52–59 行）首句替换 + 一条 🔴 + 一句编号先行 ⇒ 2 行 → 5 行（+3） | 实施轮落 |
-| `thincoder-core/prompts/discipline-engineering.md` | 346 | 集成段（现 181 行后）新增一条 ⇒ +3 行 | 实施轮落 |
-| CLI 包 `<包>/test/RTM.md` | 0（不存在） | ≈45 行：5 故事节（节标题 + 节注 + 表头 + 3 行）+「异常与更正」节 + 签署面（§11.16 建表结构） | 实施轮建 |
-| CLI 包 `test/integration/*.test.mjs`（5 档） | 345 ∥ 245 ∥ 99 ∥ 108 ∥ 132（落笔时快照——现量以 §12.3 实读为准） | 15 处标题改号（旧代号离场） | 实施轮落 |
-| `docs/batches/2026-10-24-rtm-index.check.mjs`（机判脚本） | 0（不存在） | 新建 ≈30 行；**一次性读数用毕即删**（与批档同寿命；住批档目录 ⇒ 不进包根、不入 `check-syntax` 语法门） | 实施轮落 · 收口删 |
-| vsc ∥ desktop 包 `<包>/test/RTM.md` | 0（不存在） | 骨架 + 「尚无集成用例」注；故事节随首个用例设立（≈10 行） | 实施轮建 |
-| `docs/core/design/PROMPT-SYSTEM.md` §6.6（操作数族判据源） | 4219 | 六名 → 七名：`:186`–`:187` 名单 ∥ 理由类 · `:193` J1 白名单 · `:195` ∥ `:200` 计数词 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
-| `docs/core/design/DOC-DISCIPLINE.md`（操作数族判据源） | 2200 | 六名 → 七名：`:1021` 名单 · `:1029` 行区 `:45`–`:48` → `:45`–`:49` · `:1031` ∥ `:1034` 计数词与围栏名单 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
-| `thincoder-core/doc-check/anchors.mjs` | 134 | `CANON_OPERANDS` 增第七名（RTM 总表的档名）（`:45`–`:48` → `:45`–`:49`）；`:10` ∥ `:38` ∥ `:50` 注释「六名」→「七名」 ⇒ +1 行 | 实施轮落 · 与提示词同批 |
-| `scripts/prompt-refs-check.mjs`（仓根） | 136 | `:34` 注释「六名」→「七名」；`J1_WHITELIST` 自 `CANON_OPERANDS` 派生 ⇒ 随动，零逻辑改 ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
-| `thincoder-core/tool-docs/doc_check.md` | 66 | `:16`「Six names」→「Seven names」+ 围栏名单增第七名（RTM 总表的档名） ⇒ ±0 行 | 实施轮落 · 与提示词同批 |
+| 文件 | 本批 |
+|---|---|
+| `docs/core/design/TESTING.md`（本档自身） | 设计轮落 |
+| `docs/core/requirements/TESTING.md` | 父侧落 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 实施轮落 |
+| `thincoder-core/prompts/advisor-design.md` | 实施轮落 |
+| `thincoder-core/prompts/discipline-engineering.md` | 实施轮落 |
+| CLI 包 `<包>/test/RTM.md` | 实施轮建 |
+| CLI 包 `test/integration/*.test.mjs`（5 档） | 实施轮落 |
+| `docs/batches/2026-10-24-rtm-index.check.mjs`（机判脚本） | 实施轮落 · 收口删 |
+| vsc ∥ desktop 包 `<包>/test/RTM.md` | 实施轮建 |
+| `docs/core/design/PROMPT-SYSTEM.md` §6.6（操作数族判据源） | 实施轮落 · 与提示词同批 |
+| `docs/core/design/DOC-DISCIPLINE.md`（操作数族判据源） | 实施轮落 · 与提示词同批 |
+| `thincoder-core/doc-check/anchors.mjs` | 实施轮落 · 与提示词同批 |
+| `scripts/prompt-refs-check.mjs`（仓根） | 实施轮落 · 与提示词同批 |
+| `thincoder-core/tool-docs/doc_check.md` | 实施轮落 · 与提示词同批 |
 
 **操作数族登记面的检索读数（本席实跑 2026-10-24）**：检索式 = `CANON_OPERANDS` ∥ `CANON 操作数` ∥ `Six names` ∥ `六名`，域 = 跟踪面（`docs/**` 非批档 ∥ `thincoder-core/**` ∥ `scripts/**`；批档 ∥ `.thincoder/tmp/**` ∥ `_archive` = 记录面，不入判）。
 

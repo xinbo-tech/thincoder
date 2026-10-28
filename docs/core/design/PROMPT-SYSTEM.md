@@ -3081,7 +3081,7 @@ B3 — `thincoder-core/prompts/common.md:19`（`## Check the docs before you ask
 | # | 坐标 | 现文 | 缺的那一半 |
 |---|---|---|---|
 | F1 | `thincoder-core/prompts/` 16 档（逐档见落点表） | 290 行超过 300 字符 | 一条规则与它的理由 / 例外 / 反例挤在同一行，靠分号串联；模型一次前向同时面对多件事，哪句是规则没有边界 |
-| F2 | `thincoder-core/prompts/persona-engineering.md:209` | 1,486 字符一行（closing ledger sweep） | 同上；且这是 16 档最长行，改写样板取自这一行 |
+| F2 | `thincoder-core/prompts/persona-engineering.md:209` | 超宽长行（closing ledger sweep） | 同上；改写样板取自这一行 |
 | F3 | 本档六处（`:476` `:627` `:653` `:2818` `:2849` `:2870`） | 三族口径把提示词行排除在行宽判据之外（族名与逐处处置见连带项 C 表） | 与 FR46 相抵：提示词面受行界约束、一条规则一行 |
 
 **机制（为什么行长会伤执行）**：
@@ -3098,7 +3098,7 @@ B3 — `thincoder-core/prompts/common.md:19`（`## Check the docs before you ask
 2. **加粗只落在每行的题眼上**：满行加粗等于没有重点（样板每行恰一处加粗）。
 3. **需要回查的指代要改写或删除**：读的人拿不到「那条规则就在附近」的保证。
 
-**逐字围栏块（样板 · `thincoder-core/prompts/persona-engineering.md:209` 的改写结果 · 六行 · 逐行读数见体量读数）**：
+**逐字围栏块（样板 · `thincoder-core/prompts/persona-engineering.md:209` 的改写结果 · 六行）**：
 
 ```text
 - **Closing ledger sweep**: sweep the ledger before declaring a batch closeout done — and at session close, when the user says so.
@@ -3111,24 +3111,24 @@ B3 — `thincoder-core/prompts/common.md:19`（`## Check the docs before you ask
 
 **落点表（两舱逐档 · 实施席按波推进：样板档单波先行，其余每席一到两档）**：
 
-| 舱 | 档 | 超 300 字符行数 | 最长行 |
-|---|---|---|---|
-| 甲 | `thincoder-core/prompts/persona-engineering.md` | 78 | 1,486 @`:104` |
-| 甲 | `thincoder-core/prompts/discipline-engineering.md` | 48 | 1,389 @`:42` |
-| 甲 | `thincoder-core/prompts/discipline-normal.md` | 28 | 756 @`:54` |
-| 甲 | `thincoder-core/prompts/persona-eng-designer.md` | 22 | 934 @`:35` |
-| 甲 | `thincoder-core/prompts/persona-eng-coder.md` | 4 | 885 @`:19` |
-| 甲 | `thincoder-core/prompts/persona-normal.md` | 3 | 422 @`:21` |
-| 甲 | `thincoder-core/prompts/persona-coder.md` | 1 | 386 @`:8` |
-| 甲 | `thincoder-core/prompts/persona-explore.md` | 0 | 152 @`:14` |
-| 甲 | `thincoder-core/prompts/persona-plan.md` | 0 | 217 @`:23` |
-| 乙 | `thincoder-core/prompts/common.md` | 51 | 1,003 @`:271` |
-| 乙 | `thincoder-core/prompts/advisor-design.md` | 15 | 661 @`:22` |
-| 乙 | `thincoder-core/prompts/advisor-round1.md` | 13 | 859 @`:59` |
-| 乙 | `thincoder-core/prompts/advisor-round3.md` | 13 | 771 @`:60` |
-| 乙 | `thincoder-core/prompts/advisor-round2.md` | 12 | 771 @`:64` |
-| 乙 | `thincoder-core/prompts/consult-base.md` | 2 | 706 @`:5` |
-| 乙 | `thincoder-core/prompts/subagent-base.md` | 0 | 274 @`:14` |
+| 舱 | 档 | 超 300 字符行数 |
+|---|---|---|
+| 甲 | `thincoder-core/prompts/persona-engineering.md` | 78 |
+| 甲 | `thincoder-core/prompts/discipline-engineering.md` | 48 |
+| 甲 | `thincoder-core/prompts/discipline-normal.md` | 28 |
+| 甲 | `thincoder-core/prompts/persona-eng-designer.md` | 22 |
+| 甲 | `thincoder-core/prompts/persona-eng-coder.md` | 4 |
+| 甲 | `thincoder-core/prompts/persona-normal.md` | 3 |
+| 甲 | `thincoder-core/prompts/persona-coder.md` | 1 |
+| 甲 | `thincoder-core/prompts/persona-explore.md` | 0 |
+| 甲 | `thincoder-core/prompts/persona-plan.md` | 0 |
+| 乙 | `thincoder-core/prompts/common.md` | 51 |
+| 乙 | `thincoder-core/prompts/advisor-design.md` | 15 |
+| 乙 | `thincoder-core/prompts/advisor-round1.md` | 13 |
+| 乙 | `thincoder-core/prompts/advisor-round3.md` | 13 |
+| 乙 | `thincoder-core/prompts/advisor-round2.md` | 12 |
+| 乙 | `thincoder-core/prompts/consult-base.md` | 2 |
+| 乙 | `thincoder-core/prompts/subagent-base.md` | 0 |
 
 **舱合计（D3）**：甲舱 9 档 / 184 行 >300；乙舱 7 档 / 106 行 >300；合计 16 档 / 290 行（逐行相加）。
 **推进次序（需求 §13.24「实施顺序」四步 · 硬前置，不许跳；甲舱先行不变）**：
@@ -3144,33 +3144,33 @@ B3 — `thincoder-core/prompts/common.md:19`（`## Check the docs before you ask
 
 **舱与批（D3）**：舱 = 批次边界（单舱 ≤15 档，需求 §13.24「16 档分两批」）；**派单单位 = 波，不是舱**（样板一波 · 其余每席一到两档分波）。甲舱批 = 本批（本节 = 其设计，§5 = 甲舱 9 档的语义对账映射表）；乙舱批另起一份批次档（其 §2 引本节，§5 = 乙舱 7 档映射表）。甲舱批各波跑完再开乙舱批，同一时刻在跑的实施席不超过本机 engCoder 并发（12）。
 
-**受影响文件表（现行 = 本席 `node` 实读 · 2026-10-22 · 行 / 字符 / >300 / 最长行）**：
+**受影响文件表（现行 = 本席 `node` 实读 · 2026-10-22 · 行 / 字符 / >300）**：
 
-| 文件 | 行数 | 字符数 | >300 字符行数 | 最长行 | 预期改后 |
-|---|---|---|---|---|---|
-| `thincoder-core/prompts/persona-engineering.md` | 248 | 66,324 | 78 | 1,486 @`:104` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/common.md` | 310 | 50,723 | 51 | 1,003 @`:271` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/discipline-engineering.md` | 204 | 39,858 | 48 | 1,389 @`:42` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/discipline-normal.md` | 263 | 38,535 | 28 | 756 @`:54` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/persona-eng-designer.md` | 89 | 18,574 | 22 | 934 @`:35` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/advisor-design.md` | 77 | 12,634 | 15 | 661 @`:22` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/advisor-round1.md` | 64 | 12,422 | 13 | 859 @`:59` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/advisor-round3.md` | 60 | 11,217 | 13 | 771 @`:60` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/advisor-round2.md` | 64 | 11,288 | 12 | 771 @`:64` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/persona-eng-coder.md` | 38 | 6,073 | 4 | 885 @`:19` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/persona-normal.md` | 49 | 6,471 | 3 | 422 @`:21` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/consult-base.md` | 25 | 3,639 | 2 | 706 @`:5` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/persona-coder.md` | 20 | 1,723 | 1 | 386 @`:8` | >300 = 0 · 最长 ≤300 · 行数上浮 |
-| `thincoder-core/prompts/persona-explore.md` | 14 | 931 | 0 | 152 @`:14` | ±0（现值即达标） |
-| `thincoder-core/prompts/persona-plan.md` | 26 | 2,329 | 0 | 217 @`:23` | ±0（现值即达标） |
-| `thincoder-core/prompts/subagent-base.md` | 17 | 2,166 | 0 | 274 @`:14` | ±0（现值即达标） |
-| `docs/core/design/PROMPT-SYSTEM.md` | 2,991 | 262,062 | — | — | 本节 = 新增内容；本档六处收正 = 设计席修正轮（连带项 C 表） |
+| 文件 | 行数 | 字符数 | >300 字符行数 | 预期改后 |
+|---|---|---|---|---|
+| `thincoder-core/prompts/persona-engineering.md` | 248 | 66,324 | 78 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/common.md` | 310 | 50,723 | 51 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/discipline-engineering.md` | 204 | 39,858 | 48 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/discipline-normal.md` | 263 | 38,535 | 28 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/persona-eng-designer.md` | 89 | 18,574 | 22 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/advisor-design.md` | 77 | 12,634 | 15 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/advisor-round1.md` | 64 | 12,422 | 13 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/advisor-round3.md` | 60 | 11,217 | 13 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/advisor-round2.md` | 64 | 11,288 | 12 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/persona-eng-coder.md` | 38 | 6,073 | 4 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/persona-normal.md` | 49 | 6,471 | 3 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/consult-base.md` | 25 | 3,639 | 2 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/persona-coder.md` | 20 | 1,723 | 1 | >300 = 0 · 最长 ≤300 · 行数上浮 |
+| `thincoder-core/prompts/persona-explore.md` | 14 | 931 | 0 | ±0（现值即达标） |
+| `thincoder-core/prompts/persona-plan.md` | 26 | 2,329 | 0 | ±0（现值即达标） |
+| `thincoder-core/prompts/subagent-base.md` | 17 | 2,166 | 0 | ±0（现值即达标） |
+| `docs/core/design/PROMPT-SYSTEM.md` | 2,991 | 262,062 | — | 本节 = 新增内容；本档六处收正 = 设计席修正轮（连带项 C 表） |
 
 **验收（A1–A4 · 回指 §13.24 四条）**：
 
 | # | 验收 | 判法 / 读数 |
 |---|---|---|
-| A1 | 需求 ① 两舱每一行 ≤300 | 改后一次性 `node` 脚本逐档读 `thincoder-core/prompts/*.md`（`split(/\r?\n/)` · 判 `length > 300`），两舱各报 `>300 = 0` 与最长行；改前读数 = 本节落点表（290 行 · 最长 1,486） |
+| A1 | 需求 ① 两舱每一行 ≤300 | 改后一次性 `node` 脚本逐档读 `thincoder-core/prompts/*.md`（`split(/\r?\n/)` · 判 `length > 300`），两舱各报 `>300 = 0` 与最长行 |
 | A2 | 需求 ② 语义对账映射表 | 实施轮逐档给「原文行 → 新行」映射表，四列（规则 / 条件 / 例外 / 理由）每列都要有判断——该列没有内容时写「—（本条无）」，不许留空串，也不许为凑格编一条；落批次档 §5（甲舱落本批，乙舱落乙舱批）；判法 = 该档改前每一条 >300 行在「原文行」列逐行出现，未判格 0 次（空串或全空白即未判） |
 | A3 | 需求 ③ 零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0（本席基线实跑 2026-10-22 = 提示词面 69 档 · 代码面 463 档 · 0）；改写文本零 `.md` / 零 `§N` |
 | A4 | 需求 ④ 相反口径已收正 | 设计席修正轮落笔后（C 表、F3 行与三族定义行已删，见 K8），三族子串全档零命中——族① `不在行宽机检域` / `行宽机检域`；族② `披露不行使`；族③ `行数不作断言` / `行数是排版副产品` / `只作排版读数` / `行数不作验收条`。判法 = `grep -n` 三族子串，判域排除本行自身（判据句须写出被判的子串；三族子串清单在本行内自带，不靠另起的定义行），其余行命中 0 才算过 |
@@ -3231,11 +3231,7 @@ C6 — `docs/core/design/PROMPT-SYSTEM.md:2870`：
 
 **不在射程（实扫逐处给理由）**：`§6.25` / `§6.26` 的「父侧逐笔披露」族（`:2212` `:2299` `:2372` `:2386`）= 轻通道笔披露形，不判行宽；`:2812`「+6 行（读数 · 不作验收条）」= 行面 Δ 附注，判的对象不是行数本身；`:2897`「行宽命中 0」= `doc_check` 读数；`:3082`「行宽闸值同数」= 阈值数值，非面判据；`:3011`「行数上浮」= 改后预期读数。以上五类随本表一并删。
 
-**体量读数（无帽 · 只读数）**：16 档现行 = 1,568 行 / 284,907 字符 / 290 行 >300 / 最长 1,486；样板六行 = 130 / 213 / 200 / 252 / 183 / 288 字符（最长 288 ≤ 300；逐行实读自本节围栏块）。
-本节写入前 `PROMPT-SYSTEM.md` = 2,991 行 / 262,062 字符。
-改后预期 = 两舱各 `>300 = 0`、最长 ≤300；行数上浮（每条 >300 行拆为多行）、字符量基本持平（重写不删内容，只删指代 / 装饰加粗 / 自我限定）。
-
-两舱合计的行数与字符数是体量读数（D-PS42 ③），不作验收阈值；验收线只有两条——逐行 ≤300（A1）与四类内容映射（A2）。
+**验收线只有两条**——逐行 ≤300（A1）与四类内容映射（A2）。
 
 **边界（本批不做）**：不改规则语义与判据强度 · 不新增规则 · 不为过判据删内容、不把理由挪走 · 不改 `thincoder-core/tool-docs/**` · 不改产品代码 · 不改需求档 · 不改本档 §6.19 / §6.25 / §6.26 / §6.44 正文（六处收正 = 设计席修正轮的设计档笔，见连带项 C 表）· 不新增常驻机检（引擎 `width.mjs` → `paragraph.mjs` 属 FR45 批；本批行界读数用一次性 `node` 脚本）· 提示词面不设豁免（用户 12:23「提示词面更需要！」）。
 
@@ -3264,12 +3260,10 @@ C6 — `docs/core/design/PROMPT-SYSTEM.md:2870`：
 
 **勘察证据行（本席直读 · 2026-10-22）**：
 
-- `thincoder-core/prompts/` 16 档实读（一次性 `node` 脚本）：1,568 行 / 284,907 字符 / 290 行 >300 / 最长 1,486 @ `thincoder-core/prompts/persona-engineering.md:104`；逐档读数见落点表。
-- `thincoder-core/prompts/persona-engineering.md:104` 全文实读（1,486 字符，closing ledger sweep 一条）——样板取自此行。
+- `thincoder-core/prompts/persona-engineering.md:104` 全文实读——样板取自此行。
 - `thincoder-core/doc-check/` 现为四档：`anchors.mjs` · `index.mjs` · `version.mjs` · `width.mjs`，无 `paragraph.mjs` ⇒ 本批行界读数用一次性 `node` 脚本，不依赖引擎改造。
 - `node scripts/prompt-refs-check.mjs` 零参实跑 = 提示词面 69 档 · 代码面 463 档 · 命中 0。
 - 需求档 §13.24（`:1000-1048`）∥ §13.23（`:978-995`）· 本档 §6.43 ∥ §6.44 · 本档六处相反口径（`:476` `:627` `:653` `:2818` `:2849` `:2870`，三族实扫）· 本批批次档 §1。
-- `docs/core/design/PROMPT-SYSTEM.md` 实读 = 2,991 行 / 262,062 字符（本节写入前）。
 - 工作目录内无独立公共源文档仓（`index.publicRepos = []`）——已查，无相关。
 
 **UI / 交互决策**：无界面面——本条只改模型可见提示词文本。
