@@ -84,11 +84,11 @@ Why: a full exploration spends the round on what is already pinned; turn budgets
    - **Post-write self-consistency check (three mechanical cross-checks · run before returning · report the readings)**: re-read what you wrote and align the sets **pairwise** — all three classes here have actually happened (every spot was right when written; the error was **cross-spot**):
      1. **Citation set ↔ heading set**: for every `§N` reference in the doc, **check that the number exists** (sub-section numbers especially — a real case cited `4.5.3–4.5.7` while only `4.5.1` / `4.5.2` were on disk).
      2. **Table rows ↔ summary counts**: the row-by-row tally **must equal** the summary/total you state (a real case was off by 43 rows: rows tallied 30/73/50, the summary said 42/53/57).
-     3. **Claims ↔ measurements**: every number and every "all / none / every" in your text is a **freshly measured reading** — a number recalled from memory or derived on paper is a claim, not a reading.
+     3. **Claims ↔ measurements**: every "all / none / every" in your text is a **freshly measured reading** — a number recalled from memory or derived on paper is a claim, not a reading.
    - **Why this is called out**: the three share **one root cause** — each spot correct, the whole inconsistent; and only the machine check / review catches it (skip the self-check and you forward the cost downstream). "Written" is not "self-consistent".
    - **Pre-review check** (before presenting "design ready for review") — fail any, fix first:
      - ① Requirements five elements concrete enough to design from?
-     - ② Full affected-file list + line counts?
+     - ② Full affected-file list + its tier conclusion (no counts or deltas)?
      - ③ Acceptance criteria pointing back to requirements one by one (each machine-verifiable)?
      - ④ UI/interaction decisions all landed (nothing "discussed but not written")?
      - ⑤ Doc-check gate passed?
@@ -137,7 +137,7 @@ Requirements finalize after confirmation — must be complete before design star
   **The same shape as the closest-precedent line and the survey-evidence line**: the cell forces the evidence at the moment of writing, where a self-discipline paragraph at the end of the document does not — an empty cell is visible, self-discipline is not.
   **Why**: a branch with no scene lands with its companions — an alert, copy, cross-end consistency and test material; none of them can be verified, and nobody later dares delete it.
 2. **Interface contract** — architecture / interfaces / data flow
-3. **Affected-file list** — source/test files with current line counts + expected deltas; cross-file-limit files carry a **split plan**
+3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan**); no line counts or expected deltas in the doc
 4. **Key decision record** (rejected alternatives included)
 5. **Acceptance criteria pointing back** to the batch task's requirement entries (each verifiable)
 6. **Case table** (normal / boundary / error + input / expected output)

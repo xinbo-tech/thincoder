@@ -476,43 +476,46 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | 桌面 | ✅（阶段 2） | 空闲 deadline 闩（`thincoder-desktop/src/main/timer-watch.mjs`（已落 · 实读 **76**——2026-09-29 收正）——主进程 · 键面 = 会话键）+ 窗内兑现（核件 opt-in timer 面 = §6.30.10）+ 触发落流（新 `ev:timer`）——落点逐条 = §6.30.11；门 / 帽沿用 §6.30.3 |
 | VSC | ✅（阶段 2） | 端差已消解（`_pendingTimers` 跨 run 存活——复位行删除 · §6.30.11）+ 空闲 deadline 闩（**核件消费**——B3 批改指 = §6.30.16；端面 = `thincoder-vscode/src/extension/timer-watch.mjs`）+ 自有驱动第三兑现态 + 可见面（状态行 `⏰N` + 触发落行） |
 
-### 6.30.6 受影响文件清单（R24a）
+### 6.30.6 受影响文件清单（R24a · 尺寸档位判定）
 
-**实施后重锚 as-of 2026-09-27（实测）**：代码行读数（清单表）= 实施终态实测（`wc -l` 语义；增量 = 终态 − 设计轮现行）；文档四行 = 实施零触，保持不动。
+**清单口径**：逐档列文件名 + 一句表级尺寸档位结论——尺寸档位由设计席当刻现量判定、评审轮现量复核，量出来的数只用于定尺寸档位、不落档；越档者逐档带拆分计划。文档行（本档 ∕ `docs/cli/design/TUI.md` ∕ `docs/core/design/TOOLS.md` ∕ `docs/core/design/CONFIG.md` ∕ `thincoder-cli/README.md`）为 `.md` ⇒ 零尺寸档位义务。
 
-| 文件 | 现行行数 | 实测增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent/timers.mjs`（已落） | — | **113（实测 · 2026-09-29 B3 收编后；「50」= R4 上提前读数）** | 到期件三件纯函数（deadline / take / inject）；**R4 上提后已扩面**（闩 ∕ 派发 ∕ 火策略住核——`createTimerWatch:79` ∕ `fireTimerWake:105`；重锚 = §6.30.16 重锚清单⑤ · 已落） |
-| `thincoder-core/agent/post-turn.mjs` | 70 | **−4（实测 · 70→66）** | 块改调到期件（行为零变） |
-| `thincoder-core/agent.mjs` | 444 | **+3（实测 · 444→447）** | opts `timerTurn` + 域文本三元 |
-| `thincoder-core/agent/helpers.mjs` | 463 | **+9（实测 · 463→472）** | `TIMER_TURN_DOMAIN` 常量 + 注释 |
-| `thincoder-core/agent-tools/timer.mjs` | 46 | **+17（实测 · 46→63）** | 在途帽显式拒 + 描述面字面收正（725 字符） |
-| `thincoder-core/config.mjs` | 426 | **+3（实测 · 426→429）** | `agent.timerWake: true` |
-| `thincoder-core/test/timer-wake.test.mjs`（已落） | — | **158（实测 · 新档）** | 核侧用例族（T-TW1 / T-TW2 / T-TW7 / T-TW9）  |
-| `thincoder-core/test/turn-domain-mode.test.mjs` | 57 | **+4（实测 · 57→61）** | 三元选择 + 域文本断言  |
-| `thincoder-cli/src/tui/timer-watch.mjs`（已落） | — | **64（实测 · 2026-09-29 B3 收编后；「90」= B3 收编前读数）** | 一次性 deadline 闩（`timer` / `clear` 注入缝 · `unref`） |
-| `thincoder-cli/src/tui/agent-turn.mjs` | 379 | **+7（实测 · 379→386）** | 链尾 `sync` 调用 + `userNeededAtTurnEnd` 在途 timer 除外（§6.30.3 attention 限定） |
-| `thincoder-cli/src/tui/suspension-drive.mjs` | 341 | **+21（实测 · 341→362）** | timer 轮 + 窗内 deadline + 等待第三态 |
-| `thincoder-cli/src/tui/turn-face.mjs` | 64 | **+3（实测 · 64→67）** | `turnCtx.timerWatch` 字段 |
-| `thincoder-cli/src/tui/index.mjs` | 227 | **+13（实测 · 227→240）** | 装配 + 惰性回填开轮入口 |
-| `thincoder-cli/src/tui/render-frame.mjs` | 423 | **+5（实测 · 423→428）** | `timerHint` 段（状态段簇尾） |
-| `thincoder-cli/src/tui/cmd-timers.mjs`（已落） | — | **33（实测 · 新档）** | `/timers` 只读列表 |
-| `thincoder-cli/src/tui/slash-commands.mjs` | 186 | **+3（实测 · 186→189）** | 名单 + 分派 + import |
-| `thincoder-cli/test/timer-wake.test.mjs`（已落） | — | **274（实测 · 新档）** | 端侧用例族（T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13）  |
-| `thincoder-cli/test/cmd-timers.test.mjs`（已落） | — | **42（实测 · 新档）** | T-TW11  |
-| `thincoder-cli/README.md` | 535 | **+1（实测 · 535→536）** | 配置键面示例（`agent.timerWake`） |
-| 文档：`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` | 385 | **+180（实测 · wc -l 565——设计轮 152〔§6.30 ≈148 + 变更记录 3〕+ fix 轮收正 28 · 实读 2026-09-28 = 745〔修正轮重锚——内容行数 ∕ `wc -l` 口径 · 文末换行不计〕）** | 本节（§6.30） |
-| 文档：`docs/cli/design/TUI.md` | 797 | **+42（实测 · wc -l 839——§7.6 + fix 轮 §7.1 / §7.2 / §7.6 除外限定与可达条件）** | §7.6 显示面 |
-| 文档：`docs/core/design/TOOLS.md` | 1131 | **+3（实测 · wc -l 1134——契约行改 + 变更记录 2 行）** | §6.7 timer 契约行补句（支持面指针） |
-| 文档：`docs/core/design/CONFIG.md` | 206 | **+1（实测 · wc -l 207——登记行行内扩面 + 变更记录 1 行）** | §6.2 派生消费面登记行补 `agent.timerWake` |
+**尺寸档位结论（表级一句 · 现量复判）**：表内源 ∕ 测试档无一越 `>300` advisory 线，`>500` 拆档线未触及 ⇒ 无拆分计划在册；越线判据 = 职责面，逐档理由见下「拆分结论」。
 
-- `thincoder-cli/src/tui/suspension-drive.mjs`（341 → 362，+21）：改动 = 既有等待原语 `waitForSettleOrWake` 增**第三兑现态** + 既有驱动状态机增一条判据支（窗内 deadline 到 ⇒ 开 timer 轮）——
-  无新模块职责 / 无新导出族（挂起窗单一驱动器职责未破）⇒ **不拆**。
-- `thincoder-core/agent/helpers.mjs`（463 → 472，+9）：域文本常量族内 +1 常量（`TIMER_TURN_DOMAIN`——同族 = `AUTO_TURN_DIGEST_DOMAIN` / `UPSTREAM_TURN_DOMAIN`，`:436` / `:450`）⇒ **不拆**（无新职责 / 无逻辑）。
-- `thincoder-core/agent.mjs`（444 → 447，+3）：`runAgent` opts 旗标族内 +1（`timerTurn`——与 `upstreamTurn` 同族，`:101` / `:175-176`）⇒ **不拆**。
-- `thincoder-core/config.mjs`（426 → 429，+3）：`DEFAULTS` 键 +1（`agent.timerWake`——与 `diagnostics.heapWatch` 同形先例，`:87`）⇒ **不拆**。
-- `thincoder-cli/src/tui/render-frame.mjs`（423 → 428，+5）：既有状态段簇内 +1 段（`timerHint`——同区先例 = `ledgerHint` / `titleHint`，§7.4）⇒ **不拆**。
-- `thincoder-cli/src/tui/agent-turn.mjs`（379 → 386，+7）：既有回合链尾 +1 调用（闩 `sync`）+ `userNeededAtTurnEnd` 除外判据 +1 项 ⇒ **不拆**。
+| 文件 | 说明 |
+|---|---|
+| `thincoder-core/agent/timers.mjs`（已落） | 到期件三件纯函数（deadline / take / inject）；R4 上提后闩 ∕ 派发 ∕ 火策略住核（`createTimerWatch:79` ∕ `fireTimerWake:105`；重锚 = §6.30.16 重锚清单⑤） |
+| `thincoder-core/agent/post-turn.mjs` | 块改调到期件（行为零变） |
+| `thincoder-core/agent.mjs` | opts `timerTurn` + 域文本三元 |
+| `thincoder-core/agent/helpers.mjs` | `TIMER_TURN_DOMAIN` 常量 + 注释 |
+| `thincoder-core/agent-tools/timer.mjs` | 在途帽显式拒 + 描述面字面收正 |
+| `thincoder-core/config.mjs` | `agent.timerWake: true` |
+| `thincoder-core/test/timer-wake.test.mjs`（用例族 · 随批收口删除） | 核侧用例族（T-TW1 / T-TW2 / T-TW7 / T-TW9） |
+| `thincoder-core/test/turn-domain-mode.test.mjs`（用例族 · 随批收口删除） | 三元选择 + 域文本断言 |
+| `thincoder-cli/src/tui/timer-watch.mjs`（已落） | 一次性 deadline 闩（`timer` / `clear` 注入缝 · `unref`） |
+| `thincoder-cli/src/tui/agent-turn.mjs` | 链尾 `sync` 调用 + `userNeededAtTurnEnd` 在途 timer 除外（§6.30.3 attention 限定） |
+| `thincoder-cli/src/tui/suspension-drive.mjs` | timer 轮 + 窗内 deadline + 等待第三态 |
+| `thincoder-cli/src/tui/turn-face.mjs` | `turnCtx.timerWatch` 字段 |
+| `thincoder-cli/src/tui/index.mjs` | 装配 + 惰性回填开轮入口 |
+| `thincoder-cli/src/tui/render-frame.mjs` | `timerHint` 段（状态段簇尾） |
+| `thincoder-cli/src/tui/cmd-timers.mjs`（已落） | `/timers` 只读列表 |
+| `thincoder-cli/src/tui/slash-commands.mjs` | 名单 + 分派 + import |
+| `thincoder-cli/test/timer-wake.test.mjs`（用例族 · 随批收口删除） | 端侧用例族（T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13） |
+| `thincoder-cli/test/cmd-timers.test.mjs`（用例族 · 随批收口删除） | T-TW11 |
+| 文档：`docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（`.md` · 零尺寸档位义务） | 本节（§6.30） |
+| 文档：`docs/cli/design/TUI.md`（`.md` · 零尺寸档位义务） | §7.6 显示面 |
+| 文档：`docs/core/design/TOOLS.md`（`.md` · 零尺寸档位义务） | §6.7 timer 契约行补句（支持面指针） |
+| 文档：`docs/core/design/CONFIG.md`（`.md` · 零尺寸档位义务） | §6.2 派生消费面登记行补 `agent.timerWake` |
+| `thincoder-cli/README.md`（`.md` · 零尺寸档位义务） | 配置键面示例（`agent.timerWake`） |
+
+**拆分结论**（逐档不判尺寸档位的理由——判据 = 职责面）：
+
+- `thincoder-cli/src/tui/suspension-drive.mjs`：改动 = 既有等待原语 `waitForSettleOrWake` 增**第三兑现态** + 既有驱动状态机增一条判据支（窗内 deadline 到 ⇒ 开 timer 轮）——无新模块职责 ∕ 无新导出族（挂起窗单一驱动器职责未破）⇒ **不拆**。
+- `thincoder-core/agent/helpers.mjs`：域文本常量族内 +1 常量（`TIMER_TURN_DOMAIN`——同族 = `AUTO_TURN_DIGEST_DOMAIN` ∕ `UPSTREAM_TURN_DOMAIN`，`:436` ∕ `:450`）⇒ **不拆**（无新职责 ∕ 无逻辑）。
+- `thincoder-core/agent.mjs`：`runAgent` opts 旗标族内 +1（`timerTurn`——与 `upstreamTurn` 同族，`:101` ∕ `:175-176`）⇒ **不拆**。
+- `thincoder-core/config.mjs`：`DEFAULTS` 键 +1（`agent.timerWake`——与 `diagnostics.heapWatch` 同形先例，`:87`）⇒ **不拆**。
+- `thincoder-cli/src/tui/render-frame.mjs`：既有状态段簇内 +1 段（`timerHint`——同区先例 = `ledgerHint` ∕ `titleHint`，§7.4）⇒ **不拆**。
+- `thincoder-cli/src/tui/agent-turn.mjs`：既有回合链尾 +1 调用（闩 `sync`）+ `userNeededAtTurnEnd` 除外判据 +1 项 ⇒ **不拆**。
 
 ### 6.30.7 用例表（正常 / 边界 / 错误）
 
@@ -545,7 +548,7 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13（端侧）与 T-TW11（`/timer
 | A-TW2 | 门三件定义 | §6.30.3：仅系统类可自唤醒（唤醒源写点两处 + 无通用通道）· 成本闸（合并 / 幂等 / 帽 / 无自续）· 开关（键 / 默认 / 理由 / 关语义） |
 | A-TW3 | 跨形态行为表 | §6.30.5 五形态逐格定义（自唤醒 / 不支持 + 理由）（**阶段 2 已接线**——桌面 / VSC 行改 ✅：见 §6.30.5 / §6.30.10–§6.30.11；本行 = 阶段 1 判据原样） |
 | A-TW4 | 端面枚举（含「不接 + 理由」） | `docs/cli/design/TUI.md` §7.6（TUI 落点）+ §6.30.5（桌面 / VSC 不接 + 理由 + 后续登记——**阶段 1 原样 · 阶段 2 已接线**：同表两行改 ✅，见 §6.30.10–§6.30.11） |
-| A-TW5 | 受影响文件全清单（行数标注制） | §6.30.6（现行行数 + 实测增量逐行） |
+| A-TW5 | 受影响文件全清单（尺寸档位判定制） | §6.30.6（逐档文件名 + 表级一句尺寸档位结论，越档者逐档带拆分计划；量出来的数只用于定尺寸档位、不落档） |
 | A-TW6 | 验证形态（可复现） | §6.30.7 T-TW1–T-TW13（假 timer / 假到期 / 空转态直驱——零真实等待）；端面按各自既有测法 |
 | A-TW7 | 机检零新增 | 仓根 `node scripts/doc-check.mjs --root .`——对比**开工基线**（悬空 48 / 行宽 22）；逐档零新增（实施后复测：四档零命中——行宽 31 的 +9 全来自他批在途） |
 
@@ -637,6 +640,7 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
   **修正轮补三桩**（非新号——随补注登记）：开关真链（`config.json` ⇒ 生产者真链 · 评审 🟡1）· 窗内 timer 轮中止容纳（`AbortError` ∧ 会话未停 ⇒ 容纳并重入 · ±两反例用例 · 评审 🟡2）· 触发落流（`timer { status:"fired", text }`——协议 §3.2 行 19）。
 
 ### 6.30.13 受影响文件清单（R24a · 行数 = 该批当笔读数 · as-of 2026-09-28 · `wc -l` 口径）
+> **口径说明**：本表是已收口批次的实施记录，保留当笔的两列数值——现行口径见 §6.30.6（尺寸档位判定：结论落档、数值不落档）；本节表形不作现行样式引用。
 
 **实施后重锚（2026-09-28 收尾轮 · 现盘实读）**：代码行读数（表）= `wc -l` 语义现盘实读；增量 = 轨迹标注；与并行批同片者并注「本档面」与「现盘」两值（并行批增量归其自身批档）。
 
