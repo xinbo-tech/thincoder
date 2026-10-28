@@ -325,7 +325,7 @@ pending 清容器（`:266`）与既有序（consult 清场 `:267-268`、pendingI
 | `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（本档） | — | — | §6.20 |
 | `docs/core/requirements/AGENT-LOOP.md` | — | — | §4.10 |
 
-> 行数口径 = **内容行数**（`wc -l` 同口径；读取工具把文件尾换行渲染为空尾行 ⇒ 同文件显示值可 +1——计法差异非漂移）。本表行数为 **as-of 落笔实测**；其余行为预计。
+> 行数口径 = **内容行数**（`wc -l` 同口径；读取工具把文件尾换行渲染为空尾行 ⇒ 同文件显示值可 +1——计法差异非漂移）。本表按判时读盘取数；其余行为预计。
 
 - **未触碰**：`thincoder-core/agent-tools/subagent-actions.mjs`（488）。
 

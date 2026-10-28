@@ -4,8 +4,6 @@
 > 收敛协议本体（轮次 / 会话隔离 / prior / citations / guard / 响应表 / 需求契合 / 行数核查）= `docs/core/design/ADVISOR-CONVERGENCE.md`——本档不重述（D2 单一权威源）。
 > 需求层指针 = `docs/core/requirements/ADVISOR-CONVERGENCE.md`（该板块需求档——现状绝对路径）。
 > 判据指针：归属与命名 = `docs/core/design/DOC-SYSTEM.md` §5.1 / §6。
-> 行号口径：档内代码行号一律 **as-of 参考**（D4）——落点以函数 / 符号名为准，实施轮按盘复读。
-
 ## 1. 不完整判定族（A 族——单谓词）
 
 **判定信号 = 宿主尾族（截断尾 + 机械失败尾）**（宿主生成，唯一确定性来源；模型自报“未完成”属自然语言——**不纳入**，语义判据边界不动）。
@@ -123,20 +121,20 @@
 | U-9 ∥ U-10 | 判据 1 的「本轮」与读失败：上一轮已有块 ∥ 本轮一字未写 ⇒ `no-section3-block`；点火基线 `null` ∥ 结算时档被移走 ⇒ `batch-unreadable` |
 | U-11 ∥ U-12 | 射程回归：changes-required 已写 §3 ⇒ 裁定闸标记（不是记录不合格）∥ changes-required **未**写 §3 ⇒ `no-section3-block` |
 
-**受影响文件（本笔）**——行数口径 `split("\n").length − 1`，本轮实测：
+**受影响文件（本笔）**——行数口径 `\n` 计数（= 本仓 `wc -l` 口径），按判时读盘取数：
 
-| # | 文件 | 现量（落地前） | 实落（2026-10-28 实读） | 改动面 |
-|---|---|---|---|---|
-| 1 | `thincoder-core/agent-tools/design-token.mjs` | 200 | **267** | 读档 + 判据 1（回显闸后、裁定闸前）+ 判据 2（裁定闸后）+ 标记常量 |
-| 2 | `thincoder-core/agent-tools/design-slots.mjs` | — | **305** | `batchAbsPathOfRun` 两源定序导出 · 清点面 `batchOf` 改取同一派生 |
-| 3 | `thincoder-core/agent-tools/batch-skeleton.mjs` | 367 | **391** | 导出 `ROUND_HEADING_RE` ∥ `countRoundBlocks`（读侧单源） |
-| 4 | `thincoder-core/agent-tools/batch.mjs` | 349 | **343** | 私有正则 / 计数改取 skeleton 导出（写入面语义零变） |
-| 5 | `thincoder-core/agent-tools/advisor.mjs` | 260 | **280** | 绑批档时读点火基线（`run.batchDoc` 落点同拍；读不到 ⇒ `section3BlocksAtStart = null`） |
-| 6 | `docs/batches/2026-10-27-advisor-face-fixes.test.mjs` | 0 | 新建（收口即删） | U-1–U-12 |
-| 7 | `test/integration/batch-close-token-consume.test.mjs` | 既有 | 改（10-1 夹具改写 + 10-4 新增） | 集成宿主 |
-| 8 | `test/integration/advisor-record-gate.test.mjs` | 0 | 新建（17-1 ∥ 17-2） | 集成宿主 |
+| # | 文件 | 现量（判时读盘） | 改动面 |
+|---|---|---|---|
+| 1 | `thincoder-core/agent-tools/design-token.mjs` | **266** | 读档 + 判据 1（回显闸后、裁定闸前）+ 判据 2（裁定闸后）+ 标记常量 |
+| 2 | `thincoder-core/agent-tools/design-slots.mjs` | **305** | `batchAbsPathOfRun` 两源定序导出 · 清点面 `batchOf` 改取同一派生 |
+| 3 | `thincoder-core/agent-tools/batch-skeleton.mjs` | **449** | 导出 `ROUND_HEADING_RE` ∥ `countRoundBlocks`（读侧单源） |
+| 4 | `thincoder-core/agent-tools/batch.mjs` | **356** | 私有正则 / 计数改取 skeleton 导出（写入面语义零变） |
+| 5 | `thincoder-core/agent-tools/advisor.mjs` | **280** | 绑批档时读点火基线（`run.batchDoc` 落点同拍；读不到 ⇒ `section3BlocksAtStart = null`） |
+| 6 | `docs/batches/<批档词干>.test.mjs` | —（收口即删） | U-1–U-12 单测档 |
+| 7 | `test/integration/batch-close-token-consume.test.mjs` | **182** | 集成宿主（10-1 夹具改写 + 10-4 新增） |
+| 8 | `test/integration/advisor-record-gate.test.mjs` | **119** | 集成宿主（17-1 ∥ 17-2） |
 
-500 软线：五档产品码落地后最大 = `batch-skeleton.mjs` **391**，均未触线（口径 = `split("\n").length − 1`）。
+500 软线：五档产品码现量最大 = `batch-skeleton.mjs` **449**，均未触线——读数按判时读盘取数。
 
 ## 2. 凭证链启动 / 全程守卫（B 族）
 

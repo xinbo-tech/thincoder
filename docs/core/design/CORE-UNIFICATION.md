@@ -803,7 +803,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | 端侧填什么 | **CLI = 不注入**（默认 fs 径）· **VSC = `{openDoc, isDirty, applyEdit}`**（已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs`；`isDirty` = 核 fail-closed 必需字段），脏缓冲 ⇒ 拒写 |
 | 契约 | 注入实现返回 `{ written: true, via: "editor" }` 或 `null`（未处理 ⇒ 回退默认）；缺省 = 现状；核内零端名分支（契约 5） |
 | 覆盖点 | 8 个写点（write / insert_after / hashline_edit / edit / edits 数组 / apply_patch / delete / file_ops）——`ctx` 已透传到各 `execute(args, ctx)`，可行 |
-| 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 **11**（8 写点 src 面 + `file_ops` 面 dest 扩 `copy` 后——补正① 终态）· 内容写点 `applyEdit` **6**；用例见 `thincoder-core/test/write-path.test.mjs` 夹具一 / 二）；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免登记位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
+| 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 **11**（8 写点 src 面 + `file_ops` 面 dest 扩 `copy` 后——补正① 终态）· 内容写点 `applyEdit` **6**；用例见 `thincoder-core/test/write-path.test.mjs` 夹具一 / 二）；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免表位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
 
 - **补正①**：`file_ops` 的 **`dest` 面门禁**——`gateOpenDoc` 单点（`thincoder-core/tools/write-path.mjs:83`——src / dest 两面共用；`src` 未打开不豁免 dest 门）；**dest 门条件已扩至 `copy`**；验收① 基数改判为 `openDoc` / `isDirty` 各 **11** · `applyEdit` **6**——计数与用例已同步。
 - **补正③（登记）**：① `#96` 信息段缝位与入参口径（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）；② `copy` 面门禁口径（src / dest 两面照过门禁——「所有 op 统一先问 src」；dest 面覆盖 move / rename / copy）。既定口径见「S1 续轮第三批」决策表 7 / 未决 2。
@@ -853,7 +853,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 2. **锚文法（已有）**：非法锚形态即红（`thincoder-core/test/core-prompt-face.test.mjs:38-48`）。
 3. **取值表完备（设计面）**：§2.13.2 每行「两端各填什么」非空且指向实存 `file:line`；空值行显式标「空」。
 4. **缝覆盖（核内可机判 · 已落）**：§2.13.5 验收② 的写路径结构机检——扫描域 `tools/**`；写 API 命中集合 = 白名单 `tools/write-path.mjs` + 已登记豁免 `tools/checklist-sync.mjs:88` 
-   （**命中集合逐档等值 fail-closed**——新增命中即红、豁免消失亦红；豁免登记位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表）；8 写点所在 5 档零豁免。
+   （**命中集合逐档等值 fail-closed**——新增命中即红、豁免消失亦红；豁免表位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表）；8 写点所在 5 档零豁免。
    **落地读数（含 dest 面门禁补丁 + `copy` 扩面）**：`tools/write-path.mjs` **191 行** · 8 写点全改道 · `thincoder-core/test/write-path.test.mjs` **300 行（7 用例）** · 核内 `node --test` **160/160** · exit 0。
 5. **端侧行为（S2 可机判）**：两端各自装配用例断言本端取值（§2.13.2 验收列逐条）——**含入口路径**（CLI 入口 ⇒ 装配前已配置）。
 6. **锚名集合与指针族（核内可机判）**：扫描对象 = `thincoder-core/prompts/` + `thincoder-core/tool-docs/`（本档内作为 as-of 引文的旧锚名不计）——
@@ -979,7 +979,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | # | 判据 | 通过条件 | 反证面 |
 |---|---|---|---|
 | **K1** | 仓根机检（cwd = 仓根） | `node scripts/doc-check.mjs --root .` **exit 0**（锚 / 行宽同驱——核分居 `scripts/doc-check-anchors.mjs` / `scripts/doc-check-width.mjs` / `scripts/doc-check-targets.mjs`）；台账一致性无独立脚本（归核内 SQLite 台账面） | 残留旧 token / 断了的 import ⇒ 转红 |
-| **K2** | 扫替复查 | 三类替换各自的 check 模式**报 0 处**（类 C 逐点 = 5 处，含花括号简写的改后逐字读校）；保护项计数**扫替前后逐项相等**（as-of 参考 = 点状态目录 565 / 作用域前缀 50 / 盘符路径 2+2 / registry URL 1 / 文件名里的 `core` 241——**以同脚本前后两次读数为准，不硬编码**）；站点排除 4 处**逐字未变**（核验 = 改动集 diff 不触及这 4 处；第 1 处按内容定位——「自工作区根计 = 」行；第 4 处 = 迁移期评审块——按内容定位） | 漏扫 = 报非 0；误伤 = 保护项计数前后不等；排除项被扫动 = 所在行出现在改动集 diff 中 |
+| **K2** | 扫替复查 | 三类替换各自的 check 模式**报 0 处**（类 C 逐点 = 5 处，含花括号简写的改后逐字读校）；保护项计数**扫替前后逐项相等**（保护项计数**以同脚本前后两次读数为准，不硬编码**——写死的值每变一次就失真一次，还会被下一读者当成现行量）；站点排除 4 处**逐字未变**（核验 = 改动集 diff 不触及这 4 处；第 1 处按内容定位——「自工作区根计 = 」行；第 4 处 = 迁移期评审块——按内容定位） | 漏扫 = 报非 0；误伤 = 保护项计数前后不等；排除项被扫动 = 所在行出现在改动集 diff 中 |
 | **K3** | **diff 可逆性**（防夹带——对照面 = **脚本产出子集**） | 以改前提交（HEAD）为输入跑扫替脚本 dry-run ⇒ 输出**逐字节等于**本次改动集中的**脚本产出部分**（类 A + 类 B 的 token 替换）；改动集其余部分 = **恰好两类人工改动、逐处可枚举**——① 类 C 5 处手改② 折行行集 3 行（含台账 1 行）——出现枚举外的人工改动即判红 | 夹带人工改动 ⇒ 两者不等 |
 | **K4** | 两产品全链 | CLI：`npm run lint` → `npm test`；VSC：`npm run lint` + `doc:check` → `npm test`——**全 exit 0** | 域参数 / 夹具 / 长路径引用漏改 ⇒ 用例红 |
 | **K5** | 核内测试 | `node --test`（cwd = 核目录）**49 / 49 · exit 0**（改前基线同值） | 核内注释指针或 import 面被改坏 |

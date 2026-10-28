@@ -186,7 +186,7 @@
 - VSC：`hydrateRun`（`thincoder-vscode/src/agent/setup.mjs:96`）钩子块（`:371-396`；模式门 `if` = `:378-396`）**块首加模式门**——判据 = `agent.config.agent.engineering`，已由 `applySlotSessionState`（`:242-246`）按槽订正（槽优先 + config 回退的同一合并结果；VSC 每轮 reconcile = 已是会话起点，无并列第二点）；
   缺失 + **`depth === 0`** → `initManifest(..., { writer: 'main' })`（同 CLI——梯②⑤ 两格）；`depth > 0`（子代理水合同经此钩）仅不初始化（`init:false`——写门缺省拒已机械兜底）；工作区 / 档非法 → 同款非 fatal（不抛 + 记 `_projectView`）——**两端同形**。
 - **运行期值刷新**：附着决策**仍只在会话起点**（KD-M1-12 / KD-M1-13 零改）；已附着会话的 `agent.manifest` **值**改由注入器每回合 mtime 门控重读（§2.6 ③b）——落地「CLI 会话内改档 ⇒ 下回合情境行更新」。**两分不混**：钩子管附着，注入器管取值。
-- 行号 = as-of 参考（D4——落点以函数名为准）。会话起点（ACP 装载）与进程内翻转（CLI `/eng` ON · `/session` 切槽 · 核心 `eng` 工具）的重估——两族**两分记**见 §2.8。
+- 行号不作指针形态（D4——落点以函数名为准）：行号随后续改动漂移，写指针一律写节名。会话起点（ACP 装载）与进程内翻转（CLI `/eng` ON · `/session` 切槽 · 核心 `eng` 工具）的重估——两族**两分记**见 §2.8。
 
 ### 2.3 受影响文件全清单（as-of 实测（`\n` 计数））
 
@@ -236,7 +236,7 @@
 > 说明：**行数 = 读盘实测（`\n` 计数）**。
 > **本批改动面 = 行 39–41**：39 / 41 本轮实改、40 已落——现行值单源 = `docs/core/design/LEDGER.md` §3.8 受影响面表。行 42–56 = 他批登记面、**本批零改**；其 `现行` 列是他批登记时的 as-of 读数，不作本批判定（逐格改判归各批）。
 > **口径注**：行数一律按 `\n` 计数复核（读盘显示含末尾空段 = `\n`+1——对账勿混两口径）。
-> 落点以**函数名**为准、行号为 as-of 参考（D4）；与并行的他批若同碰这些档，开工前先 `git status` 复读行数、**串行实施**（同文件并发写 = 丢改风险）。
+> 落点以**函数名**为准、行号不作指针形态（D4）；与并行的他批若同碰这些档，开工前先 `git status` 复读行数、**串行实施**（同文件并发写 = 丢改风险）。
 > 行数说明（>500 行建议带三行）：#2 425，增量均为单点微增（+~6/−2）、无跨档（≤500 软线内）⇒ **不拆**：
 > #2 增点为既有恢复块内的调用前置 + 一行重估调用（拆档会把「恢复决策 → 装配 → 应用」的顺序契约切成两档，反增耦合）。
 > **>500 软线拆分评审注（F12 = `docs/core/requirements/ENGINEERING-MODE-V2.md:631`）**：
@@ -708,7 +708,7 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 **物理实况**：工程模式提示词三档为**文件级常驻**（`thincoder-core/prompt-overlays.mjs:42` 恒拼接 `thincoder-core/prompts/persona-engineering.md` / `thincoder-core/prompts/common.md` / `thincoder-core/prompts/discipline-engineering.md`），**无节级条件装配机制** ⇒「只在该场景进上下文」在**文件级不可达**。本设计以「**短节（新增 ≤8 行）+ 场景触发领句**」达成「不常驻噪音」的**意图**；
 
   **节级条件装配 = 新机制，出本批边界**（另批另裁）。
-**同批收正（`:56` 措辞）**：② 节尾续管理面的同一笔，一并收正 `thincoder-core/prompts/persona-engineering.md:56`（EN `:56`）的失义措辞「多个 = 歧义——停：列候选，不猜，也绝不建档」。
+**同批收正（`:56` 措辞）**：② 节尾续管理面的同一笔，一并收正 `thincoder-core/prompts/persona-engineering.md:112`（EN `:56`）的失义措辞「多个 = 歧义——停：列候选，不猜，也绝不建档」。
 收正后口径与 `docs/core/design/MANIFEST.md:310` / `:769` 同源：工作区 = **常态**（不抛「歧义」/ `ambiguous`）；处置 = 列候选 + 报明事实 + 点名项目根（不猜、不 brick）。
 
 **键目录（①载荷骨架）= 描述内容契约**（本表 = 语义契约：键名 + 三腿 + 值形逐条；落地文本 = 英文同义句——`thincoder-core/tool-docs/manifest.md` 现状全英文）。**实施后保留**为描述漂移的唯一对照载体（对照核法 = AC-K2 键名覆盖）；语义单源仍在本档 §2.2，本表不构成第二权威。全 **12** 可写节点；节点集判据单源 = `MANIFEST_SCHEMA`（键集由 `DEFAULT_MANIFEST` 派生）：

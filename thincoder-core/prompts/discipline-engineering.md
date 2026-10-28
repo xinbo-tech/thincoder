@@ -311,10 +311,9 @@ Each doc category has one landing route, and the doc system is maintained by dis
    Prompts → content from the main agent, **landing by eng-coder** (product code; content basis = the mechanism doc).
 2. **D2 single authority source** — a mechanism is described in detail in exactly ONE place; everywhere else references it — a restatement leaves two live versions with nothing to tell the reader which is authoritative.
 3. **D3 count/enumeration discipline** — when declaring "N items / N places / N clauses", the count and the list must change together (machine-checkable).
-4. **D4 pointer discipline** — pointer form = `doc:section` (line numbers only as of reference); NO "see above / see that section" relative pointers.
+4. **D4 pointer discipline** — pointer form = `doc:section`; NO "see above / see that section" relative pointers.
    **What this pointer-form rule reaches = pointers** (a citation into another doc's section).
    **Implementation coordinates** (a code / tool-face location) carry **their own form**: the full path from the repo root with `:line` — a bare directory segment without the repo-root part resolves ambiguously and is judged dangling.
-   **Inventory as-of readings** (a measured line recording where things stand now) and **review evidence quotes** (a line quoted from this round's read) each belong to their own face and are outside both forms.
 5. **D5 freeze window** — a doc under review is closed to edits (editing it = the review object changed → stale, no token issued); gather the changes and enter them in one pass.
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
