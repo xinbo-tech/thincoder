@@ -4,7 +4,7 @@
  * AGENT-LOOP-SUBAGENT.md §6.9 D-SD1..SD5 + D-SL1 环形死锁修正）。
  * 内容：normalizeFileList / filesOverlap / effectiveFiles（SCHEDULER-DYNAMIC-DOMAIN
  * 动态域——声明 ∪ running touched）/ depInfo / describeBlockers / batchDocInFlight（
- * AGENT-LOOP-SUBAGENT.md §6.31 批次档复用护栏——按档查在飞占用者）/ detectStall（
+ * AGENT-LOOP-SUBAGENT.md §6.58 批次档复用护栏——按档查在飞占用者）/ detectStall（
  * P-SL2 停滞机械检测）/ queueRunnable / assertNoDepCycle / dependentLabels /
  * refreshQueuedTokens / maybeRefillAsync。
  * ASYNC_POOL_LIMITS/poolLimitsFor/runningPoolCount 回引自 subagent-async.mjs（主体保有——
@@ -178,7 +178,7 @@ export function describeBlockers(parent, entry) {
 }
 
 /**
- * AGENT-LOOP-SUBAGENT.md §6.31 批次档复用护栏（2026-10-28 batchdoc-reuse-guard）——
+ * AGENT-LOOP-SUBAGENT.md §6.58 批次档复用护栏（2026-10-28 batchdoc-reuse-guard）——
  * 按档查在飞占用者：池内条目 `_batchDoc` 与 `batchDocAbs` 按 `fileKey` 相等且**在飞**
  * ⇒ `{ id, role, status }`；无 ⇒ `null`。池派生事实单源在此（与 `depInfo` /
  * `describeBlockers` 同族），消费方单点 = `buildSpawnChild` 的 `batchDoc` 门。
@@ -187,7 +187,7 @@ export function describeBlockers(parent, entry) {
  * 不生效、没人知道；② **按 status 过滤**（`done` / `cancelled` 皆假）——正常 settle 的条目
  * 留在池里（`async-settle.mjs:295`）⇒ 只看「池里有同档条目」会把单席顺序交接全部误拒；
  * ③ **占用判据只认 `_batchDoc`、不分角色**（普通面 coder 携档也算），而被检面只有工程角色的
- * spawn、sync spawn 不入池也不是占用者（同档 §6.31.7 第 7 条）——**这个不对称勿「顺手统一」**。
+ * spawn、sync spawn 不入池也不是占用者（同档 §6.58.7 第 7 条）——**这个不对称勿「顺手统一」**。
  * 入参 = 已解析的绝对路径（唯一消费方 `buildSpawnChild` 的工程分支，路径由 `resolveBatchReadPath`
  * 保证非空）；空入参返 `null` = 「无路径可比」——本谓词不替调用方判「该不该传路径」。
  */

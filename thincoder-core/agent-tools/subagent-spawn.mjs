@@ -219,7 +219,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
     }
   }
 
-  // ── AGENT-LOOP-SUBAGENT.md §6.31 批次档复用护栏（2026-10-28 batchdoc-reuse-guard）──
+  // ── AGENT-LOOP-SUBAGENT.md §6.58 批次档复用护栏（2026-10-28 batchdoc-reuse-guard）──
   // 同一档已有在飞 spawn ⇒ 拒发（2026-10-28 11:34 事故：两席共用一本批档、文件域互不重叠 ⇒
   // 语法坏档 + 一席复原）。判据 = 池内在飞条目的 `_batchDoc` 与本次解析出的绝对路径按 fileKey
   // 相等（谓词单源 = `batchDocInFlight`——池派生事实住 subagent-scheduler.mjs，读法同 `depInfo`）。
@@ -228,8 +228,8 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 在飞就派修正轮 = 同一种两写者病，照拒。
   // **非对称是判据的一部分，勿「顺手统一」**：被检面只覆盖工程角色（本分支内），占用者是池内
   // 任何带 `_batchDoc` 的条目、不分角色（普通面 coder 携 batchDoc 也算）；sync spawn 不入池 ⇒
-  // 它不是占用者（§6.31.7 第 7 条）。
-  // 拒因文案逐字模板 = §6.31.2（文案单源 = 本处——下游断言逐字对照）。
+  // 它不是占用者（§6.58.7 第 7 条）。
+  // 拒因文案逐字模板 = §6.58.2（文案单源 = 本处——下游断言逐字对照）。
   if (engineeringRole) {
     const occupant = batchDocInFlight(parent, batchDocAbs)
     if (occupant) {
