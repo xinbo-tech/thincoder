@@ -77,7 +77,7 @@
 
 ### 7. 收口只判本批改过的档
 
-> 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执；两条判据不分适用面，工具描述面同样受段长约束。
+> 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执；两条判据不分适用面，工具描述面同样受段长约束。另有一道与本门并行的前置：**本批改面单测档仍在盘 ⇒ 拒收口**（单测零留存，判据见行 7-4）——这一道判的是「该删的删了没」，与本门判的「改过的档干净不干净」是两件事。
 > 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append，不直调 `runBatchGate`）；九态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：锚与段两条同时拦）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
@@ -234,11 +234,23 @@
 ### 20. 一本批档只服务一个并发 spawn
 
 > 目的：同一本批档同时只有一个写者——第二席被拒、点名占用者，而不是两边都写坏档。
-> 节注：回指 = 设计档 §6.31.1–§6.31.2（判据 ∥ 拒因文案）· 集成行设计 = 同档 §6.31.8；机制单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.31；交互组件 = spawn 门（`buildSpawnChild`）⟷ 异步池在飞表（`getAsyncPool`）⟷ 第二席的返回；进入口 = 工程模式父侧并发派两席共一本批档；两态（行序）= 20-1 错误。
+> 节注：回指 = 设计档 §6.58.1–§6.58.2（判据 ∥ 拒因文案）· 集成行设计 = 同档 §6.58.8；机制单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.58；交互组件 = spawn 门（`buildSpawnChild`）⟷ 异步池在飞表（`getAsyncPool`）⟷ 第二席的返回；进入口 = 工程模式父侧并发派两席共一本批档；两态（行序）= 20-1 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 20-1 | 工程模式父侧并发派两席共一本批档：第一席 async 在飞，紧接着派第二席（同一 `batchDoc`） | 第二席被拒，返回文本点名该批档路径、占用者 `<role>#<id>` 与其 status，并给可执行下一步（等其 settle ∥ cancel 它）；第一席照常交付、档上只有一套写者。**修前红**：两席都被接受 | 通过 | 2026-10-28 | 父侧（`node test/run.mjs`） | ① 只断第二席被拒 + 点名 + 池面不变（池内仅第一席、其条目零改、队列空）；「第一席照常交付」需真 LLM 子代理，夹具以池条目字面量代其在场（形态所限的收窄，非省事）。② 集成桩 `subagent-*` 侧 | `test/integration/batchdoc-reuse-guard.test.mjs`；读数 = `tests 69 / pass 69 / fail 0`（`node test/run.mjs`，含 20-1 单例 26ms 绿） |
+
+### 21. 跨项目读账读的是目标项目
+
+> 目的：进程锚与目标项目不同时，`ledger list --json` ∥ ACP `ledger/list` ∥ `ledger/count` 读的是目标项目的行与数——不是空账，也不是进程锚那个项目的。
+> 节注：回指 = `docs/cli/requirements/READ-DATA-INTERFACE.md` FR1 ∥ FR3（载荷形 = `docs/cli/design/READ-DATA-INTERFACE.md` §3.2 ∥ §2.6）；机制单源 = `docs/core/design/LEDGER.md` §3.10（界 = 同档 §3.8「三面三界」）；交互组件 = 命令面 runner（`thincoder-core/ledger-read.mjs` `runLedgerList`）∥ ACP 两出口（`thincoder-cli/src/acp/read-data.mjs` `ledger/list` ∥ `ledger/count`）⟷ `ledgerExport` ∥ `ledgerCount` ⟷ 根推导界 ⟷ 键控库读取；进入口 = 进程锚 ≠ 目标项目时跑 `thincoder ledger list --json --cwd <目标项目>`；四态（行序）= 21-1 正常 · 21-2 边界 · 21-3 正常 · 21-4 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 21-1 | 夹具项目 A ∥ B 各在台账建行；`process.chdir(A)`，再跑 `ledger list --json --cwd <B>` | 退出码 0 · 单段 JSON · `projects.length === 1` · `projects[0].root` = B · 行 id 集 = B 的行 · 零 A 行 · `schemaVersion` = 2 | 待执行 | — | — | 缺口来源 = 台账 #1834 §6 读数（修前 `{"projects":[]}` → 修后 1 项 / 1 行） | `test/integration/ledger-read-cross-project.test.mjs` |
+| 21-2 | 同一 A 锚，`--cwd <带档但无台账库的项目>` | 退出码 0 · `projects` = `[]` · stderr 零行——空账不改成抛 | 待执行 | — | — | 回指 = 需求档验收 ②「空库空集 exit 0」；夹具两项 = 目标带 `PROJECT-MANIFEST.json`、键控库不在盘 | `test/integration/ledger-read-cross-project.test.mjs` |
+| 21-3 | 同 21-1 的进程锚与目标，走 ACP `ledger/list`（`params.cwd` = B） | 回包与 CLI 载荷深等：1 项 · 根 = B · 行集 = B 的行 · 零 A 行 | 待执行 | — | — | 业务入口 = 扩展拉取选中项目的台账；缺口来源 = 台账 #1834 的第二出口 | `test/integration/ledger-read-cross-project.test.mjs` |
+| 21-4 | 同 21-1 的进程锚与目标，走 ACP `ledger/count`（`params.cwd` = B，会话锚 = A） | `count` = B 的未决四态行数（≠ 0）· `overdue` ∥ `evidenceOversize` 与 B 的读数一致 | 待执行 | — | — | 缺口来源 = 用户 2026-10-28 13:06 裁定 A（`count` 的界跟 `list`）；现行 `thincoder-cli/src/acp/read-data.mjs:77` 走 `ctx.getCwd()` ⇒ 修前回 0 | `test/integration/ledger-read-cross-project.test.mjs` |
 
 ## VS Code 端（thincoder-vscode）
 
