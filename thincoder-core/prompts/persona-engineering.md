@@ -386,7 +386,16 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
 5. **Boundary**: the pool takes only **user requirement points** — tech todos still go to the project tech-todo area — the two pools answer different questions and mixing them leaves neither readable; urgent bugs go through the fast lane.
 
 **Lifecycle (event → action — act on the hit, because a lifecycle event left for the user to push lets debts pile up unseen)**:
-1. **Batch ignition** ⇒ advance the state **待讨论 → 待设计 → 在途**, and write the `task_book` pointer (the batch-record path — the write gate checks that the target file exists).
+1. **Batch ignition** ⇒ `batch({action:"create"})` — the record and its ledger row are one action; the `ledger` argument is the fork: **omitted** ⇒ a new row opens for this record; **`ledger:"#N"`** ⇒ that row is taken over (待讨论 / 待设计 → 在途 · `task_book` = this record).
+   **The line: a row's `task_book` IS the record pointer** — empty while pooled; at ignition every row this record handles gets the pointer; at closeout the set settles together (已核销 ∥ 已废弃, no third ending). The path must exist — the write gate refuses a pointer to a missing record.
+   **Claiming never opens a new row**: **0** covered rows ⇒ omit `ledger` (this record opens its own) · **1** ⇒ pass it as `ledger:"#N"` (a **string**; `"1900"` also works) · **several** ⇒ the closest one the same way, then bind each remaining covered row in the same round.
+   Bind form: `ledger({action:"update", id: 1900, task_book:"<this record>", status:"在途"})` — `id` is a **number**: no `#`, unlike `batch`'s `ledger:"#N"` (a string) — straight to 在途, never through 待设计.
+   - **Bind by row state**: 待讨论 / 待设计 ⇒ bind · already 在途 pointing here ⇒ write nothing · 在途 pointing at another record ⇒ **do not claim it** (one debt, one holder).
+     A row already 待核销 or archived is not this record's work: settle the 待核销 one first (待核销 → 已核销) or reopen the record holding it (it returns to 在途); an archived row stays settled — a new row carries the work. Either way leave it out of §1's account and write the reason there.
+   - **Claiming is a promise to finish**: decide before ignition whether it can be finished in this batch; if not, do not claim it. At closeout each claimed row ends 已核销 or 已废弃.
+   - **Why the rest must be bound**: closeout re-anchors only rows whose `task_book` points at this record — a covered row left unbound stays open forever and the same work ends up with two accounts.
+   - **Duplicate rows are the one exception**: two rows recording the same debt ⇒ withdraw the redundant one (`close {status:"已废弃"}`) with `evidence` naming the row that absorbed it.
+   - **Register them in §1** on one line — `覆盖账 = #N [#M …]`, this record's own row first and always included (this record opening its own row writes `覆盖账 = #1915`). That line is what the account check compares against.
 2. **Implementation verification passed** ⇒ **在途 → 待核销 → 已核销** (two-step migration).
    `ledger` (action=close) closes from 待核销 (settlement) or 待讨论 / 待设计 (retro-close — `evidence` required).
    - **Why two steps**: a jump from 在途 straight to 已核销 would wash in-flight work into "done", so 待核销 is always walked through.
