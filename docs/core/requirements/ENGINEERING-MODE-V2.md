@@ -789,7 +789,7 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 
 **背景**：用户报告（2026-10-19 23:13）：`D:\repos` 较早批（`20261019-console-case-doc-views`）§2 写「自建表四张 → 五张」并进 C3；后一批（`20261019-console-docs-from-source`）加 `doc_all` 镜像改六张，前批 §2 未随动——照前批 §2 收口，C3 的等值断言会与设计对不上。
 
-提示词缺口四处：任务书两源并列无优先级（`thincoder-core/prompts/persona-engineering.md:162`）· 单一判据源只约束派单不约束 §2（`:168`）· D7 收口清单无 §2↔设计对账（`thincoder-core/prompts/discipline-engineering.md:188-189`）· 三链同源检查只在设计轮返工前跑一次（`thincoder-core/prompts/persona-eng-designer.md:82-84`）。
+提示词缺口四处：任务书两源并列无优先级（`thincoder-core/prompts/persona-engineering.md:350`）· 单一判据源只约束派单不约束 §2（`:168`）· D7 收口清单无 §2↔设计对账（`thincoder-core/prompts/discipline-engineering.md:188-189`）· 三链同源检查只在设计轮返工前跑一次（`thincoder-core/prompts/persona-eng-designer.md:82-84`）。
 
 **需求（三条）**：
 
@@ -821,12 +821,12 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 
 **背景**：`D:\repos` slot 4（2026-10-19）两次手工排队——① 15:19 exec 批因与 `#28` 共享文件而「等 `#28`」；② 16:28 为并行让 designer 把设计写进批档 §2.7、绕开被冻的设计档。它自己引用过 `thincoder-core/prompts/persona-engineering.md:229` 的规则，仍两次绕开，直到用户「文件冲突调度器自会排队，你加什么戏？」。
 
-另一项：`thincoder-core/prompts/persona-engineering.md:40` 的「anything past the approval gate has no approval behind it」在整批令覆盖批准门（FR36）后字面不成立（台账 `#1716`）。
+另一项：`thincoder-core/prompts/persona-engineering.md:76` 的「anything past the approval gate has no approval behind it」在整批令覆盖批准门（FR36）后字面不成立（台账 `#1716`）。
 
 **需求（两条）**：
 
 1. **派单纪律补硬**：提示词派单节补三句 + 一句自检——① 感知到的文件重叠不是扣住 spawn 或改落点的理由（声明 `files` 直接派）；② `queued` 是正常准入回执，不是失败信号；③ 串行编辑造成的行号漂移是内容问题，用文本锚点 / `dependsOn` 解，不用等待解；④ 派单前自检「我是因为文件重叠在等或改落点吗？是 ⇒ 声明 `files` 直接派」。
-2. **FR36 残句收口**：`thincoder-core/prompts/persona-engineering.md:40` 加作用域（批内已由整批令授权），或改成不依赖「批准门」字面的判据句（默认值只在已确认范围内取）；设计档 §6.38 对照表补一行覆盖该句。
+2. **FR36 残句收口**：`thincoder-core/prompts/persona-engineering.md:76` 加作用域（批内已由整批令授权），或改成不依赖「批准门」字面的判据句（默认值只在已确认范围内取）；设计档 §6.38 对照表补一行覆盖该句。
 
 - **为什么（依据可指认）**：两次绕开都发生在「共享文件」出现的那一刻；规则存在但未点名该失效模式，决定点没有可对撞的句子——用户原话「文件冲突调度器自会排队，你加什么戏？」。
 - **不变量（不做）**：不改调度器本体 · 不改 `files` / `dependsOn` 语义 · 不改台账 · 不改普通模式 · 不新增机械门 · 不改 FR36 四停相。
@@ -1049,7 +1049,7 @@ v1 三机检 = 必要内核 + 一大坨 thincoder 私有历史包袱（双引擎
 **同一理由延伸到数量与配置值**：并发上限、阈值、档数这类随配置变的数字，家在配置与设计档；提示词只写「按本会话配置读」和「怎么判」，不写具体值——写进去的是一份没人会去更新的副本。
 **内容边界**：规则、条件、例外、理由四类必须保留，改写前后逐条对得上；指代、装饰性加粗、自我限定可以删。样板里删掉「the dual of the opening self-check」就是按这条办的——它是指代，不是内容。
 
-**判据（取自改写前后的实例）**：`thincoder-core/prompts/persona-engineering.md:104` 原文 1,486 字符一行，改后 6 行。需求稿记的「最长 312」是初稿读数，设计稿把六行收到 130 / 213 / 200 / 252 / 183 / 288（最长 288 ≤ 300，父侧逐行复算过三行、与设计稿一致）——**样板现在过线了**；验收线 300 不变。
+**判据**：提示词面单行 ≤ 300 字符（`PROJECT-MANIFEST.json` `checkConfig.lineWidth`）—— 本仓现最长行 300，已过线；验收线 300 不变。
 
 **两舱（16 档分两批，单舱 ≤15 档）**：甲舱 = 7 档 persona-* + 2 档 discipline-*（9 档）；乙舱 = `thincoder-core/prompts/common.md` + 4 档 advisor-* + `thincoder-core/prompts/consult-base.md` + `thincoder-core/prompts/subagent-base.md`（7 档）。甲舱先行，理由是 persona 与 discipline 每轮都读，读错的代价最高。
 

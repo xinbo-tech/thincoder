@@ -1,8 +1,8 @@
 /**
  * batchdoc-reuse-guard.test.mjs — 集成用例 20-1（RTM CLI 端故事 20「一本批档只服务一个并发 spawn」）。
  *
- * 判据原文 = `test/RTM.md` 第 20 节；机制 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.31
- * （判据 §6.31.1 · 拒因文案 §6.31.2 · 集成行设计 §6.31.8）。
+ * 判据原文 = `test/RTM.md` 第 20 节；机制 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.58
+ * （判据 §6.58.1 · 拒因文案 §6.58.2 · 集成行设计 §6.58.8）。
  * **进入口 = 父侧工具面**（`subagent` 走 `executeToolCalls` 的真门——不直调 `buildSpawnChild`）：
  * 本档要的是「派第二席这件事」的业务可观察结果（第二席被拒、拒文点名、池面不变）。
  *

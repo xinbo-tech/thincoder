@@ -217,6 +217,8 @@
 3. **链完整性门（2026-10-18 · 收口前置——§4.18-A）**：`close` ∥ `status` 写 §1「已收口」两路在写盘前同过 `assertCloseoutChainComplete(src)`——§2 / §3 / §4 / §6 各段须有内容，或经 §1 声明不适用（仅 §2/§3/§4 可声明；§5 段号豁免、§6 不可声明）；不满足 ⇒ throw 并点名缺段。门位 = 门 ② 之后、门 ④ 之前（链未跑完先报结构缺口，不先跑机检）。判据逐段 / 声明形 / 三拒串 = §4.18-A（本条不重述）。
 4. **文档机检门（2026-10-18 · 结构兜底）**：append §2 / §5 与 `status` 值「已收口」、`close` 三路在写盘前跑 `doc_check` 的 gate——`REFUSED` ⇒ 拒（append 面档字节不变；close / status 面状态行不改）；`ERROR` ⇒ append 放行 + 回执明示 ∥ close / status 拒（fail-closed）。契约 = §4.1 行 + `docs/core/design/DOC-DISCIPLINE.md` §3.20「结构兜底」；门位在既有拒因**之后**、写盘**之前**（零回归）。
 
+收口两路（`close` ∥ `status` 值「已收口」）另过 **§4.13 单测档零留存门**——判序已定：本门位在 ③ 链完整性门**之后**、④ 文档机检门**之前**（判序单源 = `thincoder-core/agent-tools/batch-closeout.mjs:80` 的 `assertCloseoutGates`：① 链门 → ② `§3` 状态词臂 → ③ 本门 → ④ 机检门）；本清单只登记全路径门，本门的判据与拒面 = `docs/core/design/TESTING.md` §3.5。
+
 **在途性真值 = 批次档状态行自身**（本档 ① 冻结门读它）。
 
 **落点接线（N3 可迁移）**：解析序与防嵌套**单源 = §4.15**（2026-09-25 批收正——`batch-paths.mjs`）。
@@ -313,7 +315,7 @@ manifest `docRoot.batches` 复判（M1 缺键 → M1 默认值 fallback；注入
 **身份判据**：仅 depth-0 放行。**不替代**：台账核销事务 / 前批遗留核对（收口链主面仍是 §6 写入 + 台账动作——close 只收**机械收口**：状态行 + 冻结；不代写 §6 内容）。
 **收口前置（本批）**：写盘前过**链完整性门**（§4.18-A）——§6 非空判据在本门内、口径单源（`sectionContentState`）；**§6 为唯一缺段时拒串逐字不变**（不降级）。
 
-**收口前置（本批单测档）**：两路收口（`close` ∥ `status` 写 §1「已收口」）在文档机检门**之前**过本批批内单测档门——本批自己的单元测试档仍在盘 ⇒ 拒（拒串点名各档绝对路径 + 修法 = 删）；判据（归属 = 同目录最长批档名前缀 + `.test.mjs` 后缀）单源 = `docs/core/design/TESTING.md` §3.5，实现 = `thincoder-core/agent-tools/batch-unit-test-gate.mjs`（本档不复述）。
+**收口前置（本批单测档）**：两路收口（`close` ∥ `status` 写 §1「已收口」）另过本批批内单测档门——**登记位与门序单源 = §4.9 门清单末行**（本档只此一处登记，本条为纯指针）；判据、拒面与实现 = `docs/core/design/TESTING.md` §3.5。
 
 **收口重锚（本批未落行——自动）**：收口**两路**（`close` ∥ `status` 写 §1「已收口」）**同调单源 `reanchorOnClose`、零二写**——两路的**全部拒因通过、§1 状态行改写落盘之后**调 `ledgerReanchorBatch`（`docs/core/design/LEDGER.md` §7.1）。
 

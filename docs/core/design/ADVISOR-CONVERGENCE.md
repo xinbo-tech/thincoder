@@ -161,7 +161,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 **裁定原话（逐字）**：「不不不，过度工程，防无限重评审也不是这么防的，到处加机械限制是一种非常拙劣低级的做法，完全不体现程序员的能力和水平。」
 
 - **无会话级计数载体**：不设任何计数载体、不按计数拒发（无按计数拒发的常量 / 工具层预检 / 内防线 / guard 轮次项）。
-- **纪律面（提示词面 = 逐字建议，落笔权在主 agent）**：两处提示词末句（EN 运行面）`thincoder-core/prompts/discipline-normal.md:126` · `thincoder-core/prompts/persona-engineering.md:88`——
+- **纪律面（提示词面 = 逐字建议，落笔权在主 agent）**：两处提示词末句（EN 运行面）`thincoder-core/prompts/discipline-normal.md:126` · `thincoder-core/prompts/persona-engineering.md:293`——
   **落点（N5）**：末句 = en `No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.`（句首两段逐字保留）。
 - **轮次字段保留（区分对待——勿一刀切）**：每实例的轮次（`run.round`）**保留**——它是**提示词衰减**（§2.1 轮次表）与 TUI / VSC 轮次显示的数据源；**轮次不是终止判据**，不参与任何拒发判定。
 - **保留的既有自限**（逐条登记——都不是「评审发起封禁」）：工具轮硬帽 100（§2.3 宿主打断死循环）· 评审墙钟预算（F15）· completion guard 每 run 推回上限 `MAX_ADVISOR_PUSHBACKS`（guard 自身节流）· 异步池并发上限（资源保护归调度域）。
@@ -200,7 +200,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 | 2 | §3 设计评审停止判据 | 持续拒绝 >3 轮 ⇒ 停下上报（**非封禁**） | 同上（L3 / BR-13）· 权威 = 本档 §3 | 已是「停下上报」语义（与 F28 同向） | ① 保留并改指本档新址（锚漂移收正）· ② 同口径改写为「同因 ≥3 次 ⇒ 停下上报」· ③ 不动 |
 | 3 | eng-coder 自修轮上限（**父侧并入登记——非本面射程**） | 自修至多 5 轮修正 | 运行期 `thincoder-core/prompts/persona-eng-coder.md`「自含交付协议（概览）」节（`self-fix (max 5 correction rounds)`）· 需求面 `docs/core/requirements/ENGINEERING-MODE-V2.md` §7.4（「自修（≤5 轮）」） | 计数封顶：超限即收口交付 / 另起新批 | ① 同口径撤除（去 5 轮上限）· ② 改造（不封顶；达阈 ⇒ 停下上报）· ③ 不动 |
 
-**补登记（轮次 · 口径宽扫）**：行 1 / 行 2 的**运行期孪生行** = `thincoder-core/prompts/persona-engineering.md:50`。
+**补登记（轮次 · 口径宽扫）**：行 1 / 行 2 的**运行期孪生行** = `thincoder-core/prompts/persona-engineering.md:135`。
 现载「§5 修正轮上限 5 轮 / §3 设计评审无轮次上限（cap 豁免）/ 停止判据（持续拒绝 >3 轮）⇒ 停下上报」。
 行 3 的孪生行见上表（宽扫口径核过——同类）。
 
@@ -218,8 +218,8 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 | # | file:line | 现形态（末句） | 处置 |
 |---|---|---|---|
 | P1 | `thincoder-core/prompts/discipline-normal.md` | 现行句 `No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | **已落**——§3.1 逐字句 |
-| P2 | `thincoder-core/prompts/persona-engineering.md:288` | 现行句（轮次衰减条）：`No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | 同上（已落） |
-| P5 | `thincoder-core/prompts/persona-engineering.md:50` | §5 修正轮上限 5 轮 / §3「cap 豁免」/ >3 轮停止判据 | **同族 · 未落**——§3.5 行 1 / 行 2（待用户裁）；已登记 |
+| P2 | `thincoder-core/prompts/persona-engineering.md:293` | 现行句（轮次衰减条）：`No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.` | 同上（已落） |
+| P5 | `thincoder-core/prompts/persona-engineering.md:135` | §5 修正轮上限 5 轮 / §3「cap 豁免」/ >3 轮停止判据 | **同族 · 未落**——§3.5 行 1 / 行 2（待用户裁）；已登记 |
 | P6 | `thincoder-core/prompts/persona-eng-coder.md:22` | `self-fix (max 5 correction rounds)` | **同族 · 未落**——§3.5 行 3（非本面射程） |
 
 **② 需求面（只登记、不改文——需求档笔在父侧；三行未落）**
