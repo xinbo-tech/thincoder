@@ -1,5 +1,5 @@
 /**
- * batch-gates-reanchor.test.mjs — 集成用例 14-1 … 14-7（RTM CLI 端故事 14「评审过、收口清、重开回」）。
+ * batch-gates-reanchor.test.mjs — 集成用例 14-1 … 14-8（RTM CLI 端故事 14「评审过、收口清、重开回」）。
  *
  * 判据原文 = `test/RTM.md` 第 14 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 / §2.6 /
  * §2.7 / §2.11 / §2.13。**进入口 = 父侧工具面**（`batch` / `ledger` / `write`）——断言业务可观察结果
@@ -162,4 +162,28 @@ test("14-7 核销后重开 ⇒ 行零改、逐 id 点名；两种重开并存 �
   assert.match(lines[1], new RegExp(`本批已核销行不可回收 1 行：#${b} 「结过账」——已核销为终态`))
   assert.equal(rowsOf(root).find((r) => r.id === a).status, "在途")
   assert.equal(rowsOf(root).find((r) => r.id === b).status, "已核销", "已核销行零改")
+})
+
+test("14-8 §3 已 pass 后同批打回 ⇒ 状态行重置、§5 拒；再 pass 后放行", async () => {
+  const root = await freshRecord("14-8")
+  const coder = batchTool(REC)
+  const ctx = { depth: 1, agent: { ...agentOf(root), _role: "eng-coder", _batchDoc: REC } }
+  // 第 1 轮：评审真写一轮 pass（工具盖戳 `### 轮次 1`）⇒ 状态行 = 评审通过
+  await review(root).execute({ action: "append", segment: "§3", text: "首选方案可行。\n\nVERDICT: pass" }, { agent: agentOf(root) })
+  await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
+  // 第 2 轮：同一批判 changes-required ⇒ 工具同笔重置状态行 + 本轮块首留痕
+  await review(root).execute({ action: "append", segment: "§3", text: "复核发现一处缺陷。\n\nVERDICT: changes-required" }, { agent: agentOf(root) })
+  const src = readFileSync(recOf(root), "utf8")
+  const s3 = src.slice(src.indexOf("## §3"), src.indexOf("## §4"))
+  assert.match(s3, /\*\*状态行\*\*：进行中（第 2 轮打回）/, "档面：§3 状态行字节（不经解析）")
+  assert.match(s3, /> 状态行重置：第 2 轮打回（changes-required）· 上一轮状态行 = 评审通过 → 进行中 · \d{4}-\d{2}-\d{2}/, "重置留痕在档")
+  // §5 拒面 = 门打印的解析词（不是带括注的整串），§5 字节不变
+  await assert.rejects(
+    () => coder.execute({ action: "append", segment: "§5", text: "先写实现" }, ctx),
+    (e) => /§3 状态行 = 进行中，须 = 评审通过/.test(e.message),
+  )
+  assert.equal(readFileSync(recOf(root), "utf8"), src, "§5 拒后档字节不变")
+  // 评审再 pass ⇒ §5 恢复可写
+  await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
+  assert.match(await coder.execute({ action: "append", segment: "§5", text: "实现落地" }, ctx), /appended/)
 })

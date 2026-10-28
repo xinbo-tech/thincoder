@@ -1,4 +1,6 @@
-Search the web (DeepSeek Search when a DeepSeek provider is configured; otherwise Tavily with a key, else Bing). Returns result titles, URLs, and snippets — DeepSeek results also carry a date · authority (0–4) · rerank (0–3) line and a long summary. Use for looking up current information, docs, error messages.
+Search the web (DeepSeek Search when a DeepSeek provider is configured; otherwise Tavily with a key, else Bing). Returns result titles, URLs, and snippets — DeepSeek results also carry a date · authority (0–4) · rerank (0–3) line and a long summary.
+
+Use for looking up current information, docs, error messages.
 
 Parameters:
 - query (required): Search query

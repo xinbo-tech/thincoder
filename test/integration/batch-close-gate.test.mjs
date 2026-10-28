@@ -1,5 +1,5 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-6 / 7-7 / 7-8（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-6 / 7-7 / 7-8 / 7-9（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
  * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
  * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）。
@@ -10,7 +10,8 @@
  *
  * 笔域集（7-1 / 7-2 / 7-3 / 7-4 / 7-6 每例以两档干净档为底——7-3 再加一档含悬空指针的档）两条腿都做实：触达账（`agent._touchedFiles`）与提交 diff
  * （批档 §1 的 `批起 sha = <sha>` 记入行 ⇒ `git diff --name-only <sha> HEAD`）；这五例先实读 diff 腿自证，否则「范围 N 档」只是空转读数。
- * 7-7 不用 git 仓（笔域集只含批档自身，档数靠引擎实判数对拍）；7-8 只判写段面（不涉提交 diff 腿）。
+ * 7-7 不用 git 仓（笔域集只含批档自身，档数靠引擎实判数对拍）；7-8 只判写段面（不涉提交 diff 腿）；
+ * 7-9 判工具描述面（两条判据同判：400 字符段 + 裸档名 ⇒ 双命中；只修锚仍拒；拆段后放行）。
  *
  * 夹具 = 系统临时域（项目根 + 真 git 仓 + 六段批档；`mkdtempSync`——零落仓、可并发）。收口后的台账重锚
  * 经测试缝 `_setLedgerDirForTest` 导向临时目录（不碰真实用户数据目录）。
@@ -308,38 +309,48 @@ test('7-8 错误 · 子代理 append §2：本次写入文本含裸档名 ⇒ �
   assert.ok(after.includes(landed), "本次文本已落盘")
 })
 
-// 工具描述面（`thincoder-core/tool-docs/**`）只判锚、不判段长（-1849）——
-// 400 字符单行在该面零命中（行判据只服务提示词面、段判据在该面被跳过），而裸档名照常命中「锚·档缺」。
-test('7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸档名）⇒ 收口被拒且拒因只点名锚', async () => {
+// 工具描述面（`thincoder-core/tool-docs/**`）与其余面同判（撤面豁免）——400 字符段在该面照判段判据、
+// 裸档名照判锚判据：两条同时点名；只修锚仍拒（段那条独立成立）；拆段后同一条门放行。
+test('7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸档名）⇒ 收口被拒且锚与段两条同时点名', async () => {
   const TOOLDOC_REL = "thincoder-core/tool-docs/probe.md"
-  const TOOLDOC = "# 探针\n\n" + "长".repeat(400) + "\n\n见 `NO-SUCH-DOC.md`。\n"
+  const LONG = "长".repeat(400)
   const root = makeProject("r79")
-  const sha = gitRepo(root)
+  gitRepo(root)
   mkdirSync(join(root, "thincoder-core/tool-docs"), { recursive: true })
-  writeFileSync(join(root, TOOLDOC_REL), TOOLDOC)
+  writeFileSync(join(root, TOOLDOC_REL), "# 探针\n\n" + LONG + "\n\n见 `NO-SUCH-DOC.md`。\n")
   commit(root, "工具描述面探针档")
+  const touched = [join(root, CLEAN_A), join(root, CLEAN_B), join(root, TOOLDOC_REL)]
   const before = readFileSync(join(root, BATCH_REL), "utf8")
 
   await assert.rejects(
-    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [join(root, CLEAN_A), join(root, CLEAN_B), join(root, TOOLDOC_REL)])),
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched)),
     (e) => {
-      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串应恰 1 条（该面段零命中、仅锚 1 条）：${e.message}`)
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 2 条）/, `拒串应恰 2 条（锚 1 + 段 1——该面不再被跳过）：${e.message}`)
       assert.match(e.message, /✗ 锚·档缺 thincoder-core\/tool-docs\/probe\.md:\d+/, `拒串点名锚与该档行号：${e.message}`)
-      assert.ok(!/文字太长/.test(e.message), `同档 400 字符段应零命中（该面只判锚）：${e.message}`)
+      assert.match(e.message, /✗ 文字太长，难于阅读 thincoder-core\/tool-docs\/probe\.md:\d+/, `同档 400 字符段必须命中段判据（面豁免已撤）：${e.message}`)
       return true
     },
   )
   assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
   assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
 
-  // 对照半：同一份 400 字符内容放到 `docs/**` 面（不受面豁免）⇒ 段判据必须命中。
-  // 无此半，「零命中」就证明不了是**面豁免**在起作用（夹具漏写也能得 0）。
-  writeFileSync(join(root, "docs/notes/long.md"), "# 对照\n\n" + "长".repeat(400) + "\n")
-  const r = runDocCheck(root, { docs: ["docs/notes/long.md"] })
-  assert.ok(
-    r.hits.paragraph > 0,
-    `对照半：同 400 字符内容在 docs 面必须命中段判据（否则本例的零命中解释不了）—— 实得 ${JSON.stringify(r.hits)}`,
+  // 只删裸档名（锚那条清掉、段落一字未动）⇒ 仍拒、只剩段那条：证明段命中不是被锚命中带出来的。
+  writeFileSync(join(root, TOOLDOC_REL), "# 探针\n\n" + LONG + "\n")
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched)),
+    (e) => {
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `锚清后应只剩段 1 条：${e.message}`)
+      assert.match(e.message, /✗ 文字太长，难于阅读 thincoder-core\/tool-docs\/probe\.md:\d+/, `段判据仍拦：${e.message}`)
+      assert.doesNotMatch(e.message, /✗ 锚·/, `锚那条应已清：${e.message}`)
+      return true
+    },
   )
+
+  // 拆段（两段各 200 ≤ 阈值）⇒ 同一条门放行：判据没松，是病治好了。
+  writeFileSync(join(root, TOOLDOC_REL), "# 探针\n\n" + "长".repeat(200) + "\n\n" + "长".repeat(200) + "\n")
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched))
+  assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `拆段后收口放行且落盘：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
 })
 
 

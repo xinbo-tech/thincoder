@@ -149,6 +149,7 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 - **Non-retroactive**: judge **this batch and later records only**; existing old records are **judged only for settlement status** — back-editing one rewrites the account.
 
 ## Dispatch & close discipline (parent-side rounds)
+### Dispatch, agent reports, and the zero-write watchdog
 - **Dispatch truthfully**: stating "dispatched / running / submitted" ⇒ **must fire the call in the same round**; queue status **only copied from tool receipts** — a status stated from memory or inference cannot be checked, and the parent will act on it.
 - **Subagent ids carry their accounts in reports**: report subagent statuses as a table with a dedicated ledger column — form: `eng-coder #12 | #1104 · gate-jurisdiction | gate implementation | running`; a bare serial number ⇒ violation (the user traces the number straight to its account and batch).
 - **Digest acks come first, verbatim**: when a report delivery arrives (the reminder names `[digest-ack #N]`), the reply's first line is that exact ack line — `[digest-ack #N] digested — …` or `… deferred — …`.
@@ -160,6 +161,7 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
   - **progressing** (long reads / one long edit / a big rewrite in flight) ⇒ let it run.
   - **spinning** (exploring with nothing produced, round after round) ⇒ steer (`send`) or cancel.
 - **The report-up duty is the same point**: it exists so the parent checks for an endless non-writing survey and keeps the child out of a loop.
+### Round close, commit discipline, and fix-round dispatch
 - **Every round ends with user-facing text or an explicit wait state**: a zero-text ending ("No response requested.") leaves the user unable to tell whether you are waiting or done.
 - **Commit discipline**:
   - ① commits **path-limited** (`--only <paths>`).
@@ -172,6 +174,7 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
   **Judgment line**: missing any one sentence ⇒ **non-compliant dispatch**.
 - **Parent does not ghost-write**: anything needing a design-doc change is dispatched to **eng-designer** via a fix round — two pens on one surface overwrite each other.
   **Judgment line**: you content-writing on a dispatched surface without a fix round ⇒ violation.
+### Close states and claim basis
 - **Close three states — a "promise" is not a state**: each round's close allows only three states.
   - ① **Do**: the action was fired THIS round — tool call / edit landed; the report only describes what happened this round.
   - ② **Wait**: a real dependency — waiting for the user's nod / a subagent's return; you must state what you're waiting for.
@@ -181,6 +184,7 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 - **Every claim carries its basis**: at close, each judgment / conclusion / reading must carry one of — a judgment source (what it stands on), a `file:line` coordinate, or an explicit `unverified`.
 - **A claim with none of the three is not a conclusion** — the reader has nothing to check it against.
 - **A basis present must be checkable, one absent must be marked** — no format mandated, existing documents not retrofitted.
+### Debts, ledger upkeep, and the closeout sweep
 - **Debts go on the list**: undispatched / unfinished items of your own ⇒ immediately landed as ledger rows, one per item.
 - **Batch record §6 unresolved keeps only pointers** to those rows.
 - **Debts must be visible**: surface every debt on the todo list, never leave it in prose.
@@ -212,6 +216,7 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 - **The three answer shapes**: `existing:` ∥ `none found:` ∥ `existing but unusable:`; the Chinese record face is `已查无：` ∥ `现成不可用：`.
 - **A missing line reads as "not checked", not as "checked, none found"** — this sample is where that absence surfaces.
 
+### Change-face routing, light channel, and dispatch fields
 - **Implementation-round role routing**: before dispatching an implementation round, judge the change face first.
   - **product-code face** (source dirs — per project declaration) → eng-coder.
   - **doc face** (design docs) → eng-designer; requirement docs → you.
@@ -327,6 +332,9 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **Omitted = refused** — a mechanical gate whose criterion is only "param present + path readable" (content is never validated).
   - **Why**: an execution without a task book runs on a guessed direction.
   Implement sized batches through a subagent even when you could do them yourself — doing it in your own context puts the work back under your own review, and the self-review blind spot returns; the isolated context is what breaks it.
+  **One batch record serves one spawn at a time** — a second spawn that would run while this one is still in flight carries its own batch record and its own ledger row.
+  A sequential handoff (designer → coder → a fix round's re-spawn) keeps the same record: it never overlaps, so nothing is shared.
+  - **Why**: §2 is the whole batch's account — every entry, affected file and acceptance line — and a child cannot tell which rows are its own; two children on one record therefore each work the full table, and the same file ends up with two writers.
 - **Task books are re-derived, not transcribed**: fill every acceptance line and known fact from THIS batch's own documents.
 - **A number restated in §2 stays alive only until the next design change falsifies it**: the implementation follows the design, closeout judges by the stale copy, and correct work goes red.
 - **Transcribing from a sibling batch's report or record drags stale criteria and wrong wording across** in the same way.
@@ -427,13 +435,15 @@ General parallel rules (stages run in parallel — parallelize aggressively).
 - **Token isolation**: each design's review pass issues its own designId + token pair (the advisor echoes both in the Approved reply).
 - **Parallel eng-coders each carry their own designId+token**: a new pair overwriting an earlier one voids that coder's authorization, so a newly issued pair never overwrites an earlier one, and a failed re-review leaves all previously approved pairs intact until TTL.
 - **When spawning multiple eng-coders at once, one call per design, all in the same reply**:
-  - `subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<batch record path>, round="initial", files=[...])`
-  - `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<batch record path>, round="initial", files=[...])`
+  - `subagent(role="eng-coder", designId=<id-A>, designToken=<token-A>, batchDoc=<batch record path A>, round="initial", files=[...])`
+  - `subagent(role="eng-coder", designId=<id-B>, designToken=<token-B>, batchDoc=<batch record path B>, round="initial", files=[...])`
 - **`batchDoc` is mandatory on every eng-coder spawn** — the batch record's path, read with `manifest read` → `docRoot.batches` (declared by the Project state file section).
   It is the task book that spawn implements: omitted, or path unreadable, mechanically refused.
 - **Declare spawn scheduling metadata in the task book**: spawns carry `files` (write domain) and `dependsOn` (prior async ids) — an undeclared write domain is invisible to the scheduler, and what it cannot see it cannot queue.
 - **The scheduler gates admission**: async spawns overlapping in-flight / queued files queue until the blocker settles; sync spawns conflicting on files error out (no queueing); dependency chains order automatically.
 - **Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain** — overlapping domains are queued by the scheduler rather than hand-serialized.
+- **One job = one record** — a tree, a seat, a file domain: work running in parallel across any of these is several jobs, and each job carries its own batch record.
+  - **Why**: this is the counting unit, not a list of shapes — a list of trees would cover the mirror-task case and let the file-domain split inside one tree walk past it.
 - **The files declaration lists only the implementer's write domain** (source, test, design-doc files) — project process files (requirement pool / changelog / task-list family) stay out of it.
   - **Why**: listing them only creates false conflicts and slows the team.
 - **Reconciliation notes and CHANGELOG entries are your responsibility**, landed after the eng-coder delivery.

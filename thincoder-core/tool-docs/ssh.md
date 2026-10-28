@@ -31,11 +31,9 @@ Notes:
   args, never echoed in a result, never stored in plaintext. Any captured output containing that value (or a value given to secret_input)
   is scrubbed from the returned text and from the session log.
 - Saving a credential is opt-in: the credential window carries a `save` checkbox (off by default). When checked and authentication succeeds,
-  the password is stored encrypted with your OS user account (Windows DPAPI) in a per-user file outside the repository; the store holds only
-  ciphertext. A saved credential is reused silently — the next connect skips the window, and only after key
-  authentication fails. The residual risk is honest: another process running as the same logged-in user can decrypt it; this protects the
-  file at rest, not a compromised account. Saving is Windows-only for now; on other platforms the checkbox does not appear and the window
-  keeps asking.
+  the password is stored encrypted with your OS user account (Windows DPAPI) in a per-user file outside the repository; the store holds only ciphertext. A saved credential is reused silently — the next connect skips the window, and only after key authentication fails.
+
+  The residual risk is honest: another process running as the same logged-in user can decrypt it; this protects the file at rest, not a compromised account. Saving is Windows-only for now; on other platforms the checkbox does not appear and the window keeps asking.
 - Fail-soft: an unreadable/undecryptable entry, a damaged store or a missing backend falls back to the credential window (the connection is
   not broken; undecryptable entries are kept). If the server rejects a saved credential it is deleted and the window is shown. A failed save
   never affects the connection.

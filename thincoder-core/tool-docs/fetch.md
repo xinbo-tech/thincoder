@@ -1,4 +1,6 @@
-Fetch a URL and return its content. With a DeepSeek provider configured the URL is fetched through DeepSeek's servers and returned as Markdown ([deepseek] title + content); otherwise it is fetched locally and HTML is stripped to readable text. Private/metadata URLs are never sent. Use after websearch to read full documents.
+Fetch a URL and return its content. With a DeepSeek provider configured the URL is fetched through DeepSeek's servers and returned as Markdown ([deepseek] title + content); otherwise it is fetched locally and HTML is stripped to readable text.
+
+Private/metadata URLs are never sent. Use after websearch to read full documents.
 
 Parameters:
 - url (required): http/https URL

@@ -105,7 +105,7 @@
 | `parseSectionRows` | `scripts/doc-check-linecounts.mjs:54` | `fn` |
 | `checkLineCounts` | `scripts/doc-check-linecounts.mjs:97` | `fn` |
 | `DOC_CHECK_BUILTINS` | `scripts/doc-check-paragraph.mjs:7` | `named` |
-| `isTableRow, fenceMark, isFenceLine, isQuoteLine, isZoneHead, isExecutableLine, inCodeSpan, isListItem, isPromptFace, isToolDocFace, checkParagraphs, DOC_CLASS` | `scripts/doc-check-paragraph.mjs:8` | `named` |
+| `isTableRow, fenceMark, isFenceLine, isQuoteLine, isZoneHead, isExecutableLine, inCodeSpan, isListItem, isPromptFace, checkParagraphs, DOC_CLASS` | `scripts/doc-check-paragraph.mjs:8` | `named` |
 | `collectTestTrees` | `scripts/doc-check-targets.mjs:30` | `fn` |
 | `collectCaseTitles` | `scripts/doc-check-targets.mjs:50` | `fn` |
 | `collectCodeTokens` | `scripts/doc-check-targets.mjs:76` | `fn` |
@@ -114,6 +114,9 @@
 | `stripCanonOperands` | `scripts/prompt-refs-check.mjs:46` | `named` |
 | `stripCodeLine` | `scripts/prompt-refs-check.mjs:70` | `fn` |
 | `lineHits` | `scripts/prompt-refs-check.mjs:90` | `fn` |
+| `SUMMARY_SIG` | `test/integration/fixtures/anthropic-endpoint.mjs:73` | `const` |
+| `isSummaryRequest` | `test/integration/fixtures/anthropic-endpoint.mjs:76` | `const` |
+| `fakeAnthropic` | `test/integration/fixtures/anthropic-endpoint.mjs:91` | `fn` |
 | `SESSION_COMMANDS` | `thincoder-cli/bin/disk-root-gate.mjs:16` | `const` |
 | `DISK_ROOT_MESSAGE` | `thincoder-cli/bin/disk-root-gate.mjs:19` | `const` |
 | `diskRootGateError` | `thincoder-cli/bin/disk-root-gate.mjs:26` | `fn` |
@@ -1291,19 +1294,18 @@
 | `checkAnchors` | `thincoder-core/doc-check/anchors.mjs:101` | `fn` |
 | `DOC_CHECK_BUILTINS` | `thincoder-core/doc-check/index.mjs:23` | `const` |
 | `runDocCheck` | `thincoder-core/doc-check/index.mjs:134` | `fn` |
-| `DOC_CLASS` | `thincoder-core/doc-check/paragraph.mjs:20` | `const` |
-| `isTableRow` | `thincoder-core/doc-check/paragraph.mjs:23` | `const` |
-| `fenceMark` | `thincoder-core/doc-check/paragraph.mjs:30` | `fn` |
-| `isFenceClose` | `thincoder-core/doc-check/paragraph.mjs:36` | `const` |
-| `isFenceLine` | `thincoder-core/doc-check/paragraph.mjs:39` | `const` |
-| `isQuoteLine` | `thincoder-core/doc-check/paragraph.mjs:42` | `const` |
-| `isListItem` | `thincoder-core/doc-check/paragraph.mjs:45` | `const` |
-| `isPromptFace` | `thincoder-core/doc-check/paragraph.mjs:49` | `const` |
-| `isToolDocFace` | `thincoder-core/doc-check/paragraph.mjs:56` | `const` |
-| `isZoneHead` | `thincoder-core/doc-check/paragraph.mjs:60` | `fn` |
-| `isExecutableLine` | `thincoder-core/doc-check/paragraph.mjs:66` | `fn` |
-| `inCodeSpan` | `thincoder-core/doc-check/paragraph.mjs:75` | `fn` |
-| `checkParagraphs` | `thincoder-core/doc-check/paragraph.mjs:90` | `fn` |
+| `DOC_CLASS` | `thincoder-core/doc-check/paragraph.mjs:19` | `const` |
+| `isTableRow` | `thincoder-core/doc-check/paragraph.mjs:22` | `const` |
+| `fenceMark` | `thincoder-core/doc-check/paragraph.mjs:29` | `fn` |
+| `isFenceClose` | `thincoder-core/doc-check/paragraph.mjs:35` | `const` |
+| `isFenceLine` | `thincoder-core/doc-check/paragraph.mjs:38` | `const` |
+| `isQuoteLine` | `thincoder-core/doc-check/paragraph.mjs:41` | `const` |
+| `isListItem` | `thincoder-core/doc-check/paragraph.mjs:44` | `const` |
+| `isPromptFace` | `thincoder-core/doc-check/paragraph.mjs:48` | `const` |
+| `isZoneHead` | `thincoder-core/doc-check/paragraph.mjs:52` | `fn` |
+| `isExecutableLine` | `thincoder-core/doc-check/paragraph.mjs:58` | `fn` |
+| `inCodeSpan` | `thincoder-core/doc-check/paragraph.mjs:67` | `fn` |
+| `checkParagraphs` | `thincoder-core/doc-check/paragraph.mjs:81` | `fn` |
 | `createEmbedder` | `thincoder-core/embedding.mjs:17` | `fn` |
 | `embed` | `thincoder-core/embedding.mjs:33` | `fn` |
 | `embedTolerant` | `thincoder-core/embedding.mjs:61` | `fn` |
@@ -1760,6 +1762,7 @@
 | `normalizeTools` | `thincoder-core/provider/google.mjs:28` | `fn` |
 | `convertMessages` | `thincoder-core/provider/google.mjs:44` | `fn` |
 | `chat` | `thincoder-core/provider/google.mjs:82` | `fn` |
+| `parseGeminiStream` | `thincoder-core/provider/google.mjs:178` | `fn` |
 | `chat, createProvider, stripImagesForTextModel` | `thincoder-core/provider/index.mjs:5` | `named` |
 | `listModels` | `thincoder-core/provider/index.mjs:6` | `named` |
 | `RETRYABLE_STATUS, _rateHooks, estimateText, estimateRequestTokens, rateGate, recordRate` | `thincoder-core/provider/index.mjs:7` | `named` |

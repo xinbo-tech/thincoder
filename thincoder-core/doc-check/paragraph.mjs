@@ -4,9 +4,8 @@
  * 口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.18 条目 Q（单位是段 / 面谓词 / 阈值 / 不分域）；
  * 产品内建裁定 = 同档 §3.20 条目 S——谓词单源随迁：本仓 `scripts/doc-check-paragraph.mjs` 改述为
  * **再出口缝**（薄档 · 零逻辑 · 逐名再出口），盘上不留第二份谓词实现。
- * 三面切块：文档面量段（相邻非空正文行合并成一段，量段长）· 提示词面（`isPromptFace`）量行
- * （逐行裸判，无结构豁免）· 工具描述面（`isToolDocFace`）**不进段扫描**（该面只判锚——读者是模型，
- * 「人读不动」的理由在这个面上不成立；口径 = §3.18 条 7）。度量 = `[...line].length`（CJK 计 1——不引显示宽度 / 字体）；
+ * 两面切块：文档面量段（相邻非空正文行合并成一段，量段长）· 提示词面（`isPromptFace`）量行
+ * （逐行裸判，无结构豁免）——判据不分适用面，工具描述面同样按段判（口径 = §3.18 条 7）。度量 = `[...line].length`（CJK 计 1——不引显示宽度 / 字体）；
  * 阈值 = 调用方的内置常量（`DOC_CHECK_BUILTINS.paragraphMax` / `lineMax`）——不读声明面，也不扫目录：
  * **判定集 = 调用方传入的文件清单**。
  * 不计入段的行类（同时把段断开）= 空行 ∥ 表格行 ∥ 标题 ∥ 列表项 ∥ 引用行 ∥ 围栏（标记行与块内整行）
@@ -48,13 +47,6 @@ export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、])\s/.test(String(l))
  *  模型读原始文本，一行就是一个块（FR46 同源理由）⇒ 该面逐行裸判，无结构豁免。 */
 export const isPromptFace = (abs) => /(?:^|\/)thincoder-core\/prompts\//i.test(String(abs).replace(/\\/g, "/"))
 
-/** 工具描述面谓词（`thincoder-core/tool-docs/**`——档注进 tool 定义，读者是模型）：段判据的理由句
- *  「文字太长，难于阅读」说的是人读不动，在这个面上不成立 ⇒ 该面只判锚、不判段长（口径 = §3.18 条 7）。
- *  形态照抄 `isPromptFace`：**先归一**（`\\` → `/`——Windows 下 `path.join` 出反斜杠，不归一则谓词恒不命中）；
- *  **带 `thincoder-core/` 前缀**（`docs/**` 下同名目录不被误豁免）；**取目录不取档清单**（新增档自动继承）。
- *  判不出 ⇒ false ⇒ 该面照全判（fail-closed——跳过是假绿）。 */
-export const isToolDocFace = (abs) => /(?:^|\/)thincoder-core\/tool-docs\//i.test(String(abs).replace(/\\/g, "/"))
-
 /** 区带头谓词（§3.15 谓词面）：标题文本去首部编号（`^\d+(?:\.\d+)*[.、]?\s*`）后——等于区带名 ∨ 以
  *  「区带名 + （∕(」起（容括注后缀，如 `变更记录（续）`）；闭集外一律不纳（fail-closed）。 */
 export function isZoneHead(headingText, zones = []) {
@@ -82,7 +74,6 @@ export function inCodeSpan(line, idx) {
  *    ∧ 非围栏（标记行与块内整行）∧ 非区带内；其余行类不计入、且把段断开。
  *  · 提示词面（`isPromptFace`）：逐行裸判——`[...line].length` > `lineMax` ⇔ 命中（`clazz: "行太长"`，
  *    无结构豁免）。
- *  · 工具描述面（`isToolDocFace`）：该档**不进段扫描**（零命中）——该面只判锚（§3.18 条 7）。
  *  单遍扫描携标题栈（`^(#{1,6})\s` 行入栈——同级 ∥ 更高级出栈）：行所属标题链任一为区带头 ⇒ 区带内
  *  （不计入段且断段）。围栏未闭合 ⇒ 至档尾整块免（fail-open 方向——§3.18 残余登记 ①）；
  *  `exemptZones` 缺省 ∥ 空集 ⇒ 零豁免。`files`（必填）= **判定集**（调用方传入的档清单——本档不遍历
@@ -108,10 +99,6 @@ export function checkParagraphs({ paragraphMax, lineMax, exemptZones = [], files
       })
       continue
     }
-    // 工具描述面（`thincoder-core/tool-docs/**`）只判锚、不判段长（§3.18 条 7）：读者是模型，
-    // 「人读不动」那条理由在这个面上不成立。锚判据走 `./anchors.mjs`，本支零触。
-    // 谓词认不出 ⇒ 落回下面的全量判（fail-closed）——「判不了就跳过」正是本批要治的假绿。
-    if (isToolDocFace(f)) continue
     const stack = [] // 标题栈 —— { level, exempt }；exempt = 自身 ∥ 祖先命中区带
     let fence = null // 围栏标记（` ∥ ~）；null = 不在块内
     let para = null // 在写的段 —— { start, len }；非正文行 ⇒ 断开

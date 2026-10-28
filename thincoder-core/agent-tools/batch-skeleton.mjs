@@ -238,6 +238,64 @@ export function countRoundBlocks(src, seg = 3) {
 }
 
 /**
+ * 段内**下一轮**轮次号（`countRoundBlocks + 1` 的组合名——**不二次实现计数**）：写入面
+ * （`batch.mjs` 的 `insertIntoSection` 盖戳 `### 轮次 N`）与打回重置（`statusResetPlan` 的留痕行
+ * 「第 N 轮打回」）必须取同一个 N——各算一遍，将来改了 `ROUND_HEADING_RE` 就会一处变一处不变。
+ * @param {string} src — 批档全文（写盘前）
+ * @param {number|string} [seg] — 段号（缺省 3——轮次块只落 §3）
+ * @returns {number} 本轮 N（1 起）
+ */
+export function nextRoundNumber(src, seg = 3) {
+  return countRoundBlocks(src, seg) + 1
+}
+
+/**
+ * 裁定行锚（**写入面与签发面共读一条正则**，2026-10-28 自 `design-token.mjs` 迁入）：打回重置
+ * （`statusResetPlan`）判「本笔带不带打回裁定」，设计凭证裁定闸（`design-token.mjs` 的
+ * `verdictGateFailure`）判「回执给没给打回」，两处读同一份锚形——锚只此一份，不复制到第二档、
+ * 也不由两档各写一遍。`VERDICT_PASS_LINE` 留签发面，经 import 取 `_V_PRE` / `_V_SUF`。
+ * 本地化等价形（GitHub #32 / #14）：评审席用中文回执很常见，只认英文会让 pass 落成 `no-pass-line`、
+ * 凭证永不签发；判据仍只认**整行逐字面**，不做「句中含『通过』」这类模糊匹配——那样会把「未通过」
+ * 也放过（散文行内提及不触发）。
+ */
+export const _V_PRE = "^[ \\t]*[*_`]*[ \\t]*"
+export const _V_SUF = "[ \\t]*[*_`]*[ \\t]*$"
+export const VERDICT_CHANGES_LINE = new RegExp(
+  _V_PRE + "(?:VERDICT:[ \\t]*(?:changes-required|不通过|需修改)|结论[:：][ \\t]*(?:不通过|需修改|changes-required))" + _V_SUF, "mi")
+
+/**
+ * 打回即重置的计划形（**纯函数 · 零 fs**；`batch.mjs` 与 `insertIntoSection` 在同一笔写盘里消费）。
+ * 三合取全中 ⇒ `{ roundN, statusValue, traceLine }`，否则 `null`（零写 = 零回归）：
+ *   ① 本笔写 §3；② 本笔**净化后**正文命中打回裁定行（`VERDICT_CHANGES_LINE` 单源）；
+ *   ③ 写这一笔之前 §3 状态行 = `STATUS_WORDS[3].done`（**取词表，不写死字面**——写死则词表一改
+ *   这条判据静默失效）。
+ * 为什么必须机械：状态行是下游 `§5` 写入门 ∥ 收口门 ∥ 核销门③ 的唯一判据面；「评审记得把状态行
+ * 改回去」是一条纪律，而纪律在打回那一轮最易漏。
+ * 为什么第 ③ 条要「上一轮 = done」而非无条件：§3 已是 `进行中`（本来写着「评审未完成」）⇒ 重置
+ * 无事可做，零写零留痕；顺序交接的批（首轮 pass）因此不误伤。
+ * 状态行值 = 关键词 + 括注（**不新增第三态词**：词表零扩即读侧零改）；留痕行把「上一轮 pass 被这一轮
+ * 推翻」留在 §3 段体——重置不等于清空，否则读档的人会以为从没评过。
+ * 权威规格 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5。
+ * @param {string} src — 写盘前的档全文
+ * @param {number|string} seg — 本笔的目标段号
+ * @param {string} body — 本笔净化后正文（凭证已剥、伪造戳已丢）
+ * @param {string} date — 留痕行的日期戳 `YYYY-MM-DD`（调用方取 `todayLocal`——日期口径只一处）
+ * @returns {{roundN:number, statusValue:string, traceLine:string}|null}
+ */
+export function statusResetPlan(src, seg, body, date) {
+  if (Number(seg) !== 3) return null
+  if (typeof body !== "string" || !VERDICT_CHANGES_LINE.test(body)) return null
+  if (readSectionStatusWord(src, 3) !== STATUS_WORDS[3].done) return null
+  const roundN = nextRoundNumber(src, 3)
+  const { open, done } = STATUS_WORDS[3]
+  return {
+    roundN,
+    statusValue: `${open}（第 ${roundN} 轮打回）`,
+    traceLine: `> 状态行重置：第 ${roundN} 轮打回（changes-required）· 上一轮状态行 = ${done} → ${open} · ${date}`,
+  }
+}
+
+/**
  * 「不适用」声明行形态单源（§4.18-A——**一行一档**）：`> 不适用：§N —— <理由>`，§N ∈ {2,3,4}、
  * 理由非空（`\S.*` = 至少一个非空白字符起头）。识别域 = §1 段体内（声明住 §1——D-BR30：工程模式
  * 主 agent 的 append 域 = §1/§4/§6，写不进 §2/§3，而声明恰发生在 designer / 评审本轮不跑时 ⇒

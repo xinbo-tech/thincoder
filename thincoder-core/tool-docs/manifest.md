@@ -7,7 +7,9 @@ Actions:
   The resulting manifest must pass validation (a fault is refused with the disk byte-for-byte unchanged); a missing manifest is
   refused — run init first (write never creates one).
 
-target — explicit target directory; defaults to the session anchor, relative paths resolve against it. A workspace target
+target — explicit target directory; defaults to the session anchor, relative paths resolve against it.
+
+A workspace target
 (several projects below it) is reported by `read` and refused by `init` / `write` — with the facts, the full candidate list and
 a next step: name the project root you mean and pass it as target.
 

@@ -1,4 +1,6 @@
-Drive a real browser the tool starts itself: a headless (default) or visible system Edge/Chrome in an isolated profile under `~/.thincoder/browser/profile`. Multi-step and stateful: `navigate`, `snapshot`, then act on the element references the snapshot returns. Not a takeover — it never attaches to a browser you already have open and needs no extension.
+Drive a real browser the tool starts itself: a headless (default) or visible system Edge/Chrome in an isolated profile under `~/.thincoder/browser/profile`.
+
+Multi-step and stateful: `navigate`, `snapshot`, then act on the element references the snapshot returns. Not a takeover — it never attaches to a browser you already have open and needs no extension.
 
 **Route to browser instead of fetch:**
 - content that only exists after JS runs, or behind interaction (login, click, form, scroll) → browser

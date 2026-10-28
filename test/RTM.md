@@ -77,8 +77,8 @@
 
 ### 7. 收口只判本批改过的档
 
-> 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执；工具描述面只判锚、不判段长（该面读者是模型，段判据的理由句不成立）。
-> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append，不直调 `runBatchGate`）；九态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：段不拦、锚仍拦——收口拒因只点名锚）。
+> 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执；两条判据不分适用面，工具描述面同样受段长约束。
+> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append，不直调 `runBatchGate`）；九态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：锚与段两条同时拦）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
@@ -90,7 +90,7 @@
 | 7-6 | 夹具批档 §1 含裸档名（要求档写成了不带目录段的名字），跑一次 `batch close` | 收口被拒（throw）：拒串首行 `DOC-CHECK GATE: REFUSED`、命中行带 `§1（作者：主 agent）`；§1 状态行字节不变 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②（收口面含批档自身）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ③；用例号 = DD-129 | `test/integration/batch-close-gate.test.mjs` |
 | 7-7 | 同一夹具，批档干净、笔域集各档干净，跑一次 `batch close` | 收口放行；回执 `[doc-check gate] DOC-CHECK GATE: PASS · 范围 N 档`，N = 实判档数且 ≥ 1（批档自身在内） | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ④（判域恒非空）；用例号 = DD-135 | `test/integration/batch-close-gate.test.mjs` |
 | 7-8 | 子代理 append §2，本次写入文本把要求档写成不带目录段的名字；随后改成全路径再 append 一次 | 第一次被拒：命中行点名 `本次写入文本`，批档字节逐字不变（零字节落盘）；第二次落盘，前文零变 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ①（写段面强制集 = 本次写入文本）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ⑥；用例号 = DD-130 | `test/integration/batch-close-gate.test.mjs` |
-| 7-9 | 夹具项目里放一档 `thincoder-core/tool-docs/x.md`（内含一段 400 字符 + 一个解析不到的裸档名），入本批笔域集，跑一次 `batch close` | 收口被拒（throw）且拒因只点名锚那条（命中行指向该裸档名）；同档 400 字符段零命中（该面不判段长）；删掉裸档名后同跑放行 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F3「判据适用面分层」· 判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.18 条 7 ∥ §5 A-DD35 判据 ①；缺口来源 = 台账 `#1847`（改工具描述档一句文案，写段与收口被段判据拦下）；用例号 = DD-137 ∥ DD-138 | `test/integration/batch-close-gate.test.mjs` |
+| 7-9 | 夹具项目里放一档 `thincoder-core/tool-docs/x.md`（内含一段 400 字符 + 一个解析不到的裸档名），入本批笔域集，跑一次 `batch close` | 收口被拒（throw）且拒因**锚与段两条同时点名**（命中行分别指向该裸档名 ∥ 该 400 字符段）；只删裸档名后同跑仍拒（段那条）；拆成两段后放行 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F3「判据不分适用面」· 判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.18 条 7 ∥ §5 A-DD35 判据 ①；缺口来源 = 台账 `#1847`（改工具描述档一句文案，写段与收口被段判据拦下）；用例号 = DD-137 ∥ DD-138 | `test/integration/batch-close-gate.test.mjs` |
 
 ### 8. 批次档建在项目里（工作区锚报明、不落锚目录）
 
@@ -169,7 +169,7 @@
 ### 14. 评审过、收口清、重开回
 
 > 目的：`§5` 只在评审通过后开写；收口要 `§3 = 评审通过` 且把本批行推出 `在途`；核销判档面（换会话也成立）；重开把 `待核销` 行带回工作位。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.7 ∥ §2.11 ∥ §2.13；七态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.7 ∥ §2.11 ∥ §2.13；八态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误 · 14-8 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
@@ -180,6 +180,7 @@
 | 14-5 | 同上夹具再读回执末行 | 含「本批 2 行由重锚默认推进，父侧未显式处置：#a, #b —— 做完的请在收口前 update → 待核销，没做完的 update → 条件 / 已废弃」 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-6 | 收口后 `batch status` 重开（`§1 → 进行中` + note） | 行回 `在途`、回执第一行点名 1 行；随后产品码写当场可写（该档又是活批档） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-7 | 同一批里一行 `待核销` + 一行 `已核销`，重开 | 前者 → `在途`、后者零改；回执两行（待核销行回收 / 已核销行不可回收逐 id 点名） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-8 | 一批已 in 一轮 `pass`（§3 状态行 = `评审通过`）后，同一批判 `changes-required` 并 append `§3` 打回；随后 `append §5` | 打回那一笔同时改 §3 状态行**字节** → `进行中（第 N 轮打回）` 并在本轮块首留痕；`append §5` 被拒（拒文含 `§3 状态行 = 进行中，须 = 评审通过`，§5 字节不变）；该批再 `pass` 后 `append §5` 放行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 
 ### 15. 偶发空响应不打断会话
 
@@ -229,6 +230,15 @@
 |---|---|---|---|---|---|---|---|
 | 19-1 | CLI 配慢 prefill 的 provider 桩（响应头立刻回、首帧延迟 3s），`agent.bodyIdleTimeoutMs` 设 800，发一条消息 | 用户拿到正文答复；会话流零 `SSE … timeout` 报错（首 chunk 窗生效） | 待执行 | — | — | — | `test/integration/sse-first-chunk-window.test.mjs` |
 | 19-2 | 同一桩吐出首帧后停摆，`agent.bodyIdleTimeoutMs` 设 800 | 报错文案含 `no data for 0.8s`、相位串 `sse-idle`；用时 ≈1s（不是首 chunk 窗的 600s） | 待执行 | — | — | — | `test/integration/sse-first-chunk-window.test.mjs` |
+
+### 20. 一本批档只服务一个并发 spawn
+
+> 目的：同一本批档同时只有一个写者——第二席被拒、点名占用者，而不是两边都写坏档。
+> 节注：回指 = 设计档 §6.31.1–§6.31.2（判据 ∥ 拒因文案）· 集成行设计 = 同档 §6.31.8；机制单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.31；交互组件 = spawn 门（`buildSpawnChild`）⟷ 异步池在飞表（`getAsyncPool`）⟷ 第二席的返回；进入口 = 工程模式父侧并发派两席共一本批档；两态（行序）= 20-1 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 20-1 | 工程模式父侧并发派两席共一本批档：第一席 async 在飞，紧接着派第二席（同一 `batchDoc`） | 第二席被拒，返回文本点名该批档路径、占用者 `<role>#<id>` 与其 status，并给可执行下一步（等其 settle ∥ cancel 它）；第一席照常交付、档上只有一套写者。**修前红**：两席都被接受 | 通过 | 2026-10-28 | 父侧（`node test/run.mjs`） | ① 只断第二席被拒 + 点名 + 池面不变（池内仅第一席、其条目零改、队列空）；「第一席照常交付」需真 LLM 子代理，夹具以池条目字面量代其在场（形态所限的收窄，非省事）。② 集成桩 `subagent-*` 侧 | `test/integration/batchdoc-reuse-guard.test.mjs`；读数 = `tests 69 / pass 69 / fail 0`（`node test/run.mjs`，含 20-1 单例 26ms 绿） |
 
 ## VS Code 端（thincoder-vscode）
 

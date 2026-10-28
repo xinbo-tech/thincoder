@@ -30,12 +30,14 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 // 描述面 = `tool-docs/batch.md`（#15 描述外置统一——工厂形描述经 DESC 单一解析面，工厂调用期取值）
 import { DESC } from "../tools/shared.mjs"
-import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError, ROUND_HEADING_RE, countRoundBlocks } from "./batch-skeleton.mjs"
+import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError, ROUND_HEADING_RE, nextRoundNumber, statusResetPlan, updateSectionStatusLine } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
 import { assertSectionFiveGate } from "./batch-closeout.mjs"
 import { createBatchRecord } from "./batch-ledger-bind.mjs"
 import { closeBatchRecord, findInFlightBatch, statusBatchRecord } from "./batch-lifecycle.mjs"
+// 日期戳单源（`todayLocal`——重开 §1 状态行与本节留痕行同一枚，日期口径只一处）。
+import { todayLocal } from "./batch-reopen.mjs"
 
 export { SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath }
 
@@ -120,8 +122,11 @@ function sanitizeText(text, dropStamp) {
   return kept.join("\n")
 }
 
-/** 段尾定位 + 插入（append-only：只在段尾插入，既有字节不变；返回新全文 + 本轮 N）。 */
-function insertIntoSection(src, seg, text) {
+/** 段尾定位 + 插入（append-only：只在段尾插入，既有字节不变；返回新全文 + 本轮 N）。
+ *  `blockLead`（仅 §3——打回重置的留痕行）：落在**工具戳标题之后、评审正文之前**——与
+ *  `### 轮次 N（评审子代理）` 同属工具戳面，append-only 不变。
+ */
+function insertIntoSection(src, seg, text, blockLead = "") {
   const hdr = sectionHeaderRe(seg).exec(src)
   if (!hdr) {
     throw new Error(`batch_segment: the bound batch record has no "## §${seg}" section header — the six-section skeleton is written by the record's creator before any segment write. Fix: ask the parent/creator to add the "## §${seg} …" heading (with the template's sub-headings) first, then call batch_segment again. Nothing was written.`)
@@ -131,8 +136,10 @@ function insertIntoSection(src, seg, text) {
   const next = nextRe.exec(src)
   const endIdx = next ? next.index : src.length
   // 来源戳（仅 §3）：工具生成标题 + N——调用方写不进自己的标题（sanitize 已丢弃同名行）。
-  const roundN = seg === 3 ? countRoundBlocks(src, 3) + 1 : 0
-  const payload = (seg === 3 ? `### 轮次 ${roundN}（评审子代理）\n\n` : "") + text
+  // N 的单源 = `nextRoundNumber`（= `countRoundBlocks + 1`）——留痕行的「第 N 轮」同取这一枚。
+  const roundN = seg === 3 ? nextRoundNumber(src, 3) : 0
+  const stamp = seg === 3 ? `### 轮次 ${roundN}（评审子代理）\n\n` + (blockLead ? `${blockLead}\n\n` : "") : ""
+  const payload = stamp + text
   const before = src.slice(0, endIdx)
   const after = src.slice(endIdx)
   const eol = src.includes("\r\n") ? "\r\n" : "\n"
@@ -235,7 +242,13 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   // REFUSED ⇒ throw（零字节落盘）；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
   const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
-  const { written, roundN } = insertIntoSection(src, n, body)
+  // 打回即重置（BLRU §2.5——**工具被动写**）：三合取（本笔写 §3 ∧ 本笔命中打回裁定行 ∧ 写前 §3
+  // 状态行 = 评审通过）全中 ⇒ 同一笔写盘两处落笔：本轮块首留痕行（随 `blockLead` 进插入）+ 状态行重置。
+  // 状态行仍**只经 `updateSectionStatusLine` 这一个写入函数**改写（不新开第二条写路径）；仍是
+  // 一次 `writeFileSync`。留痕行不经文档机检门——门位在上面（判集 = 本次评审正文 `pending.body`）。
+  const plan = statusResetPlan(src, n, body, todayLocal())
+  const { written: inserted, roundN } = insertIntoSection(src, n, body, plan?.traceLine ?? "")
+  const written = plan ? updateSectionStatusLine(inserted, 3, plan.statusValue) : inserted
   writeFileSync(abs, written)
   // #84：记账面按端注入（缺省 no-op = CLI 语义零行为变——端装配经 configureBatchSegment 覆盖）。
   onWritten?.(agent, abs)

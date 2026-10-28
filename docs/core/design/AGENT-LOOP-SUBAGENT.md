@@ -2,7 +2,7 @@
 
 > 归属 = `docs/core/design/AGENT-LOOP.md` 的**机制族拆分面**——「子代理工具契约与装配面」族。
 > **三分**——自本档迁出：后台异步池 / 挂起回合与 digest / 评审实例面 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（§6.8 · §6.10 · §6.11 · §6.18 · §6.19 · §6.20）；子 → 父上行与唤醒面 ⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`（§6.27 全族）。
-> **节号沿用母档全局编号**（本档承接 §6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28）——全仓既有指针**只改档名、不改节号**；母档续 §6.1–§6.6 + §6.13–§6.17。
+> **节号沿用母档全局编号**（本档承接 §6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28–§6.31）——全仓既有指针**只改档名、不改节号**；母档续 §6.1–§6.6 + §6.13–§6.17。
 > 母档 = `docs/core/design/AGENT-LOOP.md`（归属与范围 / 核模块裁决行 / 须用户裁条目 / 对外契约 / 受影响文件 / 主循环机制面 §6.1–§6.6 / 诊断与预算面 §6.13–§6.16 / 关键决策 / 沿革）。
 > 工作流档 = `docs/core/design/CORE-UNIFICATION.md`；需求层 = `docs/core/requirements/AGENT-LOOP.md`（含 §4 需求条目面）。
 
@@ -30,7 +30,9 @@
 
 **模型 override 解析**：子代理模型 = tool 参数 `model` > `config.agent.subagentModels[role]` > `config.agent.subagentModel` > 继承父 provider
 （`resolveChildProvider`——`thincoder-core/agent-tools/subagent-async.mjs`）。合法形态 = `"provider:model"` / 渠道名 / 模型名 / `"default"`（= 不覆盖）。**非法形态三层防线**：
+
 ① config 加载期清洗——`subagentModel` / `subagentModels.*` 非「非空字符串」者不采纳（回退 `null` ∕ 剔除该键）+ 一次性警告（`loadConfig`——沿 `sanitizeConsultModels` 先例）；
+
 ② 运行期解析入口对非字符串入参抛**明确错误**（不裸 TypeError；tool `model` 参数面同防）；③ settings 写面形状表拒非法（既有）。VSC 端壳自读 raw 配置（不经核 `loadConfig`）——**端差处置 = VSC 端壳同拍清洗**：清洗逻辑核内单源（沿 `sanitizeConsultModels` 先例）、端壳于 raw 读点（`thincoder-vscode/src/agent/setup.mjs:131-132`）同拍消费 ⇒ 两端同判、用户零可见端差；宿主能力面举证不成立（清洗为纯函数、无宿主约束）。
 
 ### 6.7.2 单工具动作面（九动作）
@@ -50,6 +52,7 @@
 | design-slots | designId? | 槽位清单（designId ∥ live/expired ∥ 时龄 ∥ `expiresAt` ∥ 批 ∥ `designToken`——龄升序）+ 计数尾行；`designToken` 恒列（过期照列——`status` 自标态；畸形 ⇒ `—`）；`designId` 过滤 ⇒ 单槽行 + 计数尾行（注 `(filtered by designId)`）；两值原样入 eng-coder spawn | 同步（父侧 · 工程模式 · 只读） |
 
 **depth 可用性（本表 = 锚 `§6.7.2` 的规则住所）**：`status` 与 `observe` / `send` / `escalate` / `cancel` / `panel freeze` **同为 depth 0 专有**——子代（`depth>0`）调用 ⇒ 显式拒（子代无自有异步池）；**`consume-design` / `design-slots` 同属父侧（depth-0）面**（受限变体拒绝清单在案）；
+
 `spawn` **例外**（depth>0 合法——子代 spawn 恒同步）。拒收文案族与返回形（JSON `status:"error"` 对象形）= §6.25 ①/A1b。
 
 **observe 契约**（readonly——摘要不灌全量）：目标 = 父自身 spawn 的异步子代理池条目（`_asyncSubagents`，非 advisor / escalate）；数据源 = `entry.childAgent`（`_fullHistory` 最近 N 条回合摘要 + `_touchedFiles` + dispatch in-flight `_inflightTools` 当前工具 + turn / maxTurns）；**不读写 token / designId**。
@@ -67,17 +70,21 @@
 - **面**：CLI TUI **顶层 sync 块**运行中 ⏹ 可点——定向中止（只停子代理，父回合继续拿 stopped 报告）；嵌套层无独立 ⏹ 面；
   VSC webview 同步 spawn 块 ⏹ = 按 `syncLive` 门控（宿主只读采样核 `_syncChildAborts` registry——X10 甲案；
   **判据 / 门控 / 路由三条已落，产者侧序缺陷致运行期未达 ⇒ 降级登记**——见 `docs/vsc/design/WEBVIEW.md` §5.2）——
+
   点击 ⇒ 宿主 sync 分支（`thincoder-vscode/src/extension/panel-messages-turn.mjs` `handleCancelSubagent`）经核 `cancelSyncChild` 单源直连（与 CLI 同法）；`action:"cancel"` 只对 async 池 / advisor 池。
 - **信号链**：`armSyncChildAbort` 建**自属** `AbortController` 并链到基信号 `buildChildSignal`（`_sessionSignal ?? ctx.signal`）；
   注册 `parent._syncChildAborts`（Map，key = relayPrefix 去尾 `role#N`）——try / finally **三路径注销**。
 - **catch 三分支**（纯函数 `classifySyncAbort(ctxSignal, baseSignal, ctrlSignal, err)`）：① base / ctx aborted → 整回合停，rethrow；
   ② `AbortError` ∧ ctrl aborted ∧ 非整回合停 → **折叠**（`mergeChildMutations` + stopped partial 报告 + `⟦ev⟧stopped` 直发 + 正常 return）；③ 其他错误原样。
   `STOPPED_MARK`（定义 = `thincoder-core/agent/child-marks.mjs`——`spawn-child.mjs` 再导出；与 `TURN_CAP_MARK` 同族）= 折叠报告公共锚。
+
 `⟦ev⟧` 事件 token **文法机读单源** = `thincoder-core/agent/subagent-event.mjs`（零依赖叶——哨兵 ∥ 形态判据 ∥ 逐事件投影；`spawn-child.mjs` 再导出哨兵 ⇒ 既有 import 面零改；消费方 = ACP 桥，见 `docs/cli/design/ACP-CLIENT.md` §12；显示面三消费点收敛 = 登记）。
 - **TUI 面板门控**：按 `_syncChildAborts` 存在性 + queued 分支判 ⏹ 可见；⏹ 顺带 deny 该 child 的 pending 权限 / continue 模态。
 - **日志面**：⏹ 定向中止在 `cancelSyncChild` **提交点**（`entry.stopped = true` + `ctrl.abort({ abortTrigger:"cancel", abortDetail:"sync-child-cancel" })` 之后、`return { status:"cancelled" }` 之前）**直记一条**
   `logEvent("ev:cancelled", { id: k })`（`k` = registry 键 `role#N`——与异步取消族**同事件名 / 同字段形**；口径 = `docs/core/design/LOGGING.md` §6.2）；error 两分支（`stopped` 后再调 / registry miss）**零记录**（无取消发生）。
+
   该 child 的阻塞 spawn 面照旧**另记** `child:done`（kind `partial`——折叠报告撞 `STOPPED_MARK`；`thincoder-core/agent-tools/subagent.mjs`）——两记录分属**取消面 / spawn 面**（不合并、不去重）；
+
   「异步 running 取消以 `ev:cancelled` 取代 `child:done`」的互斥口径**不适用**本面（sync 无 settle 链）。
   ⏹ 面今日唯一调用处 = CLI TUI mouse（VSC 无 sync ⏹——本档 §6.7.2 面行在案）；写点落核单点 ⇒ 端侧他日接路自动继承。
 
@@ -99,6 +106,7 @@
 ### 6.7.4 子代理零 git
 
 **全部 explore / plan（及审计）子代理零 git**：不注入 git 上下文、不承诺 git 命令、工具集无 git——子代理证据链只含「任务书 + 磁盘当前状态（read / glob / grep）+（审计时）`_touchedFiles` 机械并集」。顶层主 agent 的 git 上下文保留（`AGENT-LOOP.md` §6.3）。
+
 动机：git 是污染源（`git diff HEAD` 不见已提交修复、untracked 新文件不可见、`status` 是全工作区脏状态）——比没有 git 更危险。与 advisor 零 git 同构——**双物理防线**（工具不存在 + 不注入）。
 
 ### 6.7.5 `check` 删除与 async 锚句
@@ -128,14 +136,16 @@
 
 > 权威 = `thincoder-core/agent-tools/subagent-scheduler.mjs`。**机制**：父代理只声明域与依赖、提交即走——调度器保证同文件串行、依赖有序、并发不误伤。
 
-- **`files?: string[]`**——写域声明（纪律：清单外改动允许但必须逐项报告；不做任务书文本自动解析）。**目录声明不支持**（`normalizeFileList` 对以 `/` 或 `\` 结尾 / 指向既有目录 → 抛明确错误，fail-closed）。归一化：相对 cwd 转绝对 + 正斜杠 + win32 小写比较键。
+- **`files?: string[]`**——写域声明（纪律：清单外改动允许但必须逐项报告；不做任务书文本自动解析）。**目录声明不支持**（`normalizeFileList` 对以 `/` 或 `\` 结尾 / 指向既有目录 → 抛明确错误，fail-closed）。归一化：相对 cwd 转绝对（`resolve`——平台原生分隔符，win32 为反斜杠）；冲突比较另走 win32 小写键（`thincoder-core/agent-tools/subagent-scheduler.mjs:70` 的 `fileKey`）。
+- **写域进 child 视野**：本清单同时作为写域行注入 child 的 system 固块（机制单源 = §6.26「写域行（S4）」——文案与用例住那里，本档不复述）。
 - **`dependsOn?: string[]`**——子代理 id 列表（显式依赖）。
-- **`batchDoc?: string`**（eng-coder spawn **门禁参数**——非调度参数，不参与冲突判定）：工程模式 spawn `role="eng-coder"` **必传**（批次档路径）；判据 = 参数在 + `resolve(cwd, batchDoc)` 存在且为文件（**不校验内容 / 措辞**）；缺失 / 不可读 → spawn 拒绝（校验落点 = `buildSpawnChild`——token 门之前，sync / async 两路共经）。
+- **`batchDoc?: string`**（eng-coder spawn **门禁参数**——非**调度器**参数，不参与 `files` 域冲突判定；同档并发的拒发面见 §6.31——那是 spawn 门，不是调度器排队）：工程模式 spawn `role="eng-coder"` **必传**（批次档路径）；判据 = 参数在 + `resolve(cwd, batchDoc)` 存在且为文件（**不校验内容 / 措辞**）；缺失 / 不可读 → spawn 拒绝（校验落点 = `buildSpawnChild`——token 门之前，sync / async 两路共经）。
 - **准入（spawn 时）**：(running ∪ queued) 有 files 交集 或 `dependsOn` 未 done → 入 queued（waiting-deps 态记原因）；否则立即 start。**仅 async 参与调度**：sync spawn 带 `files` / `dependsOn` 且命中冲突 → **明确错误**（不队列化）。
 - **动态文件域**：冲突判定的「他条目域」= `effectiveFiles(e)` = 声明域 ∪（running 且已绑 `childAgent` 时的 `childAgent._touchedFiles`——写工具批提交实时记录）；queued 条目无 `childAgent`（start 才绑）⇒ 天然只声明域。out-of-list 写入由此获得域保护。
 - **补位（`maybeRefillAsync`）**：settle / cancel 释放槽后从 queued 选「依赖全满足 + 域无冲突」的最早条目启动到槽满（先入者优先）。
 - **终态守卫**：补位**永不启动终态条目**——判据（逐字）`entry.cancelled === true ∨ entry.done === true` ⇒ 跳过（不 `start()`）；
   单点谓词 = `entryTerminal(entry)`（`thincoder-core/agent-tools/subagent-scheduler.mjs`，与 `queueRunnable` 同址），两消费点 = 子代理族 `queueRunnable`（`maybeRefillAsync` 经它判）· 评审族 `refillAdvisorQueue`。
+
   **动机**：取消后条目若仍留队列（出队未生效面——#21 的 VSC 合成 parent 下 `dequeueAdvisor` no-op 即此形），补位会把它 `start()` 重启——
   这正是「已取消条目事后仍被 settle ⇒ 幻影冻结块」的**唯一燃料**；守卫落地后该燃料族无关地消失。
   **边界**：守卫**只跳过、不剔除、不重编号**（队列内容零副作用）；终态条目滞留队列面今日 CLI 不可达（出队恒生效）、VSC 面经 §6.10 ④ 载体吸收亦零残留——实现轮若发现可达则同式剔除并回报。
@@ -254,9 +264,11 @@
 公开源档内未见同机制成案（本节为首案）。
 
 工程角色（eng-coder / eng-designer）的 spawn 面 = `batchDoc`（必带、可读）· `round`（enum，必带）· `files` / `dependsOn` / `async` / `model`（调度与运行面）· eng-coder 另带 `designId` + `designToken`。
+
 非工程角色（explore / plan / coder）保留任务书参数：四项核心（`goal` / `knownFacts` / `acceptance` / `reportFormat`）+ `scope`——它们没有批次档，不存在「第二个来源架空第一个来源」这条缺陷路径。
 
 **范围判据（本设计的推导，非用户逐字）**：**只读角色改不动任何东西，通道不构成风险；有写权的角色必须只有一个任务来源。**依据 = 用户 22:42「真正的解决方案是取消designPoints这个参数，要求一切必须写在批档里」+ 22:43「那把这些自由文本参数都取消，eng-coder只接受批档一个任务通道」（原话）。
+
 据此收口面 = **eng-coder ∥ eng-designer 两个可写角色**；explore ∥ plan ∥ 普通 coder 一律不动——自由文本在它们那里是「勘察方向」，不是任务书。
 `task` / `context` 同为自由文本且都进子代理 input（拼装尾段 / `Context:` 前缀），按同一判据对两个工程角色一并拒收（推导项，basis = 范围判据——自由文本且进子代理 input ⇒ 第二任务来源）。
 
@@ -290,7 +302,7 @@
 | eng-designer | `role` · `batchDoc`（可读）· `round` |
 | explore / plan / coder | `role` · `goal` · `knownFacts` · `scope` · `acceptance` · `reportFormat` |
 
-**门序**：角色 enum → `batchDoc` 门（既有）→ 任务书门（工程角色 = 拒收八个自由文本键 ∥ 非工程角色 = 四项核心 + `scope` 必带）→ `round`（工程角色）→ token 门（eng-coder，既有）→ files 声明面（既有）。
+**门序**：角色 enum → `batchDoc` 门（既有；同档在飞的拒发判据见 §6.31）→ 任务书门（工程角色 = 拒收八个自由文本键 ∥ 非工程角色 = 四项核心 + `scope` 必带）→ `round`（工程角色）→ token 门（eng-coder，既有）→ files 声明面（既有）。
 
 **拒收文案（逐字模板；实现单源 = `spawn-gates.mjs`，`<…>` 为拼入值）**：
 
@@ -380,7 +392,7 @@ Spawn task-channel gate (role='<role>'): <offending names, " / " separated>. An 
 ### 6.22.7 边界（本条目不做）
 
 1. 不改 token 机制（签发 / TTL / 消费 / 槽）。
-2. 不改 `batchDoc` 必填性与其判据（参数在 + 路径可读；内容不校验）。
+2. 不改 `batchDoc` 必填性与路径判据（参数在 + 路径可读；内容不校验）；同档在飞的拒发判据见 §6.31。
 3. 不校验 §2 内容（KD-SC7）；不新增任何任务书参数。
 4. 不改 `files` / `dependsOn` 调度语义、`round` 枚举、角色 enum。
 5. 不改非工程角色的任务书参数与拼装序。
@@ -495,9 +507,9 @@ An eng-coder spawn also carries designToken — the write credential (the exact 
 
 | # | 回指 | 判据（机检命令 ⇒ 期望） |
 |---|---|---|
-| A-MS1 | ①a | `cd thincoder-cli && node --test test/eng-designer-role.test.mjs` ⇒ exit 0（T30 断言已按新句改写）；且 `grep -c "engineering mode exposes explore/plan/eng-designer" thincoder-core/agent-tools/subagent.mjs` ⇒ `0` |
-| A-MS2 | ①b | `cd thincoder-core && node --test test/family-tools.test.mjs` ⇒ exit 0（期望值 = §6.23.3 的集）；CLI 侧 T30 ④ 同断言 ⇒ exit 0 |
-| A-MS3 | ② | `cd thincoder-core && node --test test/spawn-gates.test.mjs` ⇒ exit 0（含引用同一性断言）；`grep -n 'enum: \["initial", "fix"\]' thincoder-core/agent-tools/subagent.mjs` ⇒ 零命中 |
+| A-MS1 | ①a | 该批改面单测档（名随批档 · 收口即删；复跑 = 下一批的改面单测档）⇒ exit 0；且 `grep -c "engineering mode exposes explore/plan/eng-designer" thincoder-core/agent-tools/subagent.mjs` ⇒ `0` |
+| A-MS2 | ①b | 该批改面单测档（名随批档 · 收口即删；复跑 = 下一批的改面单测档）⇒ exit 0（期望值 = §6.23.3 的集） |
+| A-MS3 | ② | 该批改面单测档（名随批档 · 收口即删；复跑 = 下一批的改面单测档）⇒ exit 0（含引用同一性断言）；`grep -n 'enum: \["initial", "fix"\]' thincoder-core/agent-tools/subagent.mjs` ⇒ 零命中 |
 | A-MS5 | ① | 门行为面零回归：U7 用例（工程模式拒 `plan`）通过 |
 
 ### 6.23.8 边界（不做）
@@ -547,7 +559,9 @@ export function writeTombstone(parent, id, status, role) {
 ```
 
 **为何父字段为主 / `history` 为别名**：CLI agent 无预建 `_asyncTombstones`（懒建）⇒ **CLI 首写即走本分支**；
+
 而 CLI 的 `agent.history` **不是稳定载体**——`thincoder-core/context.mjs:309` / `:317` / `:332` / `:483`（压缩重建）· `thincoder-core/explore-distill.mjs:144` · `thincoder-core/session-lifecycle.mjs:113` / `:438` 均以 `agent.history = [...]` **整体替换数组**。
+
 容器若落 `history`（v1 形），主容器随替换漂移（靠父字段别名兜住、可运作但主落点不稳）；改后主容器 = 父字段（与今日落点**逐字同** ⇒ 「CLI 零回归」成可断言事实），`history` 侧写同一容器（VSC 合成 parent 形跨调用存活——修复目标不变）。
 **VSC 绑定形零差异**：绑定 agent 的 `parent._asyncTombstones = new Map()` 经访问器即落 `history`（`thincoder-vscode/src/agent.mjs:147-153`），第二行幂等赋同容器。
 
@@ -587,6 +601,7 @@ export function writeTombstone(parent, id, status, role) {
 | A6b | 首写用例（U6b）：无自有 Map + `history` 在场 ⇒ 主容器 = 父字段、`history` 侧同一容器 | — |
 
 **边界（本节不做）**：不动 `spawn` 的 depth 语义；不动工具描述 / 提示词面（`subagent` 工具描述 = `thincoder-core/tool-docs/subagent.md`——描述外置面（`DESC("subagent")` 单点加载）；内容依据 = 机制文档，落笔 = eng-coder）；不做 observe/send/cancel/panel 既有门文案的旧编号收正（旧编号在现行两档均不可解析——域外登记）；
+
 **不执行** `subagent-actions.mjs` 拆分，只登记不执行（§6.20.8-3 = §6.20 的边界声明，非拆分计划本体——措辞收正）。
 
 ## 6.26 机制性指令注入位置：spawn 固块改走 system 面
@@ -598,8 +613,8 @@ export function writeTombstone(parent, id, status, role) {
 
 | # | 站点 | 坐标 | 现载体 | 归类 | 裁定 + 理由 |
 |---|---|---|---|---|---|
-| 1 | 批次档路径行（S1） | `thincoder-core/agent-tools/subagent-spawn.mjs:387` | user 首条 | spawn 级固定（同一 child 终身不变） | **改**：入 system 固块——判据 ① 两条全中 |
-| 2 | 审计模板块（S2） | 同档 `:401-437` | user 首条 | spawn 级固定（父交付已定、touched 快照冻结） | **改**：入 system 固块——同上 |
+| 1 | 批次档路径行（S1） | `thincoder-core/agent-tools/subagent-spawn.mjs:350` | user 首条 | spawn 级固定（同一 child 终身不变） | **改**：入 system 固块——判据 ① 两条全中 |
+| 2 | 审计模板块（S2） | `thincoder-core/agent-tools/audit-block.mjs`（改前位 同档 `:401-437`） | user 首条 | spawn 级固定（父交付已定、touched 快照冻结） | **改**：入 system 固块——同上 |
 | 3 | `_engTaskInput`（S3） | 同档 `:441` | 记账字段 | **非注入点**（批档路径记账面） | **保持**；值 = 一行机械任务书行（批档绝对路径 + §2 指向句）；A2 摘要面已删（§6.22 KD-SC6） |
 | 4 | git 上下文 | `thincoder-core/agent/setup.mjs:55-64`（depth-0 门） | user 提醒 | 逐 run 变化 | 保持（子代理本就零 git——§6.7.4） |
 | 5 | OS / cwd / Session start + 目录树快照 | 同档 `:65-80`（once-guard） | user 提醒 | 进程级变化 | 保持——判据 ② |
@@ -612,29 +627,26 @@ export function writeTombstone(parent, id, status, role) {
 | 12 | consult / escalate / 读图降级子代理的任务文本 | `thincoder-core/agent-tools/consult.mjs:308` · `thincoder-core/agent-tools/subagent-actions.mjs:415` · `thincoder-vscode/src/extension/image-handler.mjs:84` | user 首条 | 任务内容（非机制性指令） | 保持——判据 ② 后半 |
 | 13 | `REPORT_CONTINUATION`（报告过短追问） | `thincoder-core/agent-tools/subagent-async.mjs:327-329` | user 追问 | 按需重发（机制不同：重发即在场） | 保持 |
 | 14 | async 结果注入 / digest 提醒 | `thincoder-core/agent-tools/subagent.mjs:412`（`injectAsyncResult`） | user 提醒 | 事件驱动 | 保持 |
+| 15 | 写域声明行（S4） | `thincoder-core/agent-tools/subagent-spawn.mjs:346-357`（固块收集点） | **未注入**（只有调度器知道） | spawn 级固定（`files` 是 spawn 参数，同一 child 终身不变） | **改**：入 system 固块——判据 ① 两条全中；判据 ② 后半不命中（写域声明是「在哪改」的常驻契约，不是任务内容） |
 
-**接口契约（改前 → 改后 逐字）**：
+**接口契约（改后 = 盘上真身节选）**：
 
 生产者（`thincoder-core/agent-tools/subagent-spawn.mjs` `buildSpawnChild` 内）：
 
 ```js
-// 改前（:393 · :401-437 · :441）
-if (engineeringRole) input += `\n\nBatch record (batchDoc): ${batchDocAbs}`
-if (engAuditAttempt !== null) { /* … input += 审计模板（六段拼接）… */ }
-if (role === "eng-coder") child._engTaskInput = input
-```
-
-```js
-// 改后（模板文本逐字搬入 audit-block.mjs；spawn 档只做「收集 + 绑定」）
-let input = args.context ? `Context:\n${args.context}\n\nTask:\n${taskBriefOf(args, role)}` : taskBriefOf(args, role)
+// 改后（盘上真身 `:337-363` 节选——模板文本住 `audit-block.mjs`，spawn 档只做「收集 + 绑定」）
+const input = engineeringRole
+  ? `Task book: §2 of the batch record at ${batchDocAbs} — read it before acting; it is the only task channel for this spawn.`
+  : (args.context ? `Context:\n${args.context}\n\nTask:\n${taskBriefOf(args, role)}` : taskBriefOf(args, role))
 const spawnBlocks = []
-if (engineeringRole) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
-if (engAuditAttempt !== null) spawnBlocks.push(buildAuditBlock(ctx))  // 纯函数：touched 快照 + 模板逐字 + 批档路径行（路径取 ctx.agent._batchDoc；无 A2 摘要——§6.22 KD-SC6）
-if (spawnBlocks.length) child._spawnSystemBlock = spawnBlocks.join("\n\n")
-if (role === "eng-coder") child._engTaskInput = input                  // 源 = 纯任务书（不含固块）
+if (batchBound) spawnBlocks.push(`Batch record (batchDoc): ${batchDocAbs}`)
+if (engAuditAttempt !== null) spawnBlocks.push(buildAuditBlock(ctx))
+if (files.length > 0) spawnBlocks.push(filesBlockOf(files))
+if (engineeringRole) child._engTaskInput = input
+if (spawnBlocks.length > 0) child._spawnSystemBlock = spawnBlocks.join("\n\n")
 ```
 
-消费者（`thincoder-core/agent/setup.mjs` `prepareRun`，`:214` 之后）：
+消费者（`thincoder-core/agent/setup.mjs` `prepareRun`，`:285` 之后）：
 
 ```js
 let systemPrompt = base
@@ -651,6 +663,35 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 - **文本零改**：块内文本逐字搬移（含块内 `above` / `below` 自指——它们指本块内的相对位置，整块搬移不改真值）
   ⇒ **不触提示词正文**（内容依据 = 机制文档，落笔 = eng-coder）；无正文改动 ⇒ 无上抛项。
 
+**写域行（S4）—— `files` 首次进入 child 视野**：
+
+- **触发**：`files.length > 0`。`files` 到这里已是归一化写域（`thincoder-core/agent-tools/subagent-spawn.mjs:137` 调 `normalizeFileList`：相对 cwd 转绝对——`resolve(cwd, f)`，平台原生分隔符，win32 为反斜杠）。空数组 / 未传 ⇒ **不推块**（`_spawnSystemBlock` 不因 S4 改变）。
+- **收集序**：批次档行 → 审计块 → **写域行**（追加在既有两块之后，既有两个推块语句零改、零换序）。**序非断言对象**：A23-8 判 `_spawnSystemBlock` 逐字节相等、A23-9 判块内两句语义在位，都与位次无关 ⇒ 写域行只占最后一格。
+- **落点**：`thincoder-core/agent-tools/subagent-spawn.mjs` 本档局部纯函数 `filesBlockOf(files)`（表头 + 逐条 + 两句，不外提模块——D23-9）。
+- **角色无关**：只读角色（`explore` / `plan`）同样收本行——它们的写权限已由 `thincoder-core/agent-tools/subagent-spawn.mjs:250-251` 机械置 false，文案不必按角色分叉（第二种文案无观察到的场景支撑）。
+- **文本（逐字；英文——与兄弟块同语体）**：
+
+```text
+Files declared for this spawn (the write domain this task declares, for scheduling):
+- <abs path>
+- <abs path>
+
+This list is not an authorization boundary: touching a file outside it is allowed — report every out-of-list file you changed, with its reason. It is also not the whole change surface: other spawns on this task declare their own files, and what is listed here is your share only.
+```
+
+- **两句语义不可省**（缺任一句，本块就换一个病）：
+  ① **预期写域 ≠ 授权边界**（纪律原文：`beyond-declaration ≠ violation, just disclose truthfully`）——缺这句，子代理读成「我只能写这些」⇒ 该写的漏掉，越界问题换成漏做问题；
+  ② **本清单只是你那一份**——缺这句，子代理仍把任务书 §2 全文当成自己的改动面（本块的病因）。
+- **不截断**：清单多长列多长——截断会把已声明档藏起来，正是本块要消除的「看不见」。
+
+**最贴近先例**：`existing: thincoder-core/agent-tools/subagent-spawn.mjs:350`（`Batch record (batchDoc): …` 行）· name: 既有「spawn 固块」· consumers: `child._spawnSystemBlock` → `thincoder-core/agent/setup.mjs:285`。**对齐** = 同一收集点（`:346-357`）、同一绑定单点（`:363`）、同英文语体、同「空 ⇒ 不推块」纪律。**偏离** = 无——不新开通路、不新建模块。
+
+**公开源勘察**：`docs/core/design/PROMPT-SYSTEM.md:176`（派单固块的字段与拼接位，逐字含「机制单源 = `AGENT-LOOP-SUBAGENT.md` §6.26，本档不复制」）· `docs/core/design/AGENT-LOOP.md` §6.3（system 前缀缓存契约）· 本档「缓存契约兼容证明」。**结论** = 本改动落在这三处既有契约覆盖内，无需新契约。
+
+**既有件三问（新增名）**：`existing`（措辞面）= `thincoder-core/agent-tools/subagent-spawn.mjs:143`（`subagent files must be an array of file paths (the write domain this task declares)`）∥ `thincoder-core/prompts/persona-engineering.md:439`（`spawns carry files (write domain)`）——两处都面向**派单侧**，consumers = 父侧主会话。
+
+`none found`（子代理面）= 写域此前只被调度器消费（冲突检测 / 排队），从不进入 child 的提示词面 ⇒ 块内文案新造，唯一副本 = 本节。
+
 **缓存契约兼容证明（`docs/core/design/AGENT-LOOP.md` §6.3——契约精化见同批该档修订）**：
 
 - 契约的**操作条件** = 「同一 agent 的相邻请求前缀逐字节相同」；现行表述「跨 run 逐字节不变」是它在
@@ -666,17 +707,17 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 - 压缩开销估算（`thincoder-core/agent/turn-loop.mjs:39-45` 的 `compactionOverhead.systemPrompt`）随固块自动增大 ⇒ 估算面不低计（无需另行处理）。
 - **不变量句（逐字，供 AC 断言）**：压缩前 / 压缩后，同一 child 的 system 消息含**同一**固块文本，且 `agent.history` 内**不含**该文本。
 
-**受影响文件清单**：
+**§6.26 累计受影响面（前批已落 + 本批增量 · 盘上读数）**：
 
-| 文件 | 当前行数 | 预计增量 | 说明 |
-|---|---|---|---|
-| `thincoder-core/agent-tools/subagent-spawn.mjs` | 470 | −80 / +12 | ① 审计模板构造体（`:394-437`）外提；② 三处改固块收集 + `child._spawnSystemBlock` 绑定（S1 / S2 / S3 单点） |
-| `thincoder-core/agent-tools/audit-block.mjs` | 0 | +~95 | `buildAuditBlock(ctx)`（纯函数——判据可直测）：touched 快照 + 模板逐字 + 批档路径行（路径取 `ctx.agent._batchDoc`）；不持 A2 摘要函数（§6.22 KD-SC6） |
-| `thincoder-core/agent/setup.mjs` | 234 | +3 | `:214` 之后固块拼接（`prepareRun` 单点） |
-| 批次本地单元测试档 | 0 | +~120 | 用例 U1–U7 宿主（`npm test` 自动收集——`thincoder-core/test/run.mjs:8` 单层 glob） |
-| `docs/core/design/AGENT-LOOP-SUBAGENT.md` | 883 | +~120 | 本节（机制面单源） |
-| `docs/core/design/AGENT-LOOP.md` | 514 | ±2 | §6.3 `:229` 契约精化一句 + 变更记录 |
-| `docs/core/design/PROMPT-SYSTEM.md` | 270 | +1 | §6.2 装配事实补一行指针（不复制机制——D2） |
+| 文件 | 盘上读数 | 本批增量 | 状态 | 说明 |
+|---|---|---|---|---|
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 429 | +13 | 已落 | S4 写域行：固块收集块（`:346-357`）内一处 `spawnBlocks.push`（`:357`）+ 局部纯函数 `filesBlockOf`（`:170-178`）+ 注释 |
+| `thincoder-core/agent-tools/audit-block.mjs` | 63 | ±0 | 已落（#23） | `buildAuditBlock(ctx)` 纯函数：touched 快照 + 模板逐字 + 批档路径行（路径取 `ctx.agent._batchDoc`） |
+| `thincoder-core/agent/setup.mjs` | 313 | ±0 | 已落（#23） | 固块拼接分支在盘（`:285`）；本批零改面 |
+| `docs/core/design/AGENT-LOOP-SUBAGENT.md` | 914 | — | 已落（本节） | §6.26 + §6.9 一行指针；全档过长段落拆行 |
+| `docs/core/design/AGENT-LOOP.md` | 637 | ±0 | 已落（#23） | §6.3 缓存契约精化句 |
+| `docs/core/design/PROMPT-SYSTEM.md` | 5086 | ±0 | 已落（#23） | §6.2 装配事实 + 一行指针（`:176`） |
+| `docs/batches/2026-10-28-spawn-files-visible.test.mjs` | 128 | 新增 | 已落（本批收口即删） | 用例 U8–U10 宿主；住批档同目录（单测档零留存门的扫描面） |
 
 > 行数纪律：**文档档不适用源码行数线**（线口径 = `AGENTS.md` 源文件）；档位归属（三分）——§6.8 / §6.10 / §6.11 / §6.18 / §6.19 / §6.20 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`；
 > §6.27 全族 ⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`；本档留子代理工具契约与装配面。
@@ -692,6 +733,8 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 | D23-5 | 审计子代理不补批次档路径行 | 审计范围纪律 + schema 面已删该参数 |
 | D23-6 | `_engTaskInput` 语义 = **一行机械任务书行**（批档绝对路径 + §2 指向句；不含固块） | A2 摘要面随 `summarizeEngTaskBook` 删除（§6.22 KD-SC6）⇒ 该字段只剩「批档路径记账」一个面；固块不是「任务书的一部分」 |
 | D23-7 | 任务书本体（批次档 §2 文本）**不**入 system | 范围 = 机制性指令；任务内容属会话内容，压缩摘要面已按「当前任务锚定」承接（SUMMARIZE_PROMPT 第 3–4 条）——边界如实登记 |
+| D23-8 | 写域行不分角色（`explore` / `plan` 同文） | 只读角色写权限已机械置 false（`thincoder-core/agent-tools/subagent-spawn.mjs:250-251`）；第二种文案无观察场景 ⇒ 不建分支 |
+| D23-9 | 文本由本档局部纯函数 `filesBlockOf(files)` 组合，不外提模块；清单不截断 | 组合 = 表头 + 逐条 + 两句；可测性由真 `buildSpawnChild` 端到端用例取得（U8）；截断会把已声明档藏起来，正是本块要消除的病 |
 
 **用例表（正常 / 边界 / 错误——含先红证据）**：
 
@@ -704,6 +747,9 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 | U5 | 边界 | `_spawnSystemBlock` 为 null（depth-0 / explore / plan / consult） | `systemPrompt` 与改前逐字节相同（零回归） | 现态绿（基线） |
 | U6 | 边界 | designer 勘察 spawn（attempt = null） | system 不含审计五锚 ∧ 不含批次档行 | 现态绿（基线；改后须保持） |
 | U7 | 边界 | 整请求体（system + history）文本计数 | 固块文本恰出现 **1** 次（独占性） | **红**：现态在 history 中出现（而压缩后为 0） |
+| U8 | 正常 | eng-coder spawn，`files` = 两条真路径（真 `buildSpawnChild` + 真 `prepareRun`） | `systemPrompt` 含两条绝对路径（逐条一行）∧ 含两句语义逐字 ∧ `input`（`_engTaskInput`）不含所声明的写域路径 | **红**：现态 system 零路径——写域只有调度器知道 |
+| U9 | 边界 | 同一 spawn 去掉 `files`（`batchDoc` 仍在） | `_spawnSystemBlock` 逐字节 = `Batch record (batchDoc): <abs>`（S4 未推块） | 现态绿（基线——改后须保持） |
+| U10 | 边界 | explore spawn 带 `files`（无 `batchDoc`、无审计）；同 child 连跑两次 `prepareRun` | system 含写域行 ∧ 不含批次档行 ∧ 两次 `systemPrompt` 逐字节相等 | **红**：现态零路径 |
 
 **验收标准（逐条可机判）**：
 
@@ -713,8 +759,12 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 | A23-2 | 审计 spawn 的 system 含五锚 ∧ `input` 不含（U2） |
 | A23-3 | 压缩后五锚仍在 system ∧ 不在 history（U3）——**先红**：现态两处皆无 |
 | A23-4 | 同 child 两次装配 system 逐字节相等（U4）；null 固块路径逐字节同改前（U5 / U6） |
-| A23-5 | 分类裁定表 14 行逐处有裁定（本档表——含「同类已解」第 11 行） |
-| A23-6 | `node scripts/doc-check.mjs --root .` 触碰档零新增悬空锚 / 零新增行宽违规 |
+| A23-5 | 分类裁定表 15 行逐处有裁定（本档表——含「同类已解」第 11 行） |
+| A23-6 | `doc_check(mode:"gate")` 对触碰档 PASS（判据为绝对量：零悬空锚 / 零超长段——机检无 delta 语义） |
+| A23-7 | `files` 非空 ⇒ `prepareRun(child).systemPrompt` 含每条声明路径（逐条一行）∧ `_engTaskInput` 不含所声明的写域路径（U8） |
+| A23-8 | `files` 空 / 未传 ⇒ `_spawnSystemBlock` 逐字节同改前（U9——零回归） |
+| A23-9 | 块内含两句语义逐字（`not an authorization boundary` ∧ `your share only`）（U8 / U10） |
+| A23-10 | 同一 child 两次装配 system 逐字节相等（`files` 属 spawn 参数，run 内恒定——U10 后半） |
 
 **边界（不做）**：
 
@@ -727,6 +777,10 @@ if (agent._spawnSystemBlock) systemPrompt += `\n\n${agent._spawnSystemBlock}`
 5. 不改 `batch_segment` 工具描述与提示词正文（零正文改动 ⇒ 落笔面零依赖——内容依据 = 机制文档，落笔 = eng-coder）。
 6. 不动 `thincoder-core/agent/family-tools.mjs` 的 schema 删除面（审计子代理仍无 batchDoc 参数）。
 7. 无 UI / 交互决策（system 面对 UI 不可见；TUI / webview 零改）——**无 open 项**。
+8. **不做同批他人写域注入**（要批次视图——调度器有表未外放）；**不做分组归属**（纪律面：父侧在任务书里点名）；**不做越界检测**（只让它看得见，不拦它）。
+9. 不动调度器（`thincoder-core/agent-tools/subagent-scheduler.mjs` 零改动）——`files` 的冲突判定 / 队列语义零变。
+10. 不动 `subagent` 工具描述与提示词正文（`thincoder-core/tool-docs/subagent.md` 零改动；写域行文本是运行期派生块，落点在代码）。
+11. **集成用例面 delta = 破坏 0 / 冗余 0 / 缺失 0**：`test/RTM.md` 无一行断言子代理 system 固块内容（回指组 7-x / 10-x / 11-x / 17-x 逐组读过）；本改动不改任一既有行断言的业务可观测结果，且跨组件而起于无用户可见入口（system 面对用户不可见）⇒ 两条触发均不成立，不新增用例。
 
 ## 6.28 VSC 端 batch 改名镜面修复
 
@@ -768,6 +822,7 @@ A-3 豁免集（不计入命中面）：① `configureBatchSegment` / `batchSegm
 
 A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`）：
 `node -e "const fs=require('fs'),path=require('path');let n=0;const w=d=>{for(const x of fs.readdirSync(d)){const q=path.join(d,x);if(fs.statSync(q).isDirectory())w(q);else
+
  if(/\\.(mjs|js)$/.test(x))fs.readFileSync(q,'utf8').split(/\\r?\\n/).forEach(l=>{if(l.includes('batch_segment'))n++})}};['src','test','webview'].forEach(w);console.log(n)"`
 
 **边界（不做）**：不改核侧（`0b45957c` 已收口）；不动 #84 缝契约名；不删 shim 档与别名（核撤除判据
@@ -779,11 +834,13 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`）：
 ### 6.29.1 形一 · 批次档写门（containment）
 
 **判据（逐字）**：**携绑定的子代理**（`depth > 0` ∧ `agent._batchDoc` 在场——工程角色 ∥ 普通面 coder，`BATCH-RECORD.md` §4.16）对**批次档文件**（目标路径落 `batchDocBases(cwd)` 任一基底内——声明面单源 `thincoder-core/agent-tools/batch-paths.mjs`）的写（`FILE_MUTATORS`）
+
 ⇒ 目标 ≠ 绑定 `_batchDoc` **且非绑定批次的伴随件** ⇒ **拒绝**（fail-closed）；写自己绑定的档 ∥ **自身批次伴随件** ⇒ 放行（正常面）。比较键 = 绝对路径 + win32 大小写归一。
 
 **伴随件判据（三合取）**：① 目标**非 `.md`**（批次档本体永在门内——一切 `.md`、含近词干形如 `<词干>-v2.md`）；② 目标与绑定档**同目录**（按比较键归一）；③ 目标基名以 `<词干>+「.」或「-」`打头（词干 = 绑定档基名剥 `.md`）。三合取全中 ⇒ 不进本门；余者照拒（他批 `.md` ∕ 他批伴随件 ∕ 异目录伴随件均拒）。
 
 **拒绝文案（实现单源）**：`write refused — cross-batch batch-record write: this child is bound to <A>; <B> belongs to a different batch.`
+
   `Write only your own bound record and its companion files (the batch tool targets your bound record); the parent agent handles other batch records.`（A / B = 基名；文案字面单源 = 实现档 `thincoder-core/agent/write-gate.mjs`）
 
 **判据收窄理由**：批次本地单元测试档（`docs/batches/<批档词干>.test.mjs` 族）的合法作者 = **当批实施者（子代理）** ⇒ 本门保护对象 = **批次档本体**（跨批写他批 §2 = 损害通道）——非 `.md` 伴随件不构成该通道 ⇒ 放行（拒面不动：一切 `.md` 与当批外伴随件照拒）。
@@ -791,6 +848,7 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`）：
 
 **落点（两端对齐）**：核 `thincoder-core/agent/dispatch.mjs` Phase 1（与 D5 冻结窗同区——同为写前门 · 共用同一路径集）；
 端已取核——核 `thincoder-core/agent/write-gate.mjs`（CLI parity 单点）。判据本体 = `thincoder-core/agent/write-gate.mjs` 新导出
+
 `batchRecordWriteConflict(agent, depth, absPaths)`（与 `freezeWindowConflict` 同址——写前判据单源）；基底集按子代理 run 记忆化（每 run 一次 manifest 读）。
 
 **接口契约（实现面）**（形照 `docs/core/design/TOOLS.md` §6.17「接口契约（实现面）」表）：
@@ -804,6 +862,7 @@ A-3 机检（单行 · cmd.exe · cwd = `thincoder-vscode/`）：
 **与 `batch` 工具的关系（分层，不重复）**：`batch` 工具的绑定面管**段维度**（身份 → 可写段白名单，`BATCH-RECORD.md` §4.1 / §4.2）；本门管**档维度**——绑定档**之外**的同族文件此前无门（`write` / `edit` 直写批档 = 绕过工具绑定的通道，正是本实例的损害通道）。
 
 **豁免 / 边界**：depth 0（主 agent）不受门约束（跨档处置是父侧职责）；无 `_batchDoc` 的子代理不进本门（非工程绑定族——行为零变）；`file_ops` 不入门（门判据集 = `FILE_MUTATORS`，两端同集）；读类工具零影响；
+
   **非 `FILE_MUTATORS` 写通道（`bash` / `execute` 等）不在射程**——理由：判据 = 工具面 mutator 集（零文本拦截——`docs/core/design/TOOLS.md` §6.4），且事故真实通道未定
   ⇒ 本门只收工具面直写通道、不宣称全面封闭；**自身批次伴随件 = 放行面**（三合取——见上判据）。
 
@@ -851,4 +910,122 @@ subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="
 - **KD-TF3（参数即骨架）**：文本骨架退役——「照抄标签写进任务文本」的形不再是门的形；骨架改为一次带参调用，文本面与门面同形（工程角色只带 `batchDoc` / `round` / `designToken` / `files`）。
 
 **边界（本节不做）**：门的判据面归 §6.22.1 ∥ §6.22.4 · 提示词面（`thincoder-core/prompts/`）零触 · 其他工具描述零清扫 · 不新增工具。同族两件（batch 档头可填性 ∥ 死占位判据可辨性）= `TOOLS.md` §6.20。
+
+## 6.31 批次档复用护栏：同一档的在飞 spawn 拒发
+
+**来源**：2026-10-28 事故——两个 spawn 共用一本批档、文件域互不重叠，结果语法坏档 + 一席复原。提示词面当天已补（`thincoder-core/prompts/persona-engineering.md:335`「一本批档只服务一个并发 spawn」），机制面不拦：`batchDoc` 门只判「参数在 + 路径可读」，`thincoder-core/agent-tools/subagent.mjs:151` 的描述仍是单数措辞、无禁令。本节的判据把提示词的软约束落成写不出来的硬拒。
+
+**为什么拦（而非只靠提示词）**：提示词靠「派单的人读到并记住」，机制靠「写不出来」。本项目的同族先例已经存在——`files` 文件域并发冲突由调度器拦（§6.9 `describeBlockers`），而「一本批档两个写者」是同一类资源冲突，此前只是没把它当资源声明。一次发生的代价 = 坏档 + 一席重做；护栏的代价 = 一次池扫描 + 一行拒因。
+
+**最贴近先例**：`existing: thincoder-core/agent-tools/subagent-scheduler.mjs` 的 `describeBlockers`（设计档 §6.9）——**对齐** = 同一冲突判定落点（池派生事实单源，判定在 `buildSpawnChild` 里求值）；**偏离** = 拒发不排队（KD-BG2：批档冲突排队只把第二个写者延后，病不消失）。
+
+**勘察证据**：查过——
+
+- 池与条目面：`thincoder-core/agent-tools/subagent-scheduler.mjs`（`depInfo` :115 · `fileKey` :70 · `effectiveFiles` :92 · `describeBlockers`）· `thincoder-core/agent-tools/subagent-run.mjs:92`（条目 `_batchDoc`）· `thincoder-core/agent-tools/async-settle.mjs`（`carrierField` :53-57 · 载体吸收 :120-125 · 留池 :231）。
+- spawn 门面：`thincoder-core/agent-tools/subagent-spawn.mjs`（`buildSpawnChild` :187 · batchDoc 门 :204-220 · coder 面 :212-220 · 任务书门 :227）· `thincoder-core/agent-tools/subagent.mjs`（:151 描述 · :321-322 sync 不入池）· `thincoder-core/tool-docs/subagent.md`。
+- 纪律与验收面：`thincoder-core/prompts/persona-engineering.md:335-337` · `test/RTM.md` · `docs/core/design/TOOLS.md` §6.4。
+
+外部公开源档未查——本节判据全部取自本仓既有件（池访问器 · `fileKey` · 载体吸收），无外部同机制实现可引；同机制在本仓亦为首案。
+
+### 6.31.1 判据
+
+- **在飞**：`getAsyncPool(parent, "subagent")` 中 `status ∈ {running, queued}`、且 `done !== true`、且 `cancelled !== true` 的条目。
+- **池必须经访问器读**：与 `depInfo`（`thincoder-core/agent-tools/subagent-scheduler.mjs:115`）同一读法。裸读 `parent._asyncSubagents`，在只携 `history` 的合成 parent（VSC 面）读到的是空池 ⇒ 护栏静默失效，无报错、无信号。
+- **占用**：条目的 `_batchDoc`（`thincoder-core/agent-tools/subagent-run.mjs:92` 逐条目自携）与本次入参解析出的绝对路径按 `fileKey` 相等（win32 大小写不敏感，与 `subagent-scheduler.mjs:70` 同键）。
+- **占用判据只认 `_batchDoc`，不分角色**：普通面 coder 携 `batchDoc` 时条目同样带 `_batchDoc`（`thincoder-core/agent-tools/subagent-spawn.mjs:212-220`）⇒ 它也是占用者，会拒掉后续工程派单；被检面只覆盖工程角色，coder 面靠两模式互斥不可达。
+- **命中 ⇒ 拒**：`buildSpawnChild` 抛错，不许入池；拒因逐字模板 = §6.31.2。
+- **不读 `round`**：判据面只判并发，不判轮次（理由见 §6.31.3）。
+
+**为什么必须按 status 过滤**：正常 settle 的条目留在池里（`async-settle.mjs:295`「非挂起期 ⇒ 留池 done-in-pool」，`:231-232` 置 `done=true`/`status="done"`）。只看「池里有同档条目」会把单席顺序交接全部误拒。
+
+### 6.31.2 接口契约
+
+- **新导出** `batchDocInFlight(parent, batchDocAbs)` → `{ id, role, status } | null`，住 `thincoder-core/agent-tools/subagent-scheduler.mjs`——与 `depInfo` / `describeBlockers` 同族，池派生事实单源在此；池读法同 `depInfo`。
+- **既有件三问**：`existing:` 条目字段 `_batchDoc`（`thincoder-core/agent-tools/subagent-run.mjs:92`）· 池访问器 `getAsyncPool` · 同族冲突判定 `describeBlockers`（`subagent-scheduler.mjs`，§6.9）。`none found:` 无「按档查占用者」的现成谓词——`depInfo` 只按 id 查、`describeBlockers` 只按文件域查。消费方 = `buildSpawnChild` 单点。
+- **调用点**：`thincoder-core/agent-tools/subagent-spawn.mjs:211` 之后、任务书门（`:227`）之前——即归属于既有 `batchDoc` 门，不新开一门。
+- **门的先后**：guard 在条目入池（`subagent-run.mjs:202`）之前求值 ⇒ 本次 spawn 不会命中自己。
+- **被检面双路、占用面单路**：sync / async 共用 `buildSpawnChild`（`subagent-spawn.mjs:196-197` 注释所载）⇒ 一处校验双路生效；但**占用者只来自异步池**——sync spawn 不入池（`thincoder-core/agent-tools/subagent.mjs:321-322`）⇒ 两次 `async:false` 同档并行拦不住（§6.31.7 第 7 条）。
+
+**拒因文案（逐字模板；实现单源 = `thincoder-core/agent-tools/subagent-spawn.mjs` 的 `buildSpawnChild`——下游断言照此逐字，`<…>` = 拼入值）**：
+
+```text
+batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occupant: <role>#<id> (status: <running|queued>). One batch record serves one concurrent spawn: wait for <role>#<id> to settle, or cancel it, then spawn again.
+```
+
+门序（逐字替换 §6.22.1 末行）：角色 enum → `batchDoc` 门（缺参 ∥ 不可读 ∥ **同档在飞**）→ 任务书门 → `round` → token 门 → files 声明面。
+
+### 6.31.3 关键决策记录
+
+- **KD-BG1（判据 = 并发，不读 round）**：`round="fix"` 能放行，不是因为它被豁免，而是因为派修正轮的前提是父侧已拿到上一轮结果 ⇒ 上一轮已 settle ⇒ `done=true` ⇒ 不在在飞集。反过来，前一轮仍在飞就派修正轮 = 同一种两写者病，本条照样拒。「只在 initial 上拦」会漏掉这一形，且要给池条目新增 `_round` 字段（现条目字面量无此字段，`subagent-run.mjs:66-99`）——多一个字段换更弱的判据，不取。
+- **KD-BG2（拒发，不排队）**：`files` 冲突可以排队（等域空出来重跑，结果不变）；批档冲突排队无效——第二个写者稍后启动仍然写同一本档，病没有消失，只是延后。「等前一轮 settle 再派」的判断属于派单侧，机制不替它排。
+- **KD-BG3（读在飞表，不做文本匹配）**：`TOOLS.md` §6.4 已否决文本拦截式安全；本节只用结构性事实（池 + 路径相等），不猜意图。
+- **KD-BG4（跨进程不设防）**：池是会话内存，另一个 ThinCoder 实例同仓同档不在本护栏内——与 `files` 冲突检测同一条界。设跨进程锁要新增共享状态（文件锁 / 探活），代价远大于它挡住的形；登记为已知界，不设防。
+
+**两态的观察来源（如实登记）**：
+
+- **`status="queued"` 计入在飞 = 推导项**（同一种两写者：启动序推迟不消病）——无观察场景，事故当场未留池读数。
+- **前一轮在飞就派修正轮 ⇒ 拒 = 推导项**——无观察场景。有观察场景的两态只有主分支（2026-10-28 11:34：两席共用一本、文件域不重叠 ⇒ 语法坏档 + 一席复原）与放行分支（`thincoder-core/prompts/persona-engineering.md:336`「never overlaps」的单席顺序交接）。
+
+### 6.31.4 受影响文件
+
+**行数口径**：`现` = 本批成文时实测（`[System.IO.File]::ReadAllLines().Count`，2026-10-28）。
+
+| 文件 | 现 | Δ | 改动 |
+|---|---|---|---|
+| `thincoder-core/agent-tools/subagent-scheduler.mjs` | 451 | ≈+18 | 新导出 `batchDocInFlight` + 档头口径行 |
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 428 | ≈+10 | `batchDoc` 门内的在飞判定 + 拒因文案（点名档 + 占用者） |
+| `thincoder-core/agent-tools/subagent.mjs` | 422 | ±0（`:151` 一句改写） | `batchDoc` 参数描述补「同档在飞即拒」 |
+| `thincoder-core/tool-docs/subagent.md` | 89 | ≈+2 | 工程角色段（`:49` / `:59` 区）载明一本一并发 |
+| 本批单测档（临时，收口即删） | 0 | ≈+100 | 住批次目录 `docs/batches/<批档词干>.test.mjs`——**单测档不进 `test/` 树**：`test/` 下只有 `test/integration/**` 可放 `*.test.mjs`，别处一律被 `test/run.mjs:38` 判 fail；跑法 `node --test <该档>`；用例 = §6.31.6 |
+| `test/RTM.md` | 264 | ≈+9 | 新故事节 20「一本批档只服务一个并发 spawn」+ 行 `20-1`（§6.31.8） |
+| `test/integration/batchdoc-reuse-guard.test.mjs` | 0 | ≈+70 | 新集成用例，标题照行号写 `test('20-1 …')`（§6.31.8；文件名由实施席按该目录惯例落定） |
+
+### 6.31.5 验收（回指 §2 条目；机检命令逐条）
+
+| # | 判据 | 机检命令 ⇒ 期望 |
+|---|---|---|
+| AC-BG-1 | 病态被拒：同档 + 在飞 `running` ⇒ 抛错，文本**逐字等于** §6.31.2 模板（拼入值 = 档绝对路径 · `role#id` · status） | `node --test <本批单测文件>` ⇒ 断言 rejection 且文本逐字相等 |
+| AC-BG-2 | 顺序交接放行：前一条 `done` ⇒ 同档再派 `initial` 通过 | 同上 ⇒ 返回 child 装配产物，无 throw |
+| AC-BG-3 | 修正轮放行：无在飞 + `round="fix"` ⇒ 通过 | 同上 |
+| AC-BG-4 | 队列条目也算在飞：`status="queued"` ⇒ 拒 | 同上 |
+| AC-BG-5 | 别的档不受影响：不同 `_batchDoc` 在飞 ⇒ 放行 | 同上 |
+| AC-BG-6 | 路径归一：同一档的相对写法 / 反斜杠 / win32 大小写差异 ⇒ 命中（大小写变体仅 `process.platform === "win32"` 断言——非 win32 宿主无判别力；相对 / 反斜杠变体各平台恒断） | 同上 |
+| AC-BG-7 | 非工程角色零影响：`_batchDoc = null` 的 explore 在飞 ⇒ 任何 spawn 不阻 | 同上 |
+| AC-BG-8 | 文档门：本次写入的档 `doc_check` gate PASS | `doc_check(mode:"gate")` ⇒ 首行 `DOC-CHECK GATE: PASS` |
+
+### 6.31.6 用例表
+
+| # | 类 | 输入 | 期望 |
+|---|---|---|---|
+| 1 | 错误 | 池内 `<role>#7` running、`_batchDoc=<A>`；派 `initial`，`batchDoc=<A>` | 拒；文本逐字等于 §6.31.2 模板（`<A>` / `<role>#7` / `running`）（AC-BG-1） |
+| 2 | 正常 | 池内 `<role>#7` done、`_batchDoc=<A>`；同上入参 | 放行（AC-BG-2） |
+| 3 | 正常 | 池内无同档条目；入参 `round="fix"`、`batchDoc=<A>` | 放行（AC-BG-3） |
+| 4 | 边界 | 池内条目 `status="queued"`、`_batchDoc=<A>` | 拒（AC-BG-4） |
+| 5 | 边界 | 池内 `<role>#8` running、`_batchDoc=<B>` | 放行（AC-BG-5） |
+| 6 | 边界 | 同一档分别以绝对路径 / 反斜杠写法 / 大小写差异给出 | 判为同一档（AC-BG-6）；大小写变体行按平台条件化 |
+| 7 | 边界 | 池内 `explore#3` running、`_batchDoc=null`；派任意工程角色 | 不阻（AC-BG-7） |
+| 8 | 错误 | 池内同档 running，入参 `round="fix"` | 拒（KD-BG1 的反向形——前一轮未完就派修一轮） |
+
+### 6.31.7 边界（本节不做）
+
+1. 不改提示词——`thincoder-core/prompts/persona-engineering.md:335` 零改。
+2. 不做文本匹配式拦截（`TOOLS.md` §6.4）。
+3. 不校验档**内容**（判据仍只看路径与池状态）。
+4. 不覆盖跨进程（KD-BG4）。
+5. 不含 advisor 评审池（`_asyncAdvisors`）：评审写 §3、与实施席的 §5 段不相交，「同档并行评审 + 实施」属正常流程。
+6. 不改批档写门（§6.29.1）与 token 机制。
+7. sync spawn 不入池、不是占用者——两次 `async:false` 同档并行不拦（`thincoder-core/agent-tools/subagent.mjs:321-322`；提示词 `:335` 已禁 depth-0 `async:false`，机制面不重复设防）。
+
+### 6.31.8 集成测试设计（RTM 行 20-1）
+
+**故事**：`test/RTM.md` CLI 端故事 20「一本批档只服务一个并发 spawn」。与故事 12（无活批档不许改产品代码）不是同一业务故事——12 断的是「写产品码被拒」，本节断的是「同档第二席被拒」，业务结果不同，故另立故事节而不是挂进 12。
+
+| 行 | 交互组件 | 业务可观察结果 | 进入口 | 回指 |
+|---|---|---|---|---|
+| 20-1 | spawn 门（`buildSpawnChild`）⟷ 异步池在飞表（`getAsyncPool`）⟷ 第二席的返回 | 第二席被拒，返回文本点名本批档路径、占用者 `role#id` 与其 status，并给可执行下一步（等其 settle ∥ cancel 它）；第一席照常交付，档上只有一套写者 | 工程模式父侧并发派两席共一本批档 | 设计 §6.31.1–§6.31.2 · AC-BG-1 |
+
+**进入口来源**：生产真实发生（2026-10-28 11:34 两份并发 spawn 共用一本批档 ⇒ 语法坏档 + 一席复原）——不是推演场景。
+
+**UI / 交互决策**：无 UI 面；工具描述面（`thincoder-core/tool-docs/subagent.md`）与参数描述面（`thincoder-core/agent-tools/subagent.mjs:151`）载明一本一批档，`open` 项为零。
+
 

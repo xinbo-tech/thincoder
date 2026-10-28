@@ -313,6 +313,12 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     if (strays.length) {
       notes.push(`\`.gate-*\` 残留 ${strays.length} 档（异常退出的片段档）—— 手工删除后再提交`)
     }
+    // 声明面坏而门照判：manifest 非法 JSON 时判据参数 = 引擎内置常量、不读声明面 ⇒ 行为本身正确
+    // （比短路成「未跑」强——一份坏档不该把整个门关掉）。但那一支过去**不点名**，收口人看不出
+    // 声明面已坏；与 `missing` 支「未跑（本项目无声明面）」的明示不对称 ⇒ 两种坏法一种明示一种沉默。
+    if (!read.ok && read.reason === "invalid") {
+      notes.push("声明面不可解析（`PROJECT-MANIFEST.json` 非法 JSON）—— 判据参数为引擎内置常量，本轮仍已判")
+    }
 
     const disposePara = forced.some((e) => !ANCHOR_CLASSES.has(e.clazz))
     return {

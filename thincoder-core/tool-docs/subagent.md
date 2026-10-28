@@ -8,17 +8,27 @@ ONE tool, NINE actions — pick by what you need:
 - action:'send': STEER a running async subagent mid-flight — id + message (a direction, e.g. "check X, don't fixate on Y"). The child consumes it at its next turn boundary as an ORDINARY user instruction (non-interrupting; its discipline is unchanged — guidance, not a deviation waiver); returns {id,
   status:'delivered', queued}. Only RUNNING async children are targetable — sync/queued/settled/unknown error clearly; if the child settles first, its report carries an 'undelivered' note.
 - action:'escalate' (飞刀): hand an implementation task to a STRONGER model from your consult models; it gets WRITE access and does the work itself, then returns a post-op report (what changed, why, verification). Escalate EARLY, when the task calls for stronger hands (complex refactors, intractable
-  bugs, intricate algorithms — or beyond your comfortable ability). Not available in engineering mode (implementation goes through eng-coder). Default-async at depth 0: ack {id, role:'escalate', status:'running'} returns immediately; the report arrives automatically with its mutations merged into
+  bugs, intricate algorithms — or beyond your comfortable ability). Not available in engineering mode (implementation goes through eng-coder).
+
+  Default-async at depth 0: ack {id, role:'escalate', status:'running'} returns immediately; the report arrives automatically with its mutations merged into
   your bookkeeping (pooled with the other role-domain spawns).
 - action:'cancel': STOP ONE background subagent — the id from the spawn return is REQUIRED (a blanket cancel is unsupported; Ctrl+C stops everything). Running aborts immediately ({id, status:'cancelled'}); queued is removed ({id, status:'cancelled', was:'queued'}; later positions shift). Other
-  children and the session keep running. Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first, and prefer scoped recovery — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited. Background advisor reviews cancel
+  children and the session keep running. Cancel is a last resort: verify alarming signals with reliable checks (git/node — not guesses) first, and prefer scoped recovery — a running child's in-flight work dies with it, partial changes stay unmerged and unaudited.
+
+  Background advisor reviews cancel
   the same way (pass the review id — no token is issued for a cancelled review).
 - action:'consume-design' (engineering mode, parent side): chain-terminal token consumption — after the delivery is verified and the chain closes out, consume this design's token slot. Selectors — pass exactly ONE: designId (a single slot; optional for a single-design session), designIds (an
-  explicit non-empty list), expired:true (every expired slot), or olderThanDays:N (every slot older than N days). A consumed slot mechanically rejects further spawns for the same designId — new work (deviation fixes included) needs a fresh design review and token. Idempotent
+  explicit non-empty list), expired:true (every expired slot), or olderThanDays:N (every slot older than N days). A consumed slot mechanically rejects further spawns for the same designId — new work (deviation fixes included) needs a fresh design review and token.
+
+  Idempotent
   (unknown/already-consumed = a no-op notice); batch calls report per-slot lines + a `consumed N` count line. Do NOT call while the chain is still open — fix rounds reuse the same slot.
 - action:'design-slots' (engineering mode, parent side): READ-ONLY inventory of this session's approved design token slots — one line per slot (designId, live|expired, ageDays, expiresAt, batch, designToken), oldest first, ending with a total/live/expired count line. Nothing is written. Use it to
   see what still holds a slot before consuming; the expired / olderThanDays selectors act on the same set.
-  Every row carries its designToken value (expired ones included — status marks them; a malformed record shows designToken=—). Pass designId to filter to a single slot (trimmed exact match; unknown = refused with the held id list; empty string = no filter). Take designId + designToken verbatim onto
+  Every row carries its designToken value (expired ones included — status marks them; a malformed record shows designToken=—).
+
+  Pass designId to filter to a single slot (trimmed exact match; unknown = refused with the held id list; empty string = no filter).
+
+  Take designId + designToken verbatim onto
   the eng-coder spawn — the gate checks exact equality.
 - action:'panel': DIAGNOSE + fix the subagent panel (the collapsible blocks the user sees; headless/VS Code degrade to a 'no panel' pool view). view (default): the live blocks (key, role, status: running|done|awaitingDigest) exactly as the user sees them — digested-stuck entries carry digested:true.
   freeze: pass a digested-stuck block key (e.g. 'eng-coder#9' — {action:'panel', freeze:'role#N'}) to reclaim it into the conversation — passes ONLY for awaitingDigest blocks with no live pool entry and no pending report (a still-pending report would break the digestion order — refused).
@@ -31,16 +41,23 @@ Available roles (exposed per mode; the role is REQUIRED for action:'spawn' — a
 - coder — full implementation; the parent's complete read/write/execute toolset plus verify and advisor self-review. Its report carries a delivery table, one row per requirement (Done / Simplified / Not done — no deferred column). Normal mode: may optionally carry `batchDoc` — binds this spawn's §5
   record-write channel (unbound ⇒ the main agent records §5 on its behalf); when provided the path must resolve to a readable file.
 - eng-coder — engineering mode only (replaces coder): same toolset plus the design-driven methodology overlay; its delivery protocol (implementation → audit → self-fix → advisor re-review → converged delivery) runs fully inside the child. REQUIRES a valid designToken from a passed
-  advisor(type='design') review — pass the exact value from that review, or copy it verbatim from the action:'design-slots' row (the text after designToken=): missing or mismatched = the spawn is refused, and an expired token is refused with expired named (its reply also echoes a designId — pass it:
-  required to pick between concurrent designs, optional for one; echo it back in the delivery report). REQUIRES a batchDoc — the batch record path, the task book this spawn implements (refused without it or when it does not resolve to a readable file).
+  advisor(type='design') review — pass the exact value from that review, or copy it verbatim from the action:'design-slots' row (the text after designToken=): missing or mismatched = the spawn is refused,
+
+  and an expired token is refused with expired named (its reply also echoes a designId — pass it:
+  required to pick between concurrent designs, optional for one;
+
+  echo it back in the delivery report). REQUIRES a batchDoc — the batch record path, the task book this spawn implements (refused without it, when it does not resolve to a readable file, or when that record already has an in-flight spawn — one batch record serves one concurrent spawn: wait for the occupant to settle, or cancel it).
 - eng-designer — engineering mode only: the SOLE author of the design documents and of the batch record's design section (requirement docs stay with the main agent). Writes no implementation code, does not edit prompts, does not fire reviews, needs NO designToken. Surveys on its own; may only spawn
   read-only explore children (sync, ≤6 per batch). REQUIRES a batchDoc (same gate as eng-coder).
 
 Task book (normal-mode roles: explore / plan / coder): four core structured parameters — goal (goal & why), knownFacts (the facts you already verified), acceptance (machine-verifiable criteria), reportFormat (delivery-report format)
+
 — plus scope (scope & forbidden scope — what to read / what not to touch).
 All five are required: a missing, blank or non-string value is refused with the parameter named.
 A free-text task is an optional supplement, never the whole brief.
-Engineering roles (eng-coder / eng-designer) take their task book from the batch record: batchDoc (the record path) and round (initial|fix), plus files / dependsOn for scheduling; the child reads §2 of that record itself — no other task text is passed.
+
+Engineering roles (eng-coder / eng-designer) take their task book from the batch record: batchDoc (the record path) and round (initial|fix), plus files / dependsOn for scheduling; the child reads §2 of that record itself — no other task text is passed. A record carries one concurrent spawn at a time: a second spawn on a record still in flight is refused, naming the occupant — sequential hand-offs (design → implementation → fix round) pass, because the previous spawn has settled first.
+
 An eng-coder spawn also carries designToken — the write credential (the exact value from the review, or copied verbatim from the action:'design-slots' row, the text after designToken=), and designId when several designs are open: missing or mismatched = the spawn is refused.
 
 Pass one parameter per field — contents only (the runtime adds the labels):
@@ -49,12 +66,20 @@ subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="
 
 Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/eng-designer/eng-coder — off-mode roles are refused mechanically (enums filtered at assembly; the spawn gate re-checks).
 
-Async spawn: top-level spawns are async by default — never pass async:false at depth 0 (the spawn returns {id, status:"running"} immediately; the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it — do not poll; the explicit async:false is a
-mechanism parameter, not for model use). Inside subagents (depth>0) spawns are always synchronous. Async spawns are pooled per role domain — 4 concurrent eng-coders plus 4 concurrent other-role spawns by default (agent.poolLimits overrides both); a full domain queues further spawns with a position
+Async spawn: top-level spawns are async by default — never pass async:false at depth 0 (the spawn returns {id, status:"running"} immediately; the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it — do not poll;
+
+  the explicit async:false is a
+mechanism parameter, not for model use). Inside subagents (depth>0) spawns are always synchronous.
+
+  Async spawns are pooled per role domain — 4 concurrent eng-coders plus 4 concurrent other-role spawns by default (agent.poolLimits overrides both); a full domain queues further spawns with a position
 while the other keeps starting.
 
-Task scheduling: declare files (the file paths this task will modify) and dependsOn (ids from prior async returns whose outcome this task needs) to let the scheduler order your spawns. Overlapping-file tasks serialize and dependents start in order: a conflicting/dependent spawn queues
-(position/reason) and auto-starts when the conflict clears / the dependency settles (cancel to drop). A cancelled/failed dependency leaves it queued marked "dependency cancelled" until you decide (AUTO sessions auto-start). Unknown ids error; a consumed id counts as satisfied. Omit both for a plain
+Task scheduling: declare files (the file paths this task will modify) and dependsOn (ids from prior async returns whose outcome this task needs) to let the scheduler order your spawns.
+
+  Overlapping-file tasks serialize and dependents start in order: a conflicting/dependent spawn queues
+(position/reason) and auto-starts when the conflict clears / the dependency settles (cancel to drop).
+
+  A cancelled/failed dependency leaves it queued marked "dependency cancelled" until you decide (AUTO sessions auto-start). Unknown ids error; a consumed id counts as satisfied. Omit both for a plain
 immediate spawn (no scheduler involvement).
 
 Writing the prompt:

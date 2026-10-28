@@ -1,4 +1,5 @@
 Read the project manifest (PROJECT-MANIFEST.json) — the project-level state file: version / phase / docRoot (the root of each document layer: requirements / specs / design / modules / batches) / codePaths / index.
+
 Read-only: the only action is `read`. Creating or editing a manifest belongs to the main agent — this subagent variant has no init / write action.
 
 read [target] — report the manifest state with a stable anchor `state=ok|missing|invalid|workspace|no-project`. The ok state prints the manifest JSON plus missingKeys / unknownKeys / errors rows (only when non-empty). Never throws — a missing manifest is reported, not refused.

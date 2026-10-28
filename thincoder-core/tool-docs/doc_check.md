@@ -10,9 +10,12 @@ What it checks — exactly two criteria, both built into the engine:
   (command / pattern code spans) are skipped whole.
 - **The reach is what survives extraction, not every `.md` token.** Three name families are never extracted, so they are never
   judged: **conventional file names** used to say which files get read (`AGENTS.md`, `SKILL.md`, `project_rules.md`, `todo.md`
-  and the rest of that closed set), **placeholder stems** (single letters plus the usual sample words — `x.md`, `file.md`,
-  `foo.md`, `example.md`), and — on the prompt face only — the seven operand names the `Operand names` block below
-  lists. A `.md` token outside those families is judged even when misspelled: a wrong name reports `档缺`, never a pass.
+  and the rest of that closed set),
+
+  **placeholder stems** (single letters plus the usual sample words — `x.md`, `file.md`, `foo.md`, `example.md`), and — on the
+  prompt face only — the seven operand names the `Operand names` block below lists.
+
+  A `.md` token outside those families is judged even when misspelled: a wrong name reports `档缺`, never a pass.
 
 ~~~text
   **Operand names.** Seven names count as operands rather than documents: the model writes them, or reads a file by that name. On
@@ -26,17 +29,14 @@ What it checks — exactly two criteria, both built into the engine:
   ```
 ~~~
 
-- Paragraph length — on a document face, adjacent non-blank body lines merge into one paragraph whose total character
+- Paragraph length — on every non-prompt face, adjacent non-blank body lines merge into one paragraph whose total character
   count (CJK counts as 1) is judged against the built-in threshold; blank lines, table rows, headings, list items,
   quote-block lines and fenced code blocks do not count into a paragraph and break it, and lines inside an exempt zone
 
-  are excluded. Breaking a paragraph into more lines changes nothing — only splitting it into more paragraphs or
-  writing it shorter passes.
-- Face scope — a tool-description file (`thincoder-core/tool-docs/**`, this file included) is judged on anchors only;
-  paragraph length does not apply to it. That rule guards what a human reader carries into a long paragraph.
+  are excluded. No face is exempt: a tool-description file (`thincoder-core/tool-docs/**`, this file included) is judged on
+  this criterion too — a long paragraph hides its later points from every reader, the model included.
 
-  These files are injected into tool definitions and read by the model, which carries no such burden. A dangling pointer is
-  a different harm — the model follows it and guesses — so the anchor rule keeps its full reach on this face.
+  Breaking a paragraph into more lines changes nothing — only splitting it into more paragraphs or writing it shorter passes.
 - Line length — a prompt-face file (`thincoder-core/prompts/**`) is judged line by line: the model reads raw text, so
   one line is one block, and any single line over the threshold counts with no structural exemption.
 
@@ -59,7 +59,8 @@ against the pointing document's own directory — bare names are not resolved ac
 Delivery gate — `mode: "gate"`, for the end of a design or development round. Every listed doc is judged **whole**:
 a pre-existing dangling pointer or overlong paragraph / line anywhere in it counts, not only this round's edited lines.
 
-Counted wherever that criterion applies to the doc's face — a tool-description file is anchor-judged only. The first line is the machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
+The first line is the machine-readable verdict — `DOC-CHECK GATE: PASS` / `DOC-CHECK GATE: REFUSED（命中 K 条）` / `DOC-CHECK GATE: ERROR（reason）` —
+
 and consumers judge by that prefix; the hits are fixed in the same round and are never booked to the ledger. The gate refuses
 
 **one delivery**, not a user instruction: an explicit user go-ahead is followed, with the hits written into the delivery.

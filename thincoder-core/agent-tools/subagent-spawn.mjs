@@ -24,7 +24,7 @@ import { tokenExpired, removeDesignTokenSlot, reconcileEngTokensFromSlot } from 
 import { resolveChildProvider, buildChildRunOpts, enqueueAsk } from "./subagent-async.mjs"
 import { nextSubagentId } from "./subagent-scheduler.mjs"
 import {
-  normalizeFileList, describeBlockers, assertNoDepCycle, depInfo,
+  normalizeFileList, describeBlockers, assertNoDepCycle, depInfo, batchDocInFlight,
 } from "./subagent-scheduler.mjs"
 // M5 F2（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：任务书 round 枚举 + 五项结构化参数校验/拼装本体落
 // spawn-gates.mjs（纯谓词零依赖）——本处只加 import 调用。
@@ -167,6 +167,16 @@ export function prepareScheduling(parent, filesRaw, dependsRaw, wantAsync) {
   return { files, dependsOn, errorJson: null }
 }
 
+/** S4 写域行（AGENT-LOOP-SUBAGENT.md §6.26「写域行（S4）」）：表头 + 逐条绝对路径 + 两句语义——
+ *  本档局部纯函数（D23-9：不外提模块）。两句不可省：缺① 子代理读成「我只能写这些」⇒ 该写的漏掉；
+ *  缺② 仍把任务书 §2 全文当成自己的改动面（本块的病因）。清单不截断——截断正是本块要消除的
+ *  「看不见」。返回块文本（块间分隔由装配侧 `join("\n\n")` 施加）。 */
+function filesBlockOf(files) {
+  return `Files declared for this spawn (the write domain this task declares, for scheduling):\n` +
+    files.map((f) => `- ${f}`).join("\n") +
+    `\n\nThis list is not an authorization boundary: touching a file outside it is allowed — report every out-of-list file you changed, with its reason. It is also not the whole change surface: other spawns on this task declare their own files, and what is listed here is your share only.`
+}
+
 /**
  * AGENT-LOOP-SUBAGENT.md §6.9 准入通过后的 child 装配（2026-09-05 module-split——自 execute 参数化提取，
  * 原 318-488 段 verbatim——语义零变）。副作用保留：relay 取号（sync 支 allocRelay——
@@ -206,6 +216,24 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
       if (!batchDocAbs) {
         throw new Error("batchDoc for role='coder' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); when provided it must resolve to a readable file (omit batchDoc to spawn without the §5 record-write binding).")
       }
+    }
+  }
+
+  // ── AGENT-LOOP-SUBAGENT.md §6.31 批次档复用护栏（2026-10-28 batchdoc-reuse-guard）──
+  // 同一档已有在飞 spawn ⇒ 拒发（2026-10-28 11:34 事故：两席共用一本批档、文件域互不重叠 ⇒
+  // 语法坏档 + 一席复原）。判据 = 池内在飞条目的 `_batchDoc` 与本次解析出的绝对路径按 fileKey
+  // 相等（谓词单源 = `batchDocInFlight`——池派生事实住 subagent-scheduler.mjs，读法同 `depInfo`）。
+  // 只用结构性事实（池 + 路径相等），不做文本匹配（TOOLS.md §6.4）。
+  // **不读 `round`**（KD-BG1）：修正轮靠「前一轮已 settle ⇒ 不在在飞集」自然放行；前一轮仍
+  // 在飞就派修正轮 = 同一种两写者病，照拒。
+  // **非对称是判据的一部分，勿「顺手统一」**：被检面只覆盖工程角色（本分支内），占用者是池内
+  // 任何带 `_batchDoc` 的条目、不分角色（普通面 coder 携 batchDoc 也算）；sync spawn 不入池 ⇒
+  // 它不是占用者（§6.31.7 第 7 条）。
+  // 拒因文案逐字模板 = §6.31.2（文案单源 = 本处——下游断言逐字对照）。
+  if (engineeringRole) {
+    const occupant = batchDocInFlight(parent, batchDocAbs)
+    if (occupant) {
+      throw new Error(`batchDoc is already in flight — spawn refused. Batch record: ${batchDocAbs}. Occupant: ${occupant.role}#${occupant.id} (status: ${occupant.status}). One batch record serves one concurrent spawn: wait for ${occupant.role}#${occupant.id} to settle, or cancel it, then spawn again.`)
     }
   }
 
@@ -331,8 +359,8 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // 两处（批次档路径行 + 审计模板块）原随 user 首条下发，压缩把首条并入摘要即丢（长任务中后期
   // 既看不到批次档路径、也看不到审计模板 ⇒ 过度勘察的真病根）；固块值在 child 生命周期内恒定
   // ⇒ run 内 system 前缀逐字节稳定（前缀缓存不破），且不在 `agent.history` 内 ⇒ 压缩结构上吞不掉。
-  // 收集序 = 原拼接序（批次档行 → 审计块）；空数组 ⇒ 不绑定（depth-0 / explore / plan / consult
-  // 的 system 逐字节同改前——§6.26 缓存契约兼容证明）。
+  // 收集序 = 批次档行 → 审计块 → 写域行（S4，见下）；空数组 ⇒ 不绑定（depth-0 / explore / plan /
+  // consult 的 system 逐字节同改前——§6.26 缓存契约兼容证明）。
   const spawnBlocks = []
   // §2.11 第 1 点（FR16 载体 + FR17 铁律 #5 的机械面）：批次档**绝对路径**下发给工程角色
   // （eng-coder 实现 / eng-designer 写稿）——任务书本体 = 本档 §2；本行让子代理"拿到本档路径"。
@@ -342,6 +370,9 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // `_touchedFiles` ∪ 批档 §2（审计子代理自读）——**不是** eng-coder 自述（自述可恰好漏掉应抓的
   // 越界档）。块文本（含模板逐字）住 `./audit-block.mjs`（D23-3 外提）。
   if (engAuditAttempt !== null) spawnBlocks.push(buildAuditBlock(ctx))
+  // §6.26「写域行（S4）」：`files`（本 spawn 的预期写域，`prepareScheduling` 已归一化）非空 ⇒ 追加
+  // 一格——写域此前只有调度器知道，子代理只能猜自己的改动面；空 / 未传 ⇒ 不推块，system 逐字节同改前。
+  if (files.length > 0) spawnBlocks.push(filesBlockOf(files))
   // The child's own task input rides the child object: D23-6 —— `_engTaskInput` 语义 = **一行机械
   // 任务书行**（批档绝对路径 + §2 指向句；不含固块）。
   if (engineeringRole) child._engTaskInput = input

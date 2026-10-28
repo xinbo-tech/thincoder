@@ -24,8 +24,8 @@
 - **仓内设计层相关档**：`docs/core/design/LEDGER.md`（核销机检 / 收口重锚）· `docs/core/design/BATCH-RECORD.md`（收口链门 / §3 词表）· `docs/core/design/LIGHT-CHANNEL.md`（轻通道轮在盘谓词）· `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md`（槽归属）· `docs/core/design/TOOLS.md`（工具契约）· `docs/core/design/TESTING.md`（零留存门）。
 - **面分类正源** = 需求层 `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.5（`:665`–`:668`），已并入 `§2.1` / `§2.10`。
 
-**档归属**：跨链契约（活批档 `§2.2` · 四道门 `§2.6` · 重锚分流 `§2.7` · 重开回收 `§2.13`）由本档拥有。
-`§2.1` / `§2.10`（面判）与 `§2.12`（排除名单）的长期归属 = `docs/core/design/ENGINEERING-MODE-V2.md` §13.5 的机判实现；`§2.5`（§3 词表）归 `docs/core/design/BATCH-RECORD.md` §4.12；`§2.7` / `§2.13` 归 `docs/core/design/LEDGER.md` §6.2。
+**档归属**：跨链契约（活批档 `§2.2` · 四道门 `§2.6` · 重锚分流 `§2.7` · 重开回收 `§2.13`）与 `§3` 状态行词表（`§2.5`——含打回即重置）由本档拥有。
+`§2.1` / `§2.10`（面判）与 `§2.12`（排除名单）的长期归属 = `docs/core/design/ENGINEERING-MODE-V2.md` §13.5 的机判实现；`§2.7` / `§2.13` 归 `docs/core/design/LEDGER.md` §6.2。
 
 **两侧写法不同时以本档为准**（取代项逐条列在 `§2.7`），直到对应正文并回该档。
 
@@ -160,7 +160,28 @@ batch: ledger entry #<N> is 在途 and its task_book points at <path> — anothe
 
 最终形态：`3: { open: "进行中", done: "评审通过" }`——**只有 pass 叫完成**，不设第三态词。
 
-- `changes-required` 不写状态词：该轮评审结论落在 `§3` 段体（`### 轮次 N` 块），状态行留 `进行中`——「评审没通过」= 评审未完成，这是真话。
+- `changes-required` 不写状态词：该轮评审结论落在 `§3` 段体（`### 轮次 N` 块），状态行留 `进行中`——「评审没通过」= 评审未完成，这是真话。（工具被动重置时携 `（第 N 轮打回）` 括注，见下。）
+
+**打回即重置（工具被动写，2026-10-28）**：状态行由工具改，不靠评审记得。
+
+触发 = 三合取：① 一笔 `append §3`；② 这一笔的文本带打回裁定行；③ 写这一笔之前 `§3` 状态行 = `评审通过`。
+
+② 的判据单源 = `thincoder-core/agent-tools/batch-skeleton.mjs` 的 `VERDICT_CHANGES_LINE`——`VERDICT: changes-required` / `VERDICT: 不通过` / `VERDICT: 需修改` 与 `结论：…` 同义形的整行判据，与设计凭证裁定闸读同一条正则。
+
+**三件同源**：`_V_PRE` / `_V_SUF`（`thincoder-core/agent-tools/batch-skeleton.mjs:261` / `:262`）与 `VERDICT_CHANGES_LINE`（同档 `:263`）住骨架档，写入面与签发面同读；签发面的 `VERDICT_PASS_LINE` 留 `thincoder-core/agent-tools/design-token.mjs:114`，经 import 取这两条锚。
+
+- **锚形只此一份**：不复制到第二档，也不由两档各写一遍（`design-token.mjs:20` 已 import 骨架档，无循环）。
+
+三条全中 ⇒ 同一笔写盘里两处落笔：状态行 → `进行中（第 N 轮打回）`；本轮块首戳一行留痕 `> 状态行重置：第 N 轮打回（changes-required）· 上一轮状态行 = 评审通过 → 进行中 · <YYYY-MM-DD>`。
+
+- **重置不等于清空**：留痕行把「上一轮 pass 被这一轮推翻」写在档里——状态行只余 `进行中`，不写留痕则读档的人会以为从没评过。
+- **只走既有写面**：状态行仍由 `updateSectionStatusLine` 单行改写（同档 `:164`），不新开第二条写路径；留痕行是本轮块内的段体内容，与工具戳的 `### 轮次 N（评审子代理）` 同面，append-only 不变。
+- **③ 把「上一轮 pass」写死在内**：`§3` 已是 `进行中` ∥ 无状态行 ⇒ 零写、零留痕（本来就写着「评审未完成」，重置无事可做；本轮块本身即证据）。顺序交接不误伤：未打回的批（首轮 pass）不触发。
+- **为什么必须机械**：状态行是下游 `§5` 写入门（`thincoder-core/agent-tools/batch-closeout.mjs:105`）∥ 收口门 ∥ 核销门③的唯一判据面。靠评审「记得把状态行改回去」是一条纪律，而纪律在打回那一轮最容易漏；写成工具条件，漏不掉。**第四处读它的是签发面**：`thincoder-core/agent-tools/design-token.mjs:229`-`:233` 的 §3 落地门判据 2（`status-not-passed`）——打回后再 pass 那一轮须重写 §3 状态行，否则拒签；此前它吃上一轮残留而放行，补写即可重评。
+- **修前实读（敞口本身）**：`§3` 状态行 = `评审通过` ∧ `§3` 已有轮次块含 `VERDICT: changes-required` ⇒ 直调 `assertSectionFiveGate` 喂此夹具**不抛**（放行——该函数放行时不返回值也不打印，「不抛」就是它唯一的可观察面）；同刻 `readSectionStatusWord(src, 3)` 返回 `评审通过`。重置落地后同夹具读到 `进行中`，门遂拒。
+- **判 `§3` 结论只认状态行那一行**：留痕行逐字写「上一轮状态行 = 评审通过」，轮次块正文也可能出现词表关键字——`**状态行**：` 前缀之外的关键字不构成结论（读面单源 = `readSectionStatusWord` 的段内状态行行扫描）。
+- **留痕行不经文档机检门**：门位在 `insertIntoSection` 之前（`thincoder-core/agent-tools/batch.mjs:243`，判集只含评审正文 `pending.body`），留痕行插在其后 ⇒ 不进门判集；门判的仍是评审正文本身。
+- **边界（如实登记）**：这一笔连裁定行都没有（设计凭证侧判 `no-pass-line`）⇒ 本重置不触发，`§3` 仍留上一轮的 `评审通过`，`§5` 门可写。本轮无裁定行时，工具无从区分「打回」与「补记一段散文」，故不扩触发面。
 - **被拒方案（两终态词 `评审通过` / `评审须修改`）**：代价 = 每个读侧多一态（`readSectionStatusWord` / 链门 / `batch/list` / 词表并集四处）、
   拒文多一支、且 `须修改` 与 `进行中` 对「评审还在跑」不可区分；收益（分清「没跑」与「跑了没过」）`§3` 段体的轮次块已经给了。故不取。
 - **存量档兼容**：旧字面 `评审完成` 读侧等义于 `评审通过`（`readSectionStatusWord` 一张别名表，逐条注退场条件 = 盘上再无该字面）。
@@ -172,7 +193,7 @@ batch: ledger entry #<N> is 在途 and its task_book points at <path> — anothe
 | 门 | 位置 | 判据 | 模式 | 拒绝时报什么 |
 |---|---|---|---|---|
 | 写锁 | `write-gate.mjs` `productCodeWriteConflict`，挂 `dispatch.mjs` Phase 1（`§2.3`） | 目标在产品代码面 ∧ 无活批档 ⇒ 拒 | 仅工程 | `§2.3` 串 |
-| §5 写入门（段序门） | `batch` append §5（`batch.mjs:161` `appendBatchRecord`） | `§3` 状态行 = `评审通过`；**或** `§1` 声明 `> 不适用：§3 —— <理由>`（无评审的批） | 两模式 | `R-G2` |
+| §5 写入门（段序门） | `batch` append §5（`batch.mjs:163` `appendBatchRecord`） | `§3` 状态行 = `评审通过`；**或** `§1` 声明 `> 不适用：§3 —— <理由>`（无评审的批） | 两模式 | `R-G2` |
 | 收口门 | `close` ∥ `status` 写 `§1 已收口` | 链门（既有四条与 §3 内容臂**零改**）**∧**（`§3` 状态行 = `评审通过` **∨** `§1` 声明 §3 不适用） | 两模式 | `R-G1`（§3 未过）∥ 既有 `J1`/`J2` |
 | 核销门③ | `ledger-close-proof.mjs` | **档面事实**：该档 `§3` 状态行 = `评审通过`（不再读 token 槽归属） | 两模式 | `R-L3` |
 

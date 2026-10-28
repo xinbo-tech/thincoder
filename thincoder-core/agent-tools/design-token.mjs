@@ -15,7 +15,9 @@ import { randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { tokenExpiryMs } from "../token-ttl.mjs"
 // 段面读判据单源（骨架档）：轮次块计数 ∥ 段级状态行 ∥ §3 完成词——§3 落地门与写入面读同一形态。
-import { countRoundBlocks, readSectionStatusWord, STATUS_WORDS } from "./batch-skeleton.mjs"
+// 裁定行锚（`_V_PRE` / `_V_SUF` / `VERDICT_CHANGES_LINE`）同住骨架档：签发面（裁定闸）与写入面
+// （`append §3` 的打回重置 `statusResetPlan`）读同一条正则——锚只此一份，两档不各写一遍。
+import { countRoundBlocks, readSectionStatusWord, STATUS_WORDS, _V_PRE, _V_SUF, VERDICT_CHANGES_LINE } from "./batch-skeleton.mjs"
 // 批归属派生（DESIGN-TOKEN-SETTLEMENT §10）——两源定序 `batchAbsPathOfRun`：`run.batchDoc` 优先、
 // `docSetKey` 的批档兜底（判据与清点面同源）。
 // 本档 ⇄ `design-slots.mjs` 为**静态环**（对方取 `effectiveTokenTtlMs`）：两侧绑定只在函数体内
@@ -108,12 +110,9 @@ const TRUNCATED_ECHO_MARK = "注：回显被截断（uuid 之后缺失或不符�
 // 裁定行接受本地化等价形（GitHub #32 / #14）：评审席用中文回执很常见，
 // 只认英文会让 pass 落成 no-pass-line、凭证永不签发；判据仍只认整行逐字面，
 // 不做「句中含『通过』」这类模糊匹配——那样会把「未通过」也放过。
-const _V_PRE = "^[ \\t]*[*_`]*[ \\t]*"
-const _V_SUF = "[ \\t]*[*_`]*[ \\t]*$"
+// 锚（_V_PRE / _V_SUF）与打回正则住骨架档（写入面同读）；只有 pass 正则留本档——它只服务签发面。
 const VERDICT_PASS_LINE = new RegExp(
   _V_PRE + "(?:VERDICT:[ \\t]*(?:pass|通过|通过。)|结论[:：][ \\t]*(?:通过|pass))" + _V_SUF, "mi")
-const VERDICT_CHANGES_LINE = new RegExp(
-  _V_PRE + "(?:VERDICT:[ \\t]*(?:changes-required|不通过|需修改)|结论[:：][ \\t]*(?:不通过|需修改|changes-required))" + _V_SUF, "mi")
 export function verdictGateFailure(rawResult) {
   if (typeof rawResult !== "string") return "no-pass-line"
   if (VERDICT_CHANGES_LINE.test(rawResult)) return "changes-required"

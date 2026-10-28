@@ -636,14 +636,14 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 
   **修正轮补三桩**（非新号——随补注登记）：开关真链（`config.json` ⇒ 生产者真链 · 评审 🟡1）· 窗内 timer 轮中止容纳（`AbortError` ∧ 会话未停 ⇒ 容纳并重入 · ±两反例用例 · 评审 🟡2）· 触发落流（`timer { status:"fired", text }`——协议 §3.2 行 19）。
 
-### 6.30.13 受影响文件清单（R24a · 行数 = 现盘实读（`wc -l` 口径））
+### 6.30.13 受影响文件清单（R24a · 行数 = 该批当笔读数 · as-of 2026-09-28 · `wc -l` 口径）
 
 **实施后重锚（2026-09-28 收尾轮 · 现盘实读）**：代码行读数（表）= `wc -l` 语义现盘实读；增量 = 轨迹标注；与并行批同片者并注「本档面」与「现盘」两值（并行批增量归其自身批档）。
 
 | 文件 | 现行行数 | 实测增量 | 说明 |
 |---|---|---|---|
 | `thincoder-core/agent/suspension.mjs` | **280** | +40（240⇒280——含修正轮 +7） | `timerFace` opt-in + 等待第四态 + 兑现支（修正轮：timer 支 `AbortError` 容纳） |
-| `thincoder-core/test/suspension.test.mjs` | **336** | +72（264⇒336——修正轮补例两桩后） | T-TW14–T-TW16 + 修正轮补例两桩（`clear` 先到先得 ∕ timer 中止容纳）；**已越 300 ⇒ 登记路**——登记注释 = `thincoder-core/test/core-hygiene.test.mjs:108-115`（拆分方案 ∕ 触发条件在册）  |
+| `thincoder-core/test/suspension.test.mjs` | **336** | +72（264⇒336——修正轮补例两桩后） | T-TW14–T-TW16 + 修正轮补例两桩（`clear` 先到先得 ∕ timer 中止容纳）；**已越 300 ⇒ 登记路**——登记注释随该批单测档收口删除（拆分方案 ∕ 触发条件在册）  |
 | `thincoder-desktop/src/main/timer-watch.mjs`（新档） | **79** | 新档（设计估 ~95） | 空闲 deadline 闩（键面 · 注入缝） |
 | `thincoder-desktop/src/main/agent-host.mjs` | **341** | 该档（285⇒300 恰线）；现盘含并行批增量 | 两枚注入面（`busyOf` / `takeOver`）+ 透传——装配 ∕ 武装点 ∕ 撤闩落 `thincoder-desktop/src/main/suspension-drive.mjs`（实施期前提修正 · 源 = §5.9） |
 | `thincoder-desktop/src/main/suspension-drive.mjs` | **269** | +73（196⇒269） | `timerFace` 装配 + 三武装点 + 撤闩 + 火面包装（轮后链尾接管）+ `driveTurn` 转发 |

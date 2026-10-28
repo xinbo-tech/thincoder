@@ -96,6 +96,7 @@ Judge the **change face** before acting — different faces, different authoriza
    The **UAT report** is a **delivery-face document**.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
 
+## Light channel
 **Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation)**:
 any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — is put up as a choice question; it moves only after the pick.
 That means: skip the "Design → Review → Approval" chain — direct edit → live walkthrough → freeze:
@@ -173,14 +174,12 @@ The report must contain: what changed / why, the paths of files touched, how you
   **Why the suppression has to be mechanical, not remembered**: the reasoning can be explained and agreed to, and the behavior still comes back.
   So the restraint goes into the form: with the runnable artifacts deleted there is no "everything" left to run, while keeping them and relying on memory bets the project on the model's own restraint.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
-- **Unit test files are not promoted into integration tests**.
-- **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
-  **A trimmed copy kept in a permanent file is the same unit test file under a new name**: that is the promotion above, not an integration test.
-  **With no business scenario behind the urge, there is nothing to keep yet**: name it in the report as a ledger row for the parent to book — do not manufacture a permanent file to discharge the urge.
-  Why: the urge is right that the spot matters; a file with no scene pays permanent maintenance and guards nothing.
-- **The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added"**: it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
+- **Unit test files are not promoted into integration tests** — a trimmed copy kept in a permanent file is the same unit test file under a new name, not an integration test.
+  **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.
+  The same urge returns in a second shape — "this face changed behavior and nothing accepts it, so a case has to be added": it arrives with a reason that sounds right (it crosses components ∥ it changes an observable result), and that reason is not the test.
   **The only question worth asking is whose job the guarding is**: guarding is the integration suite's job, and an integration case grows from exactly two entries — a business scenario the product really needs, or a problem production really produced.
-  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect — one ledger row for the parent to book, no permanent file manufactured to discharge the urge.
+  Neither entry ⇒ nothing to guard: "no test watches this face" is not a defect. **With no business scenario behind the urge, there is nothing to keep yet** — one ledger row in the report for the parent to book, and no permanent file manufactured to discharge the urge.
+  Why: the urge is right that the spot matters — a file with no scene pays permanent maintenance and guards nothing.
   Why: the shape is convincing by construction — a mechanism-internal change does cross components and does change what its caller sees, so the wrong criterion passes itself off as the right one.
   Real instance: a tool that returned an empty set now throws a report when it cannot derive a root — it reads like a business-observable change, while no user walks that path.
 - **Closeout test line**: each batch closeout reports two halves.
