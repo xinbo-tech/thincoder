@@ -1031,6 +1031,32 @@ Notes:
 
 **落点判定（邻位新节 · 非独立档）**：§4.7 TTY-DRIVE **无在册设计**（见本节「先例调查结论」）⇒ **无「独立档」先例可随**；本条性质 = 工具面机制（与 §6.12–§6.21 同类同冠形：`### 6.x <主题>（<批次> · 台账 #N）`）⇒ 落本档邻位新节，档数零增（`docs/README.md` 地图零动）。
 
+#### 先例与公开源（设计前置两行）
+
+**先例行**（对齐 ∥ 偏离）：
+
+| 面 | 先例坐标 | 对齐 / 偏离 |
+|---|---|---|
+| 帽窗 `capWindow` | `thincoder-core/text-budget.mjs:28` `capText`（头 `keepHead` + `marker` + 尾 `keepTail`） | **对齐**：头 ∥ 标记 ∥ 尾三件与省略数口径；**偏离** = 中段不丢、回填未读缓冲（既有件无此语义）⇒ 薄包落，截断本体仍调它 |
+| 有状态剥离 `createStripper` | `thincoder-core/tools/shared.mjs:182` `sanitizeOutput`（消费点 `thincoder-core/agent-tools/ssh-transport.mjs:173`） | **偏离** = 跨 chunk 状态 + 覆盖面（带中间字节的 CSI ∥ 单字符 ESC ∥ BEL ∥ 退格）；既有件**无状态**、按 chunk 各自过正则 ⇒ 序列被切开即残留，不可直接复用 |
+| 四门就绪判 | 现行 `thincoder-core/agent-tools/ssh-transport.mjs:220` `waitSettled`（静默 ∥ 提示符 ∥ 硬超时） | **偏离** = 静默降为去抖 + 待答标记门 + 硬超时 60 s；既有「静默到点即判就绪」（`:236`）把回显后的长静默读成完成，正是本批要治的病 |
+| 注记文案 | `thincoder-core/text-budget.mjs:16` `fillMarker`（模板首个 `N` 为省略数） | **对齐** = 同一占位约定；措辞不复用（既有说 truncated，本批语义 = 中段可取回） |
+
+**三问答案（本批新件）**：
+
+| 新件 | 何处住 · 名 · 谁用 | 既有件为何不用 |
+|---|---|---|
+| `createStripper` | 住 `thincoder-core/agent-tools/ssh-transport.mjs`（传输面单点）；名逐字 `createStripper`（仓内零同名）；谁 = `attachChild` 的 `feed`（`ssh-transport.mjs:173`） | **既有但不可用**：`sanitizeOutput` 无状态、覆盖面窄（上表）；全仓 `.mjs` 普查（`grep`）另见 `thincoder-cli/src/tui/render.mjs:239` ∥ `thincoder-vscode/src/tools/shell.mjs:24` 两份同族无状态正则——零第二份状态机 |
+| `capWindow` | 住同档；名逐字 `capWindow`；谁 = `ssh-session.mjs` 的 **7 处**返回点（`:262` ∥ `:392` ∥ `:410` ∥ `:414` ∥ `:444` ∥ `:455` ∥ `:465`——实读） | 同档既有 `capText`（`ssh-transport.mjs:279`）只保尾、且与 `text-budget.mjs:28` 同名异义 ⇒ 本批由 `capWindow` 取代并**删该局部实现**（D2 单源） |
+| 注记文案 | 随 `capWindow` 出；占位约定同 `text-budget.mjs:16` `fillMarker` | 措辞不复用（语义不同，见上） |
+| 缓冲上界 `64 K` | `thincoder-core/agent-tools/ssh-transport.mjs:37` `BUF_KEEP_CHARS` —— **既有常量**，非本批新设 | — |
+
+**勘察证据行**：查过 = ① 仓内既有实现正则逐条对照（`thincoder-core/tools/shared.mjs:185`：CSI `\x1b\[[0-9;?]*[0x40-0x7E]` ∥ OSC `\x1b\]…BEL|ESC\\` ∥ `\x1b[()][0-9A-B]` ∥ `\x1b[=>#][0-9]?`——缺单字符 ESC、带中间字节 CSI、BEL、退格）；② 公共源仓登记读数 = 空（`PROJECT-MANIFEST.json:35` `"publicRepos": []`）。
+
+结论两句：**有用信息全在仓内**（既有实现 + 本机常量），无外部公共源可引；**规范面（ECMA-48 的 CSI / OSC 结构式）未取原文**——本节 ③ 类目表的边界值（参数 `0x30–0x3F` ∥ 中间 `0x20–0x2F` ∥ 终字节 `0x40–0x7E`）是**选定设计值**（与仓内既有正则的类目对齐、按该结构式写成），**不以规范原文自称**。
+
+由此定两件事：**判据取真机读数**——B11 ∥ B17 的夹具序列形按真机输出取，不按书本值凑；**表外序列的出口**——真机出现类目表外的序列 ⇒ 按 ③「仍在吐」路如实交出，并在实施记录里点名该序列形（回填 ③ 表 = 另批）。
+
 #### 机制选型（选定 = **零原生件路**：系统 openssh + `ssh -tt` + `SSH_ASKPASS` + 流式管道；D-TO17）
 
 **① 本地侧无 PTY 也成立（本能力的设计支点）**：`ssh -tt` 强制**远端**分配 PTY——本地无终端（我们的 stdin/stdout = 管道）也照配（`ssh(1)` 原文：「Multiple `-t` options force tty allocation, even if ssh has no local tty」）。
@@ -1057,10 +1083,49 @@ ssh 的客户端口令提问只有一条通道 ⇒ `read_passphrase()`（`sshcon
 **认证类失败**（password ∥ keyboard-interactive 两径——预探短路同点）⇒ 终止探连 → **先读保存件（⑪——命中 ⇒ 直接带密会话，零窗）** → 无 / 不可用 ⇒ 弹凭据窗 → **单次**带密会话（`NumberOfPasswordPrompts=1`——错口令一次即败，不静默重试）；**指纹变更 ∥ 不可达 ∥ 连接超时 ⇒ 弹窗之前硬停**（E2 / E3 语义）。
 **不带 `BatchMode`**（带了会直接弃用口令面——服务端面真机 A/B 核在案）。
 
-**③ 提示符 / 静默判定（「该我发了」的判据）**：`send` 后等待**静默窗**（缺省 800 ms 无新输出）**或**会话提示符正则命中（可选 `promptPattern`，agent 可设）⇒ 判定「已就绪」返回；未判定 ⇒ 到**硬超时**（缺省 10 s）返回**部分输出 + 可读句**（含 `ssh#N` / host / 已等时长——**不静默挂起**）。
-`--More--` 分页：识别并原样呈现（agent 发空格继续）；**第一刀不做自动翻页**（边界句，见文末）。
+**③ 就绪判据（「该我发了」）**：判据 = **设备是否在等我输入**，不是「有没有新输出」。四门按序：
 
-终端噪声：输出面 = 文本流——CRLF 归一 + ANSI CSI/OSC 转义剥离（**非逐屏渲染**；原始字节面不保真，边界句）。
+| 序 | 门 | 判据 | 结论 |
+|---|---|---|---|
+| ① | 待答标记 | **末行**（缓冲最后一个换行之后的部分，去尾空白）出现 `--More--` ∥ `(y/n)` ∥ `Password:` | **已就绪**——设备正等我发键（`--More--` 走空格、确认走 y/n）；立即返回，标记**原样呈现** |
+| ② | 提示符 | `promptPattern`（agent 可设）命中 ∥ 缺省设备提示符形命中（行尾 `#` `>` `$` `%`，前接非空白词） | **已就绪**（`prompt`） |
+| ③ | 仍在吐 | 收到字节但尾既非待答标记亦非提示符（`Building configuration...` 这类）∥ `send` 后**一个字节都没回** | **未就绪**——设备在忙，继续等到硬超时；**不按静默判沉降** |
+| ④ | 硬超时 | 缺省 **60 s** 到点 | 返回部分输出 + 可读句，**点名哪个门没过**（**无提示符 ∥ 仍在输出 ∥ 一个字节都没回**——三枚标签与门③ 的两条子情形同文），含 `ssh#N` / host / 已等时长——不静默挂起 |
+
+静默窗（缺省 **800 ms**）降为**去抖**，职责只有一件：判「尾部这半条标记算不算到齐」（chunk 边界可能把提示符 ∥ 待答标记切开）。**门① 门② 在每个到达的 chunk 上求值**——判断时点不因静默窗推后；静默窗不参与门的求值，也不再单独构成「已就绪」。
+
+依据 = 9600 波特下一行 60 字符约 62 ms，800 ms 是行内最坏间隙的十余倍；快命令由门 ② 在首个到达 chunk 上即刻返回。
+
+**门① 只看末行（为什么）**：退格只剥离、不参与擦除（远端擦除序列各家不一，逐字节擦除语义会引入环境猜测）——「被回擦掉的旧标记」只能靠位置排除：`--More--` 一旦被后续输出顶走就不在末行，门① 自然不命中。一条规则同治「陈旧标记」与「串尾噪声」。
+
+**存量优先（`read` 的交出口）**：缓冲非空 ⇒ `read` 立即交出、结论 = `buffered`；四门只判**新到字节**（既有实现已如此：`thincoder-core/agent-tools/ssh-session.mjs:404` ∥ `:413`）。中段回填的取出路径同为此径 ⇒ 长配置按窗口连续取全时**不付硬超时**。
+
+**适用范围（时值拆两常量）**：四门与静默窗只判 `send` / `read` / `secret_input` 的本次等待；`connect` 首屏采集沿用 **10 s**（`SSH_CONNECT_SETTLE_MS`）——既有 `connect` 不传 `timeoutMs`、吃常量缺省（`ssh-session.mjs:238`），与 `send` / `read` 的显式传值（`:388` ∥ `:407`）不同源；两个时值拆成两个常量，慢设备才拖不动连接。
+
+硬超时缺省 **10 s → 60 s**。依据 = 本工具的服务对象是网络设备的**慢操作**（`write memory` / `copy run start` / `reload` 在慢 CF 上数十秒），10 s 短于该量级 ⇒ 必被判超时。
+上限侧依据 = ssh 层 2 分钟内宣告死对端（`ServerAliveInterval=30` × `ServerAliveCountMax=4`）⇒ 60 s 不越传输层寿命。**如实记**：60 s = 选定策略值，非实测读数；真机读数如不符 ⇒ 改这一个常量。
+
+`--More--` 分页：识别 + 就绪立即返回 + 原样呈现（agent 发空格继续）；**不做自动翻页**（边界句，见文末）。
+
+终端噪声（输出面 = 文本流；**非逐屏渲染**）：剥离 = **有状态**——转义序列可被 chunk 边界切开，状态须跨 chunk 携带（按 chunk 各自过正则 ⇒ 半截序列残留成字面）。
+落点 = 传输入口 `feed`，**先剥离后遮蔽**：剥离只删字节、不插入 ⇒ 切不断秘密字面；顺序反过来则遮蔽的 `len-1` 尾缓冲会把转义残片带进返回面。
+
+**遮蔽的比较面与剥离面同规**：秘密值先过同一归一（控制字节剥离 + CRLF 归一）再进遮蔽表——整串与**按不可见处切开的各段（长度 ≥ 4）**都进；含控制字节的口令因此按段遮蔽。长度 1–3 的残段不遮蔽（会误吞正常输出），列为残余风险（边界条目见文末）。
+
+**`≥ 4` 为选定策略值**（与硬超时 60 s 同处置）：3 字符以下与正常输出的撞面过高（`[OK]` / `y/n` 这类正常短词即 3 字符），4 起撞面可控；真机读数如显示更短的口令段需要遮蔽 ⇒ 改这一个数，不动结构。
+
+**半条序列的收场（flush）**：① `read` / `send` 的返回边界——状态保留，缓冲尾那半条序列不进返回面（等下一片）；② 硬超时 ∥ `close` ∥ 会话终结——尾部半条序列**丢弃并计一次**，返回注记写 `1 incomplete escape sequence dropped`（返回面 `\x1b` 仍 0 命中）；③ 丢弃只限该序列自身的字节，其前后的可见字节照常交出。
+
+**走缝（chunk 边界可控）**：序列被切开这一幕**不靠真管道**（两次 `write` 可能被合成一片，用例会随机变绿变红）——单测直接对 `createStripper` 的 `feed` 逐段喂（单元级、边界确定）；端到端那格只判「返回面零残留」+「`--More--` 字面 1 命中」，不断言切点位置。
+
+| 类 | 形 | 例 |
+|---|---|---|
+| CSI | `ESC [` + 参数 0x30–0x3F + 中间 0x20–0x2F + 终字节 0x40–0x7E | 清屏 `\x1b[2J` ∥ 光标定位 `\x1b[1;1H` ∥ 私有查询应答 `\x1b[?1;2$y` ∥ 鼠标报 `\x1b[<0;10;5M` |
+| OSC | `ESC ]` … 终止于 `BEL` ∥ `ESC \\` | 设标题 `\x1b]0;R1\x07` |
+| 单字符控制 | `ESC` + 单字节 ∥ 裸控制字符 | 存取光标 `\x1b7` `\x1b8` ∥ 响铃 `\x07` ∥ `--More--` 擦除序列里的退格 `\x08` |
+
+保留 `\n` `\t` 与非控制字符；`\r\n` 与裸 `\r` 一律归为 `\n`（行结构可比）。
+**日志面 = 模型面同源**（剥后文本，无原始字节旁路）：日志的消费方是模型（超帽取回全量）与 NS4 明文扫描，两者都要干净文本，两份面对立必然漂移（D2 单源）。原始字节面不保真 = 本节边界句，不是缺陷。
 
 **④ 会话生命周期（保活 / 闲置 / 关闭）**：
 
@@ -1084,12 +1149,26 @@ ssh 的客户端口令提问只有一条通道 ⇒ `read_passphrase()`（`sshcon
 
 主机指纹：**继承本机策略**（不下发 `StrictHostKeyChecking`）——首见经确认路（askpass `confirm` 提示 ⇒ 助手答 `yes`，照交互式首见语义记入本机 `known_hosts`）；**效果说明（知情）**：本机策略为默认 `ask` 时该路**等效 accept-new**——首见指纹不经人核入档（继承策略下的确认应答，非主动下发覆盖）；**指纹变更 ⇒ 硬停**（ssh 自身拒连，不自动改写、不重试）；本机配置若为 `yes` 则一并继承其严格性。
 
-**⑥ 超时与输出帽**：`connect` 有连接超时（`ConnectTimeout=10`）；`read`/`send` 有硬超时（缺省 10 s，可显式给更大值）；单次返回帽缺省 **8 000 字符**（**保尾** + 截断注记）；全量流式落 `configDir/tool-results/<ts>-ssh-<N>.log`（复用既有落盘族与保留期；工具结果侧超 64K 仍走既有 offload——零新帽族）。
+**⑥ 超时与输出帽**：`connect` 首屏等待 **10 s**（`SSH_CONNECT_SETTLE_MS`）；`read` / `send` / `secret_input` 硬超时缺省 **60 s**（`timeoutMs` 可显式覆盖；判据见 ③）；单次返回帽缺省 **8 000 字符**（`SSH_RETURN_CAP`），形 = **保头 + 省略注记 + 保尾**。
+
+**帽窗算术（一句口径）**：**返回总长 ≤ 帽，注记计入帽内**——先算注记长度，头尾预算 = 帽 − 注记长，再按 **头 60% ∥ 尾 40%** 分；切点按行边界取整（不切半行），取整只在头段 ⇒ **头段可少不可多**，总长恒 ≤ 帽。`maxChars` 视为本次的帽，同式。
+
+`maxChars` 覆盖的是**本次返回窗口**，不是丢弃量：省略的中段留在会话未读缓冲里，下一次 `read` 先把它交出——长配置按窗口连续取全，不靠翻日志。
+
+未读缓冲宽 **64 K**（`thincoder-core/agent-tools/ssh-transport.mjs:37` `BUF_KEEP_CHARS`——既有常量，非本批新设）；超出即从**最旧一端**截掉并置 `bufDropped`，返回注记如实写 `dropped`——**保住尾证据**（提示符 ∥ `[OK]` 不掉，否则门② 永不命中），丢的开头只能由 log 取。复现路径 = 假设备连吐 70 000 字符不平息 ⇒ 注记含 `in-memory buffer overflowed`。
+
+注记形 = `[… N chars omitted (head H / tail T) — the omitted middle is kept; call read again to collect it …]`（N = 真实省略数，占位约定同 `thincoder-core/text-budget.mjs:16` `fillMarker`）。
+
+截断本体 = `thincoder-core/text-budget.mjs:28` `capText`（`max` / `keepHead` / `keepTail` / `marker`——零新截断实现）；`ssh-transport.mjs:279` 那个只保尾的同名 `capText` 随之删除（D2 单源：同名异义两实现必漂移）。
+
+全量流式落 `configDir/tool-results/<ts>-ssh-<N>.log`（复用既有落盘族与保留期；工具结果侧超 64K 仍走既有 offload——零新帽族）。
 
 **⑦ 凭据零入上下文（NS4 的机制面）**：
 
 - 值**不进**：工具入参（`secret_input` 无值参）∥ 工具结果（只回状态句）∥ 会话档 / 消息面 ∥ trace / 日志 ∥ 保存件**明文**（**明文零落盘**——「值不落盘」口径的现行形；显式保存 = ⑪，**仅密文**落用户域私档 = 有意例外）；**新增链路（加解密 / 保存 / 复用解密段）自身子进程零 argv ∥ 零 env**；复用终段喂入 = ② 在册 `TC_SSH_SECRET` 环境直喂残留面（照旧——非新增链路零 env 之违）。
-- **回显遮蔽（新机制，如实写明）**：远端若把键入秘密回显进输出流（部分设备 / 程序会），写入后对**捕获面与日志面**做值遮蔽——移除输出中该秘密字面（含跨 chunk 切分：保留 `len-1` 尾缓冲）；秘密内存存活至会话关闭（仅供遮蔽过滤器），关闭即弃。
+- **回显遮蔽（新机制，如实写明）**：远端若把键入秘密回显进输出流（部分设备 / 程序会），写入后对**捕获面与日志面**做值遮蔽——移除输出中该秘密字面（含跨 chunk 切分：保留 `len-1` 尾缓冲）。
+- **遮蔽的比较面 = ③ 的同一次归一 + 分段**（秘密值先过控制字节剥离与 CRLF 归一，再按不可见处切成 `≥ 4` 的段进同一张表）：裸字面匹配会漏掉被 chunk 切开或内部夹控制字节的回显，正是本节要治的残段落。
+- 秘密内存存活至会话关闭（仅供遮蔽过滤器），关闭即弃。
 - 弹窗值**零留存**：端面不写入会话状态（CLI 掩码步先例「掩码步零留存——不着状态」照搬）。
 
 **⑧ 三端弹窗载荷（`onSecretInput` 注入缝——照 `onQuestion` 先例）**：
@@ -1152,8 +1231,8 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | action | 参数 | 返回（摘要） |
 |---|---|---|
 | `connect` | `host`（必）· `user` / `port`（可选——缺省交本机配置）· `label`（可选）· `identityFile`（可选——⑩） | `ssh#N` + 状态行（密钥机零弹窗 / 密码机一次凭据窗（有保存件 ⇒ 零窗——⑪））+ 首屏提示符输出 |
-| `send` | `id`（必）· `data`（必；不结尾换行时默认补 `\r`——设备 Enter 语义）· `settle`（可选开关/口径）· `timeoutMs` | 该轮输出（≤ 帽）+ 就绪判据结论（静默 ∥ 提示符命中 ∥ 超时） |
-| `read` | `id` · `timeoutMs` · `maxChars` | 上次读后新增输出（无则等至静默/超时） |
+| `send` | `id`（必）· `data`（必；不结尾换行时默认补 `\r`——设备 Enter 语义）· `settle`（可选开关/口径）· `timeoutMs` | 该轮输出（≤ 帽）+ 就绪结论（**待答标记** ∥ **提示符** ∥ **硬超时**——静默只是去抖，不出结论） |
+| `read` | `id` · `timeoutMs` · `maxChars` | 上次读后新增输出：**缓冲非空 ⇒ 立即交出**（结论 = 缓冲，不付硬超时）；缓冲空 ⇒ 等到门① ∥ 门② ∥ 门④（`timeoutMs`） |
 | `secret_input` | `id` · `label`（可选） | 触发凭据窗 → 掩码写入 + `\r`；返回状态句 + 输出增量（**值永不出现**） |
 | `close` | `id` | 末段输出 + 关闭确认 |
 | `list` | — | 在活会话清单（id / host / user / 状态 / 空闲秒）——上下文压缩后的恢复路 |
@@ -1167,11 +1246,11 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | # | 档 | 现况 | 实施面 | 动作 |
 |---|---|---|---|---|
 | 1 | `thincoder-core/tools/ssh.mjs` | **105** | +13 实读 | 工具本体 + 参数 schema + 动作分发；保存面：`credentials` / `forget` 两动作 + `identityFile` 参 + 只读钩子 |
-| 2 | `thincoder-core/agent-tools/ssh-session.mjs` | **439**（实读；非空 411） | +47（⇒ **486**） | 会话池 / 连接流 / 动作面 / 凭据窗 / 非密预填档 / 生命周期；保存面：保存件接线（探连失败支）+ 勾选面 + 两动作薄转口 |
+| 2 | `thincoder-core/agent-tools/ssh-session.mjs` | **488**（实读 2026-10-30 收口复读；非空 460——保存面 +47 已落地） | 本批 +2（⇒ **488**） | 会话池 / 连接流 / 动作面 / 凭据窗 / 非密预填档 / 生命周期；保存面：保存件接线（探连失败支）+ 勾选面 + 两动作薄转口；**本批**：7 处 `capText(...)`（`:262` ∥ `:392` ∥ `:410` ∥ `:414` ∥ `:444` ∥ `:455` ∥ `:465`）改 `capWindow(...)` + 中段写回 `entry.buf`；`connect` 首屏改吃 `SSH_CONNECT_SETTLE_MS` |
 | 3 | `thincoder-core/tools/ssh-askpass.mjs` | — | 新 ≈30–50 | 口令助手（独立进程入口） |
-| 4 | `thincoder-core/tool-docs/ssh.md` | **34**（实读） | +17（⇒ **51**） | 工具描述（**产品代码 · `thincoder-core/tool-docs/`**：内容依据 = 机制文档、落笔 = eng-coder——保存面内容点：勾选语义 / 零窗复用 / fail-soft / `credentials`·`forget` / 装公钥引导步骤 / 残余风险句 / 边界（仅连接凭据 · 仅本机）） |
+| 4 | `thincoder-core/tool-docs/ssh.md` | **49**（实读 2026-10-30；保存面 +15 已落地） | 本批 +2–4（⇒ **≈51–53**） | 工具描述（**产品代码 · `thincoder-core/tool-docs/`**：内容依据 = 机制文档、落笔 = eng-coder——保存面内容点：勾选语义 / 零窗复用 / fail-soft / `credentials`·`forget` / 装公钥引导步骤 / 残余风险句 / 边界（仅连接凭据 · 仅本机）） |
 | 5 | `thincoder-core/tools/index.mjs` | 80 行 | +2 | 注册 + 导出 |
-| 6 | `thincoder-core/agent/helpers.mjs` | 491 行 | +1 | 子代面排除集 |
+| 6 | `thincoder-core/agent/helpers.mjs` | **500**（实读 2026-10-30；非空 453） | +1（⇒ **501**） | 子代面排除集 |
 | 7 | `thincoder-core/permission.mjs` | **126**（实读） | +5（⇒ **131**） | `formatPermission` `ssh` 行（保存面 += `forget` 行——明示目标主机，无值） |
 | 8 | `thincoder-core/agent/dispatch-run.mjs` | 185 行 | +1 | `onSecretInput` 透传 |
 | 9 | `thincoder-core/agent-tools/async-discard.mjs` | 221 行 | +3–5 | 会话中止收尾 |
@@ -1181,13 +1260,19 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | 13 | VSC 端 · 会话面（逐档实读） | `thincoder-vscode/src/extension/panel-callbacks.mjs` **359** ∥ `thincoder-vscode/src/extension/panel-chat.mjs` **263** ∥ `thincoder-vscode/src/extension/panel-messages-turn.mjs` **232** ∥ `thincoder-vscode/src/extension/panel-messages.mjs` **392** ∥ `thincoder-vscode/src/extension/chat-panel.mjs` **456** ∥ `thincoder-vscode/webview/secret-input.js` **111** ∥ `thincoder-vscode/webview/chat-messages.js` **297** ∥ `thincoder-vscode/webview/question.js` **25**（卡面端壳先例——零改） ∥ `thincoder-vscode/src/tools/index.mjs` **192** | —（会话面 Δ = 0；保存面 Δ = 行 20） | 卡片面（`panel-callbacks.mjs` **:293** 注入点——`askInPanel` 同族）+ 消化面回落 + webview 卡面 |
 | 14 | 桌面端 · 会话面（逐档实读） | `thincoder-desktop/src/main/agent-bridge.mjs` **331** ∥ `thincoder-desktop/src/main/agent-host.mjs` **338** ∥ `thincoder-desktop/src/main/ipc.mjs` **300** ∥ `thincoder-desktop/src/main/ipc-registry.mjs` **103** ∥ `thincoder-desktop/src/main/suspensions.mjs` **167** ∥ `thincoder-desktop/src/preload/preload.cjs` **94** ∥ `thincoder-desktop/renderer/secret-prompt.mjs` **323** ∥ `thincoder-desktop/renderer/questions.mjs` **47**（零改——面体落新档） ∥ `thincoder-desktop/renderer/events.mjs` **287** ∥ `thincoder-desktop/renderer/events-subscribe.mjs` **103** ∥ `thincoder-desktop/renderer/badges.mjs` **44** ∥ `thincoder-desktop/renderer/i18n-views.mjs` **436** ∥ `thincoder-desktop/renderer/app.mjs` **347** | —（会话面 Δ = 0；保存面 Δ = 行 21） | 转口（注入 `askSecret` + 回调 `onSecretInput`）+ 渲染面弹窗（`secretPrompt` 切片） |
 | 15 | 单测（保存面批内件） | — | 核 1 档（保存件 + 连接流——夹具替身 ssh ∥ 替身后端；替身 = 非恒等变换，保住「明文 0 命中」判据力）+ 三端勾选渲染核（随各端既有测试面）——用后即删 | 判据核法 = S6–S9；随批档存放，不进 `test/` 树 |
-| 16 | `thincoder-core/agent-tools/ssh-transport.mjs`（**新**——拆档产物：行 2 授权句落形） | — | 新（**324**——内容行） | 运行面：askpass 链 / 子进程 / 沉降 / 遮蔽 / 输出帽 / 失败分类；A 面 = `-i` / `~` 展开 / keepAlive 透传 |
-| 17 | `thincoder-core/agent-tools/subagent-scheduler.mjs`（清单外随动——取号扫描域） | 448 行 | +3（**451**） | 取号扫描域 += `_sshSessions`（不扩 ⇒ 取号与存活 ssh 会话 id 撞号） |
+| 16 | `thincoder-core/agent-tools/ssh-transport.mjs` | **561**（实读 2026-10-30 收口复读；非空 519） | +237（⇒ **561**） | 运行面：askpass 链 / 子进程 / 就绪判据 / 遮蔽 / 输出帽 / 失败分类；本批 += 有状态剥离器 `createStripper`（承接 chunk 边界）∥ 四门就绪判据（`waitSettled`：待答标记 ∥ 提示符 ∥ 仍在吐 ∥ 硬超时 60 s）∥ 帽窗口 `capWindow`（保头 + 保尾 + 中段回填未读缓冲）∥ **删**只保尾的同名 `capText` 局部实现 ∥ 常量 `SSH_TIMEOUT_MS` 10 s → 60 s + 新 `SSH_CONNECT_SETTLE_MS` = 10 s；A 面 = `-i` / `~` 展开 / keepAlive 透传 |
+| 17 | `thincoder-core/agent-tools/subagent-scheduler.mjs`（清单外随动——取号扫描域） | **479**（实读 2026-10-30；非空 457） | +3（⇒ **482**） | 取号扫描域 += `_sshSessions`（不扩 ⇒ 取号与存活 ssh 会话 id 撞号） |
 | 18 | `thincoder-core/agent-tools/ssh-vault.mjs`（**新**） | — | 新 ≈170–220 | 保存件单点：后端解析（DPAPI）/ 加解密（PowerShell 宿主——脚本常量 + stdin/stdout）/ 存取删 / 可用性判定 |
 | 19 | `thincoder-cli/src/tui/secret-prompt.mjs`（保存面） | **202**（实读） | +12–18 | 勾选步（渲染 `(y/N)` + 值解析布尔） |
 | 20 | `thincoder-vscode/webview/secret-input.js`（保存面） | **111**（实读） | +10–16 | 勾选行（原生 checkbox + 读 `checked`） |
 | 21 | `thincoder-desktop/renderer/secret-prompt.mjs`（保存面） | **323**（实读） | +12–18 | 勾选行（同 VSC；值读取 = `readSecretValues` 支路） |
-> **近线注**：`thincoder-cli/src/tui/tool-events.mjs` **462**（余 38）∥ `thincoder-core/agent-tools/ssh-session.mjs` 保存面后 **486**（触 490 ⇒ 按既有授权句再拆——候选 = `credentials` / `forget` 与凭据获取链迁入 `ssh-vault.mjs`）。
+> **近线注（2026-10-30 收口复读）**：`thincoder-core/agent-tools/ssh-transport.mjs` **561**（越 500 顾问线——拆分计划见档位结论）∥ `thincoder-core/agent/helpers.mjs` **500**（恰在线上）∥ `thincoder-core/agent-tools/ssh-session.mjs` **488**（余 12）∥ `thincoder-cli/src/tui/tool-events.mjs` **462**（余 38）。
+> **档位结论（本批 · 收口复读）**：各档 Δ 后**无一破 800 硬线**；越 500 顾问线一档，逐条如下。
+>
+> · `ssh-transport.mjs` **561**（Δ +237，非空 519）⇒ **越 500 顾问线**（800 硬线未触）⇒ **拆分计划** = 可见文本面整块迁出：`MASK_SEG_MIN` ∥ `INVISIBLE_SPLIT` ∥ `createStripper` ∥ `normalizeText` ∥ `createMask`（现 `:40` ∥ `:122`–`:252`，≈132 行）迁入新档 `thincoder-core/agent-tools/ssh-text.mjs`（职责 = 剥后文本面单点：剥离 + 遮蔽归一——两者本就共用同一不可见类目，同档不拆）；消费方 `ssh-session.mjs:34` 的 import 一行改指向新档，其余调用点零动；迁后预估 **≈431**，**迁完重测**；迁后仍越 500 ⇒ 拆分 = 新结构，**另开批**（本设计不授权）。**授权面 = 本行自身 ∥ 落点文件清单行 16**——拆点与迁入档在此指明，不是另取授权。
+> · `ssh-session.mjs` **488**（Δ +2，非空 460）⇒ **未越 500 顾问线**（余 12）——本批只在既有七处换函数名 + 中段回填，无结构增。
+> · `helpers.mjs` **500**（实读，非空 453）：恰在 500 顾问线上 ⇒ **本批不拆**（该档本批只加一个数组元素，拆点与本次改动无关）∧ **拆分复核 = 该档下次实质触碰时做**（拆点由那一轮定，本批不预设）；800 硬线未触。
+> **批内单测**：`docs/batches/2026-10-30-ssh-device-readability.test.mjs`（随批档存放——与行 15 口径、§6.23 先例一致；跑法 `node --test docs/batches/2026-10-30-ssh-device-readability.test.mjs`；**收口删档**——RTM 7-4 门判其仍在盘即拒收口）。
 > **读数口径**：现况列 = 内容行实读（2026-10-17 复读——端侧会话面 / 保存面同拍）。
 > **零改面（保存面核过）**：`tools/ssh-askpass.mjs`（35）∥ 三端转口链（`tool-events.mjs` 462 / `panel-callbacks.mjs` 359 / `agent-bridge.mjs` 331——`fields` 整体透传，勾选属性沿载不需扩白名单）。
 
@@ -1200,7 +1285,7 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | **S1** 建会话（密钥优先 · 密码窗） | 密钥 / agent 机：`connect` 成功且**凭据窗回调零调用**＋**保存件零读取**（同机有保存件时——观测缝读次 = 0：`_vaultReadsForTest()`）；配置复用：不给 `-p`/`user` 时生效项来自本机配置（读回 `ssh -G <host>` 同值比对面）。密码机（无保存件 / 保存不可用）：`connect` **恰触发一次**凭据窗，链路含 askpass 调用（助手留痕夹具）且连接成功 |
 | **S2** 多往返 · 状态保持 | 同一 `ssh#N` 上 ≥2 轮 `send`/`read` 往返；状态判据 = 会话内设可见状态（POSIX：`cd /tmp` 后 `pwd` 回显 `/tmp`；设备：模式提示符变化），且**跨回合**仍持（缺省口径 = 间隔 > 60 s；机跑 = 时间缝压小 keep-alive 跨 ≥2 个间隔——④ 测试态时间缝） |
 | **S3** 交互流程（提示符 / 确认 / 分页） | 夹具（脚本化替身 = 会输出提示符 / `--More--` 的假设备）：`read` 在 ≤ settle 上限内返回并含提示符判据；`--More--` 出现在返回文本中，随后 `send(" ")` 返回后续页；非全屏（边界） |
-| **S4** 读回驱动 · 保活 | 两次调用间隔 > 60 s 会话仍活（机跑 = 时间缝压小 keep-alive 跨 ≥2 个间隔；`read` 正常）；闲置超时到点（`idleMs` 缝压小）⇒ 自动关闭 + 注记注入（可读）；单次返回 ≤ 帽（8 000 字符缺省）且全量在 log（读 log 与返回尾部一致） |
+| **S4** 读回驱动 · 保活 | 两次调用间隔 > 60 s 会话仍活（机跑 = 时间缝压小 keep-alive 跨 ≥2 个间隔；`read` 正常）；闲置超时到点（`idleMs` 缝压小）⇒ 自动关闭 + 注记注入（可读）；单次返回 ≤ 帽（8 000 字符缺省）且全量在 log（读 log 与返回面逐字同源） |
 | **S5** 用户可插话 · 实时可见 | 工具输出经既有 `onToolOutput` 流入端面（三端装配面实读：CLI/VSC/桌面 各一处接线）；插话 = 用户经对话面发消息（既有机制、零新面——**不声称新增**） |
 | **NS1** 零第三方运行时依赖 | 已裁 = **⓪ 零原生件**（需求档 §4.8 裁决 1）：`package.json` 运行时依赖零新增（实施轮 diff 读数为零）+ 全链实走（`connect`/`send`/`read`/`close` 经系统 openssh）。**版本面注**：askpass 径需 OpenSSH ≥8.4（`SSH_ASKPASS_REQUIRE`）——macOS 自带 ∥ Linux 主流发行版均满足；例外 = RHEL 8 / CentOS 8 代（8.0p1）⇒ 兼容 = 占位 `DISPLAY` 走旧语义（新旧两代都通，实施轮落地） |
 | **NS2** 不卡死 | 超时夹具（睡死不输出的替身）：`read`/`send` 在硬超时内返回**可读失败句**（含 id / host / 已等时长）；输出帽生效；零静默挂起 |
@@ -1213,6 +1298,25 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | **S9** 身份面 · `identityFile` | `connect identityFile=…` ⇒ `-i <路径>` 生效（`~` 展开）∧ 成功后记入 ⑨ 记录；再连（不给参）⇒ 复用记录值（⑩；N8 同判） |
 | **NS6** 保存面口径 | 明文 0 命中（会话档 / 结果 / log / trace / 保存档）；保存档仅密文 blob；子进程命令行零值（夹具记 argv）；仓内零落点（`git status` 读数） |
 | **NS7** 多端同源 | 三端共一份保存档（同 `configDir`）；端差仅渲染（勾选控件形）；保存 / fail-soft（S7）三端各跑同判 |
+| **S3 / NS2** 就绪判据（③ 本批） | 夹具（脚本化假设备，时间缝压低）：① 输出 `Building configuration...` 后停 3 s 再出 `[OK]` + 提示符 ⇒ 首次 `send` **不得**在静默窗判就绪，返回文本含 `[OK]`；② 缓冲末行为 `--More--` ⇒ 就绪原因为待答标记，且返回文本 `--More--` 恰 1 命中；③ 睡死不输出 ⇒ 硬超时返回可读句，且句内点名是哪一门没过；④ 中段回读（N9 后紧接 `read`）⇒ 结论 = `buffered`、用时 < 1 s（不付 60 s） |
+| **S4** 输出帽（⑥ 本批） | 输出 20 000 字符 ⇒ **返回总长 ≤ 帽（注记计入帽内）**且注记含真实省略数，首行 ∥ 末行俱可检出；随后 `read` 取回中段，三段拼合与原文逐字一致；`maxChars: 500` ⇒ 窗口 500 生效、中段仍在缓冲；连吐 70 000 字符 ⇒ 注记含 `dropped`、尾段提示符仍在 |
+| **S3 / NS4** 终端噪声（③ 本批） | 夹具把 CSI 按 chunk 边界切开（`\x1b[1;` ∥ `1H`）且会话含秘密回显 ⇒ 返回面 `\x1b` 0 命中、秘密**任何可见残段**（归一段 ≥ 4 字符）0 命中；`--More--` 字面 1 命中；半条序列收场 ⇒ 注记 `1 incomplete escape sequence dropped`、返回面仍零 `\x1b`；log 面同判（剥后文本、无原始字节） |
+
+#### 集成测试设计（本批 · RTM 增量）
+
+读 `test/RTM.md`（仓内 UAT 验收总表，CLI 端 21 个业务故事）后按增量答三问。
+
+**破行 = 0**：本批不改任何既有用例所断言的业务可观察结果——既有 1–21 节无一涉 `ssh` 工具（`grep` 实读：`ssh` 只在本节相关档出现）。**冗余行 = 0**：无既有行被本批取代或作废。
+
+**缺失行 = 新故事「22. SSH 接网络设备：读得清、拿得全、判得准」（CLI 端，三行 22-1 ∥ 22-2 ∥ 22-3）**，已在 `test/RTM.md` 定号（用例名逐字同号 = `test('22-1 …')`）。
+
+| 行 | 所验的组件交互 | 断言的业务可观察结果 | 需求回指 | 进入口 |
+|---|---|---|---|---|
+| 22-1 | 工具面 `ssh` ⟷ 会话池 ⟷ 传输面剥离 / 帽窗 | 20 000 字符的 `show run`：工具结果回执零 `\x1b`、首行与末行俱在、注记点名中段可取回；随后 `read` 取回中段，三段拼合与设备原文逐字一致 | §4.8 S4 ∥ S3 | CLI 会话里让助手 `connect` 再 `send("show run")`——用户看的是对话里那一格工具结果回执 |
+| 22-2 | 就绪判据 ⟷ 会话池 | `write memory` 回显后静默 3 s 再出 `[OK]`：首次 `send` 的返回含 `[OK]`，未在静默窗返回 | §4.8 S3 ∥ NS2 | 同上，`send("write memory")` |
+| 22-3 | 硬超时 ⟷ 会话池 ⟷ `list` | 睡死设备：给定 `timeoutMs` 内拿到可读句并点名未过的门，会话仍在 `list` 里（不静默挂起、不崩） | §4.8 NS2 | 同上，`send` 到一台不吐字节的替身 |
+
+**收窄（如实记）**：远端用 `_setSshBinaryForTest(cmd, prefixArgs)`（`thincoder-core/agent-tools/ssh-transport.mjs:44` 既有测试缝）换成脚本化假设备，不需真机；三行同住 `test/integration/ssh-device-readability.test.mjs`。真机腿 = 交付前人工一次，不进自动化集。
 
 #### 用例表（正常 / 边界 / 错误）
 
@@ -1222,8 +1326,8 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | N2 | 正常 | 密码机 `connect`（窗内提交） | 连接成功；askpass 助手留痕 1 次 |
 | N3 | 正常 | `send("cd /tmp")` → `send("pwd")` | 第二轮输出含 `/tmp`（状态保持） |
 | N4 | 正常 | 设备 `enable` 流程：`send("enable")` → `secret_input` | 掩码提交 + 提示符推进；返回值内含密码字面 **0 次** |
-| B1 | 边界 | 单次输出 > 帽 | 返回保尾 + 截断注记；log 全量 |
-| B2 | 边界 | 慢设备（静默窗到点无提示符） | 返回部分 + 「未检出提示符」可读句（非失败） |
+| B1 | 边界 | 单次输出 > 帽 | 返回保头 + 注记 + 保尾（注记含真实省略数）；中段留未读缓冲——再 `read` 取回；log 全量 |
+| B2 | 边界 | 慢设备：无提示符、无待答标记，静默到点（硬超时） | 返回部分 + 「未检出提示符 ∥ 仍在输出」可读句（非失败）——**不在静默窗返回** |
 | B3 | 边界 | 空闲超时（`idleMs` 缝压小——缺省 600 s） | 自动关闭 + 注记；此后 `send` 回「会话已结束」 |
 | B4 | 边界 | 第 5 条并发会话 | 显式拒（含上限句） |
 | B5 | 边界 | `--More--` 分页 | 识别 + 空格继续（第一刀不自动翻页） |
@@ -1248,6 +1352,17 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | E9 | 错误 | 保存写失败（磁盘 / 权限） | 连接不受影响 + 可读注记（增益面语义） |
 | E10 | 错误 | `forget` 无该条目 | 可读句（幂等——零抛） |
 | E11 | 错误 | mac / Linux 平台 | 勾选不出现；连接走既有凭据窗（边界明记） |
+| N9 | 正常 | 设备 `show run`（20 000 字符） | 首窗返回头 + 尾 + 注记；再 `read` 取回中段——内容零丢失 |
+| N10 | 正常 | `write memory`（回显后静默 3 s 再 `[OK]` + 提示符） | 不按静默判沉降；返回含 `[OK]` 与提示符 |
+| B11 | 边界 | 输出含 CSI ∥ OSC ∥ 退格，且序列被 chunk 边界切开 | 返回面零残留转义；`--More--` 字面保留；log 同源同判 |
+| B12 | 边界 | 缓冲尾 = `--More--` | 门① 判就绪立即返回，标记原样呈现；随后 `send(" ")` 取得后续页 |
+| B13 | 边界 | `send` 后一个字节都不回（慢 console） | 不判沉降；到硬超时才返回，可读句点名「一个字节都没回」 |
+| B14 | 边界 | `maxChars: 500` + 长输出 | 返回窗口 500；中段留缓冲；下次 `read` 继续交出 |
+| B15 | 边界 | N9 之后紧接着 `read`（缓冲里只有中段） | 立即交出（结论 = `buffered`），用时 < 1 s——不付 60 s 硬超时 |
+| B16 | 边界 | 假设备连吐 70 000 字符不平息（过 64 K） | 注记含 `in-memory buffer overflowed`；尾段提示符仍在（丢最旧、保尾）；开场从 log 取 |
+| B17 | 边界 | 收场时缓冲尾挂着半条序列（`\x1b[1;`） | 返回面 `\x1b` 0 命中 + 注记 `1 incomplete escape sequence dropped`；下一次 `read` 不受影响 |
+| B18 | 边界 | `--More--` 被后续输出顶走后出提示符 | 结论 = 提示符（门① 只看末行），不误发空格 |
+| B19 | 边界 | 回显的秘密值内含控制字节（`\x07`） | 归一后的秘密整串 ∥ 各归一段（≥ 4）**0 命中**；1–3 字符残段不判（边界句） |
 
 #### 关键决策
 
@@ -1257,6 +1372,16 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 - **D-TO19 保存机制 = 系统级加密后端（本批 Windows DPAPI，经系统 PowerShell 宿主）**：择据 = 零第三方依赖 ∧ 密钥来源 = 用户账户（不自管密钥——不做加密戏法）∧ 通道纪律（值经 stdin）；代价在册 = PowerShell 宿主启动 ≈0.3–0.4 s/次（实测；仅保存 / 复用两时点）+ 多码点字符平台注记（⑪）。
 - **D-TO20 保存交互 = 窗内 checkbox · 缺省不勾（opt-in）**：由 = 对「值不落盘」的有意例外须显式选择；单次交互（不做事后询问）——三端渲染差在册（⑪）。
 - **从属决策（保存面）**：条目被服务端拒 ⇒ 删该条目（判据 = 拒绝即值失效）；删除面 = 工具动作 `credentials` / `forget`（核单点、三端同源；私档可手删）；本批平台面 = 仅 Windows 后端（mac / Linux 边界 + 候补路在册）。
+- **D-TO21 就绪判据 = 「设备在等我输入」，不是「没有新输出」**：择据 = 网络设备的慢操作（闪存写 / 配置应用）在回显之后长时间静默，静默既可能是「做完了」也可能是「还在做」——以静默为判据必出半截输出。
+  实读 = `thincoder-core/agent-tools/ssh-transport.mjs:236` 静默到点即 `finish("silence")`，判据里没有「设备是否在等我」这一问；改判待答标记 ∥ 提示符两门，静默降为去抖。
+  - 被否 ① = 直接把 800 ms 调大：治不了「回显后长静默」这类（调多大都能被超过），且每条快命令都付这个延迟。
+  - 被否 ② = 静默到点先交部分、结论写「未检出提示符，可能仍在运行，可再 read」（= 现行 B2 的形）：它把「判据缺失」转给模型再问一次，而模型据半截输出已经先判了命令成败——本批要治的正是这一层。
+  - 被否 ② 的代价：未知提示符形的设备每条命令付满 60 s，接受它（慢操作本来就该等，快命令由门① ∥ 门② 即刻返回）。
+  - `promptPattern` 的发现路径：缺省按行尾 `#` `>` `$` `%` 判提示符；设备形不同时 `connect` 可选参 `promptPattern` 给正则（参数面 = `thincoder-core/tools/ssh.mjs:58`），工具描述与超时注记双处提示「未检出提示符 ⇒ 给 `promptPattern`」。
+- **D-TO22 输出帽 = 返回窗口，不是丢弃量**：择据 = 网络配置的关键内容在头部（接口 / ACL）、命令结束的证据在尾部（提示符 / `[OK]`）、中段仍要可取 ⇒ 保头 + 保尾 + 中段回填未读缓冲（下次 `read` 交出）。复用 `thincoder-core/text-budget.mjs:28` `capText`（头尾 + 标记已单源——零新截断实现）。
+  被否 = 只保头（丢提示符 ⇒ 判不出命令是否结束）∥ 只留日志路径（模型多一次读档，且日志是配置域不是会话面）。
+- **D-TO23 剥离面 = 传输入口，日志与模型面同源**：择据 = 日志的两个消费方（模型超帽取回全量、NS4 明文扫描）都要干净文本；留一份原始字节旁路 = 两份面对立、必然漂移（D2）。
+  被否 = 日志保原始字节：与本节既有边界句「原始字节面不保真」相抵，且取回时把噪声再喂给模型一次。
 
 #### 先例调查结论
 
@@ -1313,7 +1438,9 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 - **不做跨会话存活**（agent 会话结束 = 会话灭）；**不做子代面**（depth>0 排除）。
 - **不做 `--More--` 自动翻页 / 不做危险命令文本拦截**（后者全交审批门——零文本拦截，见 §6.4）。
 - **不引本地 PTY 包装**（`script` / `winpty` / `sshpass` 皆不入）。
-- **不改需求档**（需求面缺口如现 ⇒ 上抛主 agent）。
+- **遮蔽的 1–3 字符残段不遮蔽 = 残余风险**（③ 的 `≥ 4` 阈值）：含控制字节的口令被归一切段后，长度 1–3 的段不进遮蔽表（进则误吞正常输出），这类残段可能落在返回面。
+- **原始字节面不保真**：输出面 = 剥后文本（③「日志面 = 模型面同源」），不提供未剥离的字节流；需要原始字节的用途不在本工具。
+- **不改需求档**：本批的需求面同步由父侧落笔（`docs/core/requirements/TOOLS.md` §4.8 S3 判据句 = 待答标记 ∥ 提示符 ∥ 硬超时，静默只作去抖）；设计面只引不改。
 
 > 用例表副本 ∕ 受影响文件基准行账 ∕ 条目回指 = 本节内。
 

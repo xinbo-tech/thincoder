@@ -252,6 +252,17 @@
 | 21-3 | 同 21-1 的进程锚与目标，走 ACP `ledger/list`（`params.cwd` = B） | 回包与 CLI 载荷深等：1 项 · 根 = B · 行集 = B 的行 · 零 A 行 | 待执行 | — | — | 业务入口 = 扩展拉取选中项目的台账；缺口来源 = 台账 #1834 的第二出口 | `test/integration/ledger-read-cross-project.test.mjs` |
 | 21-4 | 同 21-1 的进程锚与目标，走 ACP `ledger/count`（`params.cwd` = B，会话锚 = A） | `count` = B 的未决四态行数（≠ 0）· `overdue` ∥ `evidenceOversize` 与 B 的读数一致 | 待执行 | — | — | 缺口来源 = 用户 2026-10-28 13:06 裁定 A（`count` 的界跟 `list`）；现行 `thincoder-cli/src/acp/read-data.mjs:77` 走 `ctx.getCwd()` ⇒ 修前回 0 | `test/integration/ledger-read-cross-project.test.mjs` |
 
+### 22. SSH 接网络设备：读得清、拿得全、判得准
+
+> 目的：接真网络设备时输出干净、长配置取得全、慢操作不误判就绪。
+> 节注：回指 = `docs/core/requirements/TOOLS.md` §4.8（S3 ∥ S4 ∥ NS2）；交互组件 = `ssh` 工具面 ⟷ 会话池 ⟷ 传输面（剥离 ∥ 帽窗 ∥ 四门）；进入口 = CLI 会话里让助手调 `ssh` 工具，用户看的是那一格工具结果回执；三态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 22-1 | CLI 会话里让助手 `ssh connect` 到脚本化假设备（`_setSshBinaryForTest` 替掉 ssh），再 `send("show run")`：设备吐 20 000 字符、夹 CSI/OSC/退格、末行 `--More--` | 工具结果回执零 `\x1b` 残留、首行与末行俱在、注记点名中段可取回；随后 `read` 取回中段，三段拼合与设备原文逐字一致；`--More--` 字面出现 1 次 | 待执行 | — | — | — | `test/integration/ssh-device-readability.test.mjs` |
+| 22-2 | 同一会话 `send("write memory")`：设备回显后静默 3 s 再出 `[OK]` 与提示符 | 结论 = 提示符命中 ∧ 未在静默窗交出（首屏从未在 800 ms 静默处返回）；`[OK]` 与提示符俱在返回文本里。用时只作旁证，不作断言 | 待执行 | — | — | — | `test/integration/ssh-device-readability.test.mjs` |
+| 22-3 | 同一会话 `send`：替身按脚本在第 N 字节后停吐（同一会话内从「会吐」切到「不再吐」，`timeoutMs: 1500`） | 硬超时内返回可读句并点名未过的门（无提示符 ∥ 仍在输出 ∥ 一个字节都没回）；会话仍在 `list` 里（不静默挂起、不崩） | 待执行 | — | — | — | `test/integration/ssh-device-readability.test.mjs` |
+
 ## VS Code 端（thincoder-vscode）
 
 **尚无集成用例**——本端集成层尚未建立；故事节随首个用例设立（编号先行：先定 RTM 编号，再落用例标题 `test('<编号> …')`）。

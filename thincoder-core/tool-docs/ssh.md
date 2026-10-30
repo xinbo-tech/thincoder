@@ -10,17 +10,17 @@ Parameters:
 - user: connect — login user (optional: your local ssh config decides, else the user recorded for this host locally)
 - port: connect / forget — TCP port (optional, default 22)
 - label: connect — short human label for this session (optional); secret_input — label for the value being sent
-- promptPattern: connect — regex that marks the shell prompt as ready (optional): send/read then settle the moment the prompt appears instead of waiting out the silence window
+- promptPattern: connect — regex that marks the shell prompt as ready (optional; the default recognises lines ending in `#` `>` `$` `%`)
 - identityFile: connect — private-key path to offer as `-i` (`~` expands); remembered for this host and reused when omitted (optional)
 - id: send / read / secret_input / close — session id from connect (`ssh#N`)
 - data: send — text to type into the session (a trailing newline is passed as-is; otherwise Enter is sent as `\r`)
 - settle: send — wait for the ready verdict before returning (default true); false returns right after the bytes are written
-- timeoutMs: send / read — wait budget override (default 10000; the wait then returns partial output with a readable line)
-- maxChars: read — return cap override (default 8000; the full output stays in the session log)
+- timeoutMs: send / read — wait budget override (default 60000; the wait ends as soon as the device is waiting for input — a prompt, `--More--`, a y/n or password prompt)
+- maxChars: read — return-window override (default 8000): head 60% + a note + tail 40%, and the omitted middle stays in the session for the next read
 
 Output:
 - every result starts with the session status line: `[ssh (ssh#3) 10.0.0.5 — ready · idle 3s]`
-- connect returns the first screen; send returns the round's output plus the ready verdict (silence | prompt matched | timeout); read returns what arrived since the last read
+- connect returns the first screen; send returns the round's output plus the ready verdict (answer prompt such as `--More--` | prompt matched | timeout); read returns what arrived since the last read
 
 Notes:
 - Key-first: keys, your ssh config and ssh-agent are always tried before any saved credential — a connect succeeds without a window
@@ -39,8 +39,9 @@ Notes:
   never affects the connection.
 - secret_input is for device prompts (enable password, sudo, key passphrases): it opens the same kind of window, writes the value plus Enter, and returns only the output — the value is never shown.
 - Sessions: at most 4 live at once (a connect beyond the cap is refused — close one first). A session idle for 600s with no send/read is closed automatically. `close` ends it (stdin EOF → 1.5s grace → the process tree is killed). Ctrl+I (interrupt) does not kill sessions; a user Stop does.
-- Output is capped per return (8000 chars, tail kept); the full stream is always in the session log whose path connect returns.
+- Output is a cleaned text stream: terminal escape sequences and CRLF noise are stripped, and the session log holds the same cleaned text as the result. Each return is a window (8000 chars: head + a note + tail); the omitted middle stays in the session, so another read collects it and a large configuration comes back in full.
 - Not for full-screen terminal UIs (vim/top/screen): output is read as a text stream — paged output such as `--More--` is shown as-is, not driven for you.
+- Ready means the device is waiting for you, not that output stopped: a prompt or an answer prompt (`--More--`, y/n, password) ends the wait, and a slow operation that goes quiet keeps waiting instead of returning half of its output. If a device's prompt does not look like a shell prompt, pass `promptPattern` on connect — otherwise each command waits out the full timeout.
 - Host keys follow your local ssh config — the tool never rewrites known_hosts. A changed or untrusted key stops the connect with a readable error before any credential is asked for.
 - read / list / credentials are read-only (no approval prompt); connect / send / secret_input / close / forget pass the approval gate like any side-effecting tool, and secret_input shows a masked placeholder — the value itself is never in the approval text.
 - credentials lists saved entries (host / user / saved / last used — never a value); forget deletes the entry for a host (and optional port) and is idempotent — the next connect asks in the window again.

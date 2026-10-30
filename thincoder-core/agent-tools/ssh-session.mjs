@@ -30,9 +30,9 @@ import {
 } from "./async-settle.mjs"
 import { assertPoolKeyFree, consumeSubagentToken, nextSubagentId } from "./subagent-scheduler.mjs"
 import {
-  SSH_KEEPALIVE_MS, SSH_RETURN_CAP, SSH_SETTLE_MS, SSH_TIMEOUT_MS, bodyText, capText, classifyFailure, createMask, drain,
-  failureText, idLabel, settleNote, sshConfigDir, spawnSession, statusLine, unlinkAskpass, waitSettled,
-  writeAskpassWrapper,
+  SSH_CONNECT_SETTLE_MS, SSH_KEEPALIVE_MS, SSH_RETURN_CAP, SSH_SETTLE_MS, SSH_TIMEOUT_MS, bodyText, capWindow, classifyFailure,
+  createMask, drain, escapeNote, failureText, idLabel, settleNote, sshConfigDir, spawnSession, statusLine, unlinkAskpass,
+  waitSettled, writeAskpassWrapper,
 } from "./ssh-transport.mjs"
 import { askCredential, deleteEntry, hostKey, resolveSecret, saveEntry, touchEntry, vaultAvailable } from "./ssh-vault.mjs"
 
@@ -232,10 +232,11 @@ export async function connectSsh(parent, ctx, { host, user, port, label, promptP
   entry.askpassFile = writeAskpassWrapper(id)
   entry.logStream = createWriteStream(entry.logPath, { flags: "a" })
   entry.logStream.on("error", () => { /* 尽力面 */ })
-  /** 沉降等待（探连 ∥ 带密会话同径）：返回 reason + 已等时长。 */
+  /** 沉降等待（探连 ∥ 带密会话同径）：返回 reason + 已等时长。首屏 = `SSH_CONNECT_SETTLE_MS`（§6.22 ③
+   *  「适用范围」：60 s 只管 `send` / `read` / `secret_input`）；`settleOnSilence` = 首屏沿用静默降级。 */
   const settle = async () => {
     const t0 = Date.now()
-    const reason = await waitSettled(entry, { signal: ctx?.signal ?? null })
+    const reason = await waitSettled(entry, { timeoutMs: SSH_CONNECT_SETTLE_MS, settleOnSilence: true, signal: ctx?.signal ?? null })
     return { reason, waitedMs: Date.now() - t0 }
   }
   /** 起跑（探连 ∥ 带密会话同径；`-i` 两径同带——追加候选身份，不夺既有尝试序列）。
@@ -258,8 +259,9 @@ export async function connectSsh(parent, ctx, { host, user, port, label, promptP
       userFromRecord ? `user "${userFromRecord}" came from the local ssh-hosts record` : "",
       ...extra,
       dropped ? "in-memory buffer overflowed — full output in the log" : "",
-    ].filter(Boolean)
-    return { text: `${statusLine(entry)}\n${bodyText(capText(text, SSH_RETURN_CAP, entry))}\n${notes.join("; ")}` }
+      escapeNote(entry), // 半条序列收场注记（§6.22 ③ flush②）——报告一次即清零
+    ].filter(Boolean).map((s) => s.replace(/^\n— /u, ""))
+    return { text: `${statusLine(entry)}\n${bodyText(capWindow(entry, text, SSH_RETURN_CAP))}\n${notes.join("; ")}` }
   }
   /** 认证类失败分类（spawn 错误 ∥ 输出判据——两径同式）。 */
   const classify = () => (entry.spawnError
@@ -278,7 +280,7 @@ export async function connectSsh(parent, ctx, { host, user, port, label, promptP
     }
     if (reason === "timeout") {
       hardClose(entry, "closed", "consumed")
-      return { error: `ssh connect did not settle within ${SSH_TIMEOUT_MS}ms (${entry.host}) — the connection is closed; retry or increase the wait` }
+      return { error: `ssh connect did not settle within ${SSH_CONNECT_SETTLE_MS}ms (${entry.host}) — the connection is closed; retry or increase the wait${escapeNote(entry)}` }
     }
     let auth = "key"
     const flowNotes = []
@@ -366,8 +368,8 @@ export async function connectSsh(parent, ctx, { host, user, port, label, promptP
   }
 }
 
-/** 缓冲溢出注记（三动作同式——丢弃面显式化；全量恒在 log）。 */
-const droppedNote = (dropped) => (dropped ? "\n— in-memory buffer overflowed — full output in the log" : "")
+/** 丢弃面注记（三动作同式——缓冲溢出 ∥ 半条序列收场；全量恒在 log）。 */
+const droppedNote = (dropped, entry) => `${dropped ? "\n— in-memory buffer overflowed — full output in the log" : ""}${entry ? escapeNote(entry) : ""}`
 
 /** `send`（§6.22 动作表）：不结尾换行 ⇒ 补 `\r`（设备 Enter 语义）；沉降到点返回该轮输出。 */
 export async function sendSsh(parent, ctx, { id, data, settle = true, timeoutMs } = {}) {
@@ -389,11 +391,11 @@ export async function sendSsh(parent, ctx, { id, data, settle = true, timeoutMs 
   entry._notify = null
   const { text, dropped } = drain(entry)
   return {
-    text: `${statusLine(entry)}\n${bodyText(capText(text, SSH_RETURN_CAP, entry))}\n— ${settleNote(entry, reason, Date.now() - t0)}${droppedNote(dropped)}`,
+    text: `${statusLine(entry)}\n${bodyText(capWindow(entry, text, SSH_RETURN_CAP))}\n— ${settleNote(entry, reason, Date.now() - t0)}${droppedNote(dropped, entry)}`,
   }
 }
 
-/** `read`：上次读后新增输出（存量即返；无则等至静默/超时——§6.22 ③/⑥）。 */
+/** `read`：上次读后新增输出（**存量即返**、结论 = 缓冲；无存量才等到门① ∥ 门② ∥ 硬超时——§6.22 ③/⑥）。 */
 export async function readSsh(parent, ctx, { id, timeoutMs, maxChars } = {}) {
   const entry = findEntry(parent, id)
   if (!entry) return { error: missingEntry(parent, id) }
@@ -407,11 +409,11 @@ export async function readSsh(parent, ctx, { id, timeoutMs, maxChars } = {}) {
     const reason = await waitSettled(entry, { timeoutMs, signal: ctx?.signal ?? null })
     entry._notify = null
     const { text, dropped } = drain(entry)
-    const body = text ? bodyText(capText(text, cap, entry)) : "(no new output)"
-    return { text: `${statusLine(entry)}\n${body}\n— ${settleNote(entry, reason, Date.now() - t0)}${droppedNote(dropped)}` }
+    const body = text ? bodyText(capWindow(entry, text, cap)) : "(no new output)"
+    return { text: `${statusLine(entry)}\n${body}\n— ${settleNote(entry, reason, Date.now() - t0)}${droppedNote(dropped, entry)}` }
   }
   const { text, dropped } = drain(entry)
-  return { text: `${statusLine(entry)}\n${bodyText(capText(text, cap, entry))}\n— buffered output since the last read${droppedNote(dropped)}` }
+  return { text: `${statusLine(entry)}\n${bodyText(capWindow(entry, text, cap))}\n— buffered output since the last read${droppedNote(dropped, entry)}` }
 }
 
 /** `secret_input`（§6.22 动作表 + ⑦）：凭据窗 → 掩码写入 + `\r`；值永不出现于返回。 */
@@ -441,7 +443,7 @@ export async function secretInputSsh(parent, ctx, { id, label } = {}) {
   entry._notify = null
   const { text, dropped } = drain(entry)
   const tag = label ? ` (${escapeLite(label)})` : ""
-  return { text: `${statusLine(entry)}\nsecret written${tag} — value never echoed\n${bodyText(capText(text, SSH_RETURN_CAP, entry))}\n— ${settleNote(entry, reason, Date.now() - t0)}${droppedNote(dropped)}` }
+  return { text: `${statusLine(entry)}\nsecret written${tag} — value never echoed\n${bodyText(capWindow(entry, text, SSH_RETURN_CAP))}\n— ${settleNote(entry, reason, Date.now() - t0)}${droppedNote(dropped, entry)}` }
 }
 
 /** `close`：stdin 结束 → 1.5 s 宽限 → 杀树；返回末段输出 + 关闭确认。 */
@@ -452,7 +454,7 @@ export async function closeSsh(parent, ctx, { id } = {}) {
   if (entry.state !== "ready") {
     const was = entry.state
     finalize(entry, { state: "closed", status: "consumed" })
-    return { text: `${statusLine(entry)}\n${bodyText(capText(text, SSH_RETURN_CAP, entry))}\n— closed (it was already ${was})` }
+    return { text: `${statusLine(entry)}\n${bodyText(capWindow(entry, text, SSH_RETURN_CAP))}\n— closed (it was already ${was})${droppedNote(dropped, entry)}` }
   }
   entry.closing = true
   try { entry.child.stdin.end() } catch { /* 进程可能已退出——宽限后杀树 */ }
@@ -462,7 +464,7 @@ export async function closeSsh(parent, ctx, { id } = {}) {
   })
   if (!exited) killProcessTree(entry.child)
   finalize(entry, { state: "closed", status: "consumed" })
-  return { text: `${statusLine(entry)}\n${bodyText(capText(text, SSH_RETURN_CAP, entry))}\n— closed${exited ? "" : " (the remote did not exit within 1.5s — the process tree was killed)"}${droppedNote(dropped)}` }
+  return { text: `${statusLine(entry)}\n${bodyText(capWindow(entry, text, SSH_RETURN_CAP))}\n— closed${exited ? "" : " (the remote did not exit within 1.5s — the process tree was killed)"}${droppedNote(dropped, entry)}` }
 }
 
 /** `list`：在活会话清单（id / host / user / 状态 / 空闲秒）——上下文压缩后的恢复路。 */
