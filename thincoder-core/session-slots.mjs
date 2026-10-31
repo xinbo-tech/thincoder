@@ -6,10 +6,10 @@
  * init-block 批 · F-MI7 二次拆分：探测束接线后本档实读 517 行（破 490 判定线并越 500 硬限）
  * ⇒ 按 `CORE-UNIFICATION.md` §2.8.1 子表原行 3（已随 2026-10-08 批清账）**随批**外提清单 / 认领 / 属主面至
  * `session-slots-manifest.mjs`（语义原样迁移；本档 re-export 该档导出保既有 import 面——
- * 消费档 import 路径与名面不动）。本档保留 = 存储原语（cwd 哈希 / 路径 / 原子写 / 进程
- * sessionId）· 端记录（end marker）· 列表面（listSlots——条目集 = 盘面实读；扫描面住
- * `session-slot-scan.mjs`）· 删槽 · 恢复决策面
- * （usableSlot / loadLegacyFile / resumeSlot）。
+ * 消费档 import 路径与名面不动）。本档保留 = 存储原语（cwd 哈希 / 路径 / 原子写）· 端记录
+ * （end marker）· 列表面（listSlots——条目集 = 盘面实读；扫描面住 `session-slot-scan.mjs`）·
+ * 删槽 · 恢复决策面（usableSlot / loadLegacyFile / resumeSlot）。进程 sessionId 的本体已迁
+ * 零 import 叶 `session-identity.mjs`（PROVIDER.md §6.17），本档 re-export 保名面。
  *
  * 端名缝（SESSION.md §6.20 D-SE50 · 2026-09-25 SLOT-END-PARAM 批）：端名 = **进程内的单值
  * 声明**（`setSessionEnd` / `sessionEnd`；`END` 仅模块级初值——CLI 零声明即得「cli」）。
@@ -53,20 +53,15 @@ import {
 import { scanSlotMetas } from "./session-slot-scan.mjs"
 // 读面懒核实面（§6.25 判据句 3 落点 B——不可信清单调度：纯内存登记 + 启动窗外延迟拍）；静态环同形。
 import { scheduleVerify } from "./session-slot-verify.mjs"
+// 进程会话 id（PROVIDER.md §6.17 会话标识头）：本体住零 import 叶 `session-identity.mjs`——本档的
+// 依赖链会经请求装配面被拉进每个 transport 的 import 图，故迁出。本档 import 取用（usableSlot ∥
+// resumeSlot 的属主判据）+ 下行 re-export 保既有 import 面零改（消费档路径与名面不动）。
+import { getSessionId } from "./session-identity.mjs"
 export {
   slotDigest, loadManifest, saveManifest, ownerPid, ownerPids,
   allocateFresh, claimSlot, activeSlot, ledgerHealth,
 } from "./session-slots-manifest.mjs"
-
-let currentSessionId = null
-
-/** Generate unique session ID for this process */
-export function getSessionId() {
-  if (!currentSessionId) {
-    currentSessionId = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-  }
-  return currentSessionId
-}
+export { getSessionId }
 
 /** Normalize cwd for hashing: uppercase Windows drive letter so both ends
  *  (CLI's process.cwd() vs VS Code's uri.fsPath, which lowercases it) agree. */

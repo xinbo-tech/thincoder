@@ -51,9 +51,11 @@ export const PROVIDER_PRESETS = {
   // `/messages` 侧（同 key——模型按侧选）。字段集 = 最小面：`thinking` / `reasoningEffort` 不设 = 不发
   // （D-13 同口径）；`maxTokens` 仅 anthropic 侧设 `65536`（该 transport `max_tokens` 必发——不设即落规格
   // 行值 131072，超渠道口径）。**待验（无 key——未实拉 `/models` ∕ 载荷未实测；接入后按实拉复核）**；
-  // `x-opencode-session` 头 = 可选遥测——**不发**（亦不动 `providers[].headers` 面）。
-  "opencode-go": { baseURL: "https://opencode.ai/zen/go/v1", desc: "OpenCode Go subscription (sk- key from opencode.ai/zen; OpenAI-compatible models — MiniMax/Qwen via opencode-go-anthropic)" },
-  "opencode-go-anthropic": { baseURL: "https://opencode.ai/zen/go/v1", format: "anthropic", maxTokens: 65536, desc: "OpenCode Go — Anthropic Messages side (same sk- key as opencode-go; MiniMax/Qwen models)" },
+  // `x-opencode-session` 头 = **必需**（不带 ⇒ 上游回 `HTTP 400 {"type":"MissingSessionID"}`——实测见
+  // PROVIDER.md §6.17）；值形 = 模板 `${sessionId}`，每次请求现取本进程会话 id（解析单源 = `withUserAgent`）。
+  // 两条预设都携缺省值：新装即带上，用户无需手改配置；不声明该头的其它渠道出站头零变化。
+  "opencode-go": { baseURL: "https://opencode.ai/zen/go/v1", headers: { "x-opencode-session": "thincoder-${sessionId}" }, desc: "OpenCode Go subscription (sk- key from opencode.ai/zen; OpenAI-compatible models — MiniMax/Qwen via opencode-go-anthropic)" },
+  "opencode-go-anthropic": { baseURL: "https://opencode.ai/zen/go/v1", format: "anthropic", maxTokens: 65536, headers: { "x-opencode-session": "thincoder-${sessionId}" }, desc: "OpenCode Go — Anthropic Messages side (same sk- key as opencode-go; MiniMax/Qwen models)" },
 }
 
 /** Build the stored provider entry from a preset — strip the display field, keep the rest

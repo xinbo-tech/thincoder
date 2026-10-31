@@ -219,7 +219,10 @@ name 空槽丢弃并计数、缺 id 合成 `call_N`。告警（`droppedToolCalls
   （Anthropic `/messages` 侧，`format: "anthropic"`；同 key）。字段集 = 最小面：`thinking` ∕ `reasoningEffort`
 
   **不设 = 不发**（D-13 同口径）；`maxTokens` 仅 anthropic 侧设 `65536`（该 transport 必发 `max_tokens`——不设即落规格行值 `131072`，
-  超渠道口径）；**待验（无 key——未实拉 `/models` ∕ 载荷未实测；接入后复核）**；`x-opencode-session` 头 = 可选遥测——**不发**（§6.17 域外与端面）。
+  超渠道口径）；**待验（无 key——未实拉 `/models` ∕ 载荷未实测；接入后复核）**。
+
+  `x-opencode-session` 头 = **必需**（不带 ⇒ 上游回 `HTTP 400 {"type":"MissingSessionID"}`，实测见 §6.17）——两条预设各携缺省值
+  `headers: { "x-opencode-session": "thincoder-${sessionId}" }`；值形 ∥ 解析单源见 §6.17「会话标识头」块。
   逐模型协议分侧表（官方档快照）。
 - **Gemini OpenAI 兼容侧入表**：`gemini-openai` = Google 官方 OpenAI 兼容端点
   （`baseURL` `https://generativelanguage.googleapis.com/v1beta/openai`；与 `gemini`（原生 `format:"google"`）**同 key、两形态并存**——本键 = OpenAI `/chat/completions` 侧）；
@@ -736,7 +739,27 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 - **三类来源**：**内置头** = transport 协议要求（`Content-Type` / `Authorization` / `x-api-key` / `anthropic-version`），各 transport 就地声明；**定制头** = 渠道级 `providers[].headers` 静态键值；**产品标识头** = `User-Agent`（本产品对上游的身份声明，既非协议要求、也非渠道配置——见本节「客户端标识头」块）。
 - **装配契约** = `{ ...withUserAgent(provider.headers), ...内置头 }`——定制头在前、内置头在后：**同名键内置头胜出**（定制头不得覆盖 `Content-Type` 与认证头）；`User-Agent` 由 `withUserAgent` 先删键再重写，故定制头也盖不掉它。`Authorization` 另有装载面防线：`config.mjs` 净化器在 loadConfig 时剥离该键（大小写不敏感）+ 非字符串值。
 - **消费点全表（定制头展开面 · 六处）**：① 主聊天（OpenAI 兼容）`core.mjs`（参照面）· ② responses（`responses.mjs` 三处 fetch 改引用提升后的单个 `const headers`）· ③ anthropic（`anthropic.mjs` 既有 `const headers` 首行加展开）· ④ google（`google.mjs` 内联展开）· ⑤ 会话标题生成（`generate-title.mjs` `opts.headers` 内联展开）· ⑥ 模型清单拉取（`list-models.mjs` 三个 format 分支）。产品标识头在同六处 + embedding 一处装载——覆盖面见本节「客户端标识头」块。
-- **域外与端面**：会话动态头（`x-opencode-session` 类）不做（证据未立）；embedding 独立渠道无定制头字段；**VS Code 端无 `providers[].headers` 概念**（配置面与展开面均无——对位引入属新需求）。
+- **域外与端面**：embedding 独立渠道无定制头字段；**VS Code 端无 `providers[].headers` 概念**（配置面与展开面均无——对位引入属新需求）；定制头写入面 = 配置文件 `providers[].headers`（四个端均无端内编辑面）。
+- **会话标识头（`x-opencode-session` 类）= 值形模板 `${sessionId}`**：定制头值支持 `${sessionId}` 模板——整值与内嵌同解、可多处，解析单源 = `withUserAgent`（`thincoder-core/client-identity.mjs:46`）。它是六处展开面共用的唯一装配入口，故一处改即全覆盖；装配后的键值仍是普通定制头，内置头胜出 ∥ UA 不可覆盖两条纪律零改。
+  - **「每会话一个」的口径 = 每进程会话实例一个**：产品内「会话」的一等标识就是 `sessionId`（`getSessionId()`，台账执行者 ∥ 同伴实例 ∥ 槽属主同值），进程内惰性生成、零 IO、形 `"{pid}-{ts}-{rand6}"`。同一进程内的会话槽切换 ∥ 子代理 ∥ 标题生成共用该值——它区分的是「哪一次进程会话」，不是「槽位里的哪一份对话」。**长驻多对话进程（ACP 服务 ∥ server 端）里多个 ACP 会话仍共用一个值**——同一粒度告警既存于 `thincoder-cli/src/acp/handlers-session.mjs:211`。
+  - **只有声明该头的渠道才发**：模板住在渠道配置 `providers[].headers`，未声明它的渠道出站头零变化（别的渠道既有头不动）；不按渠道名特办（名称分支随渠道增删漂移，且把一处通用解析拆成两条路径）。
+  - **缺省值只覆盖有 `providers[].headers` 面的端（CLI ∥ desktop）**：`opencode-go` ∥ `opencode-go-anthropic` 两条核预设各携缺省值 `"thincoder-${sessionId}"`（`thincoder-core/config-presets.mjs:57-58`）——CLI ∥ desktop 新装即带上，用户无需手改配置。
+    **范围外两端**：server 自持静态表每键只载 `baseURL`（`thincoder-server/src/ops/presets.mjs:12-34`），`expandProviderEntry` 只出 `{ name, baseURL, apiKey, models }`（`:46-51`）⇒ 经 server 预设建的 `opencode-go` 条目不带该头，仍回 400；VSC 端无 `providers[].headers` 字段面 ⇒ 对上两端引入属新需求，本项不含。
+  - **只精确匹配 `${sessionId}`**：替换按这一个固定串做，值里出现别的 `${…}` 按字面原样出站——**构造上不存在「未识别变量」这回事**，故没有识别失败要处置，也没有兜底路径。写法笔误（如 `${sessionIDd}`）出站就是该字面、不抛错：定制头值是通道值域，抛错会把历史合法值变成硬中断；代价只是路由 ∥ 缓存不优化。
+    值类型面同此判据：替换只作用于字符串值，非字符串值原样留在头对象里（同 `env-ref.mjs:29` 的类型门）；`providers[].headers` 经装载面净化只留字符串值并剥 `authorization`（`thincoder-core/config-normalize.mjs:104`），故配置链路到不了非字符串头值——该类型门只兜直接调 `withUserAgent` 的面（单测 ∥ 编程调用），不是业务分支。
+  - **closest-precedent**：`existing: thincoder-core/env-ref.mjs:28 · name: "resolveEnvRefs" · consumers: thincoder-core/config.mjs（装载面）`。对齐 = 值位模板（整值与内嵌同解、一值可含多引用、解析产物不回写配置）；**偏离** = 解析落在请求装配面而非装载面（值要每次请求现取，不能冻结进 provider 对象），且未命中不抛——`env-ref` 的「未设即抛」是密钥面判据（`:17`），模板面不适用。
+  - **三问行**：`existing: thincoder-core/session-slots.mjs:64 · name: "getSessionId" · consumers: thincoder-vscode/src/extension/session-io.mjs:49（re-export）∥ 台账执行者面`——取现有函数，不新建取值器；`session-identity.mjs`（新叶档名）= `none found`（仓根 `**/*.mjs` 扫该名零命中）；`${sessionId}`（模板变量名）= `none found`（既有值位命名空间只有 `${env:NAME}`，`env-ref.mjs:10`）。新叶只把 `getSessionId` 的 9 行搬到零 import 档，符号名沿用既有。
+  - **与 `${env:VAR}` 的关系**：两个命名空间互不相交——`${env:}` 在装载面解析（`env-ref.mjs`，未设即抛），`${sessionId}` 在请求装配面解析（每次请求取当前值）；两者解析产物都不回写配置。
+  - **公开来源核查（survey-evidence）**：检索域 = `opencode.ai/docs/go/`（官方档，原文已引于本块「实测依据」行）——相关，给出该头为必需、且按 conversation 一个稳定 id 的口径；其余无相关项（模板解析时机 ∥ 注入点 ∥ 未命中处置是我方实现选择，没有外部规范约束它们）。
+  - **实测依据**：OpenCode Go 两个可用端点（`https://opencode.ai/zen/go/v1` ∥ `https://opencode.ai/inference/go/openai/v1`）同 key 同模型，带该头 `HTTP 200`、不带 `HTTP 400 {"type":"MissingSessionID"}`；官方档要求原文 `Send a stable session ID in x-opencode-session for each conversation so we can optimize routing and prompt caching.` ⇒ 该头是**必需**，不是可选遥测。
+- **集成用例（RTM 增量）**：`test/RTM.md` CLI 端新增故事 23 与行 `23-1`「配了 OpenCode Go 的会话能发出话」（既有 1–22 节零改、零冗余行）。
+  交互 = 配置装载（`providers[].headers` 的 `${sessionId}` 模板）⟷ 请求装配（`withUserAgent`）⟷ 上游 HTTP；业务入口 = 用户在 `/config` 配好 `opencode-go` 后发一句话，看的是助手回复那一格。
+
+  **上游 = 本地脚本化假端点**（零外网、零付费端点），按请求头回两态：带头 ⇒ 200 + 一段助手回复；不带头 ⇒ `400 {"type":"MissingSessionID"}`（逐字复刻实测载荷）。断言的业务结果只有一件 = 带头配置下用户拿到助手回复；对照跑（去掉该头，即修前配置形状）复现 400——证明判据来自该头不在场的真实约束，而不是夹具自证。
+
+  出站头的值不在本层断言——同值判据归单元用例 #15 ∥ #16，两层不重复持有同一断言。真端点留给收口 smoke，本套件不跑。
+
+  回指 = 台账 #1923（用户 2026-11-01 01:04 裁定「每会话一个」）；需求面 = 用户裁定 + 台账行，需求档本批无条目。
 - **已知边界**：大小写变体同名定制头交给 fetch 归并（不做大小写归一）；未经装载面净化而直达 `chat()` 的定制 `Authorization` 在 anthropic 通路（无内置 `Authorization`）原样透传——不在本项加第二道防线。**open 项：无**。
 - **值引用**：定制头值与 `apiKey` 可携 `${env:VAR}` 引用（落盘不落明文）——解析 = 消费侧单源 `doc:CONFIG.md:§6.3`；装配契约与装载面净化零改。
 
@@ -818,8 +841,17 @@ desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树�
 | 12 | VSC 接线 | import `thincoder-vscode/src/extension/session-slots.mjs` | `{surface:"vscode", version:<thincoder-vscode/package.json>}` |
 | 13 | server 接线 | import `thincoder-server/bin/thincoder-server.mjs`（main-guard 生效，不跑 `run()`） | `{surface:"server", version:"0.1.0"}` |
 | 14 | 声明点唯一（CLI） | 源扫 `thincoder-cli/src/**/*.mjs` 的 `setClientIdentity` 命中 | 恰 1 处，且该档 = `command-table.mjs`（回到 `tui/startup.mjs` 即红） |
+| 15 | 会话头模板 | `provider.headers = { "x-opencode-session": "thincoder-${sessionId}" }`，桩 `fetch` 跑一次 `chat` | 出站该头 = `thincoder-<pid>-<ts>-<rand6>`，与 `getSessionId()` 逐字同值 |
+| 16 | 进程级稳定 | 同渠道连发两次 `chat`（桩 `fetch`） | 两次该头值相同 |
+| 17 | 未声明即不发 | `provider.headers` 无该键（桩 `fetch`） | 出站头集合无 `x-opencode-session` |
+| 18 | 只精确匹配（构造检查） | `provider.headers = { "H": "${sessionIDd}" }`，桩 `fetch` 跑一次 `chat` | 出站 `H` = `${sessionIDd}` 字面——替换只认 `${sessionId}` 一个名字，其余 `${…}` 按构造原样出站；`chat` 不抛错 |
+| 19 | 预设缺省值 | import `PROVIDER_PRESETS` ∥ `presetToEntry`（`thincoder-core/config-presets.mjs`） | `PROVIDER_PRESETS["opencode-go"].headers["x-opencode-session"]` ∥ `PROVIDER_PRESETS["opencode-go-anthropic"].headers["x-opencode-session"]` 逐字 = `thincoder-${sessionId}`；`presetToEntry("opencode-go").headers` 同值（`desc` 外全字段随条目落库）；对照面 = 其它预设（如 `deepseek`）无该键 |
 
 用例 #4 在文件内最先跑（模块级状态是进程级单值，四端接线用例会把缺省值盖掉）；#10–#13 按 CLI → desktop → VSC → server 依次 import 并**紧接断言**（每次 import 求值一次声明）。`#14` 兜住声明点唯一性：CLI 的声明只许在 `command-table.mjs` 一处——回到 `tui/startup.mjs`、或另加一处，源扫即红。若某端入口 import 有副作用（server 顶层仍有声明外副作用），实施面把该用例降到「该端声明所在模块」，契约不变并回报读数。
+
+**判据文件与跑法（本块用例 #15–#19）**：`docs/batches/2026-11-01-opencode-session-header.test.mjs`（批内单测档，收口删除）· `node --test docs/batches/2026-11-01-opencode-session-header.test.mjs`。
+
+住 `docs/batches/` 是收集面与收口门的硬约束、不是风格偏好（单源 = `docs/core/design/TESTING.md:130`）：包内 `test/` 树的收集面反查把任何 `*.test.mjs` 判错位（`thincoder-core/test/run.mjs:34-35` ⇒ 该包 `npm test` 恒红）；收口门只按批档所在目录认领本批档（`thincoder-core/agent-tools/batch-unit-test-gate.mjs:8-11`）⇒ 落进包测试树的档收口不被点名，会永久留盘。
 
 ### 6.18 图片输入与贴图降级链（VSC 端 · 终收批并入）
 
@@ -1409,3 +1441,4 @@ R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报�
 | D-PR41 | Anthropic 消息适配 = **transport 内纯函数 `convertMessages`** + **anthropic 分支内、转换前**复用 `normalizeToolPairing`；copy-on-write | 格式知识归 transport（同一协议的全部形变在一个文件）；配对修复已有单源（D2），另写一份 = 两份实现必然漂移。copy-on-write 是 D-PR3「净化只改副本」在本层的延伸——历史是四条通道共用的持久表示 |
 | D-PR42 | 畸形 `arguments` ⇒ `input:{}` + 机读告警，**不抛** | 历史持久：抛错会把一次畸形固化成此后每轮必死（毒化）；真实结果已在 `tool_result` 里，重放只需结构合法。静默不是选项——告警走 `_warnings`（#30 教训：外部形状不可信，处置要写死） |
 | D-PR43 | 首条非 user ⇒ 前置中性 user 占位；相邻同 role 合并；user 内 `tool_result` 恒在前 | 上游要求首条 user；连续同 role 的容忍度因网关而异 ⇒ 两者都在转换层收口。不在 agent 层补消息：那会改动四条通道共用的历史形态（本批明令不改 history 本体） |
+| D-PR44 | 会话头 = 定制头值模板 `${sessionId}`，解析点收在 `withUserAgent` 单处 | 六处展开面共用该入口（一处改全覆盖）；模板住渠道配置 ⇒ 只有声明它的渠道发头，别的渠道出站零变化；不按渠道名特办 |
