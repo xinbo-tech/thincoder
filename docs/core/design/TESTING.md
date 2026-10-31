@@ -123,9 +123,10 @@
 
 | 包 | 启动期检查 | 读数形 |
 |---|---|---|
-| cli | 收集面反查（`test/` 下 `.test.mjs` 只许住 `test/integration/`）+ 软链目录拒绝 | `ℹ tests N` · `pass N` · `fail 0` + exit 0；集成目录空 ⇒ `✖ no integration test set …` + exit 1 |
+| cli | 收集面反查（零目标集合——`test/` 树下任何 `*.test.mjs` 均判错位）+ 软链目录拒绝 | 常态 = `✖ no integration test set — the integration set lives at the repository root …` + exit 1（`process.exit(1)` 无条件执行、不跑用例）；`ℹ tests` ∥ `fail 0` + exit 0 在这面从不出现 |
 | core | 收集面反查（零目标集合——任何 `test/**/*.test.mjs` 均判错位）+ 软链目录拒绝 | 常态 = `✖ no integration test set — … (requirement N20) …` + exit 1（不跑用例）；**非门**——发布钩 ∥ CI 走语法门（§10.3） |
-| vscode ∥ desktop ∥ render-core | 各自收集面自检（显式清单 ∥ 单层 glob ∥ 包面自检） | **旧空集直通（exit 0）**——空集守卫未落**这三面**（面差登记 = §10.3 三行） |
+| vscode ∥ desktop | 各自收集面自检（显式清单 `test/files.mjs` 两向对账）+ 软链目录拒绝 | **旧空集直通（exit 0）**；盘上未登记的 `*.test.mjs` ⇒ `unregistered … file` + exit 1（空集守卫未落这两面——面差登记 = §10.3） |
+| render-core | 单层 glob 收集面自检（顶层 `test/*.test.mjs`；嵌套档判错位）+ 软链目录拒绝 + 包面自检 + 全档语法面 | **旧空集直通（exit 0）**；顶层档照跑（`node --test test/*.test.mjs`）——错位档被自己收起来执行，只有嵌套档 fail（面差登记 = §10.3） |
 
 **单元测试现行 = 单元测试档形态**（`docs/batches/*.test.mjs`；件数随批流动、不落固定读数——复算口径：逐档计数、后缀即匹配式；零留存（用毕即删）、**不进任何门**、零维护；生命口径 = §3.1）：**运行口径** = 批内单档直跑 `node --test docs/batches/<档>.test.mjs`（平 node；取件按 §2.2 挂载面规范）——用毕即删，**无「再跑旧档」面**；零新增命令 ∥ 零新机制。
 
@@ -133,6 +134,22 @@
 件内自持标注随件（**无「再跑旧档」面**）；本认账**零处置动作**（零移 ∥ 零改注——删件属各批收口动作）。
 
 **守闸读数**（现集成数 ∥ 窗口 50–100）随收口测试行 ②半带出（需求 F9）。
+
+### 2.4 单元测试档为什么住批次目录（两条结构事实）
+
+**口径在 §2 ∥ §3.1 ①**（单元测试档名随批次档、住批次目录）——本节不重述口径，只推它为什么**不是排版偏好**：两条结构事实把它钉死，换一个目录，二者必坏其一。
+
+**① 收口门只读批档所在目录。** 归属判定的候选集 = `dirname(<批档绝对路径>)` 下后缀 `.test.mjs` 的文件（§3.5 判据 1）——门只在这里挑本批的档。住到别处的档不进候选集，收口时没人点它的名，于是它活下来，而「零留存」剩下半句没人执行的话。
+
+**名字记错也逃。** 门按最长批档名面前缀定归属，住对目录而名不对的档无主（§3.5 判据 3——无主候选不判）⇒ 同样不被点名、同样活下来：位置对只解决一半。
+
+**② 落进包内 `test/` 会撞该包自己的收集面反查。** 包 runner 启动前递归扫 `test/` 树，任何 `*.test.mjs` 都判错位并 fail（`thincoder-core/test/run.mjs:35` ∥ `thincoder-cli/test/run.mjs:36`——拒串 `uncollected test file (unit test files live in docs/batches/ and run via node --test <file>)`）⇒ 该档收集不到，还让该包入口以这串失败。
+
+**哪个入口由绿变红，按包分开读**：cli ∥ core 的包入口今天本来就 exit 1（`thincoder-cli/test/run.mjs:40-41` ∥ `thincoder-core/test/run.mjs:39-40` 无条件 exit 1——包内集成集已归仓根），错位档在那里只把常态说明串换成收集面拒串；空集直通 exit 0 的是 vscode ∥ desktop ∥ render-core（§2.3 表）——其中**绿→红的是前两面**（未登记即 fail），render-core 那一面见下一句。
+
+render-core 单层 glob 收顶层 `test/*.test.mjs`（`thincoder-render-core/test/run.mjs:81`），顶层错位档被它自己收起来跑、只有嵌套档判错位（`:38-40`）——这一面不是变红而是**假绿**：临时件冒充覆盖。
+
+**因果**：单测档是**批内的临时件**，它的生命周期由收口门机械守、它的运行由批内直跑 `node --test <档>` 供——两件事都只在批档目录成立。位置写错，纪律就只剩自觉，而自觉不会跑门。
 
 ## 3. 测试生命周期（三层来源）
 

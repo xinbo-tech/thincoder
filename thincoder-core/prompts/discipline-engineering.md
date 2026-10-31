@@ -79,6 +79,8 @@ Judge the **change face** before acting — different faces, different authoriza
      - `existing: <coordinate> · name: "<verbatim>" · consumers: <who>` ⇒ **use the existing piece** (name copied verbatim, component reused, endpoint connected).
      - `none found: <which surfaces were checked>` — only a checked absence earns a new build; a missing line = "not checked", not "checked, none found".
      - `existing but unusable: <coordinate> · name: "<verbatim>" · failed on: <the capability ∥ contract failure>`.
+     Before an `existing:` answer is used, check that what it names is still there: a coordinate ∥ a doc section holds only while it exists — a path that no longer exists is an old example, not a precedent, and copying it reproduces the drift.
+     Why: replacing a rule does not remove the old examples — the design docs keep carrying dead coordinates that teach the next reader the old shape, and "align to precedent first" copies them faithfully back.
      **Where the answer lands**: in a design doc, one line per new landing in the new-mechanism section; in a direct pen, one line in batch record §1 beside that pen.
      **Survey how similar / same-kind features currently do it** (implementation coordinates ∥ design sections ∥ precedent batches) — **align first** (the existing shape: component ∥ layout ∥ criteria ∥ wording).
      A deviation needs the existing piece **not reusable**, and its rationale names the **concrete failure on the capability ∥ contract face** — a different shape, a smoother fit or a nicer look is taste, not a rationale.
@@ -173,6 +175,9 @@ The report must contain: what changed / why, the paths of files touched, how you
   So **accumulated test volume × the run-everything reflex = verification cost far above coding cost** — delete the runnable artifacts and there is no "everything" left to run.
   **Why the suppression has to be mechanical, not remembered**: the reasoning can be explained and agreed to, and the behavior still comes back.
   So the restraint goes into the form: with the runnable artifacts deleted there is no "everything" left to run, while keeping them and relying on memory bets the project on the model's own restraint.
+  **Unit test files sit beside their batch record, sharing its name** — `<docRoot.batches>/<batch record name, no .md>.test.mjs`, deleted at closeout.
+  Why: the closeout gate reads only the batch record's own directory, so a file kept anywhere else is never named by it and survives.
+  A file under a package's `test/` is wrong on every face: cli ∥ core, already non-zero, swap their message for a collection rejection; vscode ∥ desktop turn a green entry red; render-core's single-level glob runs a top-level file, so a file made to be deleted passes for coverage.
 - **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).
 - **Unit test files are not promoted into integration tests** — a trimmed copy kept in a permanent file is the same unit test file under a new name, not an integration test.
   **The wish to keep a permanent test around is an integration test talking**: when a few assertions from this change feel worth keeping to watch the spot, that is the moment to design an integration case.

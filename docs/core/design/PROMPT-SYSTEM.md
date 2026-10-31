@@ -162,7 +162,9 @@
 
   **纪律档两节收正（`thincoder-core/prompts/discipline-engineering.md`：`## Basic flow` 拆出轻通道 1 个 `##` ∥ `## Testing discipline` 同一禁令三遍 ⇒ 一遍）落该档内**（A 件纯结构：只加 1 行标题、正文逐字不动 ⇒ `##` 10 ⇒ 11 ｜ 标题节点 ∥ 段数（D-PS27 口径）17 ⇒ 18；B 件同位合述 10 行 ⇒ 8 行、三条判据各留；→ §6.55 · §7 D-PS48）。
 
-  **一个批档只服务一个并发 spawn（多席并行 ⇒ 各开一批 · 各自的批档 + 各自的台账行）落 `thincoder-core/prompts/persona-engineering.md`「Implementation dispatch structure」节内 `batchDoc is mandatory` 块之后 + 并行派发示例两行 `batchDoc` 占位符改字面**（既有节内增列 ⇒ 零 `##` 块计数连带 / 标题节点 22 不变；规则带顺序交接边界行，见 §6.56 K2；→ §6.56 · §7 D-PS49）。
+  **一个批档只服务一个并发 spawn（多席并行 ⇒ 各开一批 · 各自的批档 + 各自的台账行）落 `thincoder-core/prompts/persona-engineering.md`「Implementation dispatch structure」节内 + 并行示例占位符改字面**（零 `##` 块计数连带 / 标题节点 22 不变；→ §6.56 · §7 D-PS49）。
+
+  **单测档落点 + 先例必须在盘（两句）落 `thincoder-core/prompts/discipline-engineering.md` 既有两条内**（句一接 `Delete on use` 条后 ∥ 句二并入先例勘察条；`##` 11 ∥ `###` 7 ∥ 标题节点 18 全不变；→ §6.58 · §7 D-PS50）。
 - **变更流**：改规则 → 先改机制文档 → coder 依它改 EN（产品代码面；复用存量词句、语义对等）。提示词档免档位判定（`.md` 结构尺度）。承载面本体（唯一副本 / 加载面）见 **§8**（本处不重述——D2）。
 - **批次收尾核对（内容漂移防线）**：提示词面批次收尾加一步**一次性**比对——**落地档 ↔ 当批设计围栏块**（逐行；围栏内为档宽折行时，按**去折行后的段**比对）；**零常驻锁、零新增断言**（内容在场判据 = 散文锚，禁新增）。合法改档以**当批**围栏块为新基线——本步守「当批一致性」，不冻结演进。
 - **提示词零维护者注**（编写纪律 #15）：出处 / 日期 / 批次名 / 评审号一律进设计档不进提示词（语义生效边界除外——保语义去日期注）。
@@ -5046,7 +5048,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | 文件 | 现行 | Δ → 改后 |
 |---|---|---|
 | `thincoder-core/prompts/persona-engineering.md` | 480 行 / 68,668 字符 / `##` 17 / `###` 5 / 标题节点 22 / `>300` = 0 / 两行宽 164 ∥ 174 | 480 行 / 68,665 字符 / 同上四计数零变 / 两行宽 164 ∥ 171 |
-| `docs/core/design/PROMPT-SYSTEM.md` | 本节 + §7 D-PS50 | 设计档面（本席笔），非验收对象 |
+| `docs/core/design/PROMPT-SYSTEM.md` | 本节 + §7 D-PS51 | 设计档面（本席笔），非验收对象 |
 
 **边界（本节不做）**：不改机制（`subagent` 工具面 ∥ 工具描述零改；机制能拦 = `#1883` 批）· 不写「N 棵树 ⇒ N 本档」这种特例式（§1.3：11:34 的形不是树）· 不动 `:335`–`:337` 三行（刚落的，零改）· 不动 `:444` 原文一字（只在其后增列）· 不改需求档 · 不写「各自的台账行」（`:335` 已写 `its own ledger row`，重述即 D2 重复面）· 不写文件行号 / 批次名进提示词。
 
@@ -5094,6 +5096,135 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 **上抛项（处置状态）**
 
 1. 〔父侧 · 机制面另议〕本条是提示词面止血：机制不拦同一 `batchDoc` 的二次 spawn（`:332` 逐字 `content is never validated`）；真拦 = 代码面另议（§1.5 明确本批不改，机制批 = `#1883`）。**机制批落地时 `test/RTM.md` 增一行**（11:34 那个形属「生产真出过的问题」这一类入库入口，可机判面在机制侧）；本批零增。
+
+### 6.58 单测档落点 + 先例必须在盘（`thincoder-core/prompts/discipline-engineering.md` · 两句 · 逐字英文面）
+
+**来源**：用户 2026-11-01 01:27 要求检查提示词体系、分析设计档反复写错单测档路径的成因；01:50 追问「提示词处理了吗？」⇒ 开批。台账 `#1926`。
+
+**判（本席实读 2026-11-01）**
+
+- **规则本体不缺**：`docs/core/design/TESTING.md` §2 ∥ §3.1 ① 已写明单测档住批次目录、名随批档——节锚定位，行号不写（同一事实每次读数都会另出一个号）；收口门只判该目录（§3.5）。
+
+- **提示词层零覆盖**：`thincoder-core/prompts/` 16 档扫 `docs/batches` = 0 命中；`.test.mjs` 字面全 16 档仅 1 处——`thincoder-core/prompts/common.md:353`（讲设计档不得引批档单测档）；`unit test` 面的命中讲用毕即删（同一档的 `Delete on use` 条）与验收命名（`thincoder-core/prompts/persona-eng-designer.md:124`），无一讲单测档的落点。
+
+- **纪律层只给生命周期、不给位置**：`thincoder-core/prompts/discipline-engineering.md` 逐字 `- **Delete on use — an action, not a question**: at closeout the batch's unit test files are deleted; …`——删法与去处齐备，没有一句说它落在哪。
+
+- **先例库已死**：设计档引 `<包>/test/*.test.mjs` 的坐标在盘多半不存在，而 `:76` 那条要求「先对齐先例、偏离须理由」⇒ 照做就抄到旧形。两次同形复发（`2026-10-30` 设计评审抓住 ∥ `2026-11-01` 实施席抓住）即此机制在起作用。
+
+**机制一（句一）· 人读权威 = `docs/core/design/TESTING.md` §2.4**（本批新增；本节不重述推导——D2）。一句话接口：单测档与批档同目录、同名前缀；位置由两条结构事实强制，不是排版偏好。
+
+**机制二（句二）· 人读权威 = 本节**：先例坐标（或先例节）只有在它指的东西**现在还在盘**时才成立；引一条已不存在的路径是旧例、不是先例，照抄它就是复现漂移。
+**为什么**：换掉一条规则，旧例子不会自己消失——设计档里成批的旧坐标仍在教下一个读者旧形，而「先对齐先例」会忠实地把它们抄回来。
+**不做机检**：不给 `doc_check` 加「设计档引用的 test 路径必须存在」判据——存量坐标一次全红（违零假阳优先）；先清存量（台账 `#1925`）再谈机检，顺序反了就是造红海。
+
+**读者面（这五行谁读得到）**：主链槽位 = persona → common → discipline → 子代理层（§6.1）⇒ 设计席 ∥ 实施席读得到；**评审席读不到**——顾问 ∥ 会诊是自含装配（D-PS46）。本批**有意不覆盖**评审席（边界 = 不动 advisor 层）；兜底 = 下一道手：两次复发都由它抓回（`2026-10-30` 设计评审 ∥ `2026-11-01` 实施席）。
+
+**落点表（内容锚，不用行号）**
+
+| # | 文件 | 落点（内容锚） | 动作 | Δ 行 |
+|---|---|---|---|---|
+| L1 | `thincoder-core/prompts/discipline-engineering.md` | `- **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).` 那一行**之前**（即 `- **Delete on use …**` 这条 bullet 的全部续行之后） | 插入 3 行（规则 ∥ why ∥ 按包后果）；续行缩进两空格，与 `Delete on use` 条续行同形 | +3 |
+| L2 | 同档 | `**Where the answer lands**: in a design doc, one line per new landing in the new-mechanism section; …` 那一行**之前**（`Closest-precedent survey` 条内、三答形之后） | 插入 2 行（规则 ∥ why）；缩进五空格，与同块各句同形 | +2 |
+
+**L1 逐字目标形（实施席照此落笔 · 唯一副本 = 本节；紧随 `Delete on use` 条 why 续行之后，下一条 bullet 起头之前）**
+
+```text
+  **Unit test files sit beside their batch record, sharing its name** — `<docRoot.batches>/<batch record name, no .md>.test.mjs`, deleted at closeout.
+  Why: the closeout gate reads only the batch record's own directory, so a file kept anywhere else is never named by it and survives.
+  A file under a package's `test/` is wrong on every face: cli ∥ core, already non-zero, swap their message for a collection rejection; vscode ∥ desktop turn a green entry red; render-core's single-level glob runs a top-level file, so a file made to be deleted passes for coverage.
+```
+
+**L2 逐字目标形（同一副本）**
+
+```text
+     Before an `existing:` answer is used, check that what it names is still there: a coordinate ∥ a doc section holds only while it exists — a path that no longer exists is an old example, not a precedent, and copying it reproduces the drift.
+     Why: replacing a rule does not remove the old examples — the design docs keep carrying dead coordinates that teach the next reader the old shape, and "align to precedent first" copies them faithfully back.
+```
+
+**验收（A1–A6 · 机判）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 五行逐字在盘 | 快判 = 全档扫词面锚 `sit beside their batch record` ∥ `Before an `existing:` answer is used` 各 ≥1；硬判 = 插入处五行与本节两围栏块**逐行整行相等**（`node` 逐行 `===` 比对，不折字、不归一） |
+| A2 | 行数 | 该档 = 改前 + 5（关系式）；实施席落笔后把改前读数报 §5 |
+| A3 | 计数面零连带 | `^## ` 11 不变 · `^### ` 7 不变 · 标题节点 18 不变（本席本轮 node 实读：358 行 / `##` 11 / `###` 7 / 标题节点 18——改前读数，A2 走关系式；既有节内增列，不新建节） |
+| A4 | 写形零回归 | 新增五行宽 150 ∥ 133 ∥ 281 ∥ 243 ∥ 210（均 ≤300；本席本轮 node 实读）；全档 `>300` = 0 保持（现最长行 300） |
+| A5 | 两条落点各自贴对锚 | L1 首行的前一行 = `Delete on use` 条的末行；L1 末行的后一行 = `- **The change's implementer writes them and runs exactly those for the changed face**…`。L2 的后一行 = `**Where the answer lands**…`；L2 仍在 `Closest-precedent survey` 条内（首行是条件句、不是第四答键——与 `existing:` ∥ `none found:` ∥ `existing but unusable:` 不同形） |
+| A6 | `doc_check` | `doc_check(mode:"gate", docs=["thincoder-core/prompts/discipline-engineering.md","docs/core/design/PROMPT-SYSTEM.md","docs/core/design/TESTING.md"])` 首行 `PASS` |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 设计席写本批单测档坐标 | 本批要一条单测档，写在 §2 验收行 | 落 `<docRoot.batches>/<批档名去 .md>.test.mjs`（stem 形）；收口时该坐标被门点中并删。写成 `<档>.md.test.mjs` 仍按最长前缀判归本批（§3.5 判据 2），但与 L1 的名字面不符 |
+| C2 | 边界 · 先例在 ∥ 不在盘 | 读者在设计档里找先例，命中的坐标或指向在盘文件，或指向已删的旧单测档 | 在盘 ⇒ `existing:` 成立、照抄可用，勘察义务不变（三问照问）；不在盘 ⇒ 判为旧例、不是先例，不照抄，改写当前形 |
+| C3 | 错误 · 单测档写进包内 `test/` | 设计席写 `<包>/test/xxx.test.mjs` | 两次复发同一形状（`2026-10-30` ∥ `2026-11-01`）；L1 第三行逐面点名：门看不见它（它活下来）∥ cli ∥ core 只把常态说明串换成拒串 ∥ vscode ∥ desktop 绿→红 ∥ render-core 顶层档被自己跑起来（假绿） |
+| C4 | 错误 · 把 why 压成禁令 | 实施时只留规则行、删 why 行 | 违 A1（逐行整行比对红）；无 why 的禁令对没见过的场合不给判断力 |
+
+**集成测试设计**：`none` —— 改动面 = 提示词单档 +5 行 + 两份设计档，零代码档；不改既有用例断言的业务可观察结果，也未新增业务上真需要的场景 ⇒ 两条触发都不成立。
+
+**RTM 读数**（本席实读 2026-11-01）：`test/RTM.md` 23 个 CLI 业务故事节 + VS Code 端 ∥ Desktop 端两段。近面两条逐行读过、业务结果零改：故事 7「收口只判本批改过的档」（`:78`——本批不新增任何门）· 故事 20「一本批档只服务一个并发 spawn」（`:234`——本批不动派单面）。⇒ 无行需增删改。
+
+**受影响文件**
+
+| 文件 | 改动 | 备注 |
+|---|---|---|
+| `thincoder-core/prompts/discipline-engineering.md` | L1 +3 行 · L2 +2 行 | 产品代码面，落笔 = eng-coder（本席不写提示词） |
+| `docs/core/design/PROMPT-SYSTEM.md` | 本节 + §6.1 一行 + §7 D-PS50 | 本席笔 |
+| `docs/core/design/TESTING.md` | 新增 §2.4（句一的人读权威）+ §2.3 表 `:126` cli 行改实读 ∥ `:128` 按面拆成 vscode ∥ desktop 与 render-core 两行 | 本席笔；口径句只动这两行（边界按批档 §1.5 收窄——`:126` 与代码相反，本批正是靠推翻该读数立论） |
+
+**档位结论**：四个文件全是纯 `.md`（提示词档 + 两份设计档 + 本批档）⇒ 零跨档位、无拆分义务。
+
+**引用锁读数**：新增五行零文档引用（提示词面禁指针）——J1–J3 无涉，机检由 A6 的 `doc_check` gate 兜（承 §6.56 ∥ §6.57 同款一行）。
+
+**归属复核**：文档地图在盘 = `docs/README.md`（`AGENTS.md` 指名）——`:51` 把「提示词系统」归本档、`:78` 在流程 ∥ 文档机制面 12 档里列 `docs/core/design/TESTING.md` ⇒ 两节各归其主，与落点相符；本批不新建档，无归属冲突。
+
+**边界（本节不做）**：不给 `doc_check` 加路径存在机检 · 不清存量坐标（台账 `#1925`）· 不改 `docs/core/design/TESTING.md` 除 §2.3 表 `:126` ∥ `:128` 两行外的既有口径句。
+
+「它本来就对」在 `:126` 上不成立——该行与 `thincoder-cli/test/run.mjs:41` 相反，留着它同档两处活描述互斥。
+
+不动人格层 ∥ `thincoder-core/prompts/common.md` ∥ advisor 层（两句话落 `thincoder-core/prompts/discipline-engineering.md` 一处——单一权威源）· 不在 `thincoder-core/prompts/common.md:353` 加交叉句（见 K3）。
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 两句都落 `thincoder-core/prompts/discipline-engineering.md` 一处 | 两句都是「工程模式怎么干活」（设计席与实施席的落笔面）⇒ 纪律层；`thincoder-core/prompts/common.md` 是两模式共读面，普通模式不产批内单测档，写进去对普通读者是误导 |
+| K2 | 句一接在 `Delete on use` 条之后，不另起一节 | 缺的正是同一条的落点半句：`Delete on use` 已讲「收口删」，紧接讲「住哪」即把它补完；另起一节 = 同一机制两处（D2） |
+| K3 | 不在 `thincoder-core/prompts/common.md:353` 加交叉指 | 那一句讲**引用面**（设计档不得引批档单测档），句一讲**落点面**（单测档住哪）；两者不冲突、不互补，加交叉指只多一处要维护的指针，而提示词面禁指针 |
+| K4 | 句二以「续句并入先例勘察条」落，不新建条 | 先例勘察那条已给三答形与「先对齐」；缺的是「对齐的对象必须还在盘」这个条件，属同一条的判据面 |
+| K5 | 两句都带 why、why 写后果不写「因为规定」 | 读者要能对没见过的场合推答案：句一的后果 = 门看不见 → 它活下来；包内位置按面各归其面（拒串 ∥ 绿→红 ∥ 假绿）。句二的后果 = 旧坐标继续教旧形、被忠实抄回（D9 落笔携 why） |
+| K6 | 句一 why 的后果行**按包写准**（cli ∥ core 本来就非零 ∥ vscode ∥ desktop 绿→红 ∥ render-core 自己收起来跑 ⇒ 假绿） | 一个笼统的「入口红」在 cli ∥ core 上不成立（两个入口今天无条件 exit 1）——写错，读者会据此推断错场合（D9：理由写得可核） |
+| K7 | 句二首行改成**条件句**、不用题眼式 | `**Precedent must exist on disk**` 与三答形同形、紧贴其后会被读成第四答；条件句读成对 `existing:` 第一答的附加条件。仍并入同条（K4 不变） |
+| K8 | 围栏块第三行**补 render-core 第三面**，不收窄通例 | 第二行原把后果写成通例（「包内 `test/` 下任一 `*.test.mjs` 必被判错位」），在 render-core 面为假：`:38-40` 只判嵌套档、`:81` 顶层 glob 收起来照跑 ⇒ 通例留在提示词里就是一条假规则，读者据此推断错场合。且这一面的后果形状与前两面不同（不是变红，是**假绿**：临时件冒充覆盖），删掉它读者就少了唯一能推出该面的读数 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.56 ∥ §6.57 形制（同节内增列 · 逐字英文目标形只此一份 · 落点给内容锚 · 关系式验收）∥ §6.55（该档既有条内的同形增列）。**对齐** = 同形落笔、计数面零连带。**偏离** = ① 首次同批跨两份设计档分工（句一权威在 `TESTING.md`、句二权威在本档）——理由 = 两条机制各自已有依主，搬进来就成第二份活描述（D2）；② 验收改用关系式（行数 = 改前 + 5）而非绝对值——读数不进状态档（`docs/core/design/TESTING.md` §1 既有判据）。
+
+**既有件三问（新增名）**
+
+`existing`（句一落点条）= `thincoder-core/prompts/discipline-engineering.md`「Delete on use」条 · name: "**Delete on use — an action, not a question**" · consumers: 工程模式实施席 + 收口轮 ⇒ 句一紧接它写，补落点半句，不改它一字。
+
+`existing`（句二落点条）= 同档 `Closest-precedent survey = three questions before any new landing` 条（三答形 `existing:` ∥ `none found:` ∥ `existing but unusable:` 所在）· consumers: 设计席 + 主 agent 直改笔 ⇒ 句二并入其判据面。
+
+`none found` = `sit beside their batch record` ∥ `Before an existing: answer is used` ∥ `makes that package's own entry fail` ∥ `turns a green entry red` ∥ `still there` ∥ `reproduces the drift`：`thincoder-core/prompts/` 全 16 档实扫（本次修正轮 grep 逐串零命中）——本节新措辞全为新增，无旧句可复用。
+
+**勘察证据行（本席实读 2026-11-01）**
+
+- `thincoder-core/prompts/discipline-engineering.md`：`^## ` 11 · `###` 7（复算 = 逐行计数 `^## ` ∥ `^### ` 两条正则；本席本轮 node 实读）· 逐字 `- **Delete on use — an action, not a question**: at closeout the batch's unit test files are deleted; exactly one reading line stays in batch record §5 (what was verified + command + result), and no executable file is kept.` · 逐字 `- **The change's implementer writes them and runs exactly those for the changed face** (nobody else, no per-round re-runs, not another batch's files).` · 逐字 `     **Where the answer lands**: in a design doc, one line per new landing in the new-mechanism section; in a direct pen, one line in batch record §1 beside that pen.`
+- 落点表两条内容锚均抄自本轮实读的整行（连续 300 字符以内的前缀，实施席按前缀定位后整行核对）。
+- `docs/core/design/TESTING.md` §2 ∥ §3.1 ①：单测档「名随批次档 · 住批次目录」在案；§3.5 判据 1 逐字 `候选集 = `D` 下后缀为 `.test.mjs` 的**文件**（目录不计）；`（`D = dirname(abs)`）。
+- **收集面反查实读**：`thincoder-core/test/run.mjs:35` 逐字 `fail(\`uncollected test file (unit test files live in docs/batches/ and run via node --test <file>): ${rel}\`)` ∥ `thincoder-cli/test/run.mjs:36` 同串——句一 why 的第二半即此处的依据。
+- `thincoder-core/prompts/` 全 16 档扫 `docs/batches` = 0 命中；`.test.mjs` 字面 = 1 处（`thincoder-core/prompts/common.md:353`）——本席本轮 node 逐档实读。
+- `thincoder-core/prompts/common.md:353` 逐字 `    - A clause reading "the criterion is batch X §2" (or naming a batch's `.test.mjs`) dies the moment that batch closes or its file is deleted.` ⇒ 讲引用面，与句一不冲突（K3）。
+- `test/RTM.md`：23 个 CLI 业务故事节 + VS Code 端 ∥ Desktop 端两段（`^## ` / `^### ` 实读）；近面 = 故事 7（`:78`）∥ 故事 20（`:234`）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席本轮 manifest read 实读）⇒ 独立公共源文档仓无，已查无相关。
+
+**UI / 交互决策**：无界面面——本节只改模型可见提示词文本与设计档。
+
+**上抛项（处置状态）**
+
+1. 〔父侧 · 知会〕句一的 why 按包分开写，与 §1.3 中文定稿的「让该包 `npm test` 恒红」分叉：实读五面各归其面——cli ∥ core 包入口无条件 exit 1（`thincoder-cli/test/run.mjs:40-41` ∥ `thincoder-core/test/run.mjs:39-40`），错位档只把常态说明串换成收集面拒串；vscode ∥ desktop 空集 exit 0、未登记即 fail（`thincoder-vscode/test/run.mjs:48` ∥ `thincoder-desktop/test/run.mjs:36`）⇒ 绿→红；render-core 单层 glob 顶层档照跑（`thincoder-render-core/test/run.mjs:81`，只有嵌套档判错位 `:38-40`）⇒ 假绿。读数面落在 `docs/core/design/TESTING.md` §2.3 表（`:126` 改实读 ∥ `:128` 拆面）∥ §2.4。
+2. 〔父侧 · 编号〕§7 本席落 D-PS50（顺 D-PS49 下一位）；编号可由父侧收口时改。
 
 ## 7. 关键决策记录
 
@@ -5147,7 +5278,8 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | D-PS47 | **`thincoder-core/prompts/persona-engineering.md`「Dispatch & close discipline」节拆 5 个 `###`**（`:151` 节 117 行 ⇒ `### Dispatch, agent reports, and the zero-write watchdog`（`:152`–`:162`）∥ `### Round close, commit discipline, and fix-round dispatch`（`:163`–`:174`）∥ `### Close states and claim basis`（`:175`–`:183`）∥ `### Debts, ledger upkeep, and the closeout sweep`（`:184`–`:214`）∥ `### Change-face routing, light channel, and dispatch fields`（`:215`–`:267`））；**纯结构 · 零语义**：只加 5 行标题，不加空行、不删行、不换序；零 `##` 块计数连带（17 不变）· 标题节点 17 ⇒ 22 · 段数（D-PS27 口径）同移 17 ⇒ 22 | 该节 117 行 = 全档 24.9%，主题在 `:215` 已换而零标题分隔 ⇒ 读者滑过去不知道进了新段；`###` = 零 `##` 连带（同 D-PS39 ∥ D-PS43），写形取 `thincoder-core/prompts/common.md:200-201`（标题紧接领起内容，不靠空行）；取 5 刀不取 4 刀 = 内容族 12 个按物理顺序排，4 刀必有一条标题装 4–5 族或把「收尾三态 + 断言带据」并进「债务 + 台账」（父侧 2026-10-28 裁定 A）；被否 = 4 刀 ∥ 顺带改词（违零语义前提） |
 | D-PS48 | **`thincoder-core/prompts/discipline-engineering.md` 两节收正**：A 件 = `## Basic flow (four steps, in order)` 拆为两个 `##`——四步（`:53`–`:98`）∥ 新 `## Light channel`（`:98` 与 `:99` 之间插入 1 行，`:99`–`:121` 全文归其下）；纯结构 · 正文逐字不动 · 顺序不动；`##` 10 ⇒ 11 · 标题节点 ∥ 段数 17 ⇒ 18。B 件 = `## Testing discipline` 内 `:176`–`:185` 禁令三遍 ⇒ 一遍：10 行 ⇒ 8 行，三条判据（`trimmed copy` ∥ `no business scenario` ∥ `whose job the guarding is`）∥ 两个 Why ∥ 实例全留，两处重复收尾合一 | A 件 = 轻通道是**旁路**（让改动跳过四步），却住在四步节末尾 ⇒ 读者最易读成「第五步」，而按四步去查它得翻过全部四步；拆到同为 `##` 的平行节即消此误读，零语义改（A1 逐字节）。B 件 = 同一禁令说三遍而三遍各带判据——压的是叙述、不是判据；两处「one ledger row / no permanent file」是同句复用，合一不丢判断力。**受写形约束、不能多压**：再压 2 行就要把相邻两条并成一行，而并后即 312 ∥ 372 ∥ 379 字符、全越 300 行宽，两条 Why 又分属两形态各占一行（K3）。被否 = 把三遍合成一句口号（丢「怎么判」）∥ 删实例 ∥ 改「违者」句式 ∥ 顺手改正文（违 A1）∥ 动 `:186`–`:191`（不在授权内） |
 | D-PS49 | **一个批档只服务一个并发 spawn = `thincoder-core/prompts/persona-engineering.md`「Implementation dispatch structure」节内增列 3 行**（`batchDoc is mandatory` bullet 的收尾句 `:334` 之后：规则 ∥ 顺序交接边界 ∥ why；不取 `:333` Why 行之后，见 A9）+ **并行派发示例两行的 `batchDoc` 占位符改为 `<batch record path A>` ∥ `<batch record path B>`**（该两行以引文定位——收尾分别是 `batchDoc=<batch record path A>` ∥ `batchDoc=<batch record path B>` 的那两行；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:438` ∥ `:439`）；零 `##` 块计数连带（17）· 标题节点 22 不变 · 475 ⇒ 478 行。**不写子席侧判据**（子席看不见 `files`，无信号分席，见 K4）；不改机制、不动 `it IS the task book this spawn implements` ∥ `The task book is batch record §2` 既有两句（引文为准；行号 as-of 本次读数 = `:331` ∥ `:345`）、不动需求档 | 病因 = 三席共用一本批档后各按 §2 全表动手，同档两写者、其中一席按行号批删写出语法坏档（台账 `#1871`）；缺口在「是**谁的**任务书」这半句——`it IS the task book this spawn implements` ∥ `The task book is batch record §2` 两句只讲「是任务书」（引文为准；行号 as-of 本次读数 = `:331` ∥ `:345`）。规则的对象是**并发**：`thincoder-core/prompts/discipline-engineering.md:257` 已定「一个批次 = 一个实现轮次 = 一本批档」，一个批次正常顺序派设计席 → 实施席 → 修正轮 ⇒ 只写「一批档 = 一 spawn」会与那条相抵并把标准流程判成违规，故新增边界行（K2）。示例改字面 = 模板即被照抄的东西，两行原样相同就是复用示范（K3）。**本行落点一律以引文定位、行号只作 as-of 读数**：同节 A5 ∥ A6 ∥ A9 已取此形，一处写死行号则同一事实必出两个号（A5 说 `:438`、此处却停在改前的那个号），读者无从判断哪个是现状。被否 = 在 `## Parallel dispatch` 节另起一条（与 `:331` 拆成两处，D2）∥ 子席侧「读到像多席就上抛」（`The files parameter is a SCHEDULING channel…` 那一 bullet 子席看不见 `files`；引文为准，行号 as-of 本次读数 = `:351`，写规则 = 每次派单变猜）∥ 本批改机制（§1.5 明确不改） |
-| D-PS50 | **一份工作 = 一本账 = `thincoder-core/prompts/persona-engineering.md`「并行派发与多任务」节内 `:444` 之后增列 2 行**（规则 ∥ why；锚条 = `Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain` 那一行）；零 `##` 块计数连带（17）· `###` 5 · 标题节点 22 不变；478 ⇒ 480 行。**不写「N 棵树 ⇒ N 本档」特例式**；不动 `:335`–`:337` 三行 ∥ 不动 `:444` 原文 ∥ 不改机制 ∥ 不改需求档 | 缺口 = 「什么算一份」这半句不在任何一处：`:335` 讲能不能共用（约束面），本条讲计量单位（一份 = 一棵树 ∥ 一个席 ∥ 一个文件域）。11:34 事故的形是三个**文件域**而不是三棵树，特例式只覆盖字面树形，下一个说法即绕过（§1.3）；限定词 `running in parallel` 防与 `:336` 顺序交接边界相抵（K4）。被否 = 接半句到 `:444` 行尾（两规则一行，违该档一条规则一行写形（K1））∥ 另起节（与 `:444` 拆成两处，D2）∥ 本批改机制（§1.5：机制拦在 `#1883`） |
+| D-PS50 | **两句 = 单测档落点 + 先例必须在盘，都落 `thincoder-core/prompts/discipline-engineering.md` 既有两条内**（句一接 `Delete on use` 条之后 ∥ 句二并入 `Closest-precedent survey` 条；既有节内增列 ⇒ `##` 11 · `###` 7 · 标题节点 18 全不变；+5 行）；**句一的人读权威 = `docs/core/design/TESTING.md` §2.4**（本批新增；同批按 §1.5 收窄边界把 §2.3 表 `:126` ∥ `:128` 两行改成实读——`:126` 的 cli 读数与代码相反）· **句二的人读权威 = §6.58**；**EN 按 §6.58 逐字于实施轮落笔**；不加 `doc_check` 路径存在机检 ∥ 不清存量坐标（台账 `#1925`）∥ 不动人格层 ∥ `thincoder-core/prompts/common.md` ∥ advisor 层 | 病因 = 设计席把批内单测档写成 `<包>/test/xxx.test.mjs`，同一形状复发两次（`2026-10-30` ∥ `2026-11-01`）；规则本体在 `docs/core/design/TESTING.md` §2 ∥ §3.1 ① 早就对（行号 as-of：`:90` ∥ `:130` ∥ `:159`），提示词层零覆盖（`docs/batches` 16 档 0 命中）⇒ 纪律层只给生命周期、不给位置。第二半 = 先例库已死：旧坐标还教旧形，而「先对齐先例」会忠实抄回（`:76` 逐字 `Survey how **similar / same-kind features currently do it** … **align first**`）。被否 = 两句分两档落（两模式共读面对普通模式误导，K1）∥ 给 `thincoder-core/prompts/common.md:353` 加交叉指（引用面 vs 落点面两条平行轴，K3）∥ 同时加机检（存量一次全红，违零假阳优先） |
+| D-PS51 | **一份工作 = 一本账 = `thincoder-core/prompts/persona-engineering.md`「并行派发与多任务」节内 `:444` 之后增列 2 行**（规则 ∥ why；锚条 = `Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain` 那一行）；零 `##` 块计数连带（17）· `###` 5 · 标题节点 22 不变；478 ⇒ 480 行。**不写「N 棵树 ⇒ N 本档」特例式**；不动 `:335`–`:337` 三行 ∥ 不动 `:444` 原文 ∥ 不改机制 ∥ 不改需求档 | 缺口 = 「什么算一份」这半句不在任何一处：`:335` 讲能不能共用（约束面），本条讲计量单位（一份 = 一棵树 ∥ 一个席 ∥ 一个文件域）。11:34 事故的形是三个**文件域**而不是三棵树，特例式只覆盖字面树形，下一个说法即绕过（§1.3）；限定词 `running in parallel` 防与 `:336` 顺序交接边界相抵（K4）。被否 = 接半句到 `:444` 行尾（两规则一行，违该档一条规则一行写形（K1））∥ 另起节（与 `:444` 拆成两处，D2）∥ 本批改机制（§1.5：机制拦在 `#1883`） |
 
 ## 8. 提示词承载（单源 · M9 落点）
 
