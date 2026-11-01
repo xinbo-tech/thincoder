@@ -42,7 +42,8 @@
 ### 1.4 权威性与维护（B 式的代价处置）
 
 迁移完成后：**基准层活档 = 权威**；产品树旧档 = **参照历史**（保留 ≠ 维护——`docs/README.md` §2）。同一话题在两者同时存在期间，**以基准层为准**；旧档不参与内容同步（「不逐字一致、不加跨面同步依赖」——多实现面纪律）。
-**归档形态（现状）**：`thincoder-vscode/docs/**` 已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——参照历史可查 · 迁入即出机检源域；方案 = `docs/core/design/DOC-MIGRATION.md` §10。
+
+**归档形态（现状）**：`thincoder-vscode/docs/**` 已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——参照历史可查 · 迁入即出机检源域；方案 = `docs/core/design/DOC-SYSTEM.md` §5.1（归属判据 P1–P5——归档形态即“参照历史”这一归属的落地）。
 
 ## 2. 分批计划（批序 · 每批 ≤6 档 · 写域）
 
@@ -54,7 +55,7 @@
 | **批 4** | 统一面**纯新建**（落笔时核层无同话题档者） | 6 | `docs/core/{design,requirements}/{DOC-CODE-RECONCILE,AGENT-PARAMS,NORMAL-MODE,MULTI-INSTANCE-COLLAB,SETTINGS-TOOL,STRUCTURE-DEBT}.md` | `docs/core/**` | **已落** |
 | **批 5** | §8A 剩余纯新建（5 档——ADVISOR-CONVERGENCE 翻转跳过 · PROJECT 拆分双落）+ 本档拆分 | 6 | `docs/core/requirements/{DESIGN-TOKEN-SETTLEMENT,ENG-TOKEN-BINDING,PORTABILITY,VERIFY-REDESIGN,PROJECT}.md` · `docs/vsc/requirements/PROJECT.md` | 新建 core 需求档 + `docs/vsc/**` | **已落** |
 | **批 6+** | §8B 并入清单 **26 条**（转并入既有面）+ 待裁 D1–D3 定判后处置 | 26+ | 逐条给定（清单面已收口） | `docs/core/**`（+ 待裁项 `docs/vsc/**`） | **已落** |
-| **收尾批** | 产品树两份地图（`design/README.md` · `requirements/README.md`）随树降格处置 | 2 | —— | 父侧 | 待排（地图处置仍待父侧） |
+| **收尾批** | 产品树两份地图（设计树 · 需求树各一份）随树降格处置 | 2 | —— | 父侧 | 待排（地图处置仍待父侧） |
 
 ## 3. 判据缺口（登记）
 

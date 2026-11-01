@@ -6,10 +6,6 @@
 > 域档：活动池与消化面域 = `docs/desktop/design/ACTIVITY.md` · 输入区域 = `docs/desktop/design/COMPOSER.md` · 对话流域 = `docs/desktop/design/CHAT.md` · 设置域 = `docs/desktop/design/SETTINGS.md`。
 > 域档续：菜单体系 = `docs/desktop/design/MENU.md` · 打包与发行 = `docs/desktop/design/PACKAGING.md` · 端到端测试基建 = `docs/desktop/design/E2E-TESTING.md` · web 快筛 = `docs/desktop/design/WEB-QUICKCHECK.md`。
 > 核机制面（会话 / 配置 / 记忆 / 工具）**只住核**——本档只做**接入面**设计，不重述核语义（单一权威源）。
-> **迁移状态（波 2b）**：本档 = 文档体系重组（DOC-MIGRATION）· 波 2b 迁入——来源 = `docs/desktop/design/PROJECT.md` §2（**KD-5** ∥ **KD-9** ∥ **KD-15** ∥ **KD-16** ∥ **KD-28** ∥ **KD-41** ∥ **KD-56**）∥ `docs/desktop/design/UI.md` §1（会话控制面行 + 会话面板族行与批注块）∥ `docs/desktop/design/PROJECT.md` §4.1（会话族行）；
-> 迁入 = 逐字（长行按语义边界折行；迁入文本内「本档 §x」回指按新落点改指）；原址各留一行指针。
-> 本档余量：零（§6.1 ∥ §7 涉行已随切片 4（终篇）迁入——见 §4/§5/§6）；§4.1 会话族行已迁入（2c 前置步 · 文件账分片轮 · 2026-10-02——见 §3）。
-> 波 2b 记录在册 = 文档结构重组 §2。
 > **行数纪律（500 建议 ∕ 800 硬限）只对代码档**（`.mjs` ∕ `.cjs` ∥ `.css` 等）；纯 `.md` 设计档不受限（档长按内容需要；设计档读者面 = 人）。
 
 ## 1. 关键决策记录
@@ -35,9 +31,11 @@
 ### 2.2 会话面板元数据族（对齐重定位 · 项 4）
 
 4. **会话面板元数据族（D18 · 对齐 VSC 会话栏）**——对位面 = `thincoder-vscode/webview/session-bar.js:40-41`（行元数据 = `provider · N msgs · updated`）；
-   桌面落形 = 会话控制面下拉条目元数据族**三值**：
-   provider（槽投影 `activeProvider`——核 `listSlots` 条目 `thincoder-core/session-slots.mjs:212`；端壳投影 `thincoder-desktop/src/main/sessions.mjs:12-16` **已载（R3c 增）**）· `messageCount`（已载）· `updatedAt`（已载）。
-   交互对位 = 点选 / 改名 / 删除（桌面行内换形**已在册**——本注不改形）；**多标签结构不削**（本端结构差异保留）；更新时间显示形 = 本地化短日期（沿 VSC `fmtDate`）。
+   桌面落形 = 会话控制面下拉条目元数据族**三值**（逐值一条）：
+   - `provider`：槽投影 `activeProvider`——核 `listSlots` 条目 `thincoder-core/session-slots.mjs:212`；端壳投影 `thincoder-desktop/src/main/sessions.mjs:12-16` **已载（R3c 增）**。
+   - `messageCount`：已载。
+   - `updatedAt`：已载；显示形 = 本地化短日期（沿 VSC `fmtDate`）。
+   - **交互对位**：点选 / 改名 / 删除（桌面行内换形**已在册**——本注不改形）；**多标签结构不削**（本端结构差异保留）。
 
 ### 2.3 会话面板视觉（D21 项 2 · 9 面表）
 
@@ -66,14 +64,16 @@
 
 ### 2.4 会话面板七条对位处置（2026-09-29 重审 · 盘清 · #673）
 
-**会话面板七条对位处置**——逐条四类：已消（①②）· 对位物退役（③）· 需求边界（④）· 说明（⑤–⑦）：
-① **面板容器皮肤 = 已消**（R13 换装 + D21 后两端构同形——实读 `thincoder-vscode/webview/session.css:13-59` ⟷ `thincoder-desktop/renderer/session-list.css:8-46`）；
-② **会话选择器 / 下拉交互 = 已消**（同上；落形 = 本档 §2.1 会话控制面行）；
-③ **会话条对位句 = 已消（对位物退役）**——标签条 R13 裁撤 ∕ 会话头退场；对位 = VSC `#session-bar` 三件（`#session-selector` ∕ `#session-dropdown` ∕ `#new-session-btn`——新建入口 = 桌面会话控制面新建钮（`session:create`）+ 空态引导面动作），R13-A 形换装已落；
-④ **`#project-btn`（多根切换钮）= 不适用**（需求边界——本端单项目模型，需求 §2「项目模型」行）；
-⑤ **`.dropdown-section` = 说明**（VSC 会话列表不发射该节点——仅 `thincoder-vscode/webview/model-picker.js:73` 消费；桌面下拉零区标题面（R13 后）⇒ 零动）；
-⑥ **行内换形三件 = 说明**（桌面行内换形形态有意不同（`.session-rename-input` ∕ `.session-cancel` ∕ `.session-confirm`）· 零动）；
-⑦ **打开目录入口（项目钮）= 说明**（本端独有（D1 面——住会话控制面；VSC 无对位）⇒ 保留零动）。
+**会话面板七条对位处置**：
+
+- **分类**：逐条四类——已消（①②）· 对位物退役（③）· 需求边界（④）· 说明（⑤–⑦）。
+- ① **面板容器皮肤 = 已消**（R13 换装 + D21 后两端构同形——实读 `thincoder-vscode/webview/session.css:13-59` ⟷ `thincoder-desktop/renderer/session-list.css:8-46`）。
+- ② **会话选择器 / 下拉交互 = 已消**（同上；落形 = 本档 §2.1 会话控制面行）。
+- ③ **会话条对位句 = 已消（对位物退役）**——标签条 R13 裁撤 ∕ 会话头退场；对位 = VSC `#session-bar` 三件（`#session-selector` ∕ `#session-dropdown` ∕ `#new-session-btn`——新建入口 = 桌面会话控制面新建钮（`session:create`）+ 空态引导面动作），R13-A 形换装已落。
+- ④ **`#project-btn`（多根切换钮）= 不适用**（需求边界——本端单项目模型，需求 §2「项目模型」行）。
+- ⑤ **`.dropdown-section` = 说明**（VSC 会话列表不发射该节点——仅 `thincoder-vscode/webview/model-picker.js:73` 消费；桌面下拉零区标题面（R13 后）⇒ 零动）。
+- ⑥ **行内换形三件 = 说明**（桌面行内换形形态有意不同（`.session-rename-input` ∕ `.session-cancel` ∕ `.session-confirm`）· 零动）。
+- ⑦ **打开目录入口（项目钮）= 说明**（本端独有（D1 面——住会话控制面；VSC 无对位）⇒ 保留零动）。
 
 ### 2.5 账本警示面注（会话账本异常警示面 · 2026-09-28）
 
@@ -84,9 +84,11 @@
 2. **形态与锚（最小形态 = dim 行 · 非可点）**——落点 = 会话控制面**下拉首行**（开时挂选择器子位——端既有面迁位）；节点 = `div.session-ledger-notice` + 机读锚 **`data-ledger-notice`**（裸标记——在场即异常；**非 `button`** · 零 `data-action` ⇒ 不可点、零控件语义）；
    样式 = `.session-ledger-notice` 单规则（`padding: 6px 10px` · `opacity: 0.7`——dim 观感；落点 = `thincoder-desktop/renderer/session-list.css:93`〔越线档结构轮 #536 迁出后现址〕）。
 3. **词键（两语各两键 · 条件合成）**——主句键 `rail.ledger.notice` + 条件附句键 `rail.ledger.notice.scene`（住 `thincoder-desktop/renderer/i18n.mjs` `rail.*` 族；插值 = 核同形 `${reason}`）：
-   zh 主句 =「会话账本异常（${reason}）——打开会话即自动补回」/ en 主句 =「Session ledger anomaly (${reason}) — opening a session self-heals it」；zh 附句 =「损坏现场档保留 30 天」/ en 附句 =「Corrupted-scene files kept 30 days」——**`ledger.scene === true` 时合成「主句 + 分隔符 + 附句」**（zh「；」/ en「; 」按当前 `locale()` 直取；缺 / false ⇒ 仅主句）；
-   **与 VSC 两键 / CLI 同口径**（三端同一句话的条件附形态——2026-09-28 修正轮定形）；`${reason}` 值 = `ledger.reason` 逐字。
-   计数随动：宿主键总数 **144**（键数门 = 四处同笔为纪律——测试树 2026-09-28 全清重置后承载 = 随档单元证据）。
+   - **zh 主句** =「会话账本异常（${reason}）——打开会话即自动补回」/ **en 主句** =「Session ledger anomaly (${reason}) — opening a session self-heals it」。
+   - **zh 附句** =「损坏现场档保留 30 天」/ **en 附句** =「Corrupted-scene files kept 30 days」。
+   - **合成条件**：`ledger.scene === true` 时合成「主句 + 分隔符 + 附句」（zh「；」/ en「; 」按当前 `locale()` 直取；缺 / false ⇒ 仅主句）。
+   - **与 VSC 两键 / CLI 同口径**（三端同一句话的条件附形态——2026-09-28 修正轮定形）；`${reason}` 值 = `ledger.reason` 逐字。
+   - 计数随动：宿主键总数 **144**（键数门 = 四处同笔为纪律——测试树 2026-09-28 全清重置后承载 = 随档单元证据）。
 4. **数据链**——`refreshRail`（`thincoder-desktop/renderer/mount-sessions.mjs`——**唯一写路径**）在 `sessions:list` 回执到后写 `ledger` 切片（重挂键面 `SESSION_KEYS` = `thincoder-desktop/renderer/app.mjs:64` 含 `ledger`）；构树读切片出注记节点（`thincoder-desktop/renderer/views/session-control.mjs`——`sessionModel` 携 `ledger` ⇒ 下拉首行出注记）。
    **不做推送**：可见刷新 = 端侧下一次列表渲染自见（沿核 §6.25「行级刷新不做推送」口径）。
 5. **判据（机检）**——① 回执面：`ledger` 在场 ⇔ `refused > 0 ∨ scene`；缺席 = 正常（负断言）——用例 = 随档单元证据；
@@ -162,7 +164,7 @@
 | 3 | 单元测试档 | 重启自动重开族（已建成 · 215 行——五用例：命中（上次打开 ≠ 最近活跃）∕ 端分离（`.cli` ∕ `.vscode` 零影响）∕ 降级·目录已删（⇒ 冷态 + 零抛）∕ 降级·族无可读 `cwd`（标记在盘而族数据文件缺 ∕ 坏 ⇒ 冷态 + 零抛 + 不误落次新族）∕ 零记录（零写 + 冷态）；**测试用例以显式 mtime 落盘**（免粒度依赖）；随档留存 · 不进集成测试树） | #734 |
 | 4 | 设计档随动 | `docs/desktop/design/IPC.md` §2 项目面注项 7（机制单源）+ 项 4 收正 · `docs/desktop/design/SHELL.md` §1 树两行 · 本档 §1 **KD-56** ∕ **KD-9** 两处收正 ∕ `PROJECT.md` §4.1 两行说明（`main.mjs` → `docs/desktop/design/SHELL.md` §5.1；`projects.mjs` → 本档 §3.1）∥ §6.1 **D1** ∕ §7 **T-DSK50** ∕ §8 边界行 | #734 |
 
-**值列口径**（本块）：「现行」= as-of 2026-09-30 实读（内容行数口径——文末换行不计）；「预期」= 设计预估（对账后回填——与文件账行值列同源：本档 §3.1 ∥ `docs/desktop/design/SHELL.md` §5.1）。
+**值列口径**（本块）：「现行」= 判时按盘现读（内容行数口径——文末换行不计）；「预期」= 设计预估（对账后回填——与文件账行值列同源：本档 §3.1 ∥ `docs/desktop/design/SHELL.md` §5.1）。
 ## 4. 验收回指（本域需求条目 · 判据全文）
 
 | 需求 | 机检判据（点回需求卷） | 验证 |
@@ -173,10 +175,13 @@
 | **D23** | 列表计数不撒谎：count 不可得 ⇒ **显示不可得**——桌面 = **段缺席**（既有 `Number.isFinite` 门零改——`thincoder-desktop/renderer/views/sessions.mjs`）∥ CLI / VSC / `read_history` = 「—」；设计面单源 = `docs/core/design/SESSION.md` §6.25 判据句 4（台账可靠）；计数面本端零改（既有 `Number.isFinite` 门）；**账本异常警示面（账本可靠 · 桌面微轮）** = 会话控制面下拉首行 dim 注记（`div.session-ledger-notice` · `data-ledger-notice` · 非可点；触发 = `refused > 0 ∨ scene`——单源 = 本档 §2.5 / `docs/desktop/design/IPC.md` §2「会话族注」项 6） | T-DSK40 + 既有门（计数段缺席零改） |
 | **D26** | 会话标题链：标题生成 ⇒ 落盘 ⇒ 左列行 ∕ 标签条 ∕ 状态行 `title` 段三面随动（标题先于落盘 · 结算单实现）——单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（第三端） | T-DSK46 + 单元测试档（会话标题族——已建成 · 284 行 · 随档留存） |
 
-**会话标题接线（验收 · 2026-09-28）**：需求回指 = **D26**「会话标题链接线」（已落——`docs/desktop/requirements/PROJECT.md:171`；同族 = **D17** 状态行 `title` 段 ∕ **D18** 会话面板）；设计单源 = 本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（链单源——第三端）；
-机检 = **单元测试档**（会话标题族——已建成 · 284 行——链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树）；
-真机 = **T-DSK46**——**本轮不重建 E2E 基建**（测试覆盖全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例登记待基建重建；**离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）。
-  测试文件随修随加——不占设计条目（2026-09-27 裁定）。
+**会话标题接线（验收 · 2026-09-28）**：
+
+- **需求回指**：**D26**「会话标题链接线」（已落——`docs/desktop/requirements/PROJECT.md:171`；同族 = **D17** 状态行 `title` 段 ∕ **D18** 会话面板）。
+- **设计单源**：本档 §1 **KD-41** ∕ 核档 `docs/core/design/SESSION.md` §6.7（链单源——第三端）。
+- **机检 = 单元测试档**（会话标题族——已建成 · 284 行）：链路 ∕ 时序 ∕ 短路 ∕ 失败 + **E5** 窗内受理零丢失 ∕ **E6** 窗内中止零标题零写——六例；零真实网络 = `globalThis.fetch` 换桩；随档留存 · 不入集成测试树。
+- **真机**：**T-DSK46**——**本轮不重建 E2E 基建**（测试覆盖全清重置后集成域空）：转**父侧真机冒烟**闭合，集成用例登记待基建重建。
+- **离线不可产面**（真 provider 回合 ⇒ 标题生成 ⇒ 落盘 ⇒ 左列 ∕ 标签条 ∥ 状态行三面随动 + 失焦通知携标题）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
 
 （§6.1 本域行全五条已迁讫；批块一条已迁讫（上）——本域无余量。）
 

@@ -945,7 +945,7 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 故第 4 / 5 条把 `§4.18-A` / `§4.18-B` 当命中删，与 §6.6 `:185`「判据 = 指称本协议自身对象，指外部文档者一律入引证面」一致（`§4.18` = `BATCH-RECORD.md` 的节号）。§6.6 `:191` 括注的「及其下级两段形」句面本批不改，待另笔收窄。
 
-#### 6.31.3 受影响文件（该批当笔读数 · as-of 2026-10-19 · 口径 = `split("\n").length − 1` 实读）
+#### 6.31.3 受影响文件（口径 = `split("\n").length − 1` 实读；判时按盘现读）
 
 | 文件 | 现行 | Δ（⇒ 实施后） | 档位与拆分结论 |
 |---|---|---|---|
@@ -1164,7 +1164,7 @@ A citation sends the reader to another document for the meaning, and its wording
   ④ `thincoder-core/prompts/common.md:261` → `Every config item ships its UI in the same batch. "It has always been a config-file item" is a habit, not a reason — a hint pointing at a missing entry costs the trust in every later hint.`
   ⑤ `thincoder-core/prompts/common.md:179`（标题，即 H3）→ 见「标题对照表」。
 
-**基线（as-of 2026-10-19 · 逐档实测；字符 = `String.length`，行 = `split(/\n/).length`）**：
+**基线（逐档判时实测；字符 = `String.length`，行 = `split(/\n/).length`）**：
 
 | 档（`thincoder-core/prompts/`） | 行 | 字符 | 词面命中（处 / 行） | 本批改档 |
 |---|---|---|---|---|
@@ -1202,7 +1202,7 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 
 口径两条（判读数前先看）：① 词面各 token 加词边界，`red` 取 `lines?`——不带边界会多读两处子串假阳：`thincoder-core/prompts/advisor-round2.md:13` 的 "may note" ∥ `thincoder-core/prompts/discipline-engineering.md:184` 的 `measured line`（见「假阳性登记」）；单数形会漏 `thincoder-core/prompts/common.md:179` 的 "red lines"（改前唯一复数形）；
 
-  ② 处 = token 次数、行 = 命中行数，一行可含多处（如 `thincoder-core/prompts/common.md:234` = 4 处 1 行）。
+  ② 处 = token 次数、行 = 命中行数，一行可含多处（同行的多处按处计）。
 
 **验收表**：
 
@@ -1226,7 +1226,7 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 **条目处置与计数（复算 · 三者自洽）**：
 
 - 词面命中 = **90 处 / 71 行**（16 档全量 · 同一判据式）。
-- 四分区（条目处置清单）= **A 41 行 + B 4 行 + C 2 行 + D 25 行 = 72 行** ✓（A 的 41 行 = 词面命中行，其中 `thincoder-core/prompts/common.md:179` 本身是标题行）；清单内的 `thincoder-core/prompts/discipline-engineering.md:184` 在判据口径下零命中（假阳登记行）⇒ **命中读数 = 90 处 / 71 行**（72 − 1）。
+- 四分区（条目处置清单）= A（词面命中行）∥ B / C / D 三族逐条在册——处数与行数判时现算（本档不载快照）；清单内的 `thincoder-core/prompts/discipline-engineering.md:184` 在判据口径下零命中（假阳登记行）。
 - 处置项 = **44 项** = 41 个词面命中行 + 3 个词面外标题（`thincoder-core/prompts/discipline-engineering.md:3` ∥ `:29` ∥ `thincoder-core/prompts/discipline-normal.md:187`）；按标题 / 正文分：**4 个标题 + 40 个正文行 = 44 项**（`thincoder-core/prompts/common.md:179` 兼为标题与词面行，故 41 行 − 1 + 3 标题 = 44 项）✓。
 - 改后残留 = **38 处 / 34 行** = B 6 处 / 4 行 + C 3 处 / 2 行 + D 25 处 / 24 行 + **G1 保留位 4 处 / 4 行** ✓（6+3+25+4 = 38 · 4+2+24+4 = 34）；A 区 56 处 / 41 行中 **52 处 / 37 行清零**（= 56−4 · 41−4）。
 - **保留位（4 处 / 4 行 · 不处置）**：`thincoder-core/prompts/advisor-design.md:60` ∥ `thincoder-core/prompts/advisor-round2.md:46` ∥ `thincoder-core/prompts/advisor-round3.md:42` ∥ `thincoder-core/prompts/persona-eng-coder.md:37`——四处同为 G1 目标句内的 `a write that never happened`，是**描述性否定**（陈述「这次写没有发生」），
@@ -1851,7 +1851,6 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 
 - `thincoder-core/prompts/persona-engineering.md:18` 现文：`The go-ahead **does not exempt the approval gate**: the review still runs, the user's approval is still required — **"authorized to fire" is not "approved"**.` 该句让整批令在批准门再停一次——同一份授权收两次费。
 - 设计档自身两处登记引用旧语义：`:1226`（§6.34 成因表 G4，闭合列写「预授权不豁免批准照旧成立」）∥ `:1285`（§6.34 对照表第 2 行，「`:13` 仍成立：预授权照旧不等于批准」）（本笔已落，见 L6 / L7）。
-- 体量读数：父侧交单读数 61,449 字符；本席 `node` 实读 = **62,902 字符 / 243 行**——差额 = FR35 `taskbook-sync` 批已落地的 +1,453（只作记录，不作判据——见 §7 D-PS42 ③）。
 
 **机制（四条 = 需求三条 + 默认档一条 · 回指 §13.14）**：
 
@@ -5085,7 +5084,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 - `:336` = `  A sequential handoff (designer → coder → a fix round's re-spawn) keeps the same record: it never overlaps, so nothing is shared.`（130 字符）。
 - `:337` = `  - **Why**: §2 is the whole batch's account — every entry, affected file and acceptance line — and a child cannot tell which rows are its own; two children on one record therefore each work the full table, and the same file ends up with two writers.`（250 字符）。
 - 模拟替换（`node` 内存实测，把 `:446` 换成围栏块第 2 行）：480 行 / 68,665 字符 / `##` 17 / `###` 5 / 标题节点 22 / 最长行 300 / `>300` = 0；两行宽 164 ∥ 171。
-- 重复面读数（落笔前）：16 档扫 `own batch record` = 2 处（`thincoder-core/prompts/discipline-engineering.md:257` · `thincoder-core/prompts/persona-engineering.md:335`）· `one record` = 3 处（advisor-round2 `:29` · advisor-round3 `:30` · persona-engineering `:337`）· `one job` ∥ `counting unit` ∥ `per job` ∥ `unit of measure` = 0；落笔后两串各 +1（本条载体）⇒ 判法见 A5。
+- 重复面判法：扫 `own batch record` ∥ `one record` ∥ `one job` ∥ `counting unit` ∥ `per job` ∥ `unit of measure` 六串，命中行逐条登记（处数判时现算，本档不载点值）⇒ 判法见 A5。
 - 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席 manifest read 实读）⇒ 独立公共源文档仓无，已查无相关。
 - 集成面读数：`test/RTM.md` 262 行 / `## ` 5 / `###` 19 / 表行 96。
 - 字符口径 = UTF-16 `.length`（与 §6.56 A2 同口径）：该档含 8 个非 BMP 字符（6 × U+1F534 + 1 × U+1F7E1 + 1 × U+1F535）⇒ 同一档 code point 口径读 68,660、UTF-16 口径读 68,668（A2 的改后读数 68,665 同口径，其 code point 读 68,657）；本节一律取 UTF-16 口径。
@@ -5214,7 +5213,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 - 落点表两条内容锚均抄自本轮实读的整行（连续 300 字符以内的前缀，实施席按前缀定位后整行核对）。
 - `docs/core/design/TESTING.md` §2 ∥ §3.1 ①：单测档「名随批次档 · 住批次目录」在案；§3.5 判据 1 逐字 `候选集 = `D` 下后缀为 `.test.mjs` 的**文件**（目录不计）；`（`D = dirname(abs)`）。
 - **收集面反查实读**：`thincoder-core/test/run.mjs:35` 逐字 `fail(\`uncollected test file (unit test files live in docs/batches/ and run via node --test <file>): ${rel}\`)` ∥ `thincoder-cli/test/run.mjs:36` 同串——句一 why 的第二半即此处的依据。
-- `thincoder-core/prompts/` 全 16 档扫 `docs/batches` = 0 命中；`.test.mjs` 字面 = 1 处（`thincoder-core/prompts/common.md:353`）——本席本轮 node 逐档实读。
+- `thincoder-core/prompts/` 全 16 档扫 `docs/batches` 与 `.test.mjs` 字面——命中面判时现算（本行不载处数）。
 - `thincoder-core/prompts/common.md:353` 逐字 `    - A clause reading "the criterion is batch X §2" (or naming a batch's `.test.mjs`) dies the moment that batch closes or its file is deleted.` ⇒ 讲引用面，与句一不冲突（K3）。
 - `test/RTM.md`：23 个 CLI 业务故事节 + VS Code 端 ∥ Desktop 端两段（`^## ` / `^### ` 实读）；近面 = 故事 7（`:78`）∥ 故事 20（`:234`）。
 - 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席本轮 manifest read 实读）⇒ 独立公共源文档仓无，已查无相关。
@@ -5376,7 +5375,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 
 | D-PS53 | **「文字太长，难于阅读」口径并入三面 = 名 + 阈值分句 + 行说法**（设计档 7 行 12 处：`:148` ∥ `:598` ∥ `:606`×3 ∥ `:610` ∥ `:618` ∥ `:5353`×2 ∥ `:5354`×3 = 本席本轮已落；需求档 `:58` = 主 agent 笔；英文 `thincoder-core/prompts/persona-engineering.md:437`-`:438` = 实施席照 §6.61 围栏块落笔）；**值 300 不动**；条目名的词头由量词换成毛病 | 判由：① 逐字采用 `docs/core/design/LEDGER.md:883` 已定形——一个东西一个名（D2）；② 数字只住阈值那句——名字带数，读者就去量长度而不是看读不读得下去（`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 2）；③ 量的口径会把读者推向「把字删短凑进线内」，细节仍在行里（前批已记）；④ 做法词「指针化」与英文 `pointer-ized` 保留——治的是条目名，不是做法词。被否 = 沿用旧名（三面两个名）∥ 只改中文不改英文（§1.4 以中文终稿为准译）∥ 把旧口径词表写进本档（A4 的 0 命中判据会命中自己，且状态档不承载旧名——见 §6.61 K6） |
-| D-PS54 | **「文字太长，难于阅读」的处置动词 = 重新组织语言重写**（中文设计档 `:606` ∥ `:5354` 两行 3 处 + 处方面 22 处 / 6 档〔§6.62 ④〕∥ 英文面 `:437`-`:440` 四行；英文围栏块就地换写）——本批已落；**值 300 不动 · 名与阈值句不动 · §1.4 五族零改**；判据单源逐字 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 1 ∥ `docs/core/design/DOC-DISCIPLINE.md` §3.18 ⑥ | 判由：① 旧词「收窄」是宽度词——读者照它删字凑线，细节留在行里且被打碎；② 判据单源早写了处置口径（重新组织语言重写），档里却换了另一个动词，读者按档里那个手；③ 一个动作一个动词（D2）——同一条规矩三面出现三种处置词即分叉；④ 例外行 `narrow` 与例外语义相反（例外允许的是**一段摘要**，落点出现后是**搬走 + 重写**） |
+| D-PS54 | **「文字太长，难于阅读」的处置动词 = 重新组织语言重写**（中文设计档 `:606` ∥ `:5354` 两行及判由③ 句形〔§6.62 ④ 逐处表〕∥ 英文面四行；英文围栏块就地换写）——本批已落；**值 300 不动 · 名与阈值句不动 · §1.4 五族零改**；判据单源逐字 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 1 ∥ `docs/core/design/DOC-DISCIPLINE.md` §3.18 ⑥ | 判由：① 旧词「收窄」是宽度词——读者照它删字凑线，细节留在行里且被打碎；② 判据单源早写了处置口径（重新组织语言重写），档里却换了另一个动词，读者按档里那个手；③ 一个动作一个动词（D2）——同一条规矩三面出现三种处置词即分叉；④ 例外行 `narrow` 与例外语义相反（例外允许的是**一段摘要**，落点出现后是**搬走 + 重写**） |
 
 
 ### 6.60 工具描述面的举例不得指向本仓档（`thincoder-core/tool-docs/advisor.md` · 一行换举例形）
@@ -5641,7 +5640,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 3. 〔父侧 · 结构 · 非阻断〕本档 §6.60 排在 `## 7. 关键决策记录` 之后（`:5378` > `:5320`），节序与编号倒置；§6.61 沿用既有尾部位置（与 §6.56–§6.60 同处）。搬序 = 上百行结构移动 + 语义漂移风险，建议单开一批。
 4. 〔父侧 · 词表确界〕§2 词表 B 组那一串不能进「全域 0 命中」：同一串在白话里另指三个别的东西（`docs/core/design/BROWSER-TOOL.md:145` 的截断行 · `docs/server/requirements/PROJECT.md:110` 的配额超限时的行为 · `thincoder-cli/docs/_archive/batches/2026-09-11-ABORT-PROVENANCE.md:120` 的行宽口径）⇒ 本批按「射程三档内 0」判，全域词表只收无歧义串（逐串见 §2）。
 
-### 6.62 「文字太长，难于阅读」的处置口径 = 重新组织语言重写（处方面 22 处 / 6 档 + 英文面四行）
+### 6.62 「文字太长，难于阅读」的处置口径 = 重新组织语言重写（处方面各档 + 英文面四行）
 
 **来源**：本批 §1——用户 2026-11-01 15:02 逐字「超过三百字不能表达成宽度超限，那会把背后的真实原因给隐藏了，真是原因是：文字太长阅读困难。处置办法也不是简单的收窄或者拆行，而是：重新组织语言！」；同轮 15:1x 判首轮「到处残留在打折扣」。台账 `#1950`。前情 = `#1947`（代码面与描述面）∥ `#1951`（名与阈值），均已收口。
 
@@ -5678,7 +5677,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 - **划界（消解 §6.61 K8 ∥ K2 相抵）**：进英文终稿的句子只有两个来源——**中文三面已有的句子**（译），或**判据单源那句话的译文**（`folding a line, splitting a paragraph or trimming is not a rewrite`）。后者自带，因为提示词面禁文档引用，判据句不在场读者只拿到一个动词。两源之外的句子不进。
 - `:429` 的 `pointer-ized` 不改：它说的是做法，不是量、也不是处置动词（承 §6.61 K4）。
 
-**④ 逐处处置（22 处 / 6 档；类 = 处方 ∥ 描述已发生 ∥ 验收判法）**
+**④ 逐处处置（类 = 处方 ∥ 描述已发生 ∥ 验收判法）**
 
 「处方」= 原句在教下一次怎么做；「描述已发生」= 记的是某批落笔后的事实；「验收判法」= 判据 / 判法面。三类都有同一半句要拔掉（把挪断点写成处置），三类都不重写事实。
 

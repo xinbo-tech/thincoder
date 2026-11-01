@@ -28,7 +28,7 @@
 
 > **退役状态（2026-09-18 · v1 文档退役（台账 #22）· 轮 A 已落）**：`thincoder-vscode/docs/**` 136 活档已 `git mv` 入 `thincoder-vscode/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改）——VSC 树自本政策第 4 / 5 条的「随批迁」路径转为**归档形退役**（保留语义不变；执行记录 = 该批记录）；
 > `thincoder-cli/docs/**`（**轮 B · 已落 2026-09-18**）——**139 活档**同法 `git mv` 入 `thincoder-cli/docs/_archive/<原相对路径>`（恒等映射 · 正文一字未改 · `R` 对 139 / 错配 0）；
-> **三档暂留原地**（`batches/` · `design/` · `requirements/` 各 1 档——父侧裁定，见 §3 与 `core/design/DOC-MIGRATION.md` §10.3 已结清块）；执行记录 = 该批记录。**两树退役闭合**（VSC 轮 A 136 + CLI 轮 B 139）。
+> **三档暂留原地**（`batches/` · `design/` · `requirements/` 各 1 档——父侧裁定，见 §3；迁移期该块已结清、台账退役）；执行记录 = 该批记录。**两树退役闭合**（VSC 轮 A 136 + CLI 轮 B 139）。
 
 ## 3. 待迁清单（现状）
 
@@ -64,12 +64,12 @@
 **其它板块（非核心统一拆分）**：`core/design/DOC-SYSTEM.md` + `core/requirements/DOC-SYSTEM.md`——文档体系（`docs/` 的 core / CLI / VSC / desktop / render-core 五部分落点规划）；2026-09-14 建档，**只做规划、不执行迁移**。
 
 **迁移迁入档（2026-09-15——非核心统一拆分）**：按 §2 政策「逐档随批迁」自产品树迁入（B 式重建——源档留原地作参照历史），落点按 `core/design/DOC-SYSTEM.md` §5.1 判据（P1 统一面 ⇒ `core/` · P2 产品面 ⇒ `cli/` ∥ `vsc/`）：
-- `core/design/` **5 档**：`core/design/ARCHITECTURE.md` · `core/design/PORTABILITY.md` · `core/design/STRUCTURE-DEBT.md` · `core/design/TWO-REPO-MERGE.md` · `core/design/DOC-MIGRATION.md`（迁移台账——承 `core/design/DOC-SYSTEM.md` §11 拆分规划）；
+- `core/design/` **4 档**：`core/design/ARCHITECTURE.md` · `core/design/PORTABILITY.md` · `core/design/STRUCTURE-DEBT.md` · `core/design/TWO-REPO-MERGE.md`；
 - `core/requirements/` **2 档**：`core/requirements/PHILOSOPHY.md` · `core/requirements/TWO-REPO-MERGE.md`（`RELEASE.md` 同批迁入后 2026-09-20 再迁根 = `docs/RELEASE.md`——§1 首行）；
 - `cli/` **14 档**——设计 9 住 `cli/design/`（其中 `cli/design/CLI-DEBT.md` 与 `cli/design/CLI-ENTRY.md` 为 2026-09-25 新建的非迁移档，载体收口 = 台账 #340 ∥ #350）；需求 5 住 `cli/requirements/`（P2——2026-09-15 首迁 2 档后历批续迁；`RELEASE.md` 已随三端合一迁根 = `docs/RELEASE.md`——2026-09-20）。**逐名清单见目录列举**；
 - `vsc/` **10 档**：`design/` = `vsc/design/VSC-MIGRATION.md` · `vsc/design/SETTINGS.md` · `vsc/design/PROJECT-SWITCHER.md` · `vsc/design/WEBVIEW.md` · `vsc/design/WEBVIEW-PROTOCOL.md` · `vsc/design/WEBVIEW-INPUT.md` · `vsc/design/VSC-DEBT.md`；`requirements/` = `vsc/requirements/VSC-MIGRATION.md` · `vsc/requirements/WEBVIEW.md` · `vsc/requirements/PROJECT.md`。
 
-**`core/design/` 其余 42 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 2026-10-10 补登记一档 · 2026-10-13 补登记一档（`core/design/TEAM-LEDGER.md`——团队客户端面） · 判据 = `core/design/DOC-MIGRATION.md` §9.3 A21 · 计数随批收正 2026-10-13）**：
+**`core/design/` 其余 42 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 2026-10-10 补登记一档 · 2026-10-13 补登记一档（`core/design/TEAM-LEDGER.md`——团队客户端面） · 判据 = `core/design/DOC-SYSTEM.md` §5.1（P1–P5 归属判据） · 计数随批收正 2026-10-13）**：
 - 文件 / 编辑 / 执行工具面 **8 档**：`core/design/APPLY-PATCH.md` · `core/design/EDIT.md` · `core/design/EDIT-HELPERS.md` · `core/design/HASHLINE-EDIT.md` · `core/design/INSERT-AFTER.md` · `core/design/TOOL-OUTPUT-LIMITS.md` · `core/design/WRITE.md` · `core/design/BASH-EXECUTOR-FACE.md`（bash 执行器语义面——运行时探测与声明单源；2026-10-04 建档，2026-10-07 补登记）；
 - 浏览器工具面 **1 档**：`core/design/BROWSER-TOOL.md`（浏览器工具——自启浏览器驱动面：十六动作契约（基线八 + 输入域八：press/hover/wheel/mouse/drag/touch/insert/clipboard）∥ 引用 / 几何机制 ∥ 会话模型 ∥ 写闸 ∥ 剪贴板面；2026-10-07 建档）；
 - 顾问 / 协作 / 子代理面 **9 档**：`core/design/ADVISOR-CONVERGENCE.md` · `core/design/ADVISOR-GUARDS.md` · `core/design/AGENT-LOOP-ASYNC-POOL.md` · `core/design/AGENT-LOOP-SUBAGENT.md` · `core/design/AGENT-LOOP-UPSTREAM.md` · `core/design/ESCALATE.md` · `core/design/MULTI-INSTANCE-COLLAB.md` · `core/design/PROXY.md` · `core/design/SEND-STALL-DISTILL.md`；

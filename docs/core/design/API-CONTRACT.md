@@ -4730,7 +4730,7 @@
 **节级注记（非符号键面 —— v1）**：以下接口契约节无具名导出可键（CLI 参数表 / 目录与命名面 / 判据），不入本表：
 
 - `docs/core/design/TESTING.md` §4.3（双端集成面：目录 ∥ 命名 ∥ 入口 ∥ 发布门）· `docs/core/design/MODEL-BENCH.md` §2（CLI 参数表——`bench/run.mjs` 面）；
-- `docs/core/design/DOC-SYSTEM.md` §7（交叉引用形态 R1–R5——判据）· `docs/core/design/DOC-MIGRATION.md` §10.2（迁移落点规则）；
+- `docs/core/design/DOC-SYSTEM.md` §7（交叉引用形态 R1–R5——判据）· `docs/core/design/DOC-SYSTEM.md` §5.1（归属判据 P1–P5 · 落点规则）；
 - `docs/core/design/ARCHITECTURE.md` §4 的族名行（transport 族 / 工具族 / 模块级端面）以代表性导出键入表；入口档（`thincoder-cli/bin/thincoder.mjs`）与端面壳（desktop）无核导出——登记于此。
 
 <!-- END SEMANTIC -->

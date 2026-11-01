@@ -18,10 +18,13 @@
 
 
 
-1. **菜单树（五组）**：文件[新建会话 `Ctrl+N` ∥ 打开工作目录… `Ctrl+O` ∥ 最近工作目录▸（前 10 · 项 label = cwd 全路径 · 空表 ⇒ 单枚禁用占位项）∥ close ∥ quit] ∥ 编辑[role 组 + 查找… `Ctrl+F`]
-   ∥ 视图[role 组 + 主题▸（跟随系统 ∥ 亮色 ∥ 暗色——序 = `thincoder-desktop/renderer/theme.mjs` `THEMES` 闭集序；**需求档字面序保持**（实现序 = `THEMES` 闭集序）；**当前生效主题带勾**）] ∥ 设置[设置… ⇒ 现有设置页 ∥ **六组项** ⇒ 组弹窗∥ 两子组（维护▸ ∥ 关于与快捷键▸）（单源 = 本档 §1 **KD-67**）]
-   ∥ 帮助[检查更新… ∥ 命令与快捷键… ∥ 关于 ThinCoder…]（首项 = `host("update")` 主进程更新面；单源 = `docs/desktop/design/PACKAGING.md` §2.8.1）。
-   组名与条目双语（词表单源 = `thincoder-desktop/src/main/menu-words.mjs`；role 默认文案 = Electron 英文硬编码 ⇒ 显式双语 label 覆写——防 en-only 债）；**窗口组（minimize/zoom）不入菜单**（窗口操作走系统标题栏）。
+1. **菜单树（五组）**（逐组一条规则）：
+   - **文件**：新建会话 `Ctrl+N` · 打开工作目录… `Ctrl+O` · 最近工作目录▸（前 10 · 项 label = cwd 全路径 · 空表 ⇒ 单枚禁用占位项）· close · quit。
+   - **编辑**：role 组 + 查找… `Ctrl+F`。
+   - **视图**：role 组 + 主题▸（跟随系统 ∥ 亮色 ∥ 暗色——序 = `thincoder-desktop/renderer/theme.mjs` `THEMES` 闭集序；**需求档字面序保持**（实现序 = `THEMES` 闭集序）；**当前生效主题带勾**）。
+   - **设置**：设置… ⇒ 现有设置页 · **六组项** ⇒ 组弹窗 · 两子组（维护▸ ∥ 关于与快捷键▸）（单源 = 本档 §1 **KD-67**）。
+   - **帮助**：检查更新…（首项 = `host("update")` 主进程更新面；单源 = `docs/desktop/design/PACKAGING.md` §2.8.1）· 命令与快捷键… · 关于 ThinCoder…。
+   - **词面与边界**：组名与条目双语（词表单源 = `thincoder-desktop/src/main/menu-words.mjs`；role 默认文案 = Electron 英文硬编码 ⇒ 显式双语 label 覆写——防 en-only 债）；**窗口组（minimize/zoom）不入菜单**（窗口操作走系统标题栏）。
 2. **交互落径（每项 = 既有单一实现）**：新建会话 → 会话创建出口 ∥ 打开项目 ∥ 最近项 → `openDir`（原生选择框同径）∥ 查找 → 搜索面 `openSearch()`（与核件 `Ctrl+F` 键径**同径收敛**——开语义幂等，双触发零害）∥ 主题 → 设置面出口 `setTheme`（`theme.mjs` 单写者 + 切片写；**落地值回读主进程**——`theme:state` ⇒ 菜单勾随动）∥ 命令与快捷键 → `/help` 流内打印口 ∥ 关于 → 原生面板（版本 = `app.getVersion()` 动态）。
 3. **键盘可达**：三新增键位（`Ctrl+N` ∥ `Ctrl+O` ∥ `Ctrl+F`——菜单加速键；**记法注**：macOS 上 = Cmd——实现取 `CmdOrCtrl`；需求档字面 `Ctrl` 保持）；其余等于 role 默认加速键保留；零冲突实读（渲染面 `ctrlKey` 零既有绑定）。
 4. **判据**：机检 = 单元测试档（菜单体系族 · 300 行 · 8/8 绿——五用例：树形（含带勾态）∥ 双语回落 ∥ 动作闭集 ∥ 词表纪律 ∥ 通道双表（含 `theme:state` 白名单））；真机 = **T-DSK57**（走查：五组双语在场 ∥ 五入口 ∥ 三键 ∥ 关于面板含版本 0.10.1 ∥ 主题勾随动）。
@@ -59,8 +62,9 @@
 | 11 | 单元测试档 | 菜单体系族（**已建成 · 300 行 · 五用例 · 8/8 绿**） | 全批 |
 | 12 | 设计档 | 本档 §1 **KD-65** ∥ 本档 §3.1（新行二 + 三行随动）∥ 本档 §3.2 本块 ∥ 本档 §4（该批块 + `docs/desktop/design/PROJECT.md` §6.1 表头 **D1–D41**）∥ 本档 §5（批注 + **T-DSK57**）∥ `docs/desktop/design/PROJECT.md` §8 该批边界行 ∥ 本档 §6 **DG**；`docs/desktop/design/SHELL.md` §1 树三行 + §2 菜单行；`docs/desktop/design/UI.md` §1 批注；`docs/desktop/design/IPC.md` §1 `ev:menu` 行 + §2 `theme:state` 行 + 计数随动（白名单 **+1**）；`docs/desktop/design/RENDERER.md`（**机制面零触**——仅计数随动） | 全批 |
 
-零触面：`src/main/context-menu.mjs`（D27 零触 ∥ 只读复用 `contextMenuLabels`）∥ `thincoder-desktop/src/main/projects.mjs`（数据面只读复用——`recentDirs` ∥ `openProject` 零改）∥ `renderer/theme.mjs` ∥ `thincoder-desktop/renderer/search.mjs` ∥
-  核件 `thincoder-render-core/**` ∥ 核 `thincoder-core/**` ∥ CLI ∥ VSC；测试覆盖随修随加——不占设计条目（2026-09-27 裁定）。
+- **零触面（端侧档）**：`src/main/context-menu.mjs`（D27 零触 ∥ 只读复用 `contextMenuLabels`）· `thincoder-desktop/src/main/projects.mjs`（数据面只读复用——`recentDirs` ∥ `openProject` 零改）· `renderer/theme.mjs` · `thincoder-desktop/renderer/search.mjs`。
+- **零触面（核与其它端）**：核件 `thincoder-render-core/**` · 核 `thincoder-core/**` · CLI · VSC。
+- **测试覆盖**：随修随加——不占设计条目（2026-09-27 裁定）。
 
 ### 3.3 现有文件改动 · 设置菜单升级（实施落盘）
 
@@ -107,22 +111,47 @@
 
 ## 4. 验收回指（需求卷 D36）
 
-**菜单体系（验收 · 2026-10-02）**：需求回指 = **D36**（五组扩充 ∥ 双语 ∥ 窄通道 ∥ 四默认定案）；设计单源 = 本档 §1 **KD-65** ∥ `docs/desktop/design/SHELL.md` §2 菜单行 ∥ `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行 ∥ 本档 §2；
-机检 = 单元测试档（菜单体系族 · 300 行 · 8/8 绿——五用例：① **菜单树结构**（五组序 ∥ 逐组条目 ∥ 三加速键 ∥ 主题子菜单三值序 = `THEMES` 闭集序 + **带勾态**（`theme` 给定 ⇒ 恰一枚 `checked`；缺省 ⇒ 全假） ∥ 最近子菜单 ≤10 + 空表占位禁用）② **双语 ∥ 回落**（zh/en 词值 + 未知 ∕ 缺 locale ⇒ en 回落）
-  ③ **动作闭集**（五动作 `onAction` 派发正确 ∥ 未知 action ⇒ 零动作 + 记错）④ **词表纪律**（`menuLabels` 键集 = 预期集 ∥ Edit 四值 = `contextMenuLabels` 同源读取）
-  ⑤ **通道面**（`preload.cjs` `EVENT_CHANNELS` ∧ `events-subscribe.mjs` `CHANNELS` 双表含 `"ev:menu"` 且等值；**回读面**——`preload.cjs` `CHANNELS` 含 `"theme:state"`（+1——随正）∧ `ipc-registry.mjs` `HANDLERS` 含同项））；随批留存 · 不进集成测试树）；
-真机 = **T-DSK57**（走查十一项：五组双语在场 ∥ 新建会话 ∥ 打开项目 ∥ 最近项 ∥ 查找 ∥ 主题切换 ∥ **主题勾随动**（切主题 ⇒ 当前生效主题带勾——设置面 ∥ 菜单两径）∥ `/help` 打印 ∥ 关于面板含版本 0.10.1 ∥ `CmdOrCtrl+N/O/F` 三键（macOS = Cmd）∥ 边界两查（空最近表 ⇒ 单枚禁用占位；未配 locale ⇒ en 回落））；**离线不可产面**（真菜单 ∥ 原生关于面板 ∥ 系统对话框）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
+**菜单体系（验收 · 2026-10-02）**：
 
-**设置菜单升级（验收 · 菜单半 · 2026-10-02 · 需求 D38 ∥ D39）**：需求回指 = **D38**（改名 ∥ 设置… 入口 ∥ 维护子组零改）∥ **D39**（七组项 ⇒ 组弹窗）；设计单源 = 本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68**；
-机检 = 单元测试档（设置菜单升级族——**波 1 用例**：① 菜单树（组名设置 ∥ 条目序 = 设置… ∥ sep ∥ 七组项（序 = `SECTIONS`）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项 ∥ 七项 emit 值 = 组名闭集——**跨面闭集一致性**：`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序（渲染——`SCOPES` 同源派生）源扫）
-   ② 词表纪律（键集 32 ∥ `settingsSectionLabels` HOST_DICT 投影 + en 回落）③ 动作闭集六（`openSettings` 两形派发 ∥ 表外 ⇒ 记错））；随批留存 · 不进集成测试树；
-真机 = **T-DSK59**（用例行 = `docs/desktop/design/SETTINGS.md` §5——两波合一走查）；**离线不可产面**（原生菜单 ∥ 原生对话框 ∥ 原生面板）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
+- **需求回指**：**D36**（五组扩充 ∥ 双语 ∥ 窄通道 ∥ 四默认定案）。
+- **设计单源**：本档 §1 **KD-65** ∥ `docs/desktop/design/SHELL.md` §2 菜单行 ∥ `docs/desktop/design/IPC.md` §1 `ev:menu` 行 ∥ §2 `theme:state` 行 ∥ 本档 §2。
+- **机检 = 单元测试档**（菜单体系族 · 300 行 · 8/8 绿——五用例）：
+  - ① **菜单树结构**（五组序 ∥ 逐组条目 ∥ 三加速键 ∥ 主题子菜单三值序 = `THEMES` 闭集序 + **带勾态**（`theme` 给定 ⇒ 恰一枚 `checked`；缺省 ⇒ 全假）∥ 最近子菜单 ≤10 + 空表占位禁用）
+  - ② **双语 ∥ 回落**（zh/en 词值 + 未知 ∕ 缺 locale ⇒ en 回落）
+  - ③ **动作闭集**（五动作 `onAction` 派发正确 ∥ 未知 action ⇒ 零动作 + 记错）
+  - ④ **词表纪律**（`menuLabels` 键集 = 预期集 ∥ Edit 四值 = `contextMenuLabels` 同源读取）
+  - ⑤ **通道面**（`preload.cjs` `EVENT_CHANNELS` ∧ `events-subscribe.mjs` `CHANNELS` 双表含 `"ev:menu"` 且等值；**回读面**——`preload.cjs` `CHANNELS` 含 `"theme:state"`（+1——随正）∧ `ipc-registry.mjs` `HANDLERS` 含同项）
+  - 随批留存 · 不进集成测试树。
+- **真机**：**T-DSK57**（走查十一项）——
+  - 五组双语在场 ∥ 新建会话 ∥ 打开项目 ∥ 最近项 ∥ 查找 ∥ 主题切换 ∥ `/help` 打印 ∥ 关于面板含版本 0.10.1 ∥ `CmdOrCtrl+N/O/F` 三键（macOS = Cmd）。
+  - **主题勾随动**：切主题 ⇒ 当前生效主题带勾——设置面 ∥ 菜单两径。
+  - **边界两查**：空最近表 ⇒ 单枚禁用占位；未配 locale ⇒ en 回落。
+- **离线不可产面**（真菜单 ∥ 原生关于面板 ∥ 系统对话框）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
 
-**设置菜单组项收窄（验收 · 菜单半 · 2026-10-02 · 需求 D39 收正）**：需求回指 = **D39**（菜单组项 七 ⇒ 六——「模型」不入菜单；设置页面七段零动）；设计单源 = 本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68** ④（闭集关系）。
-机检 = 单元测试档（设置菜单组项收窄族 · 3/3 绿——三用例：① 六项集（条目序 = 设置… ∥ sep ∥ 六组项（序 = `SECTIONS` 去「团队」）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项；六项 emit 值 = 组名闭集；「模型」零在场）；
-② 跨面闭集一致性（`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序去「团队」（渲染）源扫；读取面键序同值）∥ ③ 弹窗仍达六组（逐组开 ⇒ 切片写 + 读取链）+ 校验十名宽容（表外 ⇒ 拒））；随批留存 · 不进集成测试树。
-前批注（单元测试档用例①/② 断言 = 七组项快照——**已实证**：实施落盘后恰 2 红（2026-10-02 复跑 = `tests 8 ∥ pass 6 ∥ fail 2`；红例 = 用例① `:171` ∥ 用例② `:254`）；处置 = 该档头注（已落）+ 收口互指）。
-真机 = **T-DSK59**（条目面随正 = `docs/desktop/design/SETTINGS.md` §5——六组项）；**离线不可产面**（真菜单）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计面条目（2026-09-27 裁定）。
+**设置菜单升级（验收 · 菜单半 · 2026-10-02 · 需求 D38 ∥ D39）**：
+
+- **需求回指**：**D38**（改名 ∥ 设置… 入口 ∥ 维护子组零改）∥ **D39**（七组项 ⇒ 组弹窗）。
+- **设计单源**：本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68**。
+- **机检 = 单元测试档**（设置菜单升级族——**波 1 用例**）：
+  - ① 菜单树（组名设置 ∥ 条目序 = 设置… ∥ sep ∥ 七组项（序 = `SECTIONS`）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项 ∥ 七项 emit 值 = 组名闭集——**跨面闭集一致性**：`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序（渲染——`SCOPES` 同源派生）源扫）
+  - ② 词表纪律（键集 32 ∥ `settingsSectionLabels` HOST_DICT 投影 + en 回落）
+  - ③ 动作闭集六（`openSettings` 两形派发 ∥ 表外 ⇒ 记错）
+  - 随批留存 · 不进集成测试树。
+- **真机**：**T-DSK59**（用例行 = `docs/desktop/design/SETTINGS.md` §5——两波合一走查）。
+- **离线不可产面**（原生菜单 ∥ 原生对话框 ∥ 原生面板）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计条目（2026-09-27 裁定）。
+
+**设置菜单组项收窄（验收 · 菜单半 · 2026-10-02 · 需求 D39 收正）**：
+
+- **需求回指**：**D39**（菜单组项 七 ⇒ 六——「模型」不入菜单；设置页面七段零动）。
+- **设计单源**：本档 §1 **KD-67** ∥ `docs/desktop/design/SETTINGS.md` §1 **KD-68** ④（闭集关系）。
+- **机检 = 单元测试档**（设置菜单组项收窄族 · 3/3 绿——三用例）：
+  - ① 六项集（条目序 = 设置… ∥ sep ∥ 六组项（序 = `SECTIONS` 去「团队」）∥ sep ∥ 维护▸ 两项 ∥ 关于与快捷键▸ 两项；六项 emit 值 = 组名闭集；「模型」零在场）
+  - ② 跨面闭集一致性（`SETTINGS_GROUPS`（主）≡ `SECTIONS` 名序去「团队」（渲染）源扫；读取面键序同值）
+  - ③ 弹窗仍达六组（逐组开 ⇒ 切片写 + 读取链）+ 校验十名宽容（表外 ⇒ 拒）
+  - 随批留存 · 不进集成测试树。
+- **前批注**：单元测试档用例①/② 断言 = 七组项快照——**已实证**：实施落盘后恰 2 红（2026-10-02 复跑 = `tests 8 ∥ pass 6 ∥ fail 2`；红例 = 用例① `:171` ∥ 用例② `:254`）；处置 = 该档头注（已落）+ 收口互指。
+- **真机**：**T-DSK59**（条目面随正 = `docs/desktop/design/SETTINGS.md` §5——六组项）。
+- **离线不可产面**（真菜单）= 人工走查 + 父侧真跑闭合（D16 义务）；测试文件随修随加——不占设计面条目（2026-09-27 裁定）。
 
 ## 5. 用例
 
@@ -132,7 +161,7 @@
 
 **菜单体系批注（验收 · 2026-10-02）**：机检 = 单元测试档（菜单体系族 · 300 行 · 五用例 · 8/8 绿——逐条 = 本档 §4）；真机 = **T-DSK57**（走查十一项——清单 = 本档 §4；用例行 = 本表）；用例行随测试文件修加——不进设计面条目（2026-09-27 裁定）。
 
-**设置菜单升级批注（验收 · 2026-10-02）**：真机用例 = **T-DSK59**（全文 = `docs/desktop/design/SETTINGS.md` §5——菜单 ∥ 弹窗两波合一走查；as-of 2026-10-02）；机检用例 = 本档 §3.3 ∥ §4（波 1 三用例）+ `docs/desktop/design/SETTINGS.md` §4（波 2 三用例）。
+**设置菜单升级批注**：真机用例 = **T-DSK59**（全文 = `docs/desktop/design/SETTINGS.md` §5——菜单 ∥ 弹窗两波合一走查）；机检用例 = 本档 §3.3 ∥ §4（波 1 三用例）+ `docs/desktop/design/SETTINGS.md` §4（波 2 三用例）。
 
 **设置菜单组项收窄批注（验收 · 2026-10-02）**：真机用例 = **T-DSK59**（条目面随正——六组项；全文 = `docs/desktop/design/SETTINGS.md` §5）；机检用例 = 本档 §3.4 ∥ §4。
 

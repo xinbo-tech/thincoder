@@ -1277,7 +1277,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 | 批 · 源 AC | 判据（需求面） | 设计落点 | 判定方式 |
 |---|---|---|---|
-| 价格v5 · AC-1 | ark 价格收尾落盘（lite 录入 · turbo 缓存价补录 · pro 来源句升级）⇒ **在册 29 键全价**；缺价路径保留不变 | §2.5（schema / 取值纪律零改）· §3 表 `bench/prices.json` 行 · KD-6 | `roster.3`（无孤儿 + 已录价键 `matchPrice` 命中自身）+ 现盘计数（`bench/models.json` 29 键 ↔ `bench/prices.json` 29 条目 · 零缺键）+ 逐条 `source` / `asOf` 对读（读数入档） |
+| 价格v5 · AC-1 | ark 价格收尾落盘（lite 录入 · turbo 缓存价补录 · pro 来源句升级）⇒ **在册键全价**；缺价路径保留不变 | §2.5（schema / 取值纪律零改）· §3 表 `bench/prices.json` 行 · KD-6 | `roster.3`（无孤儿 + 已录价键 `matchPrice` 命中自身）+ 现盘键集对读（`bench/models.json` ↔ `bench/prices.json` 键集逐条覆盖 · 零缺键）+ 逐条 `source` / `asOf` 对读（读数入档） |
 | 价格v5 · AC-2 | 缺价用例校准后测试全绿（预期入 §2 · 实测入 §5） | §5.13 `render.1`（缺价用例 = 合成键）· §3 表 `bench/check/report-render.check.mjs` 行 | `render.1` 三条断言（位级成本 `null` · 位级缺价警告在位 · md 零评估开销金额）+ `node bench/check/run.mjs` 全绿 |
 | 价格v5 · AC-3 | 跑批命令与产物名在档 · **可跑准备就绪**（点火 = 用户点名） | §2.1-6（结果对落 `bench/results/`）· §2.7 全量复跑 · §3 表 `bench/results/` 行 | 命令 = `node bench/run.mjs --label roster-29-v5`（缺省 = 清单全量 29 档 · 28 项/档 ≈ 812 run）；就绪三检 = 全价 ∧ 测试全绿 ∧ provider 覆盖（29 档 provider ∈ 用户 config——`bench/lib/pipeline.mjs` 缺即拒跑）+ 判官三槽冻结 5；产物 = `bench/results/<运行日>-roster-29-v5.{md,json}`（同名拒写——KD-10）（本行数值 = 该批当时读数；现行版本值 = 7——单源 = §1.3-4） |
 | 价格v5 · AC-4 | §2 条目表逐条对到落点与判定方式 | §2（与本表同源） | 本表三列逐条对读（AC ↔ 设计落点 ↔ 判定方式） |

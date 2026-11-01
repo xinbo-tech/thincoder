@@ -635,9 +635,9 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 - **复现命令（现行读数）**：无档且下辖带档子目录 ≥1 的目录（夹具 = `%TEMP%\ledger-repro-1795`，下辖 `projA` 带档）⇒ 按「无根契约」条的复现命令跑 ⇒ 抛无根文案 + 候选全列（2026-10-25 实测；`state='workspace'` ⇒ `root=null`）。
 - **勘察证据**：查过 = `docs/core/design/MANIFEST.md` §2.2 / §2.4 / §2.5 / §2.9 ∥ 本档 §2.1 / §7.2 ∥ 上述需求档 §⑥——**相关**。声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`**（实读）⇒ 无仓外声明源可查；参考系 `D:\ref\` 在工作区外、不入索引。结论 = 无仓外声明源相关。
 
-**受影响面（行数两列 = 该轮 `node` 实测，批内 as-of；预期列 = 实施轮目标）**：
+**受影响面（行数 = 判时按盘现读；本表不载 as-of 快照）**：
 
-| 档 | 该批读数（as-of 2026-10-25） | 该批目标 | 改动面 |
+| 档 | 现行行数（判时现读） | 目标行数 | 改动面 |
 |---|---|---|---|
 | `thincoder-core/ledger-db.mjs` | 271 | 271 | **本轮实改**：`resolveLedgerRoot(target, boundary)` 薄包装（判据单源）· `ledgerDbPath` / `openLedger` 收界并透传 · `noRootMessage(start, boundary)` 改「只陈述事实」 |
 | `thincoder-core/manifest-discovery.mjs` | 158 | 158 | `projectRootView` 取根臂收窄 + 界改盘根已落；**本轮实改**：`discoverProjects` 删 `unique` 两臂（`≥1 ⇒ workspace`） |
@@ -652,7 +652,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 | `docs/core/design/BATCH-RECORD.md` | 684 | 684 | §4.15 条 1 四形矩阵末形两判 ∥ 条 5（多根工作区锚判据 + 逐字文案）∥ §4.8 BR-39 ∥ BR-40 ∥ BR-42（行数 = 本轮改后实测） |
 | `docs/core/design/MANIFEST.md` | 1214 | 1214 | 本轮设计面：AC-44 禁字样 +`容器` · `projectView` 第一段界 · KD-M1-42（`unique` 射程）· §2.3 行 39/41/49 现行读数（158 / 208 / 300）· T59 补裸仓锚格（判据零改） |
 
-- **本表性质**：本节受影响面 = 该批的实施记录与改动面清单；两列 = **该批 as-of 读数 ∥ 该批目标**（实施轮实测），不是现行读数。**现行行数单源 = §3.5「受影响面」表**——读现行值一律看 §3.5，本节两列只记该批当时读到了什么。
+- **本表性质**：本节受影响面 = 改动面清单（行数判时按盘现读）；**现行行数单源 = §3.5「受影响面」表**。
 
 - **用例档**：一次性单测（PR-1–PR-21）——本批已跑完后删除，零留档、无常驻运行命令。
 - **文档面**：本档 §2.1 ∥ §3.8 ∥ §7.1（导出面）∥ §7.2 ∥ §8（与本条冲突的判据句随本批改齐）。

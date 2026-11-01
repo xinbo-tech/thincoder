@@ -75,7 +75,7 @@ git blame thincoder-vscode/package.json                # blame 跨 graft 无需�
 | `（X 仓）` 注记 | **停新增**；留痕档（`_archive/`）冻结不动；现行档**随触碰改写**（D10） |
 | 同名撞车（两产品各自的同名档） | **不物理合并**——两产品文档分层保留在各自子目录内，撞车不成立 |
 | 文档地图 | 基准层地图 = `docs/README.md`；各产品地图各留一份（各管各产品）；仓根 `README.md` = 合并仓总览 |
-| 三部分落点（core / cli / vsc） | 规划 = `docs/core/design/DOC-SYSTEM.md`；迁移台账 = `docs/core/design/DOC-MIGRATION.md`（CLI 树）· `docs/vsc/design/VSC-MIGRATION.md`（VSC 树） |
+| 三部分落点（core / cli / vsc） | 规划 = `docs/core/design/DOC-SYSTEM.md`；迁移执行 = CLI 树已收口（执行表退役）· `docs/vsc/design/VSC-MIGRATION.md`（VSC 树 · 归档形态） |
 
 ## 4. 提示词承载（单源）
 

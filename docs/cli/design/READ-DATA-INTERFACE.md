@@ -147,32 +147,6 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | `thincoder-core/agent-tools/batch-read.mjs` | `listBatchRecords` |
 | `thincoder-cli/src/acp/read-data.mjs` | `createReadDataHandlers` · `WATCH_INTERVAL_MS` |
 
-## 4. 受影响文件与行数预算
-
-Δ = 预期增量；模块 = M 族归属（L7 取数面——非 M 族标 `—`）。
-
-| 文件 | 模块 | 现行 | Δ | 预算 | 改动点 |
-|---|---|---|---|---|---|
-| `thincoder-core/ledger-db.mjs` | M2 | 134 | +31 | ~165 | `openLedger:108` 增 readOnly 态 + items 探针 + 常量 + 落标 |
-| `thincoder-core/ledger-cmd.mjs` | M2 | 140 | +4 | ~144 | `:21` / `:34` 两读点切只读 |
-| `thincoder-core/ledger-read.mjs` | M2 | — | ~150 | ≤300 | 序列化 + 三口径 + `runLedgerList` |
-| `thincoder-core/agent-tools/batch-skeleton.mjs` | M3 | 174 | +22 | ~196 | `:113` 邻位增 `readSectionStatusWord` |
-| `thincoder-core/agent-tools/batch-read.mjs` | M3 | — | ~90 | ≤300 | 记录列举 + sections 组装 |
-| `thincoder-core/agent-tools/batch-lifecycle.mjs` | M3 | 332 | 0 | 332 | `:62` 收集器转导出（零增） |
-| `thincoder-core/ledger.mjs` | M2 | 241 | 0 | 241 | 零编辑——只 import `discoverFamily`（§5 D-11） |
-| `thincoder-cli/src/acp/read-data.mjs` | — | — | ~150 | ≤300 | 三方法 + 观察器 |
-| `thincoder-cli/src/acp.mjs` | — | 143 | +13 | ~156 | `:116-122` 工厂接线 + watcher 出参 + 启动 |
-| `thincoder-cli/src/command-table.mjs` | — | 185 | +8 | ~193 | `:154` 分支 + `:162` usage 行 |
-| `thincoder-cli/src/completions.mjs` | — | 140 | +6 | ~146 | 三套脚本 `list` 词（`:26` / `:73` / `:136`） |
-| `thincoder-cli/bin/thincoder.mjs` | — | 178 | +3 | ~181 | `:137` 邻位 USAGE 两行 |
-
-| `docs/README.md` | — | ≈154 | 0 | ≈154 | §1 计数收正 + 变更记录 |
-| `docs/cli/design/CLI-ENTRY.md` | — | 80 | +3 | ~83 | §2 行 + 变更记录 |
-| `docs/cli/design/ACP-CLIENT.md` | — | 650 | +9 | ~659 | §2.1 / §2.2 行 + §3 枚举（`:76` ∥ `:84` 五 handler 模块，+ `thincoder-cli/src/acp/read-data.mjs`）+ §3.5 模块表（+ 行）+ 变更记录 |
-| `docs/core/design/LEDGER.md` | M2 | 509 | +~6 | 515 | §2 / §7.1 登记 |
-
-**L7 复核（模块数——口径 = `docs/core/design/BATCH-RECORD.md` §5.1）：** 模块列去重 = **2**（M2 台账 SQLite ∥ M3 批次档生命周期）≤ 2——不拆批。
-
 ## 5. 关键决策记录（含被否）
 
 - **D-1 输出分组形**（`{ projects: [...] }`——族态逐项归属）∥ 被否：平铺 `{ schemaVersion, items }`——跨库 id 撞号、族态零归属。

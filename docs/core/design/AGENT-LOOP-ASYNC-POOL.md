@@ -284,7 +284,7 @@ Follow this declaration — do not infer the review target from the documents.
   CLI 侧除 `depInfo`（`thincoder-core/agent-tools/subagent-scheduler.mjs:123`）外零墓碑读取调用点（grep 实核）⇒ 丢弃 id 在 CLI 状态面报 unknown。
   **取舍**：不触碰 `subagent-actions.mjs`（488 行——§6.20.8-3）——丢弃事实由整批提醒承载（模型可见面不缺）；**收敛方向 = 后续批**（status 墓碑回显）。
 
-**接线点①** `thincoder-core/agent/run-stages.mjs:168-170`（as-of 2026-09-29）：三行（`subPool?.clear(); advPool?.clear(); agent._asyncQueue = []`）
+**接线点①** `thincoder-core/agent/run-stages.mjs:168-170`：三行（`subPool?.clear(); advPool?.clear(); agent._asyncQueue = []`）
 
 → `discardAbortedPool(agent)` + `discardAbortedAdvisors(agent)`（**不传 ctx**——判据 = controller 支，D-AD6；队列剔除由模块接管）。
 `ev:stopped` 日志（`:166`）与 `cleanupConsultSessions` / pending 过滤（`:171-176`）**不变**。
@@ -390,7 +390,7 @@ I1 → 集成用例（扩）。
 ### 6.30.1 现状坐标
 
 - **投递（收正）**：驱动面（CLI ∥ VSC ∥ 桌面）⇒ 到期件不在回合边界注入——交付交**空闲面**（前台空闲闩 ∥ 挂起窗第三兑现态）；回退面（headless ∥ 直连 ∥ 开关关）⇒ 回合边界投递保持。
-  注入单点 = `thincoder-core/agent/post-turn.mjs:21` ∥ 调用点 = `thincoder-core/agent/turn-loop.mjs:263`（as-of 2026-10-12）。机制单源 = §6.34。
+  注入单点 = `thincoder-core/agent/post-turn.mjs:21` ∥ 调用点 = `thincoder-core/agent/turn-loop.mjs:263`。机制单源 = §6.34。
 - **在途跨 run 存活 = 规范语义**（决策 D-TW3）：核内 `_pendingTimers` 读写点三处——初值 `thincoder-core/agent.mjs:73`（三拆后档面收窄） · 写 `timer.mjs:55-59` · 消费 `post-turn.mjs:18-21`——**无 per-run 复位**。
 - **端差（裁定与现态见 §6.30.11 / D-TW3）**：跨 run timer 两端同存活（与核语义一致）。
 - **桌面端**：挂起窗**已落**（2026-09-28 桌面空闲唤醒批——直消费核 `thincoder-core/agent/suspension.mjs` `startSuspension`；原「核挂起驱动在端上零消费者」句随该批收正）· 回合入口单一（`thincoder-desktop/src/main/ipc.mjs:78`）· 主进程仍零轮询 ⇒ **自唤醒面仍不存在**（无空闲 deadline 闩 + 核件 `waitForSettleOrWake` 无 timer 第三兑现态；§6.30.5 表）。
@@ -585,7 +585,7 @@ T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13（端侧）与 T-TW11（`/timer
 - **透传**：`turn-face.mjs` 的核 opts 四件 ⇒ 五件（`timerTurn: opts.timerTurn === true`）；`suspension-drive.mjs` `driveTurn` 同键转发。
 - **窗内投递存活（缺陷修复 · 2026-10-01 · #799）**：窗内 timer 轮的会话钉定重装**先于投递**（`suspension-timers.mjs` `faceOf().deliver` 内先重装后注入）；`driveTurn` 对 timer 轮零重装——否则重装整换机读线会吞掉刚落的投递行（明细 = §6.30.17）。
 - **通道与可见面**：新 `ev:timer { key, text }`（触发落流一行；`text` = 交付原文，显示裁 = ≤3 行 + `…`——CLI 同规）⇒ 白名单 **18**（＝盘面现值——含在途批 `ev:ledger` / `ev:queue`；只增自身一位 · 定序同前——只增位）；
-  `ev:usage.timers` 沿用（段 12 `⏰N` 源 = `thincoder-desktop/renderer/views/statusline.mjs:167-174`（as-of 2026-09-29）——零改）；渲染 = 流内触发行（归约切片 `state.timerNotice[key]` + `thincoder-desktop/renderer/views/chat.mjs` 行组——与 `ev:digest` 行同族：**生命期照其现行判据同法**——在场 / 退场随 `ev:digest` 行实现（页读整置即失）；实施轮按该行同法落地并在 §5 记明）。
+  `ev:usage.timers` 沿用（段 12 `⏰N` 源 = `thincoder-desktop/renderer/views/statusline.mjs:167-174`——零改）；渲染 = 流内触发行（归约切片 `state.timerNotice[key]` + `thincoder-desktop/renderer/views/chat.mjs` 行组——与 `ev:digest` 行同族：**生命期照其现行判据同法**——在场 / 退场随 `ev:digest` 行实现（页读整置即失）；实施轮按该行同法落地并在 §5 记明）。
 - **新鲜度**：闩到点即开轮 ⇒ 到期不滞留（该轮回合尾读数同点刷新）；到期/已设两态凭 `⏰N` 段（派生式 · 零缓存）。
 
 **VSC（批条目 B1）**：
@@ -628,7 +628,7 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 
   **修正轮补三桩**（非新号——随补注登记）：开关真链（`config.json` ⇒ 生产者真链 · 评审 🟡1）· 窗内 timer 轮中止容纳（`AbortError` ∧ 会话未停 ⇒ 容纳并重入 · ±两反例用例 · 评审 🟡2）· 触发落流（`timer { status:"fired", text }`——协议 §3.2 行 19）。
 
-### 6.30.13 受影响文件清单（R24a · 行数 = 该批当笔读数 · as-of 2026-09-28 · `wc -l` 口径）
+### 6.30.13 受影响文件清单（R24a · `wc -l` 口径；判时按盘现读）
 > **口径说明**：本表是已收口批次的实施记录，保留当笔的两列数值——现行口径见 §6.30.6（尺寸档位判定：结论落档、数值不落档）；本节表形不作现行样式引用。
 
 **实施后重锚（2026-09-28 收尾轮 · 现盘实读）**：代码行读数（表）= `wc -l` 语义现盘实读；增量 = 轨迹标注；与并行批同片者并注「本档面」与「现盘」两值（并行批增量归其自身批档）。
@@ -697,7 +697,7 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 
 **来源**：parity 收编批（归批表 B3——annex + 重造③ + 上提②）；本节单源承载删留账与实施序。
 
-**现状坐标（as-of 2026-09-29 收编后实测 · 113 内容行）**：核 `thincoder-core/agent/timers.mjs`——`createTimerWatch:79` ∕ `fireTimerWake:105` ∕ `timerWakeEnabled:61` ∕ `deliverExpiredTimers:69`（设计不动；档头 `:16` 双写窗口句随此收正）。
+**现状坐标**：核 `thincoder-core/agent/timers.mjs`——`createTimerWatch:79` ∕ `fireTimerWake:105` ∕ `timerWakeEnabled:61` ∕ `deliverExpiredTimers:69`（设计不动；档头 `:16` 双写窗口句随此收正）。
 
 桌面（对照组 · 已合规）= `thincoder-desktop/src/main/timer-watch.mjs:11-17`（核直取 + 判据 re-export）· `:22`（交付 = 核派发 + `ev:timer` 出词）· `:34-63`（键面表壳包核闩）· `:70-75`（火面 = 核策略 + 端两缝）——代码零触。
 
@@ -1042,7 +1042,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 - **判据加宽**：`handleCompletion` 空判 `!response.content` ⇒ **空白判**（`String(content ?? "").trim() === ""`）——`stop` 且零内容（含纯空白）走既有空响应重试（`MAX_EMPTY_RETRIES = 2`——`thincoder-core/agent/completion.mjs:15`）⇒ 用尽抛错（fail-loud）——「不得静默」两径达成（`thincoder-core/agent/completion.mjs:30-51`）。
 - **边界**：非空半句 `stop` 检测**不做**（信号层不可分辨——已知边界）；模型层不动；重试预算 / 文案骨架零变；**按因分文不做**（stop 与非 stop 零内容同判——信号层语义收益低）。
 
-#### 6.31.9 受影响文件清单（R24a · 行数 = as-of 2026-10-05 实读；口径 = 内容行数——`wc -l` 同口径，读取工具显示值 +1，§6.20.4）
+#### 6.31.9 受影响文件清单（R24a · 口径 = 内容行数——`wc -l` 同口径，读取工具显示值 +1，§6.20.4；判时按盘现读）
 
 | 文件 | 现行行数 | 预计增量 | 说明 |
 |---|---|---|---|
@@ -1194,7 +1194,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 **续跑段（`resume`）「轮首」口径（登记）**：轮首 = **每段起跑窗 ∥ 段内 `turn === 0`**——`resume` 段（撞帽续跑）重开一次轮首窗；该重开**发生在系统轮内**（续跑链逐段同 `autoTurn` 旗）、**不回用户回合**（用户回合段判据照旧零放行——I1 不破）。
 
-### 6.34.2 逐径改法（现状七行 · as-of 2026-10-12 实读）
+### 6.34.2 逐径改法（现状七行）
 
 | # | 件 | 现投递点（坐标） | 改法 / 保持（落点） |
 |---|---|---|---|
@@ -1258,7 +1258,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 | A-AD6 | 端差异零增（核单点收窄 = run-start 门 ∥ drain 门 ∥ post-turn 门三处；端侧零改） | N3 |
 | A-AD7 | 机检零新增：`node scripts/doc-check.mjs --root .` 对比开工基线（悬空 / 行宽逐档零新增） | 批档自身约束 |
 
-### 6.34.8 受影响文件清单（R24a——实施轮预算；行数口径 = **内容行数**（`wc -l` 同口径——读取工具显示值 +1；§6.20.4）；as-of 2026-10-12 实读 ∥ 2026-10-13 fix 轮复核）
+### 6.34.8 受影响文件清单（R24a——实施轮预算；行数口径 = **内容行数**（`wc -l` 同口径——读取工具显示值 +1；§6.20.4）；判时按盘现读）
 
 | 文件 | 现行行数 | 预计增量 | 说明 |
 |---|---|---|---|
