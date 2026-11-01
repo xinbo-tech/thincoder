@@ -13,13 +13,15 @@
  * dimension it could no longer check (silent failure, the worst class: invisible
  * and unfixable by the user). Missing pieces now say so, and the reviewer is told
  * to state the limitation in its findings. The document map is derived from the
- * manifest's `docRoot` (the one place that says where the docs live); the standards
- * face has no derivable convention name and is therefore an explicit degradation.
+ * manifest's `docRoot` (the one place that says where the docs live); the standards face
+ * is the project's OWN declaration too (`docRoot.standards`) — the probe was retired, the
+ * declaration replaced guessing — and it degrades in three machine-distinguishable states:
+ * undeclared (no path), declared but unreadable (the declared path is named), and injected.
  */
 import { readFileSync, existsSync } from "node:fs"
 import { resolve, join, relative, dirname, sep } from "node:path"
 import { providerSpec } from "../config.mjs"
-import { DEFAULT_MANIFEST, docRootPaths, readManifest } from "../manifest.mjs"
+import { DEFAULT_MANIFEST, docRootPaths, manifestFilePath, readManifest } from "../manifest.mjs"
 
 /** Project guide (AGENTS.md) injection budget — decision 2026-08-08:
  *  NO fixed truncation; long-context models (1M+) get up to 5% of their context
@@ -36,6 +38,29 @@ export const NO_GUIDE_NOTICE = "(No AGENTS.md found — neither at the working d
 export const NO_DOC_MAP_NOTICE = "(No document map found — no README.md under the declared document roots and none at their common ancestor — the Document ownership criterion is degraded: check placement against the Project Guide where present, and state the limitation in your findings.)"
 export const NO_STANDARDS_NOTICE = "(No project standards document — nothing in the project declares one — judge methodology compliance from the Project Guide (when present) and the review criteria above; state the limitation in your findings.)"
 export const NO_GIT_NOTICE = "(No git repository detected — change-set context is unavailable; read the review-scope files directly.)"
+
+/**
+ * 态 2 —— 声明了标准档，但一份都读不到（文案单源 = `docs/core/design/MANIFEST.md` §2.12）。
+ * 与 `NO_STANDARDS_NOTICE` **不得同形**：那句说的是「没有任何东西声明」，而这里恰好是「声明了但
+ * 读不到」。同形会让作者以为自己没声明过，回头去补一个其实已经有的声明——所以本句必带声明路径；
+ * `reason` 两因分列（`no such file` 修路径 ∥ `read failed: <code>` 修权限）。
+ * @param {{path: string, reason: string}} p — 声明路径（绝对形）+ 读不到的原因
+ * @returns {string}
+ */
+export const STANDARDS_UNREADABLE_NOTICE = ({ path, reason }) =>
+  `(Project standards declared at ${path} in the manifest, but unreadable — ${reason};\n` +
+  "the methodology-compliance criterion is unchecked.\n" +
+  "Fix the path or the file — do NOT declare it again. State the limitation in your findings.)"
+
+/**
+ * 半读句 —— 多份声明里有几份读不到（态 3 的下半；KD-M1-61 拒掉「只注入首份」：其余既不注入也不报
+ * = 静默丢声明，与需求档 §5.1 验收 ③「任何一面都不得静默跳过」相抵）。
+ * @param {{unreadable: string[]}} p — 逐份 `"<路径>: <原因>"`（路径绝对形）
+ * @returns {string}
+ */
+export const STANDARDS_PARTIAL_NOTICE = ({ unreadable }) =>
+  `(Of the standards declared in the manifest, these could not be read — ${unreadable.join("; ")};\n` +
+  "the standard set above is INCOMPLETE. Fix them — do NOT declare them again. State the limitation in your findings.)"
 
 /**
  * Discover the project root for the review — user decision 2026-08-08:
@@ -207,16 +232,101 @@ export function injectDocumentMap(agent, parts, root) {
   return mapPath
 }
 
+/** 消息里的路径书写（\ → /）：与 `injectProjectGuide` 的根注记同款（`relative(...).split(sep).join("/")`），
+ *  且让「声明路径字面」在消息里可 grep（`docs/nope` 而非 `docs\nope`）。读盘仍用原样路径。 */
+const displayPath = (p) => String(p).replaceAll("\\", "/")
+
 /**
- * Inject the project standards section (PO-2). The declaration face is gone with the manifest
- * `advisor` key, and no standards file name is derivable from what the project does declare (the old
- * `METHODOLOGY.md` probe was deleted exactly because most projects have none). The section stays so the
- * reviewer is TOLD the dimension is unchecked — visible degradation, not a silent skip.
- * @returns {null} always degraded
+ * Inject the project standards section (PO-2 · 判据 ∥ 文案单源 = `docs/core/design/MANIFEST.md` §2.12).
+ *
+ * 三态（**可机判互异**，本面立身之本 = 用声明、不猜固定名）：
+ *   态 1 未声明 —— `docRoot.standards` 缺键 / `null` / 一个路径都没得来 ⇒ `NO_STANDARDS_NOTICE`
+ *        （零路径字面、零 `declared`）。
+ *   态 2 声明了但读不到 —— 声明了路径、逐份都不可读 ⇒ `STANDARDS_UNREADABLE_NOTICE`（点名**声明了
+ *        的绝对路径** + 原因）。绝不与态 1 同形。
+ *   态 3 读到 —— 正文注入（多份 = 按声明序拼接）；部分读不到时正文在前、半读句点名不可读的逐份。
+ *
+ * 取值源 = `read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST`（同 `declaredDocRoots` 先例，
+ * 不另立第二套判定）⇒ 整档缺失 / 非法一律 `std === null` ⇒ 态 1；`paths.length === 0 ⇒ 态 1` 是硬不
+ * 变量——态 2 句永不含 `undefined` 路径。数据档本身读抛（非 ENOENT）收为态 2 族，不中断消息组装。
+ *
+ * @param {Object} agent — the parent agent（`cwd` / provider 取上下文窗口）
+ * @param {string[]} parts — message parts (mutated)
+ * @param {string|null} [root] — project root from the guide walk（`null` ⇒ `agent.cwd`；与
+ *   `injectDocumentMap` 同一 base）
+ * @returns {string|string[]|null} 注入的标准档绝对路径（单份 = 串，多份 = 数组）；降级 ⇒ null
  */
-export function injectProjectStandards(_agent, parts, _root) {
+export function injectProjectStandards(agent, parts, root) {
   parts.push("## Project Standards")
-  parts.push(NO_STANDARDS_NOTICE) // degraded — visible by contract
+  const base = root ?? agent.cwd
+
+  // 数据档本身读抛（权限 / 目录等——`readManifest` fail-closed 上抛）：收为态 2 族，不冒 `undefined`。
+  let read
+  try {
+    read = readManifest(base)
+  } catch (e) {
+    parts.push(STANDARDS_UNREADABLE_NOTICE({ path: displayPath(manifestFilePath(base)), reason: `manifest read failed: ${e?.code ?? "unknown"}` }))
+    parts.push("")
+    return null
+  }
+
+  const std = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot.standards
+  // 态 1（两入口）：未声明（缺键 / null / undefined）∥ 声明了但一个合法路径都没得来。
+  // 后者是硬不变量：宁可判「未声明」，也绝不发一句带 `undefined` 的「declared at …」。
+  const paths = std == null ? [] : docRootPaths(std, base)
+  if (paths.length === 0) {
+    parts.push(NO_STANDARDS_NOTICE) // degraded — visible by contract
+    parts.push("")
+    return null
+  }
+
+  const readable = []
+  const unreadable = []
+  for (const p of paths) {
+    if (!existsSync(p)) { unreadable.push({ path: p, reason: "no such file" }); continue }
+    try {
+      readable.push({ path: p, text: readFileSync(p, "utf8") })
+    } catch (e) {
+      unreadable.push({ path: p, reason: `read failed: ${e?.code ?? "unknown"}` })
+    }
+  }
+  // 态 2：声明了，一份都读不到。
+  if (readable.length === 0) {
+    parts.push(STANDARDS_UNREADABLE_NOTICE({ path: displayPath(unreadable[0].path), reason: unreadable[0].reason }))
+    parts.push("")
+    return null
+  }
+
+  // 态 3：正文（多份 = 按声明序拼接，共用一次注入的同一预算——一次评审注入就是一个预算单位）。
+  parts.push("The file below is the project's standards document. Judge methodology compliance against it.")
   parts.push("")
-  return null
+  const body = readable.map((r) => r.text).join("\n\n")
+  // 预算算式复用同两条常量、**逐注入独立计算**（不与指南共享池——两面语义不同，不该互相记账）。
+  // providerSpec 取值在 body 之外算：上下文规格查不到也不得伪装成「没有标准档」。
+  const resolvedProvider = agent.provider ?? agent._provider
+  const ctx = providerSpec(resolvedProvider).context
+  const cap = Math.max(PROJECT_GUIDE_MIN, Math.floor(ctx * PROJECT_GUIDE_FRACTION))
+  let shown = body
+  // 计量与切片**同一单位**（码点）：两条口径混用会让含星平面字符（emoji / 生僻字）的标准档在
+  // 「其实全给了」时也报 PARTIAL、并给出 truncated at N of M 的假读数（M 是 UTF-16 长度）。
+  const chars = [...body]
+  if (chars.length > cap) {
+    // 被截断的那一份（拼接期已有逐份偏移；偏移同以码点计）——恢复指针必须指向它，否则评审拿着残缺规矩判。
+    let offset = 0
+    let cut = readable[readable.length - 1].path
+    for (const r of readable) {
+      const len = [...r.text].length
+      if (cap < offset + len) { cut = r.path; break }
+      offset += len + 2 // +2 = 拼接分隔符 "\n\n"
+    }
+    // 截断的风险不在大小，在**静默**：指南截断丢的是指针，标准档截断丢的是判据本身。
+    shown = chars.slice(0, cap).join("") + `\n\n…(truncated at ${cap} of ${chars.length} chars — the standard set is PARTIAL;\nread the full file — ${displayPath(cut)} — for the rest)`
+  }
+  parts.push(shown)
+  // 半读句：正文在前，缺口逐份点名（零静默——KD-M1-61）。
+  if (unreadable.length > 0) {
+    parts.push(STANDARDS_PARTIAL_NOTICE({ unreadable: unreadable.map((u) => `${displayPath(u.path)}: ${u.reason}`) }))
+  }
+  parts.push("")
+  return readable.length === 1 ? readable[0].path : readable.map((r) => r.path)
 }

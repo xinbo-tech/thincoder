@@ -21,11 +21,12 @@ Refusals throw `manifest <action>: refused — …` and leave the disk unchanged
 
 read is read-only (planMode passes, no approval); init / write are side effects (approval gate). Writes go through writeManifest / initManifest with writer "main" — the fail-closed subagent default is never used.
 
-Key catalog — the 12 writable nodes (3 whole keys + docRoot's 5 sub-keys + index's 4 sub-keys): what each is; when to change it; wrong ⇒ consequence.
+Key catalog — the 13 writable nodes (3 whole keys + docRoot's 6 sub-keys + index's 4 sub-keys): what each is; when to change it; wrong ⇒ consequence.
 - `version` — schema version (a number); change on file migration; wrong ⇒ validation refuses (disk unchanged).
 - `phase` — project stage, `initial-dev` / `production`; change when the stage is crossed; wrong ⇒ validation refuses.
 - `codePaths` — path segment names (replaces the default `["src"]`); change when the layout moves; wrong ⇒ no segment is classified (the fallback still runs).
 - `docRoot.requirements` · `docRoot.specs` · `docRoot.design` · `docRoot.modules` · `docRoot.batches` — each doc-layer root path (a string | a multi-root array | `null` = absent); change when a layer moves root; wrong ⇒ validation refuses, or checks / batch landing / review roots point elsewhere.
+- `docRoot.standards` — the project's standards document, by FILE path (a string | a multi-file array | `null` = undeclared); the reviewer judges methodology compliance against it; change when that document moves; wrong ⇒ the review says the declaration is unreadable and names the path (never a guessed default — there is none).
 - `index.codeExtensions` · `index.docExtensions` — extra code / doc extensions (unioned, add-only); change when a file type is missing from the index; wrong ⇒ that type stays out of the index (extras harmless; a missing entry = a miss).
 - `index.excludePaths` — project-root-relative path prefixes (for the index); change to keep a directory out of the index; wrong ⇒ that directory is still indexed, or another is wrongly excluded.
 - `index.publicRepos` — public-repo paths (resolvable from this repo root); change when wiring a public repo into the index or cross-repo refs; wrong ⇒ that repo is unreachable for retrieval (empty origin set / wrong path).

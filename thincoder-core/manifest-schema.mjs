@@ -36,6 +36,10 @@ export const DEFAULT_MANIFEST = Object.freeze({
     design: "docs/design",
     modules: "docs/design/modules",
     batches: "docs/batches",
+    // 第六子键（MANIFEST.md §2.12 · KD-M1-55/57）：**标准档本身**的文件路径（单份 ∥ 多份数组），
+    // 不是目录——目录会逼着在目录里猜文件名，正是本批禁的「猜固定名」。默认 `null`（未声明）是
+    // 三态的地基：给一条默认路径，「未声明」与「声明了但读不到」会读出同一路径、塌成一态。
+    standards: null,
   }),
   // 项目声明三族（2026-09-27 声明载体唯一化批并入——键名 / 形态逐字承前；来源档已退役）。
   codePaths: Object.freeze(["src"]),

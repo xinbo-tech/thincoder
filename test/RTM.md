@@ -174,14 +174,14 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 14-1 | `§3` 无结论（段体有内容）时以 eng-coder 绑定 append `§5`；再让评审写 `§3 = 评审通过` 后重试 | 第一次拒（拒文含 `§5 append refused`，§5 字节不变）；第二次写入成功 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-1 | `§3` 无结论（段体有内容）时以 eng-coder 绑定 append `§5`；再让评审写一轮 `§3`（块内无裁定行）+ `§3 = 评审通过` 后重试；最后补一块携 `VERDICT: pass` 的轮次块重试 | 第一次拒（拒文含 `§5 append refused`，§5 字节不变）；第二次拒（拒文逐字 = `R-G2b`，块内裁定 = 无裁定行）；末块携 pass 裁定 ⇒ 写入成功 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-2 | `§3` 非 pass 时 `batch close` | 拒，拒文含 `§3 状态行 = …，须 = 评审通过`；§1 状态行字节不变 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-3 | 换一个会话（ctx 无槽 / 无 designId）用 `ledger close` 核销一条「已收口 ∧ §3 = 评审通过」的合格行 | 核销成功（`status = 已核销`）——③ 判档面，不再看槽内归属 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-4 | `batch close` 一个含 1 行 `在途` + 1 行 `待讨论` 的批 | 分别落 `待核销` / `条件`；回执两行（在途行 / 未动行）各一行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
-| 14-5 | 同上夹具再读回执末行 | 含「本批 2 行由重锚默认推进，父侧未显式处置：#a, #b —— 做完的请在收口前 update → 待核销，没做完的 update → 条件 / 已废弃」 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-5 | 同上夹具再读回执三行 | 汇总行（末行）只点名「本批 2 行由重锚默认推进，父侧未显式处置：#a, #b」、不再给建议；建议句各贴其行——第一行（在途行 → 待核销）携「认领行只有两种终局」、第二行（未动行 → 条件）携「不是本批的活（点火违规）」 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-6 | 收口后 `batch status` 重开（`§1 → 进行中` + note） | 行回 `在途`、回执第一行点名 1 行；随后产品码写当场可写（该档又是活批档） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-7 | 同一批里一行 `待核销` + 一行 `已核销`，重开 | 前者 → `在途`、后者零改；回执两行（待核销行回收 / 已核销行不可回收逐 id 点名） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
-| 14-8 | 一批已 in 一轮 `pass`（§3 状态行 = `评审通过`）后，同一批判 `changes-required` 并 append `§3` 打回；随后 `append §5` | 打回那一笔同时改 §3 状态行**字节** → `进行中（第 N 轮打回）` 并在本轮块首留痕；`append §5` 被拒（拒文含 `§3 状态行 = 进行中，须 = 评审通过`，§5 字节不变）；该批再 `pass` 后 `append §5` 放行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-8 | 一批已 in 一轮 `pass`（§3 状态行 = `评审通过`）后，同一批判 `changes-required` 并 append `§3` 打回；随后 `append §5`；再 `status` 置 `评审通过` 后重试；最后追加一块携 `VERDICT: pass` 的 `§3` 轮次块重试 | 打回那一笔同时改 §3 状态行**字节** → `进行中（第 N 轮打回）` 并在本轮块首留痕；`append §5` 被拒（拒文含 `§3 状态行 = 进行中，须 = 评审通过`，§5 字节不变）；`status` 单写仍拒（`R-G2b`：末块仍携 `VERDICT: changes-required`）；补块 ⇒ `append §5` 放行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 
 ### 15. 偶发空响应不打断会话
 
@@ -272,6 +272,17 @@
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 23-1 | CLI 会话把 `opencode-go` 的 `baseURL` 指向本地假上游（零外网、零付费端点）：假上游按请求头作答——带头 ⇒ 200 + 一段助手回复，不带头 ⇒ `400 {"type":"MissingSessionID"}`（逐字复刻实测载荷）。先跑一次带头的正常回合；再以修前配置形状（无该头）跑同一句作对照 | 正常跑 = 会话里出现助手回复（不再落 400 错误面）；对照跑 = 该回合失败并带出上游 400 的 `MissingSessionID` 错误面（不静默、不返回空回复） | 待执行 | — | — | 出站头的值不在本行断言（同值判据归单元用例，两层不重复）；真端点留给收口 smoke | `test/integration/opencode-session-header.test.mjs` |
+
+### 24. 评审的方法论符合度不再恒空
+
+> 目的：项目声明了标准档，评审就拿到正文、按它判方法论；没声明 ∥ 声明了读不到，各自说清是哪一种——不再对任何项目都空着。
+> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1「项目标准」行 ∥ 验收 ③④（③ = 任何一面都不得静默跳过——24-2 的第二半与 24-3 的负向锁都断在它上面）；判据 ∥ 文案单源 = `docs/core/design/MANIFEST.md` §2.12；交互组件 = 项目数据档 `docRoot.standards` → 数据档读取 → 注入器 → 评审消息组装面；进入口 = 工程模式会话里对一本批档发起一次设计评审（`batchDoc` 绑定）；三态（行序）= 24-1 正常 · 24-2 错误 · 24-3 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 24-1 | 夹具项目声明 `docRoot.standards` = 一份在盘的标准档，在该项目里发起一次设计评审 | 评审消息组装面含 `## Project Standards` + 用途句 + 该档正文首行；返该档绝对路径 | 待执行 | — | — | — | `test/integration/review-standards-injection.test.mjs` |
+| 24-2 | 同一夹具把声明值改成不存在的路径，再发起一次设计评审 | 注入面出现态 2 句（含该声明路径字面 + `no such file`），**且与 24-3 的句子不等**；零正文注入 | 待执行 | — | — | — | `test/integration/review-standards-injection.test.mjs` |
+| 24-3 | 同一夹具删掉该键（或整档），再发起一次设计评审 | 注入面出现 `NO_STANDARDS_NOTICE`；零正文、零路径字面、零 `declared` | 待执行 | — | — | — | `test/integration/review-standards-injection.test.mjs` |
 
 ## VS Code 端（thincoder-vscode）
 

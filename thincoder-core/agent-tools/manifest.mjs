@@ -11,8 +11,8 @@
  *  - `write` ⇒ **点改**：读现档 → 设节点 → 落盘（`writeManifest` 内先 `validateManifest`——
  *              编辑结果非法 ⇒ 拒 + 盘零变）；**缺档 ⇒ 拒** + 引导 `init`（写不建档）。
  *
- * 写面白名单（判据单源 = `MANIFEST_SCHEMA`——钉死谓词）：**12 个可写节点** = `keys` 中**非** `nestedKeys`
- * 父键者（`version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` 五子键 / `index.*` 四子键）；
+ * 写面白名单（判据单源 = `MANIFEST_SCHEMA`——钉死谓词）：**13 个可写节点** = `keys` 中**非** `nestedKeys`
+ * 父键者（`version` / `phase` / `codePaths` 整键）+ `nestedKeys` 子键（`docRoot.*` 六子键 / `index.*` 四子键）；
  * **两族整键写（传整个对象）⇒ 拒**；白名单外 ⇒ 拒（拼写保护——未知键写盘 = 静默死键，KD-M1-36 问题本体）。
  * `value` 解析 = 同款口径 `settings.mjs` 的 `parseValue`（先 `JSON.parse`，失败取字面串；`"null"` ⇒ `null`
  * ——`docRoot.*` 的「本面无」，KD-M1-37）。

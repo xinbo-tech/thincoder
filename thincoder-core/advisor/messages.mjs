@@ -155,8 +155,9 @@ function buildAdvisorUserMessageInner(agent, prior, reviewType, designToken = nu
       }
     }
 
-    // Engineering mode: the project standards section — the declaration face is gone with the
-    // manifest `advisor` key, so this is always an explicit degradation (PO-2).
+    // Engineering mode: the project standards section — read from the project's own
+    // declaration (`docRoot.standards`); three states, each machine-distinguishable:
+    // undeclared / declared-but-unreadable / injected. Never a probed convention name (PO-2).
     if (agent.config?.agent?.engineering) {
       injectProjectStandards(agent, parts, guideRoot)
     }

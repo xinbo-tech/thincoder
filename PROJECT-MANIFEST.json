@@ -20,7 +20,8 @@
       "docs/server/design"
     ],
     "modules": "docs/core/design/modules",
-    "batches": "docs/batches"
+    "batches": "docs/batches",
+    "standards": "docs/core/requirements/METHODOLOGY.md"
   },
   "codePaths": [
     "src"
