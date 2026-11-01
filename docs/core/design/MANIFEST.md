@@ -1052,38 +1052,69 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 
 ### 2.12 标准档声明口：`docRoot.standards` + 三态注入
 
-**病灶**：`injectProjectStandards`（`thincoder-core/advisor/project-context.mjs:217-222`）三个参数一个不用、恒 `push(NO_STANDARDS_NOTICE)`——评审的「方法论符合度」维度对**任何项目**都空着。上一轮治「猜固定名」时，把「让评审拿到项目标准」这件事一起删了。本批用**声明**接回来：声明是项目自己的口，猜是我们的口。
+**病灶**：`injectProjectStandards`（`thincoder-core/advisor/project-context.mjs:217-222`）三个参数一个不用、恒 `push(NO_STANDARDS_NOTICE)`——评审的「方法论符合度」维度对**任何项目**都空着。上一轮治「猜固定名」时，把「让评审拿到项目标准」这件事一起删了。
+
+本批用**声明**接回来：声明是项目自己的口，猜是我们的口。
 
 **最近先例（逐项）**：
 
 - 键位与值形态 — `existing: thincoder-core/manifest-schema.mjs:21`（`isValidDocRootValue`：串 ∥ 非空串数组 ∥ `null` 本面无）· 逐字复用，零新谓词。
-- 路径解析 — `existing: thincoder-core/manifest.mjs` 的 `docRootPaths(value, cwd)`（展开 + `trim` + `\` 归一 + 基数 = 项目根 + 去重保序；`null` ⇒ `[]`）· 逐字复用。
+- 路径解析 — `existing: thincoder-core/manifest.mjs:111` `docRootPaths(value, cwd)`（`isValidDocRootValue` 假 ⇒ `[]`；`null` ⇒ `[]`；展开 + `trim` + `\` 归一 + 基数 = 项目根 + 去重保序）· 逐字复用。
 - 注入形 — `existing: thincoder-core/advisor/project-context.mjs:187`（`injectDocumentMap`：段头 + 一行用途 + 正文 + 显式降级）· 对齐其形（同一 `base` 取值）。
-- **偏离一处**：降级句分两态。先例只有一态，因为先例的降级只有「没有」一种成因；本面多一个「有声明但读不到」。
+- 取值源回退形 — `existing: thincoder-core/advisor/project-context.mjs:136` 逐字 `const docRoot = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot ?? {}` · 逐字复用（同档同 base）。
+- **偏离一处**：降级句分两态 + 半读句。先例只有一态，因为先例的降级只有「没有」一种成因；本面多一个「有声明但读不到」，以及「多份声明里部分读不到」。
+
+**新增名三问（逐项）**：
+
+- 键 `docRoot.standards` — `none found: thincoder-core/manifest-schema.mjs` 的 `DEFAULT_MANIFEST.docRoot` 五子键 ∥ `thincoder-core/manifest.mjs` ∥ `thincoder-core/advisor/project-context.mjs` ∥ `thincoder-core/declaration.mjs`（旧 `advisor.standardsDoc` 已整键退场，无替代键）。
+  名逐字 = `standards`。消费者 = `injectProjectStandards`（注入）· `entryDocPaths`（索引范围，经 `docRootPaths`）· `manifest` 工具键目录（人读面）。
+- 常量 `STANDARDS_UNREADABLE_NOTICE` — `existing: thincoder-core/advisor/project-context.mjs:37` `NO_STANDARDS_NOTICE` · failed on：**句义相反**（那句子说「没有任何东西声明」，第二态恰好是「声明了但读不到」）⇒ 复用即误判，本批禁。
+  形态对齐先例（同档、同出口、`(…)` 括注体、末句要求把限制写进发现）；名逐字 = `STANDARDS_UNREADABLE_NOTICE`。消费者 = `injectProjectStandards` 唯一。
 
 **survey-evidence**：① 实读 `thincoder-core/manifest-schema.mjs` · `manifest.mjs` · `advisor/project-context.mjs` · `agent-tools/manifest.mjs` · `declaration.mjs` · `agent/write-gate.mjs`；② 实读 `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1；③ 工作目录外公共源未勘察（本批不依赖外部源）。
 
 **接口契约（目标态）**
 
 - **键** = `docRoot.standards`（第六子键）；值形态 = `isValidDocRootValue`（与其余五键同款）；**默认值 = `null`**。
-- **值语义 = 标准档本身（项目根相对的文件路径）**，不是「标准档目录」。理由：这一族其余五键是文档**类目录**，标准档是**单份文档**；若定成目录，就得在目录里再猜文件名（`README.md`？）——那正是本批禁掉的「猜固定名」。文件值在本族已有先例（`declaration.mjs:151-153` `entryDocPaths` 注释「文件值如 `docs/RELEASE.md` ⇒ 恰该文件」）。
+- **值语义 = 标准档本身（项目根相对的文件路径）**，不是「标准档目录」。理由：这一族其余五键是文档**类目录**，标准档是**单份文档**；若定成目录，就得在目录里再猜文件名——那正是本批禁掉的「猜固定名」。
+  文件值在本族已有先例（`declaration.mjs:151-153` `entryDocPaths` 注释「文件值如 `docs/RELEASE.md` ⇒ 恰该文件」）。
 - **默认 `null` 的理由（三态的地基）**：若给一条默认路径，「未声明」与「声明了但读不到」会读出同一个路径——第一、第二态塌成一态。`null` 是既有「本面无」哨兵（KD-M1-37），`docRootPaths(null) = []` 是合法零根 ⇒ 零新机制。
 
 **判据（纯函数，三态）**
 
 ```text
-std = manifest.docRoot.standards        （缺键经 fillDefaults ⇒ null）
-std === null            ⇒ 态 1  未声明
-docRootPaths(std, base) 逐项 try readFileSync：
-  首个读到                ⇒ 态 3  声明且读到（注入正文）
-  全部不可读              ⇒ 态 2  声明了但读不到
+base  = root ?? agent.cwd                        （与 injectDocumentMap 同一 base）
+read  = readManifest(base)                       （读抛 ⇒ catch，见下「读抛」一行）
+std   = (read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST).docRoot.standards
+std == null            ⇒ 态 1  未声明（缺键 / 显式 null / 项目根本没有 manifest）
+paths = docRootPaths(std, base)                  （展开 + 归一到项目根；非法形态 / null ⇒ []）
+paths.length === 0     ⇒ 态 1    ← 一个路径都没得来，绝不发态 2 句（不许编路径）
+逐项 readFileSync ⇒ 可读集 R（保序）∥ 不可读集 U（各带 reason）
+  R 空                 ⇒ 态 2  声明了但一份都读不到（句中路径 = U 的第一份）
+  R 非空 ∧ U 空        ⇒ 态 3  声明且全部读到
+  R 非空 ∧ U 非空      ⇒ 态 3 + 半读句（正文在前，半读句点名 U 的逐份路径与原因）
 ```
 
-- `base` = `root ?? agent.cwd`——与 `injectDocumentMap`（同档 `:187-188`）**同一 base**，不另立第二套解析（`docRootPaths` 内部按 `docRootBase` 再归到项目根）。
+- `std == null` 用**宽松相等**一次覆盖 `null` ∥ `undefined`；取值后一律归一为「有值 ∥ `null`」，不再往下传 `undefined`。
+- **`paths.length === 0 ⇒ 态 1` 是硬不变量**：态 2 句必含至少一个绝对路径字面，由 AC-51 断言。这条把「未声明项目收到 `declared at undefined`」整类误判挡在判据里，而不是靠措辞。
+- **`read.ok === false`（档非法 / 档缺失）⇒ 走 `DEFAULT_MANIFEST`（`std = null`）⇒ 态 1**：与 `declaredDocRoots` 同源判定，不另立第二套。档非法的**报明面在会话状态行**（AC-25），本面不再造第三个报面。
+- **读抛（非 ENOENT 读错）**：`readManifest` 在 `manifest.mjs:164` 逐字 `throw e // 权限/目录等其他读错——fail-closed 上抛，不伪装成缺失` ⇒ 本函数 `try { readManifest } catch` 收下，按 `STANDARDS_UNREADABLE_NOTICE({ path: manifestFilePath(base), reason: "manifest read failed: <code>" })` 注入（态 2 族），**不冒 `undefined` 路径、不中断评审消息组装**。
+- `base` = `root ?? agent.cwd`——与 `injectDocumentMap`（同档 `:188` 逐字 `const base = root ?? agent.cwd`）**同一 base**，不另立第二套解析。
+
+**分支出处（每条分支的场景来源：实读观察 ∥ 复现命令）**
+
+| 分支 | 出处 |
+|---|---|
+| 态 1：未声明（键缺 / `null`） | 实读 `thincoder-core/advisor/project-context.mjs:37`——现行句逐字 "nothing in the project declares one" 已在用；本仓今日未声明即走此态，本轮设计评审 §3「限制声明」行即该态的实际输出 |
+| 态 1：项目根本没有 manifest | 实读 `thincoder-core/manifest.mjs:162`：`return { ok: false, reason: "missing", … manifest: null }` ⇒ `read.ok` 假。复现：空目录为锚直调 `injectProjectStandards` |
+| 态 1：manifest 非法 | 实读 `manifest.mjs:170` / `:173`（`reason:"invalid"`, `manifest:null`）。复现：档内写非法 JSON，跑一次设计评审 ⇒ 态 1 句（报明面在状态行） |
+| 态 2：声明了但读不到 | 复现：`manifest write key=docRoot.standards value=docs/nope` ⇒ 跑一次设计评审 ⇒ 注入面出态 2 句（含 `docs/nope` + `no such file`）。同一夹具把值改成在盘路径即转态 3——两句并排可对照 |
+| 态 2 族：manifest 读抛 | 实读 `manifest.mjs:164`（上抛分支在场）。复现：夹具把 `PROJECT-MANIFEST.json` 造成目录（`readFileSync` 抛 `EISDIR`）⇒ 句含 `manifest read failed: EISDIR`，评审消息组装不中断 |
+| 半读：多份声明部分不可读 | 复现：`docRoot.standards = ["docs/core/requirements/METHODOLOGY.md","docs/nope"]` ⇒ 正文 + 半读句点名 `docs/nope`。出处 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1 验收 ③「任何一面都不得静默跳过」 |
 
 **三态文案（逐字）**
 
-- 态 1：`NO_STANDARDS_NOTICE` 原句（`project-context.mjs:37`）——已说 "nothing in the project declares one"，不改。
+- 态 1：`NO_STANDARDS_NOTICE` 原句（`project-context.mjs:37`）——已说 "nothing in the project declares one"，不改。零路径字面、零 `declared`。
 - 态 2：新常量 `STANDARDS_UNREADABLE_NOTICE({ path, reason })`，句身逐字：
 
 ```text
@@ -1092,22 +1123,38 @@ the methodology-compliance criterion is unchecked.
 Fix the path or the file — do NOT declare it again. State the limitation in your findings.)
 ```
 
-  `reason` ∈ `no such file`（`existsSync` 假）∥ `read failed: <code>`（读抛，如 `EACCES`）。
-- 态 3：`## Project Standards` + `The file below is the project's standards document. Judge methodology compliance against it.` + 正文。
+  `reason` ∈ `no such file`（`existsSync` 假）∥ `read failed: <code>`（读抛，如 `EACCES`）∥ `manifest read failed: <code>`（数据档本身读抛）。
+- 半读句（态 3 的下半，多份声明部分读不到时）：新常量 `STANDARDS_PARTIAL_NOTICE({ unreadable })`，句身逐字：
+
+```text
+(Of the standards declared in the manifest, these could not be read — <path>: <reason>; …;
+the standard set above is INCOMPLETE. Fix them — do NOT declare them again. State the limitation in your findings.)
+```
+
+- 态 3：`## Project Standards` + `The file below is the project's standards document. Judge methodology compliance against it.` + 正文（多份 = 按声明序拼接）。
 - **两态可机判的分界**：态 2 句含声明路径**字面** + 前缀 `declared at`；态 1 句零路径、零 `declared`。这是硬判据不是措辞偏好：两态同形会让作者以为自己没声明过，回头去补一个其实已经有的声明。
+  两因分开是因为可修面不同（路径 vs 权限）。
 
 **注入预算**
 
 - 算式复用同两条常量（`project-context.mjs:29-30`：`PROJECT_GUIDE_MIN = 8192` / `PROJECT_GUIDE_FRACTION = 0.05`），**逐注入独立计算**（不与指南共享池）。
-- 超帽 ⇒ 截断 + **本面专用**截断句：`…(truncated at <N> of <M> chars — the standard set is PARTIAL)`。
+  多份声明共用**一次注入的同一预算**（正文按声明序拼接后一次截断），不按份各算一档——一次评审注入就是一个预算单位。
+- 超帽 ⇒ 截断 + **本面专用**截断句：
+
+```text
+…(truncated at <N> of <M> chars — the standard set is PARTIAL;
+read the full file — <absolute path> — for the rest)
+```
+
+  `<absolute path>` = **被截断的那一份**的绝对路径。给恢复指针是本面的必要项：立论是「标准档截断丢的是判据本身」，只报 PARTIAL 而不给去读的路径，评审就拿着残缺规矩判。
 - **为何算式复用而句子必须自己说 PARTIAL**：截断的风险不在大小，在**静默**。指南截断丢的是**指针**（评审还能直接读范围档补回）；标准档截断丢的是**判据本身**——评审拿一份残缺的规矩判「方法论符合度」，正是本批要治的「看不见的失准」，而且更难发现（因为确实注入了东西）。
 - **拒掉的三种**：① 不截断——大档撑爆消息 ⇒ 全丢，比部分更坏；② 小硬帽（如 2000）——真标准档的规则常在文档后半，硬帽稳定地砍掉判据；③ 与指南共享一个池——谁先注入谁挤死另一个，两面语义不同不该互相记账。
 
-**副作用面（逐面判，含 §1.4 ① 点名的那一条）**
+**副作用面（逐面判，含批次 §1.4 ① 点名的那一条）**
 
 - `DOC_ROOT_ORDER`（`project-context.mjs:131`）= **显式五名串**，不是 `Object.keys(docRoot)` ⇒ 新子键入 `docRoot` **不会**把文档地图带偏：父侧担心的那条判为**不成立**；成立的是它的孪生面（下一条）。
 - `declaration.mjs:158` `entryDocPaths` 遍历的正是 `Object.keys(DEFAULT_MANIFEST.docRoot)` ⇒ **索引范围（§6.14 面⑦）自动多一个前缀**。实读影响：未声明项目 `docRootPaths(null) = []` ⇒ 零变化；声明项目 ⇒ 标准档所在目录进索引范围（本仓 = `docs/core/requirements`，已在范围内 ⇒ 零变化）。判：**接受**——被声明的文档进索引范围是自洽的；由 AC-54② 锁「未声明 ⇒ 逐项等值」。
-- `REVIEW_ROOT_KEYS`（评审根五键，`write-gate.mjs:48` 再出口）⇒ 本族键与评审根键的比较须为**显式名单**（§2.3 该条已收正）；由 AC-54① 锁「加入该键前后 `resolveReviewTargetPaths` 逐项等值」。
+- `REVIEW_ROOT_KEYS`（评审根五键，`write-gate.mjs:48` 再出口；键集本体 `agent-tools/review-facts.mjs:35`）⇒ 本族键与评审根键的比较须为**显式名单**（§2.3 该条已收正）；由 AC-54① 锁「加入该键前后 `resolveReviewTargetPaths` 逐项等值」。
 - 写面白名单**从 schema 派生**（`agent-tools/manifest.mjs:62-70`）⇒ 新子键自动可写，工具侧拒因文案零改（`:181` 写的是「sub-keys of docRoot / index」，无计数）。**批次 §1.3「新键得进白名单」这条判断要收正**：不是手加白名单，是进了 schema 就有了。
 
 **已知代价：`missingKeys` 噪音（自愈）**
@@ -1120,15 +1167,16 @@ Fix the path or the file — do NOT declare it again. State the limitation in yo
 | # | 文件 | 面 | 角色 | 变更 | 编辑点 |
 |---|---|---|---|---|---|
 | 1 | `thincoder-core/manifest-schema.mjs` | 产品 | eng-coder | `DEFAULT_MANIFEST.docRoot` 增 `standards: null`（一行） | `:33-39` |
-| 2 | `thincoder-core/advisor/project-context.mjs` | 产品 | eng-coder | `injectProjectStandards` 三态实现 · 新常量 `STANDARDS_UNREADABLE_NOTICE` · 预算常量复用 | `:217-222` · `:37` 邻 · `:29-30` |
+| 2 | `thincoder-core/advisor/project-context.mjs` | 产品 | eng-coder | `injectProjectStandards` 三态实现 · 新常量 `STANDARDS_UNREADABLE_NOTICE` / `STANDARDS_PARTIAL_NOTICE` · 预算常量复用 · **头注与 JSDoc 收正**（现文称「标准面无派生名、故显式降级」「declaration face is gone」，改后即假话） | `:217-222`（实现）· `:37` 邻（新常量）· `:29-30`（预算常量）· `:16-17`（模块头注）· `:210-215`（函数 JSDoc） |
 | 3 | `thincoder-core/agent-tools/manifest.mjs` | 产品 | eng-coder | 头注「12 个可写节点 / `docRoot.*` 五子键」→「13 / 六子键」 | `:14-15` |
-| 4 | `thincoder-core/tool-docs/manifest.md` | 产品（描述档） | eng-coder | `docRoot` 键目录增 `standards` 一行（现值 = 12 节点，见 §2.11 行 8） | 键目录段 |
+| 4 | `thincoder-core/tool-docs/manifest.md` | 产品（描述档） | eng-coder | 键目录增 `docRoot.standards` 一行 **+ 计数同改**：`:24` 的「the 12 writable nodes (3 whole keys + docRoot's 5 sub-keys + index's 4 sub-keys)」→ 13 / 6；`:28` 的 `docRoot` 枚举补 `standards` | `:24` · `:28` |
 | 5 | `PROJECT-MANIFEST.json` | 数据 | **主 agent**（写门：`main`） | `manifest write key=docRoot.standards value=docs/core/requirements/METHODOLOGY.md` | 本仓自用——自己不用就没验过 |
 | 6 | `docs/core/requirements/ADVISOR-CONVERGENCE.md` | 需求档 | 本设计轮已落 | §5.1 三态行 / 边界 / 验收 / §8 端差登记行 | `:109` · `:111` · `:113` · `:184` |
 | 7 | `docs/core/design/MANIFEST.md`（本档） | 设计档 | 本设计轮已落 | 本节 + §2.2 / §2.3 / §2.11 计数收正 | 同左 |
-| 8 | 单元测试档（一次性——收口即删） | 测试 | eng-coder | 三态 + 负向锁 + 预算 | — |
+| 8 | `test/RTM.md` + `test/integration/review-standards-injection.test.mjs` | 测试（集成） | eng-coder | 新增 §24 三行（号已在本档定死，见「集成测试设计」节）+ 用例档 | `test/RTM.md` §24 |
+| 9 | 单元测试档（一次性——收口即删） | 测试 | eng-coder | 三态 + 负向锁 + 预算 + 半读 + 读抛 | — |
 
-**tier 结论**：8 档全在**产品面 / 需求面 / 设计面**既有层内，**无档跨 tier、无拆分需求**。
+**tier 结论**：9 档全在**产品面 / 需求面 / 设计面 / 测试面**既有层内，**无档跨 tier、无拆分需求**。
 
 **关键决策**
 
@@ -1136,19 +1184,23 @@ Fix the path or the file — do NOT declare it again. State the limitation in yo
 |---|---|---|
 | KD-M1-55 | 键位 = `docRoot` 第六子键，不是顶层新键 | 复用 `isValidDocRootValue` / `docRootPaths` / `fillDefaults` / 白名单派生四处，零新谓词；顶层键同样能复用值形态，但会把「文档类住在哪」这一族的口拆成两个口。三条副作用面已逐条判并各有验收锁。 |
 | KD-M1-56 | 值 = **文件路径**（单份 ∥ 多份数组），不是目录 | 定成目录就得在目录内猜文件名——本批禁的「猜固定名」；本族已容许文件值（`entryDocPaths`）。多份数组免费（`docRootPaths` 展开）。 |
-| KD-M1-57 | 默认值 = `null`，不设默认路径 | 默认路径会把「未声明」与「读了不到」塔成一态；`null` = 既有「本面无」哨兵，`docRootPaths(null) = []` 合法零根。 |
-| KD-M1-58 | 预算 = 算式共用 + 独立计算 + **本面专用 PARTIAL 截断句** | 截断丢的是**判据**不是指针（指南是后者）；静默截断比不注入更坏。拒掉：不截断 / 小硬帽 / 与指南共享池（理由见上节）。 |
+| KD-M1-57 | 默认值 = `null`，不设默认路径 | 默认路径会把「未声明」与「读不到」塌成一态；`null` = 既有「本面无」哨兵，`docRootPaths(null) = []` 合法零根。 |
+| KD-M1-58 | 预算 = 算式共用 + 独立计算 + **本面专用 PARTIAL 截断句（含绝对路径）** | 截断丢的是**判据**不是指针（指南是后者）；静默截断比不注入更坏；只报 PARTIAL 不给路径 ⇒ 评审无处补，等于半静默。拒掉：不截断 / 小硬帽 / 与指南共享池（理由见上节）。 |
 | KD-M1-59 | 态 2 必须点名声明路径 + 原因 | 与态 1 同形会让作者补一个已有的声明；`no such file` ∥ `read failed: <code>` 两因对应两部分可修面（路径 ∥ 权限）。 |
+| KD-M1-60 | 取值源 = `read.ok && read.manifest ? read.manifest : DEFAULT_MANIFEST`（同 `:136` 先例）；`paths.length === 0 ⇒ 态 1` | 拒掉「直接取 `manifest.docRoot.standards`」：整档缺失时得 `undefined` ⇒ `docRootPaths` 空 ⇒ 掉进态 2 ⇒ 给未声明项目发 `declared at undefined`，正是本批禁止的误判反向。 |
+| KD-M1-61 | 多份声明 = **全部注入 + 半读句** | 拒掉「只注入首份」：声明三份只有首份可读时，其余既不注入也不报 = 静默丢声明，与 §5.1 验收 ③ 相抵。半读句让缺口可见（零静默纪律同向）。 |
 
 **验收对照（回指 §1 三态与 §1.5 边界）**
 
 | # | 验收条 | 核法 |
 |---|---|---|
-| AC-51 | **三态互异**：夹具三格（未声明 / 声明指向不存在档 / 声明且可读）⇒ 分别 `NO_STANDARDS_NOTICE` ∥ `STANDARDS_UNREADABLE_NOTICE`（含路径字面 + `no such file`）∥ 正文注入 | 三次调 `injectProjectStandards`，逐格断言首行与关键词；三格输出两两不等 |
+| AC-51 | **三态互异 + 态 2 必带路径**：夹具五格（未声明 / 无 `PROJECT-MANIFEST.json` / 声明指向不存在档 / 声明且可读 / 多份部分不可读）⇒ 分别 态 1 句 ∥ 态 1 句 ∥ 态 2 句（含路径字面 + `no such file`）∥ 正文注入 ∥ 正文 + 半读句；三态输出两两不等；**态 2 句必含绝对路径、绝不含 `undefined`** | 五格各调一次 `injectProjectStandards`，逐格断言首行与关键词；态 2 句正则断 `<盘符>:` 或 `/` 起首路径字面 |
 | AC-52 | **零探测（负向锁——本批立身之本）**：标准档在盘但 manifest 未声明 ⇒ 态 1 句；源码面 `project-context.mjs` 的 standards 段内 `METHODOLOGY` / 固定档名探测零命中 | 夹具 + 源码面行扫 |
-| AC-53 | **预算**：正文 > 帽 ⇒ 截断 + `PARTIAL` + `N of M` 读数；≤ 帽 ⇒ 逐字节全等、无截断句 | 两夹具对照 |
+| AC-53 | **预算**：正文 > 帽 ⇒ 截断 + `PARTIAL` + `N of M` 读数 + **截断句含被截断那份的绝对路径**；≤ 帽 ⇒ 逐字节全等、无截断句 | 两夹具对照 |
 | AC-54 | **副作用三锁**：① 加入该键前后 `resolveReviewTargetPaths` 逐项等值（标准档不入评审根）；② `docRoot.standards = null` ⇒ `entryDocPaths` 结果与加入前逐项等值；③ `declared` 旗不因该键为 `null` 而变 | 逐项数组比较 |
 | AC-55 | **写面可用**：`manifest write key=docRoot.standards value=<路径>` 落盘成功 + 回读相等；非法形态（`""` / `[]`）⇒ 拒且盘零变 | 工具调用往返 + sha256 |
+| AC-56 | **多份零静默丢**：`["<在盘>","docs/nope"]` ⇒ 正文含在盘那份 + 半读句点名 `docs/nope`；`["docs/nope1","docs/nope2"]` ⇒ 态 2 句（不冒半读句） | 两夹具各一断言 |
+| AC-57 | **读抛不中断**：`PROJECT-MANIFEST.json` 造成目录（`EISDIR`）⇒ 注入面出态 2 族句含 `manifest read failed: EISDIR`，函数不抛、消息组装完成；句内零 `undefined` | 夹具 + 不抛断言 |
 
 **用例**
 
@@ -1157,8 +1209,29 @@ Fix the path or the file — do NOT declare it again. State the limitation in yo
 | T87 | 正常：声明且可读 | `docRoot.standards = "docs/core/requirements/METHODOLOGY.md"` | 注入 `## Project Standards` + 用途句 + 正文；返该绝对路径 |
 | T88 | 错误：声明了但读不到 | `docRoot.standards = "docs/nope"`（该档不存在） | 态 2 句（含 `docs/nope` + `no such file`）；≠ 态 1 句 |
 | T89 | 边界：未声明（负向锁） | manifest 无该键 / 该键 = `null`；标准档在盘 | 态 1 句；零正文注入 |
+| T90 | 边界：项目根本没有 manifest | 空目录锚（无 `PROJECT-MANIFEST.json`） | 态 1 句；零正文；句内零路径字面（不冒 `undefined`） |
+| T91 | 错误：数据档读抛 | `PROJECT-MANIFEST.json` 造成目录（`EISDIR`） | 态 2 族句含 `manifest read failed: EISDIR`；不抛；零 `undefined` |
+| T92 | 边界：多份声明部分不可读 | `["<在盘档>","docs/nope"]` | 正文 + 半读句点名 `docs/nope` + `no such file` |
 
-**边界（不做）**：不探测任何固定档名（`docs/core/requirements/METHODOLOGY.md` 那类路径 ∥ `README.md` ∥ `docs/standards*` 均不许探）；不改 `AGENTS.md` 那条路；不改文档地图派生（`DOC_ROOT_ORDER` 零改）；不改评审根键集（`REVIEW_ROOT_KEYS` 零改）；不为 `missingKeys` 加过滤分支；不加迁移脚本。
+**集成测试设计（对 `test/RTM.md` 的增量）**
+
+实读 `test/RTM.md`（节 1–23，末节 = 23）。相邻业务故事 = §6「设计评审的文档范围按项目根受理」（行 6-1…6-5，证据 `test/integration/review-doc-scope.test.mjs`）∥ §17「评审没写进批档就不算过」（行 17-1 / 17-2，证据 `test/integration/advisor-record-gate.test.mjs`）。
+
+- **破**：无。§6 断的是 `documents` 清单的项目根受理（拒发文案与拒因），不触注入面文案；§17 断 §3 落地门。本批不动 `resolveReviewTargetPaths`（AC-54① 锁逐项等值）⇒ **零行被本批改写**。
+- **冗余**：无。本批不改任何既有行断言到的业务可观察结果 ⇒ **零行删除**。
+- **缺**：**新增 §24**（现最后一节 = 23，下一空号 = 24），业务故事 = 评审的「方法论符合度」不再恒空。用例号 `24-1` / `24-2` / `24-3`，证据档 `test/integration/review-standards-injection.test.mjs`。
+
+  用户进入点 = 工程模式会话里对一本批档发起一次设计评审（`batchDoc` 绑定）。组件间交互 = 项目数据档 `docRoot.standards` → `readManifest` → `injectProjectStandards` → 评审消息组装面。断言到的业务结果 = 评审上下文里出现该标准档正文 ∥ 两态降级句。回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1「项目标准」行 + 验收 ③④。
+
+  缺口入口 = production 真产物：本批存在的理由本身——评审的「方法论符合度」对任何项目都空着（台账 #1943）。
+
+| 号 | 怎么做 | 怎么算通过 |
+|---|---|---|
+| 24-1 | 夹具项目声明 `docRoot.standards` = 一份在盘的标准档，在该项目里发起一次设计评审 | 评审消息组装面含 `## Project Standards` + 用途句 + 该档正文首行；返该档绝对路径 |
+| 24-2 | 同一夹具把声明值改成不存在的路径，再发起一次设计评审 | 注入面出现态 2 句（含该声明路径字面 + `no such file`），**且与 24-3 的句子不等**；零正文注入 |
+| 24-3 | 同一夹具删掉该键（或整档），再发起一次设计评审 | 注入面出现 `NO_STANDARDS_NOTICE`；零正文、零路径字面、零 `declared` |
+
+**边界（不做）**：不探测任何固定档名（`docs/core/requirements/METHODOLOGY.md` 那类路径 ∥ 根级标准档 ∥ `docs/standards*` 均不许探）；不改 `AGENTS.md` 那条路；不改文档地图派生（`DOC_ROOT_ORDER` 零改）；不改评审根键集（`REVIEW_ROOT_KEYS` 零改）；不为 `missingKeys` 加过滤分支；不为「档非法」另造报面；不加迁移脚本。
 
 ## 3. 测试层
 
