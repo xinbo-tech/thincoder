@@ -201,7 +201,6 @@ CLI 待答状态行（同一张卡的第二行）：`Continue after ${seg} turns
 | 桌面文案 | `thincoder-desktop/src/main/turn-driver.mjs:103` | 换 §6.3 模板 + 签名 |
 | 桌面转口 / 调用点 | `thincoder-desktop/src/main/turn-face.mjs:68` / `:150` | 传累计值 |
 | 需求档 | `docs/core/requirements/TURN-CAP-CONTINUE.md:43`（「不改继续提示文案」） | 与本裁定冲突——**主 agent 落**，设计侧只报 |
-| CLI 设计档 | `docs/cli/design/TUI-SESSION-VIEW.md:70`（引用旧询问串） | 待对齐 —— 本批不动：该档整档未过段落长度门，与本批文案一并由主 agent 安排修 |
 
 - 检索串 = `turns \(limit` ∥ `Continue from here` ∥ `Ran \d` ∥ `Continue after`；命中面 = 三处源码 + 本档 + 需求档 + 归档档，**测试档零命中**。
 - 归档档（各端 `docs/_archive/*`）不追改——历史面。

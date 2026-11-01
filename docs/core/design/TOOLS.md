@@ -146,8 +146,9 @@
 - **ctx 字段**：cwd / agent / depth / signal / callbacks / onOutput / onQuestion / onPermissionRequest。
 - **undo 快照**：副作用工具执行前 `snapshotForUndo`（写前文件内容入内存栈），`/undo` 回滚；快照为全量副本（检查点面权威 = 本层 `CHECKPOINT.md`）。
 - **hooks**：PreToolUse / PostToolUse / PostToolUseFailure / Stop 四事件用户脚本——配置位 = `~/.thincoder/config.json` 的 `hooks` 键（`{ matcher?, command, args?, timeout?, action? }`，action = allow/block/notify）；`action: "block"` 时按**退出码**定夺（0 = 放行、非 0 = 阻断）。
-  - **载荷含工具结果全文**：`PostToolUse` ∥ `PostToolUseFailure` 的 stdin JSON 携 `result`（原始返回值）与 `toolArgs`——hook 是用户自己配置的可执行命令，与自己直接跑脚本同权（可读任意文件）；日志面的 `SECRET_FORM` 剥离（形态扫描常量 = `thincoder-core/log.mjs:43`；脱敏函数 `redactSecret` = 同档 `:149-180`）不覆盖该面。配置第三方 hook 前须自行确认它会怎样处理这段正文。
-  - **hook 载荷不脱敏（已定）**：hook 是用户自己在 `~/.thincoder/config.json` 里配的可执行命令，**与自己直接跑一条脚本同权**——脚本本来就能读任意文件。给载荷脱敏防的是「自己配的程序偷自己」，不是威胁模型；且脱敏只能靠日志面那套 `SECRET_FORM` 形态匹配（`thincoder-core/log.mjs:43` / 同档 `:149-180`），**漏一种形态就是假安全，而假安全比没有更坏**（安全纪律⑤：自加的安全机制默认不立）。
+  - **载荷不脱敏（已定）**：`PostToolUse` ∥ `PostToolUseFailure` 的 stdin JSON 携 `result`（原始返回值）与 `toolArgs`——载荷含工具结果全文；日志面的 `SECRET_FORM` 剥离（形态扫描常量 = `thincoder-core/log.mjs:43`；脱敏函数 `redactSecret` = 同档 `:149-180`）不覆盖该面。配置第三方 hook 前须自行确认它会怎样处理这段正文。
+  - **为什么不脱敏**：hook 与用户自跑脚本同权——可执行、可读任意文件，脱敏防的是「自己配的程序偷自己」，不是威胁模型；且脱敏只能靠日志面那套形态匹配，**漏一种形态就是假安全，而假安全比没有更坏**（安全纪律⑤：自加的安全机制默认不立）。
+  - **先例 ∥ 勘察**：先例 = 日志面脱敏口径（上条）∥ 本档 §6.4 hooks 行同格披露；勘察 = 查过 `thincoder-core/log.mjs` 脱敏面与 `~/.thincoder/config.json` 的 `hooks` 配置位，无既有「hook 载荷分级」面；公共源 = `PROJECT-MANIFEST.json:36` 的 `index.publicRepos` 为空，已查无相关。
 - **dispatch console 回显**：工具执行期间的 console 输出回显到结果（调试价值）——调度细节权威 = AGENT-LOOP 板（本层 `AGENT-LOOP.md`）。
 
 ### 6.4 安全边界
@@ -162,7 +163,7 @@
 | 文件 | `MAX_READ_LINES = 2000` / `MAX_OUTPUT_CHARS = 200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 `node --check`） |
 | lint | `node --check` fast path + 语言级联（tsc / ruff / cargo / go vet）；`scripts/check-syntax.mjs` 替代 eslint 级联（零依赖） |
 | lsp | 按需 spawn LSP server（`config.lsp.servers` 的 `command` 直跑，无 shell——`thincoder-core/tools/lsp.mjs:148`），语义级诊断 / 跳转兜底 |
-| hooks | 用户脚本与 agent 同权（可读任意文件）：载荷含工具结果全文（`result` ∥ `toolArgs`），`SECRET_FORM` 剥离不覆盖 hook stdin（机制与披露句 = §6.3 hooks 行）；**不做载荷脱敏**——hook 与用户自跑脚本同权，脱敏防的不是威胁模型（理由 = §6.3 hooks 行） |
+| hooks | 用户脚本与 agent 同权（可读任意文件）：载荷含工具结果全文（`result` ∥ `toolArgs`），`SECRET_FORM` 剥离不覆盖 hook stdin（机制与披露句 = §6.3 hooks 行）；**不做载荷脱敏**（口径 = §6.3 hooks 行） |
 
 **execute 边界**：纯净 node ESM 子进程，与 bash 同边界——顶层 await / 动态 `import()` / `require()` / `console` / `fetch` / `process` 全可用；**无 import 阻断、无 require 禁、无目录限制、无伪沙箱、无预置全局**。文件能力唯一入口 = 专用工具。超时 SIGKILL 强杀（默认 30s，上限 600s）。
 
