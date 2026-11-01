@@ -125,9 +125,6 @@
 | `thincoder-core/agent-tools/async-settle.mjs` | 280 | +2/−2 | `:274-278` 补位豁免面收窄（advisor 纳入补位；consult 保持豁免） |
 | `thincoder-core/agent-tools/async-discard.mjs` | 139 | +6 | 排队条目取消 = 出队 + 余项位置重编号 |
 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 398 | 0 | **复用**既有导出面（入队 / 位置重算 / 补位 / 排队块刷新）——不新造第二套队列 |
-| `thincoder-core/test/advisor-pool-queue.test.mjs` | 新档 | +90 | 判据 1–5 用例宿主  |
-| `thincoder-cli/test/config-pool.test.mjs` | 159 | ±15 | 池满两处断言改排队（`:70-83` / `:85-96`——异 scope 第 5 发 ⇒ 断 `queued` + `position`）  |
-| `thincoder-vscode/test/config-pool.test.mjs` | 201 | ±15 | 同族两处（`:90-97` / `:99-105`）  |
 
 > 行数口径与值 = 本节表**逐字一致**。
 
@@ -318,10 +315,6 @@ pending 清容器（`:266`）与既有序（consult 清场 `:267-268`、pendingI
 | `thincoder-core/agent/run-stages.mjs` | 244 → **246（实测）** | +3 / −3（含 import 行——净 ≈0） | 接线点① |
 | `thincoder-cli/src/tui/suspension-drive.mjs` | 299 → **301（实测）** | +3 / −3（含 import 行——净 ≈0） | 接线点② |
 | `thincoder-core/agent-tools/subagent-scheduler.mjs` | 394 → **398（实测）** | +2 / −1 | F4 |
-| `thincoder-core/test/async-discard.test.mjs` | —（新建） | **234（实测）** | 单点用例（U1–U8）  |
-| `thincoder-core/test/async-family.test.mjs` | 177 → **225（实测）** | +~10 | F4 用例（U9 / U9b）  |
-| `thincoder-cli/test/input-lock.test.mjs` | 204 → **267（实测）** | +~30 | 接线点② 桩驱动用例（U10）  |
-| `thincoder-cli/test/integration/subagent-lifecycle.test.mjs` | 167 → **228（实测）** | +~45 | 业务可观察集成用例（I1）  |
 | `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（本档） | — | — | §6.20 |
 | `docs/core/requirements/AGENT-LOOP.md` | — | — | §4.10 |
 
@@ -356,13 +349,13 @@ pending 清容器（`:266`）与既有序（consult 清场 `:267-268`、pendingI
 | U8 | 提醒形态 | n = 2 | 注入**一条** user 消息；列表含 `(was queued — never started)` 与 `(was running)` 两词 | F2 N1 |
 | U9 | 依赖终态（C-6） | 依赖目标墓碑 `discarded`（**夹具次序前提**：先经 `writeTombstone` 落一条父形态既有墓碑，复现「载体自有墓碑 Map 已存在」——否则「丢弃先写」次序下写 / 读同落 history 老 Map、用例假绿——评审轮 1 #1） | `depInfo` ≠ `ok`（= `cancelled`）；非 AUTO 依赖者 depc / AUTO 可启动；`failed` / `cancelled` 墓碑行为不变 | F4 |
 | U9b | 边界·生产者绑定（F1↔F4） | 夹具：父形态墓碑已在（`writeTombstone` 写）+ `history` 在场；走生产入口 `discardAbortedPool` | 丢弃墓碑由接线入口产出、与读取面同容器可读（`tombstoneOf` / `depInfo`） | F1 F4 |
-| U10 | 接线点②·挂起中止（桩驱动） | 桩驱动 `suspensionSession`（`thincoder-cli/test/input-lock.test.mjs:17` import），池含在飞 / 排队 / done 条目；父回合中止 | 已死条目出池 + `discarded` 墓碑 + 两族各一条提醒 / `ev:discarded`；存活条目留池 | F3 N2  |
+| U10 | 接线点②·挂起中止（桩驱动） | 桩驱动 `suspensionSession`（端单测档 import），池含在飞 / 排队 / done 条目；父回合中止 | 已死条目出池 + `discarded` 墓碑 + 两族各一条提醒 / `ev:discarded`；存活条目留池 | F3 N2  |
 | I1 | 集成·真管线中止 | 真调度器 + 脚本化 provider：父回合中止（signal abort），池含在飞子代理 | 父历史获一条提醒（关键子串）+ 一条 `ev:discarded`；已死条目出池、存活条目仍能结算注入 | F2 N2 |
 
-**落点**：U1–U8 → `thincoder-core/test/async-discard.test.mjs:84-233`（新建）；U9 / U9b → `thincoder-core/test/async-family.test.mjs:110` / `:135`（扩）；
+**落点**：U1–U8 → 核单测档（新建）；U9 / U9b → 核单测档（扩）；
 
-U10（接线点② 桩驱动）→ `thincoder-cli/test/input-lock.test.mjs:212`（扩）；
-I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）。
+U10（接线点② 桩驱动）→ CLI 单测档（扩）；
+I1 → 集成用例（扩）。
 **I1 若在中止时序上不可稳定驱动 ⇒ 降级为桩面 + 如实登记**，不静默省略。
 
 **测试层寿命分类**：I1 = 集成资产（常驻）；U1–U10 = 单元（开发期工具——批次收口逐条判：默认退役，除业务可观察 + 集成未覆盖 + 可稳定驱动三者全满足）。**断言语义 = 行为面**（池内容 / 墓碑状态 / 注入 / 事件计数 / 依赖终态），不做文档散文锚（寿命分类 → `docs/core/requirements/TESTING.md` §2；行为面禁令本体 → 同档 §5.2 F19）。
@@ -490,8 +483,6 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | `thincoder-core/agent/helpers.mjs` | `TIMER_TURN_DOMAIN` 常量 + 注释 |
 | `thincoder-core/agent-tools/timer.mjs` | 在途帽显式拒 + 描述面字面收正 |
 | `thincoder-core/config.mjs` | `agent.timerWake: true` |
-| `thincoder-core/test/timer-wake.test.mjs`（用例族 · 随批收口删除） | 核侧用例族（T-TW1 / T-TW2 / T-TW7 / T-TW9） |
-| `thincoder-core/test/turn-domain-mode.test.mjs`（用例族 · 随批收口删除） | 三元选择 + 域文本断言 |
 | `thincoder-cli/src/tui/timer-watch.mjs`（已落） | 一次性 deadline 闩（`timer` / `clear` 注入缝 · `unref`） |
 | `thincoder-cli/src/tui/agent-turn.mjs` | 链尾 `sync` 调用 + `userNeededAtTurnEnd` 在途 timer 除外（§6.30.3 attention 限定） |
 | `thincoder-cli/src/tui/suspension-drive.mjs` | timer 轮 + 窗内 deadline + 等待第三态 |
@@ -500,8 +491,6 @@ I1 → `thincoder-cli/test/integration/subagent-lifecycle.test.mjs:182`（扩）
 | `thincoder-cli/src/tui/render-frame.mjs` | `timerHint` 段（状态段簇尾） |
 | `thincoder-cli/src/tui/cmd-timers.mjs`（已落） | `/timers` 只读列表 |
 | `thincoder-cli/src/tui/slash-commands.mjs` | 名单 + 分派 + import |
-| `thincoder-cli/test/timer-wake.test.mjs`（用例族 · 随批收口删除） | 端侧用例族（T-TW3–T-TW6 / T-TW8 / T-TW10 / T-TW12 / T-TW13） |
-| `thincoder-cli/test/cmd-timers.test.mjs`（用例族 · 随批收口删除） | T-TW11 |
 | 文档：`docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（`.md` · 零尺寸档位义务） | 本节（§6.30） |
 | 文档：`docs/cli/design/TUI.md`（`.md` · 零尺寸档位义务） | §7.6 显示面 |
 | 文档：`docs/core/design/TOOLS.md`（`.md` · 零尺寸档位义务） | §6.7 timer 契约行补句（支持面指针） |
@@ -647,7 +636,6 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 | 文件 | 现行行数 | 实测增量 | 说明 |
 |---|---|---|---|
 | `thincoder-core/agent/suspension.mjs` | **280** | +40（240⇒280——含修正轮 +7） | `timerFace` opt-in + 等待第四态 + 兑现支（修正轮：timer 支 `AbortError` 容纳） |
-| `thincoder-core/test/suspension.test.mjs` | **336** | +72（264⇒336——修正轮补例两桩后） | T-TW14–T-TW16 + 修正轮补例两桩（`clear` 先到先得 ∕ timer 中止容纳）；**已越 300 ⇒ 登记路**——登记注释随该批单测档收口删除（拆分方案 ∕ 触发条件在册）  |
 | `thincoder-desktop/src/main/timer-watch.mjs`（新档） | **79** | 新档（设计估 ~95） | 空闲 deadline 闩（键面 · 注入缝） |
 | `thincoder-desktop/src/main/agent-host.mjs` | **341** | 该档（285⇒300 恰线）；现盘含并行批增量 | 两枚注入面（`busyOf` / `takeOver`）+ 透传——装配 ∕ 武装点 ∕ 撤闩落 `thincoder-desktop/src/main/suspension-drive.mjs`（实施期前提修正 · 源 = §5.9） |
 | `thincoder-desktop/src/main/suspension-drive.mjs` | **269** | +73（196⇒269） | `timerFace` 装配 + 三武装点 + 撤闩 + 火面包装（轮后链尾接管）+ `driveTurn` 转发 |
@@ -657,8 +645,6 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 | `thincoder-desktop/renderer/views/chat.mjs` | **354** | 该档（338⇒354——设计轮 439 为拆档前值） | 流内触发行（与 `ev:digest` 行同族） |
 | `thincoder-desktop/renderer/events-subscribe.mjs` | **77** | 该档（74⇒75）；现盘含并行批增量 | 订阅表随动（现盘 18 位——与桥面同集同序） |
 | `thincoder-desktop/renderer/store.mjs` | **328** | 该档（307⇒310）；现盘含并行批增量 | `timerNotice: {}` 初态 |
-| `thincoder-desktop/test/timer-wake.test.mjs`（新档） | **286** | 新档 | T-TW17–T-TW21 宿主 + 驱动面两例 + 渲染面一组  |
-| `thincoder-desktop/test/host-floor.test.mjs` · `thincoder-desktop/test/agent-host.test.mjs`（随动） | **363** · **431** | 计数随动；两档现盘读数含并行批随动 | `host-floor` U76 计数 16⇒17 + `fresh` 入册；`agent-host` = T-TW21 驱动面  |
 | `thincoder-vscode/src/agent/agent-state.mjs` | **158** | −1（159⇒158） | 复位行删除（端差消解） |
 | `thincoder-vscode/src/agent.mjs` | **455** | −2（457⇒455） | 内联块改调核三件 |
 | `thincoder-vscode/src/agent/turn-domains.mjs` | **37** | +2（35⇒37） | `timerTurn` 支 |
@@ -673,7 +659,6 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 | `thincoder-vscode/webview/chat-messages.js` | **259** | +21（238⇒259） | `timer` 消息渲染 |
 | `thincoder-vscode/webview/state.js` | **132** | +4（128⇒132） | 两计数槽 |
 | `thincoder-vscode/locales/{zh,en}.json` | **271** | +1 / +1（270⇒271） | `status.timer` |
-| `thincoder-vscode/test/timer-wake.test.mjs`（新档）等 | **396** | 新档（修正轮三例随补）；改例 `agent-lifecycle-singleton.test.mjs` 409⇒414 · `status-line.test.mjs` **239** | T-TW22–T-TW27 + `protocol-coverage` 面  |
 | 文档：本档 §6.30 | **745**（全档实读——2026-09-28 修正轮重锚；口径 = 内容行数 ∕ `wc -l`） | +166（575⇒741——§6.30.10–§6.30.15 + 修正轮 ∕ 收尾轮随动） | §6.30.10–§6.30.15 |
 | 文档：`docs/core/design/TOOLS.md` | **1137** | +3（1134⇒1137） | §6.7 timer 行支持面句 |
 | 文档：`docs/vsc/design/WEBVIEW-PROTOCOL.md` | **657** | +8（649⇒657） | §3.2 两行 + §6.1 / §6.3 + §12 `timer` 行 + 变更记录 |
@@ -686,7 +671,7 @@ T-TW22 / T-TW23–T-TW27 = 同一批开发期用例（随批收口删除——`t
 - `docs/desktop/design/IPC.md:29`（事件表增 `ev:timer` 行）+ 载荷键集段 + 会话键面 / 订阅面计数（**18**——盘面现值）；
 - `docs/desktop/design/RENDERER.md`（流内触发行承载句——现档无 timer 条，补一行）；
 - `docs/render-core/design/RENDER-CORE.md` §10 F 行（新鲜度句：空闲期到期 ⇒ 闩到点即开轮，读数于该轮回合尾刷新）；
-- `docs/desktop/design/E2E-TESTING.md`（D16 真机用例行——**已落**（`T-DSK44`）；真机档 `timer-wake-face.test.mjs` 未落（离线不可产组 ⇒ 人工走查 + 真跑闭合））。
+- `docs/desktop/design/E2E-TESTING.md`（D16 真机用例行——**已落**（`T-DSK44`）；真机用例档未落（离线不可产组 ⇒ 人工走查 + 真跑闭合））。
 
 ### 6.30.14 验收标准（阶段 2 · 逐条回指）
 
@@ -929,7 +914,7 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 
 **最近先例**：闩转口与零变口径 = 本档 §6.30.16（`createTimerWatch` 端面转口签名冻结）；注入缝 × 假钟用例形 = §6.30.7 T-TW3（直驱、零真实等待）。本批沿同一形；**偏离项** = 构造期新增可选 `busy` 键（additive——§6.30.16 零变不变量 ④ 已登记）。
 
-**调研证据**：查过 `thincoder-core/test/`（现只有 `run.mjs` ∥ `slow.mjs`，**零 `.test.mjs`**——实读 2026-10-19）、`thincoder-core/test/run.mjs`（零目标集合、不跑用例——全文 40 行）、三端 `timer-watch.mjs` 现文——**仓内无既有 timer 测试档可扩**（本档旧清单所列各档均已在各自批收口时按零留存删除）。
+**调研证据**：查过 `thincoder-core/test/`（现只有 `run.mjs` ∥ `slow.mjs`，**零 `.test.mjs`**——实读 2026-10-19）、`thincoder-core/test/run.mjs`（零目标集合、不跑用例——全文 40 行）、三端 `timer-watch.mjs` 现文——**仓内无既有 timer 测试档可扩**。
 
 **受影响文件（现读 = 实读 2026-10-19）**：
 
@@ -939,8 +924,6 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 | `thincoder-cli/src/tui/timer-watch.mjs` | **65** | ＋1–2 | 转口透传 `busy`（构造期） |
 | `thincoder-vscode/src/extension/timer-watch.mjs` | **74** | ＋1–2 | 同上（`turnBusy` 判据） |
 | `thincoder-desktop/src/main/timer-watch.mjs` | **76** | ＋1–2 | 同上（`busyOf` 判据） |
-| `thincoder-core/test/timer-watch-busy.test.mjs` | 新档 | ≈80 | T-TW51–T-TW53；**寿命 = 随批收口删除**（单元测试档零留存） |
-| `thincoder-cli/test/timer-rearm-order.test.mjs` | 新档 | ≈60 | T-TW54（链尾 sync 与 `processing` 归位的先后）；同上寿命 |
 
 - **基线口径**：`timers.mjs` 现读 **164** = §6.30.18 的基线值（该节「164 → ＋≈50」**未落盘**——现读仍 164）；两批同片 ⇒ **串行**：§6.30.18 先落则本批基线改 ≈214 并实施当刻复读。
 - 桌面 **76** vs §6.30.13 的 79：差 −3 归其后收编批次（本档不逐行归因）；本批以现盘 76 为基。

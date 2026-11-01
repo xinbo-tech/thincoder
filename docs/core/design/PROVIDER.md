@@ -818,7 +818,6 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 | `thincoder-desktop/src/main/session-slots.mjs` | 272 | +3 |
 | `thincoder-vscode/src/extension/session-slots.mjs` | 77 | +3 |
 | `thincoder-server/bin/thincoder-server.mjs` | 360 | +3（`:359` 有 main-guard，import 不跑 `run()`） |
-| `test/2026-10-26-user-agent.test.mjs` | 新建（仓根 `test/` 现无根级 `*.test.mjs`） | ≈140 行（批内单测，收口删除） |
 
 tier 判定：最大 = server 363 ∥ CLI 205，全在 500 行软线内，不触发拆分。
 desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树整目录实拷（`:25` `PACKAGES` 两核包；`:31` 排除面仅 `test` ∥ `.thincoder`）⇒ 新件 `client-identity.mjs`（根级 `.mjs`）随目录镜像带入，无需清单加行。
@@ -849,7 +848,7 @@ desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树�
 
 用例 #4 在文件内最先跑（模块级状态是进程级单值，四端接线用例会把缺省值盖掉）；#10–#13 按 CLI → desktop → VSC → server 依次 import 并**紧接断言**（每次 import 求值一次声明）。`#14` 兜住声明点唯一性：CLI 的声明只许在 `command-table.mjs` 一处——回到 `tui/startup.mjs`、或另加一处，源扫即红。若某端入口 import 有副作用（server 顶层仍有声明外副作用），实施面把该用例降到「该端声明所在模块」，契约不变并回报读数。
 
-**判据文件与跑法（本块用例 #15–#19）**：`docs/batches/2026-11-01-opencode-session-header.test.mjs`（批内单测档，收口删除）· `node --test docs/batches/2026-11-01-opencode-session-header.test.mjs`。
+**判据文件与跑法（本块用例 #15–#19）**：批内单测档（住 `docs/batches/`、名随批次档、收口删除）· `node --test <批档>.test.mjs`（cwd = 仓根）。
 
 住 `docs/batches/` 是收集面与收口门的硬约束、不是风格偏好（单源 = `docs/core/design/TESTING.md:130`）：包内 `test/` 树的收集面反查把任何 `*.test.mjs` 判错位（`thincoder-core/test/run.mjs:34-35` ⇒ 该包 `npm test` 恒红）；收口门只按批档所在目录认领本批档（`thincoder-core/agent-tools/batch-unit-test-gate.mjs:8-11`）⇒ 落进包测试树的档收口不被点名，会永久留盘。
 
@@ -977,7 +976,7 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 - **`kind` 词表与 i18n 键**：`kind` = `rateWait` / `rateLimited` / `overloaded` / `quota`——**与 VSC 面 `statusTextPayload` 的 kind 同名**（两端同一词表）；渲染 = `t("status." + kind, { s, msg }, locale)`（`t` = `thincoder-core/i18n.mjs:89`——同表同占位符，**核内零第二套字面**）。
 - **API**：`waitStatusOf(ev) → { kind, seconds?, message? } | null`（纯映射）· `waitStatusText(ev, locale?) → string | null`（`null` = 不显示）；`quota` 相剥发射前缀（`retry.mjs:60` `quota exhausted: `——首现即剥，一次）后插值。
 - **消费点收敛**：三处相位枚举 / 兜底分支退役 → `const s = waitStatusText(ev); if (s) …`（TUI 状态行 / headless stderr `[rate-limit]` 前缀 / ACP stderr 日志）。
-- **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:72` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 `thincoder-vscode/test/status-line.test.mjs:62-70`）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。
+- **VSC 面（多实现面）**：`thincoder-vscode/src/extension/panel-callbacks.mjs:72` `statusTextPayload()` 五相已完备（`warn` / 未知 → `null` = 不发射；用例 = 端侧状态行单测档）——**语义同源、各面独立实现**（不以任一面产物回改另一面）。
 - **复现与判据（测试层 · 需求档 F-PV1）**：
   ① 单元测试直驱三消费点回调：`{ phase: "warn", message: "estimated 5000 tokens > tpm 1000 — request proceeds and may hit a server 429" }` ⇒ TUI 状态行 / headless stderr **不出现** `undefined`（现态必现）；
 
@@ -1325,7 +1324,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 |---|---|---|---|
 | 1 | `thincoder-core/provider/anthropic.mjs` | 363 | 新增 `convertMessages`（`:97`，R1–R13）+ `chat()` 接转换（`:169`）与告警并入 `_warnings`（`:234`）；批前 240 ⇒ +123 |
 | 2 | `thincoder-core/provider/core.mjs` | 479 | anthropic 分支（`:151`）加 `messages = normalizeToolPairing(messages)`（`:155`）——本层两行 |
-| 3 | `thincoder-core/test/anthropic-message-adapt.test.mjs`（新档） | 229 | 批内单测（T-1–T-16；closeout 删除可执行档） |
 
 tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normalize.mjs` 零改（复用既有函数）。
 
@@ -1386,13 +1384,13 @@ tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normali
 
 - **最近先例（夹具形态）**：`existing: test/integration/context-overflow-guard.test.mjs:162-163 · name: "compressCalls ∥ turnCalls" · consumers: 该档 11-1–11-9 各行`。**对齐** = 本地脚本化假端点、零外网、请求按类分列计数（摘要请求 ∥ 回合请求）、断言只落业务可观察结果；**偏离** = 本节的分类判据按**请求内容**认——越窗桩的请求种类由调用相位决定，打个标记就够，不需要内容识别。
 - **先例（夹具层级）**：同档 §6.27 的单元层用例表（T-1–T-16）与本节分工——**对齐** = 两层不重复持有同一断言（内部形态归单元层，业务结果归本节 G1–G3）；**偏离** = 本节把夹具本体从用例档提为独立档：识别谓词要脱离 CLI 场景单独驱动。
-- **公开来源核查**：本节不引入新的上游请求形态，无新增外部源；§6.27 已核的 Messages API 请求体形态（`content` 为字符串 ∥ text 块数组）沿用，本档不重述。核查面 = 仓根 `test/integration/` 实读 19 档（夹具一律内联在用例档，无 `fixtures/` 子目录）+ 全仓 `*.mjs` 路径含 `fixtures` 者零命中。
-- **三问行（既有件核对）**：`test/integration/fixtures/anthropic-endpoint.mjs` = `none found`（上面两面实测零命中）⇒ 新建，文件名沿内容命名惯例（同族 `anthropic-tool-roundtrip.test.mjs`）；搬迁符号 `fakeAnthropic` ∥ `isSummaryRequest` ∥ `SUMMARY_SIG` 名不改——一个概念一个名字。
+- **公开来源核查**：本节不引入新的上游请求形态，无新增外部源；§6.27 已核的 Messages API 请求体形态（`content` 为字符串 ∥ text 块数组）沿用，本档不重述。核查面 = 仓根 `test/integration/` 实读（现状 22 档用例 + `fixtures/` 1 档）。
+- **三问行（既有件核对）**：`test/integration/fixtures/anthropic-endpoint.mjs` = **在盘**（夹具本体已落地）⇒ **指向它，不新建**；文件名沿内容命名惯例（同族 `anthropic-tool-roundtrip.test.mjs`）；搬迁符号 `fakeAnthropic` ∥ `isSummaryRequest` ∥ `SUMMARY_SIG` 名不改——一个概念一个名字。
 
 **边界**：只落 CLI 实例（本档持有的业务入口）；VSC ∥ desktop 的实例化按 F14 各端原文自持，不在本档单源。
 R7 畸形参数的处置只在单元层断言（T-7）——它不是生产报过的场景，集成层不复制。
 
-**窗口读数**：`thincoder-cli/test/` 实读现量 = `run.mjs` ∥ `session-observability.test.mjs` ∥ `slow.mjs`，无 `integration/` 目录 ⇒ 集成集 0 例，本表 3 例为其首批；50–100 为上限约束（超窗裁减旧场景）。
+**窗口读数**：`thincoder-cli/test/` 实读现量 = `run.mjs` ∥ `slow.mjs`，无 `integration/` 目录 ⇒ 集成集 0 例，本表 3 例为其首批；50–100 为上限约束（超窗裁减旧场景）。
 
 ## 7. 关键决策记录
 

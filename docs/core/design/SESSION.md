@@ -519,7 +519,13 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 | 回收批超期 | 后续 pass 清运（7 天窗口）；清运失败（占用 / 权限）⇒ 静默跳过、不误删在期批、后续 pass 重试 |
 | 恒保留组（① 活 / 未知、② T1 成立 / 不可读）达 ≥500 组 | 该类组**计入 500 预算**（评估闸 = 过 ③ 进 ①）且恒保留 ⇒ **自动面滞留**（升序窗口被占用、更新的可清组暂不进入）；**兜底 = 显式命令面**（`session gc --confirm --all`——全量面 limit=Infinity） |
 
-**验收回指（需求 §2.4 四条 + `docs/cli/requirements/TUI.md` §3 N12）**：① 同步阻塞 ≤50ms = **机检路由三档**（结构扫描 + 行为代理 ≤1s + 收口真机读数）；② 启动到 TTY 门 ≤2s / `--version` ≤0.5s = 真机读数（验收）；③ 三端测试全绿；④ 存量回落且零误删 = 判据矩阵 + 一次性清理用例（dry-run 全列 / confirm 全移 / 幂等 / 可回退）。端差注销 + VSC 命令入口可机检（命令注册 + 直调点）。
+**验收回指（需求 §2.4 四条 + `docs/cli/requirements/TUI.md` §3 N12）**：① 同步阻塞 ≤50ms = **机检路由三档**（结构扫描 + 行为代理 ≤1s + 收口真机读数）；② 启动到 TTY 门 ≤2s / `--version` ≤0.5s = 真机读数（验收）；
+
+③ 三端门禁读数（各取本面可达值 · 口径单源 = `docs/core/design/TESTING.md` §10.3）：核 = `cd thincoder-core && npm run prepublishOnly` exit 0 ∧ `check-syntax: N file(s) OK`；
+
+集成层 = 仓根 `node test/run.mjs` exit 0 ∧ `fail 0` · CLI = 空集说明器 exit 1 ∧ 输出指仓根 · VSC = `cd thincoder-vscode && node test/run.mjs` exit 0 ∧ `fail 0`（单元清单面）；
+
+④ 存量回落且零误删 = 判据矩阵 + 一次性清理用例（dry-run 全列 / confirm 全移 / 幂等 / 可回退）。端差注销 + VSC 命令入口可机检（命令注册 + 直调点）。
 
 **不做（边界）**：不改槽文件 / manifest / 端标记形态 · 不改 90 天冷判据与残留后缀保留期 · 不引入常驻进程 / 周期后台定时器（清理 = 启动窗外一次性延迟拍 + 显式命令）· 不动二次成本四项（单进程化 / 懒加载 / execSync 去重 / MCP 连接）· 不读 / 不改用户 config.json · 轨迹面策略裁决不动（见 `docs/core/design/TRACES.md` §6.4）。
 
@@ -581,7 +587,7 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 - T3 = 崩溃路径负向回归（认领在 + 探测 unknown ⇒ 全新分配——现状锁）。
 - T4 = CLI 退出分支 e2e（`exitDelay` 注入 + `ctx.exitTimer` 捕获——先释放后定时器注册 / 桩收 `exit(0)` / 失败容忍 = 核 D-SE41 面：`releaseClaimsAll` 失败返回 false 不抛 ⇒ 退出零阻、定时器恒注册；接线层零防护，如驱动接线层抛错形态须模块 mock 显式命名缝）。
 - T5 = VSC 端壳机判（`releaseClaimsOnExit` 沙箱 + deactivate 结构机检）。
-- T6 = 三端测试全绿。
+- T6 = 三端门禁读数（各取本面可达值 · 口径单源 = `docs/core/design/TESTING.md` §10.3）：核 = `cd thincoder-core && npm run prepublishOnly` exit 0 ∧ `check-syntax: N file(s) OK` · 集成层 = 仓根 `node test/run.mjs` exit 0 ∧ `fail 0` · CLI = 空集说明器 exit 1 ∧ 输出指仓根 · VSC = `cd thincoder-vscode && node test/run.mjs` exit 0 ∧ `fail 0`（单元清单面）。
 
 **不做（边界）**：探测三态判据（D-MI10）一字不动 · 不做时间窗猜死活启发式 · 崩溃路径不接线（F-XR3）· `deleteSlot` 既有语义（含 marker 置空）不动 · 槽文件格式 / `version` / marker 形态与维护点集不动 · NF1 零跨端共享可变字段 · 本释放面域 = **退出 cwd 单 manifest**（会话级 close 与跨 cwd 释放住 §6.15 / §6.16）· Ctrl+C 单按两按（非退出）不释放。
 
@@ -684,7 +690,11 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 **验收回指（需求 §4.3 F-R19a / **F-R19c** / **F-R19d** · §4.4 F-S4）**：
 ① 超大会话（> 50,000 消息夹具）经索引可答（返回 JSON 数组，非 `TOO_LARGE`）∧ 未索引同档仍逐字护栏文案（回落面零回归）——F-R19c；② `path:"all"` 跨 cwd 两会话命中 + 行内回查锚——F-R19a / F-R19d；③ 增量 = 追加 1 条 ⇒ 新增恰 1 行（其余行 `rowid` 不变）；④ 幂等 = 二次 pass 零读零写；
 
-⑤ 重建 = 删库 / 坏库自愈（行数复原）+ `--rebuild` / `--status` 读数（F-R19d——零权威 · 可重建）；⑥ 零新依赖 + 主存零改（F-R19d / F-S4；`session-store.mjs` / `session.mjs` 零 diff + sessions 树文件「路径 / 字节 / mtime」三元组快照对拍不变）；⑦ 三端测试全绿。
+⑤ 重建 = 删库 / 坏库自愈（行数复原）+ `--rebuild` / `--status` 读数（F-R19d——零权威 · 可重建）；⑥ 零新依赖 + 主存零改（F-R19d / F-S4；`session-store.mjs` / `session.mjs` 零 diff + sessions 树文件「路径 / 字节 / mtime」三元组快照对拍不变）；
+
+⑦ 三端门禁读数（各取本面可达值 · 口径单源 = `docs/core/design/TESTING.md` §10.3）：核 = `cd thincoder-core && npm run prepublishOnly` exit 0 ∧ `check-syntax: N file(s) OK`；
+
+集成层 = 仓根 `node test/run.mjs` exit 0 ∧ `fail 0` · CLI = 空集说明器 exit 1 ∧ 输出指仓根 · VSC = `cd thincoder-vscode && node test/run.mjs` exit 0 ∧ `fail 0`（单元清单面）。
 
 **不做（边界）**：不迁主存（双线文件 = 真源——§6.14 语义零动）· 不做向量 / 语义检索（不引 embedding）· 不改默认路径与 `cwd:` 发现面 · 不改两道护栏与错误文案（回落面）· 不复刻其他消费面（`/session` 列表 / TUI 翻页 / `listSlots` 仍走主存）· 不索引裸 v1 `{hash}.json` · 不做 `.d` 孤儿目录清运（`session gc` 后缀表不含 `.d`——另案） · 不做索引自动清理 / 淘汰 · 不做库的跨端同步协议（索引 = 本机派生品）。
 
@@ -728,7 +738,11 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 | 同端多活进程 | 端名同值（端名 = 端级事实，非进程级事实） | marker 的「端内最后认领者」语义不变 |
 | ACP 显式钉槽 / 模式 F（未绑定） | 与创建端字段无关 | 两套语义互不牵连 |
 
-**验收回指**：① 三端零 marker 副本 → 判据句 3；② 端分离恢复零回归 + 三态不破 → 判据句 1 / 2（缺省 = 进程端名 `sessionEnd()`——CLI 零声明即 `"cli"` ⇒ CLI 全调用点零改；marker 路径与三态语义逐条不变）；③ 老槽缺字段 ⇒ 未知零猜测 → 判据句 4；④ 三包测试全绿 + `doc-check` 零新增闸态失败。
+**验收回指**：① 三端零 marker 副本 → 判据句 3；② 端分离恢复零回归 + 三态不破 → 判据句 1 / 2（缺省 = 进程端名 `sessionEnd()`——CLI 零声明即 `"cli"` ⇒ CLI 全调用点零改；marker 路径与三态语义逐条不变）；③ 老槽缺字段 ⇒ 未知零猜测 → 判据句 4；
+
+④ 三包门禁读数（各取本面可达值 · 口径单源 = `docs/core/design/TESTING.md` §10.3）：核 = `cd thincoder-core && npm run prepublishOnly` exit 0 ∧ `check-syntax: N file(s) OK`；
+
+集成层 = 仓根 `node test/run.mjs` exit 0 ∧ `fail 0` · CLI = 空集说明器 exit 1 ∧ 输出指仓根 · VSC = `cd thincoder-vscode && node test/run.mjs` exit 0 ∧ `fail 0`（单元清单面）+ `doc-check` 零新增闸态失败。
 
 **端差注销**：扩展端消费核 `resumeSlot` 后获得核的 legacy 单文件兜底（端壳副本原无此项——端壳项登记 = §6.15 端壳款①（端差注销 · 零副本转口））——两端口径归一（D-SE38 纪律：端差默认消除）。
 
@@ -774,7 +788,11 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 | 选定写回：boot 播种回声（无槽复合 ⇒ 下发 prefs 自动回写） | 零写回（回声判零——宿主簿记命中；槽面档缺判真亦不写） | 判据句 6——系统播种不劫持全局默认；VSC 端机制 = `docs/vsc/design/WEBVIEW.md` §4.10 |
 | 选定写回：槽写未发生（槽未解析窗口 ∥ 槽不可读） | 零写回（会话侧照旧：内存态 ∥ prefs 已更新） | 判据句 6——写回门住槽面实变；无槽面 ⇒ 无判据 |
 
-**验收回指**：① 桌面会话头三值切标签随动 + 非活动槽只写盘 → 判据句 1 / 4 / 5；② 老槽零行为变更 → 判据句 5 + 边界表首行；③ 档位候选面与写面同判据（不可 off 的模型两面一致）→ 判据句 3 + 边界表第 3 行；④ 三包测试全绿 + `doc-check` 零新增闸态失败 → 落点表在册；
+**验收回指**：① 桌面会话头三值切标签随动 + 非活动槽只写盘 → 判据句 1 / 4 / 5；② 老槽零行为变更 → 判据句 5 + 边界表首行；③ 档位候选面与写面同判据（不可 off 的模型两面一致）→ 判据句 3 + 边界表第 3 行；
+
+④ 三包门禁读数（各取本面可达值 · 口径单源 = `docs/core/design/TESTING.md` §10.3）：核 = `cd thincoder-core && npm run prepublishOnly` exit 0 ∧ `check-syntax: N file(s) OK`；
+
+集成层 = 仓根 `node test/run.mjs` exit 0 ∧ `fail 0` · CLI = 空集说明器 exit 1 ∧ 输出指仓根 · VSC = `cd thincoder-vscode && node test/run.mjs` exit 0 ∧ `fail 0`（单元清单面）+ `doc-check` 零新增闸态失败 → 落点表在册；
 
 ⑤ 会话选定（模型面实变）⇒ `defaultModel` 实写回 ∥ 等值 ∥ 回声 ∥ boot 播种 ∥ 回退径零写 + **端到端 = 选定 ⇒ 新建会话 ⇒ 运行模型 = 最近一次显式选定**
 （取数链 = 新槽创建（核 `newSession`，

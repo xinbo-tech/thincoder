@@ -595,18 +595,7 @@ seg === 1 ∧ depth0 ∧ ¬review ∧ stripDecorations(value) === 进行中 ∧ 
 
 最大舱 = 7 档（舱 1），均不跨面。
 
-**单测档（改动面，收口即删——零留存；零现有档——`thincoder-core/test/` 现只有 2 个目录项）**：
-
-| 档 | 覆盖条目 | 预估 |
-|---|---|---|
-| `thincoder-core/test/write-face.test.mjs` | R2 · R12 · R14 · R16（面判六态 + 名单同值） | ~18 例 |
-| `thincoder-core/test/live-batch.test.mjs` | R2 · R10（三合取 · 多活 · 读错 fail-closed） | ~8 例 |
-| `thincoder-core/test/batch-bind.test.mjs` | R1 · R8（新建 / 接管 / 三拒 / 回滚） | ~10 例 |
-| `thincoder-core/test/batch-gates.test.mjs` | R3 · R4 · R5 · R9 · R16（词表 · 段序 · 收口 · 别名） | ~12 例 |
-| `thincoder-core/test/ledger-reanchor.test.mjs` | R7 · R11 · R13（分流 · 兜底点名 · 残值） | ~9 例 |
-| `thincoder-core/test/ledger-reclaim.test.mjs` | R15（重开回收 · 已核销不回 · executor） | ~6 例 |
-
-**改行预算**：新档 6（`skip-dirs` / `write-face` / `live-batch` / `batch-ledger-bind` / `batch-closeout` / `batch-reopen`）+ 改档 17（含 `agent/light-round.mjs` 与 `thincoder-core/prompts/persona-engineering.md`）+ 单测档 6（删）= 29 档落笔面。
+**改行预算**：新档 6（`skip-dirs` / `write-face` / `live-batch` / `batch-ledger-bind` / `batch-closeout` / `batch-reopen`）+ 改档 17（含 `agent/light-round.mjs` 与 `thincoder-core/prompts/persona-engineering.md`）= 23 档落笔面。
 
 ## 4. 关键决策（含被拒）
 

@@ -359,7 +359,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 | `thincoder-core/tool-docs/ledger.md` | 9 | 换写（query 读数键 + 归批门句；不增行） | 9 |
 | `thincoder-cli/src/acp/read-data.mjs` | 147 | 0（`ledgerCount` 三键消费面已落） | 147 |
 
-- **用例**：档 `thincoder-core/test/ledger-batch-ops.test.mjs`（**实施轮新建** ~150–200 行——T92–T98 · T100–T101（含 T94a ∥ T94b）；T99 属 C 落 #1550 档）——**一次性验收（零留档）：随实施轮跑完即删**。
+- **用例**：单测档（**实施轮新建** ~150–200 行——T92–T98 · T100–T101（含 T94a ∥ T94b）；T99 属 C 落 #1550 档）——**一次性验收（零留档）：随实施轮跑完即删**。
 - **文档 / 描述面（模型可见文案——换写）**：本档 §3.3 / §3.4 / §5 / §6.2 / §7.1 / §8 · `thincoder-core/tool-docs/ledger.md`（9 行——`query` 读数键 / `batch` / `task_book` / `resume_when` / count 对象形换写）。
 **贴线判（由上表现行 + 增量上界相加得出 · 两条口径各管各的面）**：`batch-lifecycle.mjs` **现读 355** + ≤15（出口清单未落半幅——AC-M2-35；C 收口重锚 ≈+25 已落，不重复计入）⇒ **≈370**；全表上界最高 = `ledger-cmd.mjs` **336 + 40 ⇒ ≤376**，次 = `declaration.mjs` **372** · `batch-lifecycle.mjs` **≈370** · `ledger-tools.mjs` **358**——**无一档越过 500 顾问线，无一档越过 800 硬线**。
 
@@ -403,7 +403,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
   - `thincoder-core/agent-tools/batch-lifecycle.mjs`（现行 = §3.5——收口两路重锚：取行集 + 调核内重锚单源 + 回执点名；写入经核内单源，工具层零 SQL）⇒ 本节增量 +~25
   - `thincoder-core/ledger-migrate.mjs`（现行 = §3.5——`writeGateFlag` **行为零改**：该旗自始只报告、不拦截（实读 `ledger-migrate.mjs` `writeGateFlag` = 返旗串 ∥ `null`，无写路径分支）；本节只收正**旗面文案 + 头注**，措辞 = 读数语义（旗为读数、不拦任何写入））⇒ 本节增量 ≤ +5（纯文案）
   - `thincoder-core/ledger.mjs`（现行 = §3.5——`ledgerBatchRows` / `ledgerReanchorBatch` re-export）⇒ 本节增量 +3
-- **用例**：档 `thincoder-core/test/ledger-pointer-reanchor.test.mjs`（**实施轮新建** ~180–240 行——T99 · T102–T108 · T123–T124；靶向单跑 `node --test test/ledger-pointer-reanchor.test.mjs`）——**一次性验收（零留档）**：随实施轮跑完即删（用户既定「单元测试零留存 · 用毕即删」；该档不复跑、不承载回归）。
+- **用例**：单测档（**实施轮新建** ~180–240 行——T99 · T102–T108 · T123–T124）——**一次性验收（零留档）**：随实施轮跑完即删（用户既定「单元测试零留存 · 用毕即删」；该档不复跑、不承载回归）。
 - **文档 / 描述面（模型可见文案——换写）**：本档 §2 ∥ §2.2 ∥ §3.2 ∥ §3.4 ∥ §5 ∥ §6.1 ∥ §6.2 ∥ §7.1 ∥ §8 ∥ §9 ∥ 本节 · `thincoder-core/tool-docs/ledger.md`（query 读数键 + 归批门句）。
   另含 `docs/core/design/BATCH-RECORD.md` §4.13 ∥ §4.17 ∥ §7（D-BR29）∥ §8 边界 12 · 需求档 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-LEDGER.md`（AC-M2-10 / AC-M2-29 / AC-M2-30 / AC-M2-33——**笔归主 agent**）。
 - **零改面**（现行行数 = §3.5 表，本节不复写）：`thincoder-core/ledger-db.mjs`（DDL / CHECK / 常量零改，读数不入库）· `thincoder-core/declaration.mjs`（`resolveDeclaredRef` 既有）· `thincoder-core/ledger-tools.mjs`（参数声明面零改）。
@@ -498,7 +498,7 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
   - `thincoder-core/agent-tools/batch-lifecycle.mjs`（现行 = §3.5——close 径回执附清单；与 §6.2 重锚**同径同回执**，两处增量须并为一次落笔）⇒ 本节增量 +~15
   - `thincoder-core/tool-docs/ledger.md`（9 行——`count` 出参 / `query` 读数键）⇒ 换写
   - `thincoder-cli/src/acp/read-data.mjs`（**147**——`ledger/count` 分支去 `{count:…}` 包装 ⇒ 直传核对象）⇒ ±0（改 1 行）；面 = `ledgerCount` 三键形的 ACP 消费面
-- **用例**：档 `thincoder-core/test/ledger-overdue.test.mjs`（**实施轮新建** ~100–150 行——T109–T114；靶向单跑 `node --test test/ledger-overdue.test.mjs`）——一次性验收（零留档：随实施轮跑完即删）。
+- **用例**：单测档（**实施轮新建** ~100–150 行——T109–T114）——一次性验收（零留档：随实施轮跑完即删）。
 - **文档 / 描述面（模型可见文案——换写）**：本档 §3.4 ∥ §3.7 ∥ §5 ∥ §6.1 ∥ §6.2 ∥ §7.1 ∥ §7.3 ∥ §8 ∥ §9。
 - **零改面**（现行行数 = §3.5 表，本节不复写）：`thincoder-core/ledger-db.mjs`（`AGING_DAYS` 常量单源零改）· `thincoder-core/ledger-tools.mjs`（参数声明面零改）· `thincoder-core/ledger-migrate.mjs`（读数不入 `DATA_COLUMNS`）· 三端渲染面（`ledger-surface.mjs` ×3——端零自算，随核格式化单源）。
 
@@ -642,7 +642,6 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | — | — | **本轮实改**：收口重锚 `reanchorOnClose(abs, boundary)` 传会话锚（close ∥ status 两路） |
 | `thincoder-core/ledger.mjs` | 160 | 160 | **本轮实改**：`findProject` 两参形（界 = 锚自身）· `buildScan` / `ledgerQuery` 路径传本面锚 |
 | 其余消费面（`ledger-migrate.mjs` ∥ `ledger-variant-notice.mjs` ∥ `agent/light-round.mjs`） | 306 / 47 / 63 | 零改 | 全部经包装入口取名——无第二判据 |
-| `thincoder-core/test/project-root-single-source.test.mjs` | 已删除 | — | 一次性单测（PR-1–PR-21）——建 → 跑 → 删，零留档 |
 | `test/RTM.md` | 138 | 138 | 故事 8 加 8-2、新故事 9 加 9-1（编号先行）；6-5 / 8-1 在表；**结果列现态 = 待执行**（口径单源 = `test/RTM.md`——本档不写跑绿） |
 | `docs/core/design/LEDGER.md` | 1119 | 1119 | 本节 ∥ §2.1 ∥ §3.5 ∥ §6.1 ∥ §7.1 ∥ §8（AC-M2-17）∥ §9 随判据改齐；本轮落点 = 无根文案逐字契约 ∥ 入口表 / 起点条 / 无根契约坐标 ∥ 受影响面五行（`ledger-cmd` · `batch-lifecycle` · `ledger.mjs`）∥ 贴线判 ∥ 用例档零留档 ∥ `findProject` 两参形（行数 = 定稿实测） |
 | `docs/core/design/BATCH-RECORD.md` | 684 | 684 | §4.15 条 1 四形矩阵末形两判 ∥ 条 5（多根工作区锚判据 + 逐字文案）∥ §4.8 BR-39 ∥ BR-40 ∥ BR-42（行数 = 本轮改后实测） |
@@ -650,14 +649,14 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 
 - **本表性质**：本节受影响面 = 该批的实施记录与改动面清单；两列 = **该批 as-of 读数 ∥ 该批目标**（实施轮实测），不是现行读数。**现行行数单源 = §3.5「受影响面」表**——读现行值一律看 §3.5，本节两列只记该批当时读到了什么。
 
-- **用例档**：一次性单测 `thincoder-core/test/project-root-single-source.test.mjs`（PR-1–PR-21）——本批已跑完后删除，零留档、无常驻运行命令。
+- **用例档**：一次性单测（PR-1–PR-21）——本批已跑完后删除，零留档、无常驻运行命令。
 - **文档面**：本档 §2.1 ∥ §3.8 ∥ §7.1（导出面）∥ §7.2 ∥ §8（与本条冲突的判据句随本批改齐）。
 
 **贴线判**：受影响面现行读数与增量上界单源 = §3.5 表（本节不复写数字）；结论 = 无一档越过 500 顾问线、无一档触发 650 拆分（单源 = §3.5「档位结论」）。
 
 **边界（本面不做）**：向下取根（无候选择一）∥ 起点推导的自动发现（多根工作区锚不猜项目）∥ 发现规则（`discoverProjects` / `discoverRepos`——答「锚下有哪些项目」）∥ 建档流 ∥ 新配置键 ∥ `realpath` / 符号链接解析。
 
-**用例表（一次性单测档 = `thincoder-core/test/project-root-single-source.test.mjs`）**：
+**用例表（一次性单测档）**：
 
 | # | 类 | 输入 | 期望 |
 |---|---|---|---|
@@ -1312,7 +1311,7 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 
 **用例表（续——写门·指针点名）**：T11 `task_book` 三形态（无后缀 / `§2` / `§1.5（括注）`）**本笔新写**且指向在档 → 通过 · T12 **本笔新写**指向不在盘档 → 拒（文案 + 行不变） · T13 **本笔新写** `§2`（非空但缺文件部分）→ 拒（臂②） · T14 本笔未指名（只改 `status` / `evidence`）而指针所指档已清 → 不判（照过）；`待讨论` 行**本笔新写** `task_book`（在档 ⇒ 过 / 不在盘 ⇒ 拒——臂② 全状态射程）。
 
-**用例表（续——执行者归属与判活展示，F-LX1；档 `thincoder-core/test/ledger-executor.test.mjs`；L2 文案断言双端 = `thincoder-cli/test/ledger-surface.test.mjs` / `thincoder-vscode/test/ledger.test.mjs`）**：
+**用例表（续——执行者归属与判活展示，F-LX1；L2 文案断言双端 = CLI ∥ VSC 两端单测档）**：
 
 - T15 `待设计 → 在途` ⇒ 行 `executor` = 注入 sessionId（兜底链三态各一拍：缺省 / patch 显式 / 行现值兜底）。
 - T16 `在途 → 待核销` / `在途 → 已废弃` ⇒ executor NULL（patch 显式传也不复活）。
@@ -1321,7 +1320,7 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 - T19 三态对照（注入 `_setProcessProbeTestImpl`）：dead ⇒ L2 带「属主已死，可接手」/ alive + staleDays ≥ 1 ⇒「执行中 <n> · 最长 <d> 天未动」/ unknown（aliveSet null · cmdline 缺行）⇒ 不显死亡。
 - T20 inflight 空 ⇒ `resolveExecutorStates` 零 exec 快返；同 pid 二次解析 TTL 内零 exec。
 
-**用例表（续——库键归一与存量迁移；档 `thincoder-core/test/ledger-key-normalize.test.mjs` / `thincoder-core/test/ledger-migrate.test.mjs`）**：
+**用例表（续——库键归一与存量迁移）**：
 
 - T21 键归一：同项目两盘符拼写（含 `\` / `/` 混写、尾斜杠）⇒ `ledgerDbPath` 同路径；盘符本大写 ⇒ 键 = 原样 `sha1[:16]`（回归）。
 - T22 级联守卫（§2.1 比较边界登记）：`findProject` 以两拼写 anchor ⇒ 命中同一库文件。
@@ -1336,7 +1335,7 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 - T31 `--from <key>`：**取值必须为 16 位小写十六进制键形**（`/^[0-9a-f]{16}$/`——路径形 / 非键形 ⇒ 拒）；显式键补充源 ⇒ 并入候选（与枚举去重）后照六步迁入；指名键无对应库 / 不可开 ⇒ 拒跑（fail-closed，零写）。
 - T32 dry-run 指针读数旗：源含 `task_book` 解析不成立 ∥ 档不在盘的行 ⇒ 报告含读数旗（**不拦截**、照迁；**读数非门**——该行后续更新零阻）；dry-run 零写照旧。
 
-**用例表（续——收口两源；档 `thincoder-core/test/ledger-close.test.mjs`）**：
+**用例表（续——收口两源）**：
 
 - T33 正常：追认核销直通——待讨论 / 待设计（先行回写 `evidence`）⇒ 已核销 + `closed_at` 写入 + 行保留（软删除）。
 - T34 错误：追认核销缺 `evidence`（空 / 全空白两拍）⇒ 拒（文案逐字 + 行不变）。
@@ -1372,9 +1371,9 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 **用例表（续——台账工具统一入口；单元测试档（已落））**：
 
 - T77–T91：统一入口五 action 等价 ∥ 弃用壳 ∥ 守卫逐 action 文案（P3 / P5 + P2 / P4 / P6 补）∥ 未知 action ∥ action 缺失 ∥ 装配名集（号段 T77 起）。
-**用例表（续——批级批量与反查；单元测试档（新建 `thincoder-core/test/ledger-batch-ops.test.mjs`——靶向单跑 `node --test test/ledger-batch-ops.test.mjs`））**：
+**用例表（续——批级批量与反查；单元测试档（实施轮新建））**：
 
-**在册状态（单源）**：用例 **T92–T98 · T100–T101**（批甲面；含 T94a ∥ T94b）**未落地在册（在册未落）**——`thincoder-core/test/ledger-batch-ops.test.mjs` 实读**不在盘**（落地后新建）；落地批 = 台账 #1530。T99（收口重锚）= C 面 ⇒ 用例落 #1550 档（见下）。
+**在册状态（单源）**：用例 **T92–T98 · T100–T101**（批甲面；含 T94a ∥ T94b）**未落地在册（在册未落）**——单测档实读**不在盘**（落地后新建）；落地批 = 台账 #1530。T99（收口重锚）= C 面 ⇒ 用例落 #1550 档（见下）。
 
 - T92 正常：纯批收口——同批 N 行（全在 `待核销`）⇒ `close --batch` 一次全销（`applied.length === N` · `skipped.length === 0`）；**直读库**该批行数 = N（按 `task_book` 直查——**非** `ledger(count)`：后者只数未决四态、该批收口后回报 0，两读数口径不同、非矛盾）；**调用数 = 2**（`update --batch` + `close --batch`）。
 - T93 安全阀：混批（部分落）——同批三行（`待核销` / `在途` / `待讨论` 各一）⇒ `close --batch` 只销 `待核销` 者（`applied = [该行]`），另两行**逐行点名**（`skipped` = `[{id, from:"在途", why:…}, {id, from:"待讨论", why:…}]`）；库内另两行状态零变。
@@ -1388,9 +1387,9 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 - T100 正常：`resume_when` —— `add` / `update` 携值落行；空串 / 全空白 ⇒ 拒；不带参零回归；旧库（无列）打开 ⇒ ALTER 补列、行不损、二次打开零副作用；`query` 行集携带。
 - T101 边界：`evidence` 超限读数——写一行 301 字 `evidence` ⇒ `query` 该行 `evidenceOversize === true`、`count.evidenceOversize === 1`；**写入不拒**（行已落）。
 
-**在册状态（单源）**：用例 **T99 · T102–T108 · T123–T124**（指针判据重锚面）**未落地在册（在册未落）**——`thincoder-core/test/ledger-pointer-reanchor.test.mjs` 实读**不在盘**（落地后新建）；落地批 = 台账 #1550。
+**在册状态（单源）**：用例 **T99 · T102–T108 · T123–T124**（指针判据重锚面）**未落地在册（在册未落）**——单测档实读**不在盘**（落地后新建）；落地批 = 台账 #1550。
 
-**用例表（续——指针判据重锚与读数；单元测试档 = `thincoder-core/test/ledger-pointer-reanchor.test.mjs`（实施轮新建 ~180–240 行——T99 · T102–T108 · T123–T124；靶向单跑 `node --test test/ledger-pointer-reanchor.test.mjs`），一次性验收 · 零留档）**：
+**用例表（续——指针判据重锚与读数；单元测试档（实施轮新建 ~180–240 行——T99 · T102–T108 · T123–T124），一次性验收 · 零留档）**：
 
 - T99 正常（C 收口重锚）：批档收口时本批尚存未落行 ⇒ 库内该行 `trigger = 条件` ∧ `resume_when` = 复启句（`<批名>` = 本档文件部分）∧ 该行读数 `overdue = null`（无 `@` 锚 ⇒ §3.4 判 `free`——不产 `resume_due`）；**该列现值非空的行**（行主条件句在册）⇒ 原值不动 ∧ 复启句追加 `evidence`；**`待核销` 行零触**（属已落——不取、零改）；`trigger = 认账不排期` 的行零触；回执逐行点名 + 冻结照常；全部已落 ⇒ 无该段。
 
@@ -1404,7 +1403,7 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 - T123 边界（C 次序）：夹具 = 批档 §3 为空（链完整性门拒）∧ 本批一行 `trigger=归批` 指本档 ⇒ `close` 拒 ∧ 该行 `trigger` 仍 `归批`、`evidence` 零追加（台账零写、`failed` 不产）；补 §3 后同档再 `close` ⇒ 该行改 `条件` + 复启句。
 - T124 边界（C `cwd` 基准）：工作区锚（项目 A + B）· 批档在 A · A 库一行 ∥ B 库一行各指本档 ⇒ `close` A 的批档 ⇒ A 库该行改 `条件`、B 库字节等值（零改）；`ledgerBatchRows` 取出的是 A 的库行集（非按会话锚收敛所得之根）。
 
-**用例表（续——开批同面判；单元测试档 = `docs/batches/2026-11-01-claim-existing-debt.test.mjs`（实施轮新建；靶向单跑 `node --test docs/batches/2026-11-01-claim-existing-debt.test.mjs`），一次性验收 · 零留档）**：
+**用例表（续——开批同面判；单元测试档（住批档同目录、名随批档；实施轮新建），一次性验收 · 零留档）**：
 
 **夹具口径（本案八例共用）**：
 
@@ -1420,9 +1419,9 @@ batch: ledger must be a ledger entry number (e.g. "#1830") — got <raw>. Pass a
 - T131 边界（候选截断与序）：同面 12 条未决行（`id` 递增造）⇒ 拒文列前 10 行且升序（首行 = 最小 `id`），后随 `… 2 more not listed` + 自取命令句；同面 3 条 ⇒ 无计数句（未截断则整行不出现）。
 - T132 边界（理由读面）：本批行 `evidence` = `新事理由：<X>` ⇒ 本批收口回执含一行 `新事理由（#<id>）：<X>`；该行 `evidence` 后续追加（`<旧>｜<新>` 形）⇒ 引文仍取 `新事理由：` 之后至首个 `｜` 的一段；无该前缀的行不引（负向锁）、行字节零改。
 
-**用例表（续——出口面；单元测试档 = `thincoder-core/test/ledger-overdue.test.mjs`（实施轮新建 ~100–150 行——T109–T114；靶向单跑 `node --test test/ledger-overdue.test.mjs`），一次性验收 · 零留档）**：
+**用例表（续——出口面；单元测试档（实施轮新建 ~100–150 行——T109–T114），一次性验收 · 零留档）**：
 
-**在册状态（单源）**：用例 **T109–T114**（出口面）**未落地在册（在册未落）**——`thincoder-core/test/ledger-overdue.test.mjs` 实读**不在盘**；落地批 = 台账 #1530 的出口面。
+**在册状态（单源）**：用例 **T109–T114**（出口面）**未落地在册（在册未落）**——单测档实读**不在盘**；落地批 = 台账 #1530 的出口面。
 
 - T109 正常：`overdueOf` 四类首中优先（序 = `resume_due` → `dangling` → `unlabeled` → `aged`）——`resume_due`（`trigger=条件` ∧ 日期锚 `@<过去日>`）∥ `dangling`（`trigger=归批` ∧ 批档不在盘）∥ `unlabeled`（`trigger IS NULL` ∧ 行龄 > 30）∥ `aged`（未决 ∧ 行龄 > 30，本拍用 `trigger = 认账不排期`）各一拍；皆不中 ⇒ `null`；归档态 ⇒ `null`（不判）。
 - T110 正常：`ledgerCount` 回报 `{ count, overdue, evidenceOversize }`（三值各对 · `overdue ≤ count`）；`ledgerQuery` 行集逐行携 `overdue`；**不入库、不入 `DATA_COLUMNS`**（列集零变）。

@@ -96,7 +96,7 @@
 
 **新名三问**：`ROUND_MARKER`——`existing: thincoder-core/agent/light-round.mjs:25 · name: "ROUND_MARKER" · consumers: lightRoundOpen（同档谓词）` ⇒ 沿用（单源迁址 `ledger-db.mjs`，消费面不变名）。
 
-测试档名 `ledger-close-marker-gate.test.mjs`——`existing: test/integration/unbooked-pen.test.mjs`（仓根；命名形 = 机制名 kebab；同名单元档已随其批收口删除——测试纪律）⇒ 对齐。
+测试档名沿「机制名 kebab」形——`existing: test/integration/unbooked-pen.test.mjs`（仓根；同名单元档随其批收口删除——测试纪律）⇒ 对齐。
 
 **先例行**：台账写门 `assertTaskBookGate`（同档同层判据新增——判位与迁移表判同层，`ledger-cmd.mjs:149-160`）∥ 源态拒（`applyRowClose` 既有门，`:259`）；偏离 = 判据读标题字面（非指针存在性）。
 
@@ -112,7 +112,6 @@
 | `thincoder-core/agent/light-round.mjs` | 67 行 | −3 / +1（删本地常量、动态 import 解构增名）→ ~65 | 消费面改源 |
 | `thincoder-core/tool-docs/ledger.md` | — | close 条 +1 句 ∥ update 条 +半句（拒面登记） | 工具描述同步（提示词面——实施轮 eng-coder 落笔） |
 | `thincoder-core/prompts/persona-engineering.md` | — | 轻通道块 +1 行（逐字 EN 见下） | 提示词面（实施轮 eng-coder 落笔） |
-| `docs/batches/2026-10-25-closeout-marker-gate.test.mjs` | 新档 | ~110 行（M1–M7） | 单元测试档（随批档住、收口删除——测试纪律；落点经父裁收正——`thincoder-core/test/` 被 runner SC-1 判错位） |
 
 **提示词面逐字 EN**（`thincoder-core/prompts/persona-engineering.md` 轻通道块「The round ledger row's title carries …」行后 +1 行——实施席照此落笔）：
 
@@ -258,8 +257,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 |---|---|---|---|---|
 | `thincoder-core/agent/unbooked-pen.mjs` | 62 行 | 新档 | 谓词叶（`PEN_TOOLS` ∥ `unbookedPenText()` ∥ `unbookedPenNotice()`） | 新档——免拆分 |
 | `thincoder-core/agent/record-results.mjs` | 199 行（挂接点 `:29-30` ∥ `:87-90`） | +5 | 结构不变（不拆函数、不增导出） | 低于 300 软线 ∥ 500 顾问线（`docs/core/requirements/ENGINEERING-MODE-V2.md:653` F12）⇒ 不触发拆分评审 |
-| `thincoder-core/test/unbooked-pen.test.mjs` | 112 行 | 新档（8 例） | 单元测试档（收口删除——测试纪律） | 新档——免拆分 |
-| `test/integration/unbooked-pen.test.mjs`（仓根） | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——与上一行是两个对象：单元档随批删、集成档常驻 | 新档——免拆分 |
+| `test/integration/unbooked-pen.test.mjs`（仓根） | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——单元档随批删、集成档常驻，两者是两个对象 | 新档——免拆分 |
 
 **不改面**：轻通道准入判据（§2.1）· 代码笔闸（§2.8）· 全链放行 · 提示词面（规则已在 persona-engineering:218-222，本件只装触发点）· 批档 ∥ 台账机制本体 · 无新配置键。
 

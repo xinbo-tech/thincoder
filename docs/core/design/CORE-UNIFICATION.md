@@ -515,7 +515,7 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **核提示词面（S1 新建）** | `thincoder-core/prompts/*.md`（16 档） | 0 | 逐档行数挂 §2.5 | 唯一副本（A7）；来源 = 两产品 `src/prompts/` 裁决结果（B14） |
 | **核提示词面（S1 新建）** | `thincoder-core/tool-docs/*.md`（54 档） | 0 | 逐档行数挂 §2.5 | 唯一副本（A7）；来源 = 两产品 `src/tools/*.md`（B14） |
 | **核提示词加载面（S0a 首建 · S1 随裁决面补齐）** | `prompt-files.mjs`（落 `thincoder-core/`） | 0 | +60±20 | D-C13 解析面（`import.meta.url` 为根——三态一致）；缺档语义按调用方三类（契约 9） |
-| **核内锚替换缝（U0 前置笔）** | `thincoder-core/prompt-files.mjs` · `prompt-overlays.mjs` · `thincoder-core/tools/shared.mjs` · `advisor.mjs`；核内测试 = 扩 `test/prompt-files.test.mjs` + 新建面覆盖档 | 66 / 74 / **452** / 290（`wc -l` 实核）· 测试 108 / 新建 0 | +14±6 / +10±4 / +3±2 / +8±3 · 测试 +20±10 / +120±40 | §2.13.8（U0）——注入原语 + 三装配面挂点（四装配面）   |
+| **核内锚替换缝（U0 前置笔）** | `thincoder-core/prompt-files.mjs` · `prompt-overlays.mjs` · `thincoder-core/tools/shared.mjs` · `advisor.mjs`；核内测试 = 扩 prompt-files 单测 + 新建面覆盖档 | 66 / 74 / **452** / 290（`wc -l` 实核）· 测试 108 / 新建 0 | +14±6 / +10±4 / +3±2 / +8±3 · 测试 +20±10 / +120±40 | §2.13.8（U0）——注入原语 + 三装配面挂点（四装配面）   |
 | **提示词加载面（S2 删）** | `thincoder-cli/src/prompt-overlays.mjs` | 82 | **−82（删）** | 槽位装配面 = 核 `prompt-overlays.mjs` 单点——已随 CLI U15 落地（实核：档不存在） |
 | **提示词加载面（S2 删）** | `thincoder-vscode/src/prompt-overlays.mjs` | 83 | **−83（删）** | 同上——VSC 随 W2 落地 |
 | **提示词加载面（S2 删）** | `thincoder-cli/src/advisor.mjs` | 290 | **−290（删）** | advisor 加载面 = 核 `advisor.mjs`（4 档硬加载语义不变——已随 CLI 侧接线落地；实核：档不存在）  |
@@ -525,7 +525,6 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | **提示词加载面（S2 删〔CLI〕/ 重定保留〔VSC〕）** | `thincoder-cli/src/agent/setup.mjs` · `thincoder-vscode/src/agent/setup.mjs` | 354 / **668** | CLI **−354（删）** · VSC **净减方向（保留——装配面瘦身 + 核原语改指；零删）** | consult 消费点 = 核面（缺档抛错语义不变——契约 9）；CLI 已落地〔实核：档不存在〕；**VSC 半 = W15 重定：「同路径 ≠ 同内容」⇒ 端壳装配面保留（行数 464 → 668 实测）；修正轮-4 原句「VSC 随 W15 删除集 · −464（删）」已被取代**  |
 | **提示词副本删除（S2 / S3）** | 两产品 `src/prompts/*.md`（15×2）· `src/tools/*.md`（25×2） | — | 逐档见 §2.5 | 迁移后删空（S3 零残留——T-C8） |
 | **产品文档（S2 改）** | `thincoder-cli/AGENTS.md`（`:21`）· `thincoder-vscode/AGENTS.md`（`:15`） | 68 / 125 | ±4 / ±4 | 「产品内双源」约定段改述为「核内落地（单副本）」 |
-| **产品测试（S2 改）** | `thincoder-cli/test/{prompts-dual-source,prompts-async-guidance,doc-consistency}.test.mjs` · `thincoder-vscode/test/prompts-mirror-anchors.test.mjs` · `files.mjs` | 116 / 168 / 265 / 145 / 84 | 逐档 ±10 | 双源断言改指新落点（含档名集合断言——随接线改）   |
 | **记忆面（S2 改）** | `thincoder-cli/src/memory/**`（8 档：`schema` 452 · `docs` 420 · `code-sync` 416 · `core` 300 · `delete` 236 · `code-index` 219 · `file-walk` 109 · `scan` 95）· `thincoder-vscode/src/memory.mjs`（273）· `memory-tool.mjs`（386） | — | 逐档见 §2.5 | **A12**：面向 CLI 语义归一（CLI 为准）；VSC 两档改 / 删依 S0 裁决；**旧数据迁移面**（VSC `personal` 层 md / 遗留 `.json` / `modelPrefs`——无自动迁移路径——§2.12.3 上抛清单）；**索引面收口**：VSC 文件制索引档（`indexer` / `index-bin` / `index-discover` / `embed-config` + `tools/code.mjs`）随 W8 删旧、归一核 sqlite；**索引数据面零迁移 / 零兼容**（不写导入器——重新索引 = 正当路径；`docs/core/design/MEMORY.md` §4 #11）  |
 | **记忆面导入器（S2 新建）** | CLI `memory import` 子命令面（落 `thincoder-cli/src/cli/`） | 0 | +60±20 | **§2.5.1 A2 已裁 ①**（一次性导入器：VSC `personal` 层 md / 遗留 `.json` → CLI `entries`）；`modelPrefs` 无文件系统载体 ⇒ 不迁 |
 | **文案面（S1 建核 · S2 接线）** | 核内文案常量档（落 `thincoder-core/`）· `thincoder-vscode/src/i18n.mjs` + `locales/{en,zh}.json` | 0 / 57 / — | +40±15 / ±6 | **§2.5 #185 / 丁组 D1（已裁 · 按建议）**：容器归一 + 投影端差；机器消费面冻结（§2.12.2 第 12 行） |
@@ -557,10 +556,10 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 
 #### 2.8.1 核内逐档行数与拆分计划（R24a 补全）
 
-**口径**：本小节 = 核内逐档行数的**设计侧落点**（R24a；T-C14 检查对象）；**设计侧现行登记面 = 本小节子表**（新超线档须入表 + 拆分计划——防回潮）；核内读数侧（机检门）= `thincoder-core/test/core-hygiene.test.mjs` 的 `SOFT_LINE_REGISTRY`——**运行面随测试树全清退场，该门义务随测试体系重建恢复**。行数 = `wc -l`；**>500（软线）档须带拆分计划**。
+**口径**：本小节 = 核内逐档行数的**设计侧落点**（R24a；T-C14 检查对象）；**设计侧现行登记面 = 本小节子表**（新超线档须入表 + 拆分计划——防回潮）；核内读数侧（机检门）= 核行数上限门（软线 / 硬限登记表）——**运行面随测试树全清退场，该门义务随测试体系重建恢复**。行数 = `wc -l`；**>500（软线）档须带拆分计划**。
 
 **读数 as-of = 2026-09-14**（逐档实跑复核，与树逐档一致；三块结构现读 = 主表 **15 行** + 拆分计划子表 **1 行** + 次优先列表已随批清账）；
-`wc -l` 语义 = 核内机检 `thincoder-core/test/core-hygiene.test.mjs:98` 的口径（**file-tier-sweep 批复测刷新——面 = 主表行 4–11 · 14 与子表行 1；未列行保留各自 as-of**）。
+`wc -l` 语义 = 核内机检行数上限门的口径（**file-tier-sweep 批复测刷新——面 = 主表行 4–11 · 14 与子表行 1；未列行保留各自 as-of**）。
 
 | # | 档（`thincoder-core/` 内） | 当前行数 | 来源 / 落点（裁决行） | 拆分计划 |
 |---|---|---|---|---|
@@ -669,9 +668,9 @@ D-C1–D-C4 · D-C7–D-C10 **与边界扩张无涉**（形态 / 装载 / 闸口
 | 类 | 契约点（现状 · 证据） | 归一可能引入的变更 | 兼容形态（A7 要求） | 落地物 |
 |---|---|---|---|---|
 | **配置格式** | `~/.thincoder/config.json`：两端**同一文件同一格式**（严格 `JSON.parse`，无 JSONC）；顶层键 = `providers` / `defaultModel` / `agent` / `memory` / `shell` / `embedding` / `mcp.servers` / `websearch` / `traces` / `proxy`（全 camelCase）；迁移核 = `migrateLegacyModelFields`（两端各一份、无版本字段、写回、删旧键）——`thincoder-core/config.mjs:17` · `thincoder-vscode/src/config-io.mjs:30-31` · `thincoder-cli/src/config-migrate.mjs:26-60` · `thincoder-vscode/src/config-migrate.mjs:30-78` · 用户面 `thincoder-cli/README.md:103-163` | 键名 / 默认值 / 口径归一（实测分叉：CLI-only `agent.goalTurns` · `agent.streamRules`；`agent.compactThreshold` 默认 100000 vs null——`thincoder-core/config-defaults.mjs:23-24` ↔ `thincoder-vscode/src/config-io.mjs:312-331`）；`$schema` 注入与否（VSC 注入 / CLI 不注入——`thincoder-vscode/src/config-io.mjs:108` ↔ `thincoder-core/config-io.mjs:75`） | ① **旧键可读**：保留现有「旧形态在场即迁移」的读入路径（幂等 / 失败不阻断 / 写回带 `.bak-{ts}`——`thincoder-core/config.mjs:203-211` · `thincoder-core/config-io.mjs:78`）；② **不得静默丢弃**：用户已手写的键（含未知顶层键）在读写往返后仍在；③ 键名 / 默认值归一 ⇒ 登记 + CHANGELOG（旧键保留为读入别名）；④ `$schema` 差异归一取一侧时须登记（拟保留注入——编辑器补全；只建议不代裁） | 测试断言（旧配置读入 ⇒ 键仍在 / 旧键触发迁移）+ CHANGELOG 条目 + README 键面同步 |
-| **输出文案** | CLI = 源码内联字面量（USAGE `thincoder-cli/bin/thincoder.mjs:92-114`；stderr 前缀族 `[rate-limit]` / `[tool]` / `[context]` / `[task]` / `[usage]` `:183-211`；TUI 文案 `thincoder-cli/src/tui/cmd-help.mjs:17-25`）；VSC = `thincoder-vscode/locales/en.json` / `zh.json` + `t()`（`thincoder-vscode/src/i18n.mjs:49-56`）+ 扩展侧硬编码文案 | 归一后同一句只留一份 ⇒ 字面量可能与任一端旧文案不同 | ① **机器消费面不得改**（改前先列 §2.12.3）：CLI `[error] ` 前缀（`thincoder-cli/bin/thincoder.mjs:74`——`thincoder-cli/test/tui-stderr-capture.test.mjs:89` 锁定）· ACP 通知文案（`docs/cli/design/ACP-CLIENT.md:47`）· VSC locale 逐字串（`thincoder-vscode/test/status-line.test.mjs:86-111` 锁定）；② **人读文案**：允许改，但**须登记** + CHANGELOG；③ VSC 字典面（key + 双语）整体迁移，不留半套（缺键回退返回 key——`thincoder-vscode/src/i18n.mjs:51`）；④ **不得只改一端**（同类文案两端同源） | 变更条目（两产品 CHANGELOG）+ 受影响测试同步 + §2.5 登记   |
+| **输出文案** | CLI = 源码内联字面量（USAGE `thincoder-cli/bin/thincoder.mjs:92-114`；stderr 前缀族 `[rate-limit]` / `[tool]` / `[context]` / `[task]` / `[usage]` `:183-211`；TUI 文案 `thincoder-cli/src/tui/cmd-help.mjs:17-25`）；VSC = `thincoder-vscode/locales/en.json` / `zh.json` + `t()`（`thincoder-vscode/src/i18n.mjs:49-56`）+ 扩展侧硬编码文案 | 归一后同一句只留一份 ⇒ 字面量可能与任一端旧文案不同 | ① **机器消费面不得改**（改前先列 §2.12.3）：CLI `[error] ` 前缀（`thincoder-cli/bin/thincoder.mjs:74`——单测锁定）· ACP 通知文案（`docs/cli/design/ACP-CLIENT.md:47`）· VSC locale 逐字串（端单测锁定）；② **人读文案**：允许改，但**须登记** + CHANGELOG；③ VSC 字典面（key + 双语）整体迁移，不留半套（缺键回退返回 key——`thincoder-vscode/src/i18n.mjs:51`）；④ **不得只改一端**（同类文案两端同源） | 变更条目（两产品 CHANGELOG）+ 受影响测试同步 + §2.5 登记   |
 | **命令面** | CLI 子命令 13 项 + `--` 参数 + TUI 26 条斜杠命令 + 别名 + 补全词表（`thincoder-cli/bin/thincoder.mjs:92-114` / `:133` · `thincoder-cli/src/tui/slash-commands.mjs:39-69` · `thincoder-cli/src/completions.mjs:14-80`）；VSC 4 条命令 id + 菜单 + 快捷键 + 内部 `thincoder.buildIndex`（`thincoder-vscode/package.json:56-89` · `thincoder-vscode/extension.mjs:76`） | 合一时命令名 / 参数 / 行为取一侧 ⇒ 另一端旧名可能消失 | ① **旧命令名保留**（改名 ⇒ 旧名留为**别名**——CLI 别名机制已有：`thincoder-cli/bin/thincoder.mjs:397-403` · `thincoder-cli/src/tui/slash-commands.mjs:69`）；② **VSC 命令 id 视作冻结**（对外可绑定面：用户 keybindings / 第三方扩展——`thincoder-vscode/package.json:83-89`）；③ 端独有命令**不因归一而新造**（如 VSC 端无 `/mcp` 命令面）⇒ 只统一**共同**命令面；④ 既有对外承诺漂移（与本板块无关）另报另批 | 别名实现 + CHANGELOG + README 命令表同步 |
-| **事件语义** | CLI：`⟦ev⟧` 文本 token 族（`thincoder-cli/src/tui/subagent-blocks.mjs:35-46`）· hooks 四事件（`thincoder-cli/src/hooks.mjs:7-11` / `:47-56`；`thincoder-cli/test/hooks-stop.test.mjs:247` 锁定）· ACP `session/update` 块（`thincoder-cli/src/acp/bridge.mjs:58-59` / `:186-227`；契约档 `docs/cli/design/ACP-CLIENT.md`）；VSC：`postMessage` 50 类型（`thincoder-vscode/src/extension/panel-callbacks.mjs:119-176` → `thincoder-vscode/webview/chat.js:128-297`）· `subagent.status` 值域 · `onWait` phase 值域（VSC 多 `rate`——`thincoder-vscode/src/extension/panel-callbacks.mjs:88`） | 事件名 / 状态值域 / 载荷字段归一 ⇒ 任一端对侧语义可能变 | ① **对外事件面冻结**（ACP `session/update` 值域与载荷 · hooks 四事件名与 payload · VSC `postMessage` type 与 `subagent.status` 值域）——变更须列入 §2.12.3 并给迁移；② **归一的是语义（何时 / 什么状态），不是承载形态**（CLI 文本 token ↔ VSC 结构化消息 = 结构性不对称，留壳以注入表达——§2.2 契约 5）；③ **状态 / phase 值域统一 = 面内条目**（含 A11 ②：改对外可见语义 ⇒ 须裁）；④ 行为面分叉以谁为准 = 逐条裁决 | 事件面变更登记 + 测试同步 + CHANGELOG   |
+| **事件语义** | CLI：`⟦ev⟧` 文本 token 族（`thincoder-cli/src/tui/subagent-blocks.mjs:35-46`）· hooks 四事件（`thincoder-cli/src/hooks.mjs:7-11` / `:47-56`——单测锁定）· ACP `session/update` 块（`thincoder-cli/src/acp/bridge.mjs:58-59` / `:186-227`；契约档 `docs/cli/design/ACP-CLIENT.md`）；VSC：`postMessage` 50 类型（`thincoder-vscode/src/extension/panel-callbacks.mjs:119-176` → `thincoder-vscode/webview/chat.js:128-297`）· `subagent.status` 值域 · `onWait` phase 值域（VSC 多 `rate`——`thincoder-vscode/src/extension/panel-callbacks.mjs:88`） | 事件名 / 状态值域 / 载荷字段归一 ⇒ 任一端对侧语义可能变 | ① **对外事件面冻结**（ACP `session/update` 值域与载荷 · hooks 四事件名与 payload · VSC `postMessage` type 与 `subagent.status` 值域）——变更须列入 §2.12.3 并给迁移；② **归一的是语义（何时 / 什么状态），不是承载形态**（CLI 文本 token ↔ VSC 结构化消息 = 结构性不对称，留壳以注入表达——§2.2 契约 5）；③ **状态 / phase 值域统一 = 面内条目**（含 A11 ②：改对外可见语义 ⇒ 须裁）；④ 行为面分叉以谁为准 = 逐条裁决 | 事件面变更登记 + 测试同步 + CHANGELOG   |
 
 #### 2.12.2 处置表（S0 逐条填——与 §2.5「对外契约影响」列一一对应）
 
@@ -728,7 +727,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | **行口径** | 一行 = 一个注入位（锚名 / 缝）；同一锚多处出现者，出现处列**逐处列举** |
 | **消费方** | 填值方 = **端侧装配层**（CLI / VSC 各自的入口装配——调 `configurePromptInjections`）；替换执行 = **核内单点**（`prompt-files.mjs` 原语——§2.13.8）——核内零端名分支（契约 5 / 10） |
 | **现状标签** | 无消费方者一律写「**待 S2 接线**」——如实登记，不假装已有 |
-| **锚语法** | `{{inject:<name>}}`，`<name>` ∈ `[a-z0-9-]+`；机检 = `thincoder-core/test/core-prompt-face.test.mjs:38-48` 的锚文法断言（非法形态即红）   |
+| **锚语法** | `{{inject:<name>}}`，`<name>` ∈ `[a-z0-9-]+`；机检 = 核单测锚文法断言（非法形态即红）   |
 
 #### 2.13.2 提示词面锚——已消
 
@@ -757,8 +756,8 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | `opts.schema`（`$schema` 写盘注入） | `thincoder-core/config-io.mjs:57,74` | 端装配层 | CLI = 不传（写盘无 `$schema`）· VSC = `$schema` 指针（W16 已迁核——现体 `thincoder-vscode/src/extension/settings-panel-write.mjs:15` `VSC_CONFIG_SCHEMA` + `:20-22` `vscPersistRaw` 注入；原 `thincoder-vscode/src/config-io.mjs:108` 已删） | 未注入 ⇒ 产物无 `$schema` 键；注入 ⇒ 键在场且值 = 注入值 |
 | `projectDictionary(locale)`（文案字典投影） | `thincoder-core/i18n.mjs:87` | 端消费者 | CLI = 不用（直接读核内常量）· VSC = `locales/{en,zh}.json` 投影（逐字一致） | 投影结果与 VSC 现 `locales/*.json` 逐字相同（机器消费面冻结） |
 | `config-migrate` 注入参数（`loadRaw`/`saveRaw`/`conflictError`） | `thincoder-core/config-migrate.mjs:83` | **核内 `config.mjs`**（非端侧注入） | 两端同（核内调用点） | 核内测试：假 `saveRaw` 注入 ⇒ 写回失败不阻断（`conflictError` 路径） |
-| `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:66`（`configureWritePath`；191 行 · **已落** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `{openDoc, isDirty, applyEdit}`（W14 已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs:99`〔R3 改指后重锚〕；`isDirty` = 核 fail-closed 必需字段，`applyEditorRangeEdit` 随 range 径退场） | 双夹具 + 结构机检——见 §2.13.5（`thincoder-core/test/write-path.test.mjs`）   |
-| `configureExecRun` / `runCommand`（执行面单点） | `thincoder-core/tools/exec-run.mjs:31`（`configureExecRun`；**140 行** · **已落**；**`runInterruptible` 上提 · R3**〔纯搬 + 转口零语义改〕· §5 交付读数） | 端装配层 | CLI = 不注入（默认径 = `execFileSync` CLI 语义） · VSC = 可中断执行器（现形 = 核 `runInterruptible`〔`thincoder-core/tools/exec-run.mjs:59`——上提单源〕；VSC 壳 = `thincoder-vscode/src/tools/shared.mjs:21` ∕ `:104`〔导入 ∕ 注入〕；VSC 侧 linter / verify / ops 消费） | 双夹具 + 结构机检（执行面单点：linter / verify 零直调 `child_process`）——见 `thincoder-core/test/tool-seams.test.mjs`   |
+| `writeThroughPath` / `configureWritePath`（编辑器写路径缝） | `thincoder-core/tools/write-path.mjs:66`（`configureWritePath`；191 行 · **已落** · §5 交付读数） | 端装配层 | CLI = 不注入（默认 fs 径） · VSC = `{openDoc, isDirty, applyEdit}`（W14 已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs:99`〔R3 改指后重锚〕；`isDirty` = 核 fail-closed 必需字段，`applyEditorRangeEdit` 随 range 径退场） | 双夹具 + 结构机检——见 §2.13.5   |
+| `configureExecRun` / `runCommand`（执行面单点） | `thincoder-core/tools/exec-run.mjs:31`（`configureExecRun`；**140 行** · **已落**；**`runInterruptible` 上提 · R3**〔纯搬 + 转口零语义改〕· §5 交付读数） | 端装配层 | CLI = 不注入（默认径 = `execFileSync` CLI 语义） · VSC = 可中断执行器（现形 = 核 `runInterruptible`〔`thincoder-core/tools/exec-run.mjs:59`——上提单源〕；VSC 壳 = `thincoder-vscode/src/tools/shared.mjs:21` ∕ `:104`〔导入 ∕ 注入〕；VSC 侧 linter / verify / ops 消费） | 双夹具 + 结构机检（执行面单点：linter / verify 零直调 `child_process`）   |
 
 **族余项（登记——S2 取值补登）**：同款 module-level `configure*` 缝另有 **9 组**已物化（实核坐标）：
 
@@ -822,7 +821,7 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 | 端侧填什么 | **CLI = 不注入**（默认 fs 径）· **VSC = `{openDoc, isDirty, applyEdit}`**（已迁核——薄壳现体 `thincoder-vscode/src/tools/shared.mjs`；`isDirty` = 核 fail-closed 必需字段），脏缓冲 ⇒ 拒写 |
 | 契约 | 注入实现返回 `{ written: true, via: "editor" }` 或 `null`（未处理 ⇒ 回退默认）；缺省 = 现状；核内零端名分支（契约 5） |
 | 覆盖点 | 8 个写点（write / insert_after / hashline_edit / edit / edits 数组 / apply_patch / delete / file_ops）——`ctx` 已透传到各 `execute(args, ctx)`，可行 |
-| 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 **11**（8 写点 src 面 + `file_ops` 面 dest 扩 `copy` 后——补正① 终态）· 内容写点 `applyEdit` **6**；用例见 `thincoder-core/test/write-path.test.mjs` 夹具一 / 二）；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免表位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
+| 验收（可机判） | ① 核内测试：假注入面驱动全部 8 个写点 ⇒ 全部经过注入面 + 未注入 ⇒ 回 fs 径（双夹具；交付读数：`openDoc` / `isDirty` 各 **11**（8 写点 src 面 + `file_ops` 面 dest 扩 `copy` 后——补正① 终态）· 内容写点 `applyEdit` **6**；用例 = 双夹具（夹具一 / 二））；② 结构机检（**落地口径**）：**扫描域 = `tools/**`**；检测面 = `writeFile(Sync)` / `appendFile(Sync)` / `createWriteStream` / `writeSync`；白名单 1 档 = `tools/write-path.mjs`；**已登记豁免 1 档 = `tools/checklist-sync.mjs:88`**（checklist 状态档同步机——非模型面文件编辑写点）；白名单外**命中集合逐档等值（fail-closed——新增命中即红、豁免消失亦红）**；8 写点所在 5 档**零直调 fs 写（无豁免）**；豁免表 = 结构机检用例的 `EXEMPT` 表（`WHITELIST` 白名单同处）——**随测试树全清退场，随测试体系重建恢复**；③ VSC 侧（S2）：对已打开文件执行 write ⇒ 断言 `applyEdit` 被调 + `doc.isDirty === false` + 磁盘内容 = 缓冲内容 |
 
 - **补正①**：`file_ops` 的 **`dest` 面门禁**——`gateOpenDoc` 单点（`thincoder-core/tools/write-path.mjs:83`——src / dest 两面共用；`src` 未打开不豁免 dest 门）；**dest 门条件已扩至 `copy`**；验收① 基数改判为 `openDoc` / `isDirty` 各 **11** · `applyEdit` **6**——计数与用例已同步。
 - **补正③（登记）**：① `#96` 信息段缝位与入参口径（阻塞三态含段 vs VSC 现形不含；`codeFiles` vs `files`）；② `copy` 面门禁口径（src / dest 两面照过门禁——「所有 op 统一先问 src」；dest 面覆盖 move / rename / copy）。既定口径见「S1 续轮第三批」决策表 7 / 未决 2。
@@ -866,10 +865,10 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
    ⑤ **与 `configurePromptInjections` 式核内缝不同轴**——零端侧输入（判据全在核内 `specForModel`）⇒ 不进 §2.13.2 / §2.13.3 注入位清单、无端供值义务；同轴的仅是「调用期求值、不做一次性物化」形态纪律。
    **与 §2.13.4 #112 行的关系 = 更新其 `read_image` 门子项**（「装配期参数化」→「装配面恒含 + run 期重解」）——非冲突形态，是同一行的门位迁移；三项条件参数化的其余两项（编辑器上下文 / MCP 扩工具时机）不变。
 
-   **验收（可机判——S2）**：① 核内用例（**S2 新建**——拟档名 `tool-face-capability.test.mjs`，落 `thincoder-core/test/`；既有 `thincoder-core/test/tool-registry.test.mjs:54` 覆盖装配期门）——假 agent 文本模型 ⇒ run 面缺 `read_image`；同一 agent 改 `provider.model` 为视觉 ⇒ **下一 run** 面含（不重建 agent）；
+   **验收（可机判——S2）**：① 核内用例（**S2 新建**——核单测档；装配期门另有既有用例覆盖）——假 agent 文本模型 ⇒ run 面缺 `read_image`；同一 agent 改 `provider.model` 为视觉 ⇒ **下一 run** 面含（不重建 agent）；
 
    反向 / 未知模型（DEFAULT_SPEC）⇒ 缺（保守）；
-   ② 装配面恒含断言（名集与模型无关 + 静态表 24 名 ⊆ 装配面）；③ 既有 `thincoder-cli/test/read-image-guide.test.mjs` 双态零回归（执行门保留）；
+   ② 装配面恒含断言（名集与模型无关 + 静态表 24 名 ⊆ 装配面）；③ 执行门双态零回归（执行门保留）；
    ④ 端侧（S2 接线段）——CLI `/model` 切换用例：切换后下一回合请求 `tools` 面含 `read_image`（VSC picker 同）。
 6. **`#99` 反向风险**：核内 `subagent` 动作枚举含 `panel`，VSC 端差要求「不注入该动作」——**落点 = 端装配面（端侧装饰 · 非核内缝）· 已落**
    （W13 `thincoder-vscode/src/agent/setup.mjs` `vscSubagentFace`：panel 剔除 + C-5 终态回显 + `isReadonlyAction`/`isControlAction` 谓词；原则 = 端差走端侧装饰/注入 · 零核改）。
@@ -877,15 +876,15 @@ S1 收口暴露的是**消费方缺口**：锚已落在核档里，但「谁在�
 #### 2.13.7 验收（可机判——S2 落位与接线）
 
 1. **替换完备（核内可机判 · 形态见 §2.13.8）**：配置态下，核内 `prompts/` 与 `tool-docs/` 经**四装配面**输出的文本**零 `{{inject:` 字面**（正则 `{{inject:[^}]*}}` 命中数 = 0）**∨ 抛错**（fail-loud——无「字面静默进模型」第三态）；未配置态 ⇒ 原文过（现行行为零变）。机检 = 核内用例（假全表 ⇒ 零字面 / 缺键 ⇒ 抛错 / 未配置 ⇒ 恒等）。
-2. **锚文法（已有）**：非法锚形态即红（`thincoder-core/test/core-prompt-face.test.mjs:38-48`）。
+2. **锚文法（已有）**：非法锚形态即红（核单测锚文法断言）。
 3. **取值表完备（设计面）**：§2.13.2 每行「两端各填什么」非空且指向实存 `file:line`；空值行显式标「空」。
 4. **缝覆盖（核内可机判 · 已落）**：§2.13.5 验收② 的写路径结构机检——扫描域 `tools/**`；
-   写 API 命中集合 = 白名单 `tools/write-path.mjs` + 已登记豁免 `tools/checklist-sync.mjs:88` （**命中集合逐档等值 fail-closed**——新增命中即红、豁免消失亦红；豁免表位置 = `thincoder-core/test/write-path.test.mjs` 结构机检用例的 `EXEMPT` 表）；8 写点所在 5 档零豁免。
+   写 API 命中集合 = 白名单 `tools/write-path.mjs` + 已登记豁免 `tools/checklist-sync.mjs:88` （**命中集合逐档等值 fail-closed**——新增命中即红、豁免消失亦红；豁免表 = 结构机检用例的 `EXEMPT` 表——随测试树全清退场，随测试体系重建恢复）；8 写点所在 5 档零豁免。
 
-   **落地读数（含 dest 面门禁补丁 + `copy` 扩面）**：`tools/write-path.mjs` **191 行** · 8 写点全改道 · `thincoder-core/test/write-path.test.mjs` **300 行（7 用例）** · 核内 `node --test` **160/160** · exit 0。
+   **落地读数（含 dest 面门禁补丁 + `copy` 扩面）**：`tools/write-path.mjs` **191 行** · 8 写点全改道 · 结构机检用例 **300 行 / 7 用例** · 核内 `node --test` **160/160** · exit 0。
 5. **端侧行为（S2 可机判）**：两端各自装配用例断言本端取值（§2.13.2 验收列逐条）——**含入口路径**（CLI 入口 ⇒ 装配前已配置）。
 6. **锚名集合与指针族（核内可机判）**：扫描对象 = `thincoder-core/prompts/` + `thincoder-core/tool-docs/`（本档内作为 as-of 引文的旧锚名不计）——
-   锚名去重集合 = **13**；旧名 `agent-loop-pointer` **零命中**；`agent-loop-ptr-*` **恰 5 名 / 5 处**；VSC 侧端说明括注不出现在核内（与 `thincoder-core/test/prompt-files.test.mjs:107` 的反向断言同向）。
+   锚名去重集合 = **13**；旧名 `agent-loop-pointer` **零命中**；`agent-loop-ptr-*` **恰 5 名 / 5 处**；VSC 侧端说明括注不出现在核内（与核 prompt-files 单测的反向断言同向）。
 
 #### 2.13.8 锚替换机制定稿（U0）
 

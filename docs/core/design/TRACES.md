@@ -76,20 +76,24 @@
   ② `dayStart(D) + retention > now` ⇒ **整目录跳过**（正常写入下目录内无可过期文件）；
   ③ 其余（含含非 `.jsonl` 条目的目录）⇒ **逐文件 `stat` 判定 + unlink**（现行语义；非 `.jsonl` 一律不碰）。空日目录在任何分支后按现法移除。
 - **语义 delta 登记（D-TR11）**：纯 `.jsonl` 日目录整删时不逐文件核 mtime（人为回拨 mtime 的文件随目录清理；正常写入 mtime ∈ 目录日 ⇒ 无差异）；②支跳过时人为前拨（超期）文件暂留（宽容向）——保留期主粒度改为**目录日**（与 §6.1 的 24h 保留期并读）。
-- **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言保持（`thincoder-vscode/test/trace-store.test.mjs:248-249` `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。
+- **整删支计数口径（D-TR11）**：整删支的 `removed` 计数 = 该批内 `.jsonl` 条目数（与 ③ 支逐文件计入同口径；非 `.jsonl` 不计数）——既有断言保持（整删支 `removed === 2`：含非 `.jsonl` 的目录落 ③、纯 `.jsonl` 过期目录落 ①，两路合计数不变）。
 - **非日期名 / 非法日目录归类（D-TR11）**：目录名不以 `YYYY-MM-DD` 解析（日期解析 NaN），**或为非法日（解析归一后 ≠ 原日**——如 `2026-02-31`）⇒ ①② 两条件恒假 ⇒ **回落 ③ 逐文件支**（现行语义；非 `.jsonl` 一律不碰）。
 - **D-TR12 每写 prune 节流**：`maybePruneTraces`（`recordChatTrace` 写盘成功后调用）——模块级窗口 `PRUNE_THROTTLE_MS`（10 分钟）+ 在飞合并；`cleanupTraces` 本体保持无状态（启动面 / 手动面直调）。判据 = 同窗 3 连写 ⇒ 扫描 ≤1 次。
   **测试缝（D-TR12）**：节流为模块级状态（**跨用例残留**）——缝 = 既有先例 `_resetTraceStateForTest`（`thincoder-core/traces/trace-store.mjs:106`）扩展为**一并复位节流窗**（或给节流面注入 now 缝），用例须显式复位。
 - **D-TR13 启动清理触发面收窄（白名单）+ 启动窗外延迟拍**：启动清理仅在**会话型命令白名单**执行——`tui`（**含无参默认路径 `command === undefined`**，`thincoder-cli/src/command-table.mjs:93-94` `case "tui": case undefined:`）/ `chat` / `acp`；
-  白名单外命令一律零启动清理（一次性 / 信息命令 `--version` / `-v` / `--help` / `completion`，及 `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）；闸位 = 命令解析之后（同档 `:40`）；启动清理白名单判定 = 同档 `:144`；
-  判据 = `--version` 总时长 ≤0.5s + **无参启动仍执行启动清理**；策略裁决不变——清理照常执行，只是不在白名单外命令启动时执行。
-  **启动清理 = 启动窗外延迟拍**：
-  闸内（同档 `:144-149`）不直呼 `cleanupTraces`，改经**核侧调度器** `scheduleTraceCleanup({ dir, retentionHours })`（`thincoder-core/traces/trace-cleanup.mjs` 导出）——`setTimeout` 延迟点火（`TRACE_CLEANUP_DELAY_MS` = **3s**，自调度点起；与 D-SE39 的 `GC_PASS_DELAY_MS` 同值同形态——启动窗 ≤2s 之外留 ≈1s 裕度；**不 unref**——保后台排空现状，与 D-SE39 同向）。
-  `dir` 由调度点捕获（调用面取 `tracesRoot()`）；失败静默保持（`.catch(() => {})` 移入调度器——fire-and-forget 语义不变）；白名单 / 闸位 / 每进程一次语义均保持（启动面恰一处调用——调度器无去重闸）；进程早退（显式 `process.exit`）未及拍 ⇒ 本次不执行（幂等——下次会话型命令照常清理）。
-  **注（一次性命令排空 · 与 D-SE39 同向）**：不 unref ⇒ 一次性命令（`chat`）的进程自然排空被延迟拍推后 ≤3s（设计内后果——不损正确性，仅进程退出稍候）。
-  **判据句（启动解耦）**：启动链（`resumeSlot` → 装配 → TTY 门）**不因 traces 清理竞争超 2s**——读数 = 无参启动至拒印时刻（非 TTY 环境代理「TTY 门」）≤2s × **复测 ≥2 次**（同 D-SE39 口径）；结构性保证 = 清理起点 ≥ 调度点 + `TRACE_CLEANUP_DELAY_MS`（3s——落于启动窗之外）。
-  **测试缝** = `_setTraceCleanupDelayForTest(ms)`（`_setSessionGcDelayForTest` 同款；用例置 0–短值立即点火；默认值 = 3s 可断言）。
-  **形态取舍**：核侧 `setTimeout` 取支——与 D-SE39 同款单源（机制 / 常量 / 测试缝住核；核用例可注入 0–短值；闸位包裹在 CLI 子进程面**缝不可注入**且常量外落端层）。
+白名单外命令一律零启动清理（一次性 / 信息命令 `--version` / `-v` / `--help` / `completion`，及 `memory` / `sync` / `reindex` / `distill` / `upgrade` / `session`）；闸位 = 命令解析之后（同档 `:40`）；启动清理白名单判定 = 同档 `:144`；
+判据 = `--version` 总时长 ≤0.5s + **无参启动仍执行启动清理**；策略裁决不变——清理照常执行，只是不在白名单外命令启动时执行。
+**启动清理 = 启动窗外延迟拍**：
+
+闸内（同档 `:144-149`）不直呼 `cleanupTraces`，改经**核侧调度器** `scheduleTraceCleanup({ dir, retentionHours })`（`thincoder-core/traces/trace-cleanup.mjs` 导出）——`setTimeout` 延迟点火（`TRACE_CLEANUP_DELAY_MS` = **3s**，自调度点起；与 D-SE39 的 `GC_PASS_DELAY_MS` 同值同形态——启动窗 ≤2s 之外留 ≈1s 裕度；**不 unref**——保后台排空现状，与 D-SE39 同向）。
+
+`dir` 由调度点捕获（调用面取 `tracesRoot()`）；失败静默保持（`.catch(() => {})` 移入调度器——fire-and-forget 语义不变）；白名单 / 闸位 / 每进程一次语义均保持（启动面恰一处调用——调度器无去重闸）；进程早退（显式 `process.exit`）未及拍 ⇒ 本次不执行（幂等——下次会话型命令照常清理）。
+**注（一次性命令排空 · 与 D-SE39 同向）**：不 unref ⇒ 一次性命令（`chat`）的进程自然排空被延迟拍推后 ≤3s（设计内后果——不损正确性，仅进程退出稍候）。
+
+**判据句（启动解耦）**：启动链（`resumeSlot` → 装配 → TTY 门）**不因 traces 清理竞争超 2s**——读数 = 无参启动至拒印时刻（非 TTY 环境代理「TTY 门」）≤2s × **复测 ≥2 次**（同 D-SE39 口径）；结构性保证 = 清理起点 ≥ 调度点 + `TRACE_CLEANUP_DELAY_MS`（3s——落于启动窗之外）。
+**测试缝** = `_setTraceCleanupDelayForTest(ms)`（`_setSessionGcDelayForTest` 同款；用例置 0–短值立即点火；默认值 = 3s 可断言）。
+
+**形态取舍**：核侧 `setTimeout` 取支——与 D-SE39 同款单源（机制 / 常量 / 测试缝住核；核用例可注入 0–短值；闸位包裹在 CLI 子进程面**缝不可注入**且常量外落端层）。
 - **双端同函数**：目录级判据与节流住核同一实现——CLI（启动扫 + 每写 prune）与 VSC（仅每写 prune；宿主长驻无启动事件）同源生效；不动开关默认与保留期取值面。
 - **存量一次性清理**：目录级判据下任一后续清理拍即整删全部过期日目录（幂等、可复跑）；判据 = 清理后 `.jsonl` 总量回落。
 - **模块落点**：清理面外提 `thincoder-core/traces/trace-cleanup.mjs`——`trace-store.mjs` 回落 ≤300；`cleanupTraces` 经 `trace-store.mjs` re-export 保既有 import 面（两端测试）；启动面调度器 `scheduleTraceCleanup` 住该档、由 CLI 直引（不动 store 行数——见 D-TR13）。

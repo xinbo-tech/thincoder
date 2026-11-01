@@ -97,7 +97,7 @@ parse 失败 → 字符串字面（`:226` `return s`——裸 `abc`）。两端�
 
 W16：VSC 端 = **同一核工具实例化**（`thincoder-vscode/src/agent/setup.mjs` 取 `settingsTool(opts)` 工厂；写盘 = 核 `writeConfigAtomic`）；热应用 = `ctx.agent.config` 内存对象；注册于 depth-0 agentTools（动作级只读分类同款机制，`isReadonlyAction` 端面）。
 键空间 = 核 `DEFAULTS` 全量（A5 已裁「以 CLI 为准（全量类型校验）」；
-VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例——双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）——单元测试树重建时回迁。
+VSC 端测试 = 9 例（双缝并用：写侧 `settingsTool({ configPath })` + 读侧 `_setConfigPathForTest`）——单元测试树重建时回迁。
 **端差（W16 登记——热应用载体键面）**：热应用落点 = 端 `ctx.agent.config` 载体，而 VSC 载体键面 = `{advisor, agent, hooks, proxy, shell, providersList, websearch, fetch, traces}`
 （`thincoder-vscode/src/agent/agent-state.mjs` `:98-112`）——无 `providers` / `memory` / `embedding` / `mcp` 段 ⇒ 这些键在 VSC 端的「运行中已生效」回显不落端侧运行读取源
 （端侧运行读盘面 `loadRaw()`，如 `resolveProviders`）；该面以「写盘为准」（持久化生效，进程内热应用仅限上列键面）。
@@ -126,7 +126,7 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | D-ST12 | **双端同批**（用户拍板） | VSC config 存储差异以偏差注处理；键空间归一（§2.8） |
 | D-ST13 | **敏感谓词扩面 = 词表扩面 + 开口键族整族遮罩**（两句取或——§2.4） | 实证 `mcp.servers.0.headers.Authorization` 明文回显。段内复合段名（refreshToken 类）残余登记 = D-ST17 |
 | D-ST14 | **`env` 并入开口键族**（与 `headers` 同句） | 同族同因：`mcp.servers.*.env.*` 子键名由用户 / 对端任意取（实证：`env` 段任意变量名的值明文回显）；代价 = 少数无害 env 值被遮——方向安全且**键名仍可见**（只丢值） |
-| D-ST15 | **遮蔽面用例落新档**（`settings-mask.test.mjs`——单元测试树重建时回迁该档形） | 单档行数超 500 行硬限（工具面 480 行 + 遮蔽面用例 ≈95 行 ⇒ ≈575）；分档 = 工具面 / 遮蔽面，runner 通配 `test/*.test.mjs` 自动收 |
+| D-ST15 | **遮蔽面用例落新档**（单元测试树重建时回迁该档形） | 单档行数超 500 行硬限（工具面 480 行 + 遮蔽面用例 ≈95 行 ⇒ ≈575）；分档 = 工具面 / 遮蔽面，新档登记进该包测试清单（未登记即跑器自检失败） |
 | D-ST16 | **`${env:VAR}` 引用形态 = 已受理做** | 属新增能力（配置内放引用 + 消费侧展开）；机制（解析点 ∕ 生效面 ∕ 语义 ∕ 与遮蔽关系）单源 = `doc:CONFIG.md:§6.3`——本档遮蔽谓词零改（引用串同住敏感值位 ⇒ 族遮罩内）；解析产物永不回显 |
 | D-ST17 | **段内复合段名入遮 = 采纳**（camelCase / 前缀复合敏感名） | 谓词扩段内边界（形如 `refreshToken` / `clientSecret` / `privateKey`）；假阳取舍 = 方向安全（只丢值、键名仍可见）；**先红夹具格**（§2.4 / §4 同拍） |
 | D-ST18 | **`advisor.timeoutMs` 非法值在写面即拒**（收 `null` ∥ 有限正数） | 读面「非法一律回退默认」是给手写 `config.json` 的兜底，不是写面的许可证：收下 `0` 再回显「运行中已生效」= D-ST6 要防的静默面（写了等于没写）。拒绝句点名键与可消费形态 |
@@ -150,7 +150,7 @@ VSC 端测试坐标 = `thincoder-vscode/test/settings-tool.test.mjs`（9 例—�
 | 原子写盘 | `thincoder-core/config.mjs`（`writeConfigAtomic`——`:28` export；`configPath` 同档；`DEFAULTS` 在 `thincoder-core/config-defaults.mjs:15`） |
 | CLI 装配 | 核 `thincoder-core/agent/assemble.mjs` 装配 + `thincoder-cli/src/cli/make-agent.mjs` 留面（MCP ∕ 剔除经 `toolsFinalize` 缝）；dispatch 动作级只读分类（list/get 放行） |
 | 读取器判据点 | `thincoder-core/config.mjs:216`（defaultModel 非串→null）· 核 `thincoder-core/agent/assemble.mjs:31`（`!team?.repo`）· `thincoder-core/agent-tools/subagent-spawn.mjs:82`（subagentModels 回落）· `thincoder-core/tools/bash.mjs:120`（`shell ?? true`） |
-| 单元测试档 | `thincoder-cli/test/settings.test.mjs`（480 行 · T-S2 族 25 例 · T-S3 族 3 例）· 遮蔽面档（`settings-mask.test.mjs`；夹具键集逐键 6 例，D-ST15）· VSC 端 `thincoder-vscode/test/settings-tool.test.mjs`（9 例——W16 改指核工具；双缝并用）——单元测试树重建时回迁 |
+| 单元测试档 | CLI 端 480 行 · T-S2 族 25 例 · T-S3 族 3 例 · 遮蔽面档夹具键集逐键 6 例（D-ST15）· VSC 端 9 例（W16 改指核工具；双缝并用）——单元测试树重建时回迁 |
 
 **受影响文件（本批——promote 同步 ∥ 写面校验；行数 = `split("\n").length − 1` 实读 · 2026-10-24）**：
 
