@@ -53,10 +53,10 @@ const B = makeProject("B") // 目标项目
 const C = makeProject("C") // 带档但从不写台账 ⇒ 键控库不在盘
 
 const A_TITLES = ["A-行一（旁项目）", "A-行二（旁项目）"]
-const B_TITLES = ["B-行一", "B-行二（复启到期 + evidence 超限）", "B-行三", "B-行四（已废弃）"]
-/** B 的期望读数（夹具已知量）：三条未决行（第四条已废弃不计）· 其一复启到期 · 其一 evidence 超限。
+const B_TITLES = ["B-行一", "B-行二（复启到期 + evidence 文字太长）", "B-行三", "B-行四（已废弃）"]
+/** B 的期望读数（夹具已知量）：三条未决行（第四条已废弃不计）· 其一复启到期 · 其一 evidence 文字太长。
  *  A 的未决行数 = 2 ⇒ 本组读数与「读了旁项目 A」可区分（判据落到 A 时 count 会是 2，不是 3）。 */
-const B_EXPECT = { count: 3, overdue: 1, evidenceOversize: 1 }
+const B_EXPECT = { count: 3, overdue: 1, evidenceTooLong: 1 }
 
 // 造行先于任何 chdir（夹具纪律①）；`boundary` = 该项目根 ⇒ 界恒含目标自身。
 for (const title of A_TITLES) ledgerAdd({ cwd: A, row: { kind: "tech_todo", title }, boundary: A })
@@ -159,5 +159,5 @@ test('21-4 正常 · ACP ledger/count（params.cwd = B、会话锚 = A）⇒ cou
   const reply = await withCwdAsync(A, () => acpHandlers(A)["ledger/count"]({ cwd: B }))
 
   assert.notEqual(reply.count, 0, `跨项目计数须非 0（无根 ⇒ 三零、零报错——正是本行要抓的形态）：${JSON.stringify(reply)}`)
-  assert.deepEqual(reply, B_EXPECT, "count = B 的未决四态行数；overdue ∥ evidenceOversize 取 B 的读数（不是 A 的）")
+  assert.deepEqual(reply, B_EXPECT, "count = B 的未决四态行数；overdue ∥ evidenceTooLong 取 B 的读数（不是 A 的）")
 })

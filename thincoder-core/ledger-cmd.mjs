@@ -8,7 +8,7 @@
  * `ledgerReanchorBatch`）留本档，工具档消费之；`ledgerBindBatch` / `ledgerReclaimBatch` 由本档
  * re-export（设计档 §2.4 / §2.13 的公共面落点不变）。
  *
- * 读数面（逐行携、不入库、不入 `DATA_COLUMNS`——先例 = `aged`）：`evidenceOversize`（§5 P4）∥
+ * 读数面（逐行携、不入库、不入 `DATA_COLUMNS`——先例 = `aged`）：`evidenceTooLong`（§5 P4 文字太长）∥
  * `overdue`（§3.7 出口态——机判单源 `overdueOf`）∥ `taskBookOnDisk`（§7.1 B——指针在盘读数）。
  * 三枚皆**读数非闸门**（不拒任何写入）。
  * 指针判据重锚面（§6.1 两臂写门 ∥ §6.2 收口重锚 · 台账 #1550）：写门判**本笔写入面**、只判本笔新指名；
@@ -28,7 +28,7 @@
  * 的 depthOnly 分支）——一律**动态 import** 本模块链（ledger-db.mjs 静态 import node:sqlite ⇒
  * 消费侧静态 import 会破 W8 契约②）。
  */
-import { AGING_DAYS, EVIDENCE_SOFT_LIMIT, PENDING_STATUSES, nowIso, openLedger, resolveLedgerRoot } from "./ledger-db.mjs"
+import { AGING_DAYS, EVIDENCE_TOO_LONG_MAX, PENDING_STATUSES, nowIso, openLedger, resolveLedgerRoot } from "./ledger-db.mjs"
 import { resolveDeclaredRef } from "./declaration.mjs"
 import { filePartOf, namesPointer } from "./ledger-close-proof.mjs"
 import {
@@ -48,9 +48,9 @@ function isRowAged(row, now) {
   return Number.isFinite(ms) && (now - ms) / 86400000 > AGING_DAYS
 }
 
-/** `evidence` 超限读数（设计档 §5 P4——**读数非闸门**）：缺 / 空 ⇒ false；`query` 逐行携（含归档行——
- *  行值事实）；`count` 的统计集 = 未决四态（§7.1）。 */
-const isEvidenceOversize = (row) => row?.evidence != null && String(row.evidence).length > EVIDENCE_SOFT_LIMIT
+/** `evidence` 文字太长读数（设计档 §5 P4——**读数非闸门**）：缺 / 空 ⇒ false；`query` 逐行携（含归档
+ *  行——行值事实）；`count` 的统计集 = 未决四态（§7.1）。 */
+const isEvidenceTooLong = (row) => row?.evidence != null && String(row.evidence).length > EVIDENCE_TOO_LONG_MAX
 
 /** 本地日界（`YYYY-MM-DD`）——`resume_due` 比较粒度（设计档 §3.7：本地日界，当日锚当日即到期）。 */
 const localDay = (ms) => { const d = new Date(ms); const p = (n) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` }
@@ -92,7 +92,7 @@ export function overdueOf(row, { now = Date.now(), base } = {}) {
 /** 查询（只读，全角色）：SELECT 行集（status / kind / board / trigger / task_book 等值过滤并取，缺省 =
  *  全部行；id 升序）。库不在 = 空账。只读开库（readOnly 句柄 + 零 DDL/ALTER——read-data-interface 批
  *  FR2③）；库档非台账库 ⇒ 空账。逐行携计算字段（均不入库、不入导出白名单 `DATA_COLUMNS`）：
- *  `aged`（§13.4）∥ `evidenceOversize`（§5 P4 超限读数）∥ `taskBookOnDisk`（§7.1 B 在盘读数）∥ `overdue`
+ *  `aged`（§13.4）∥ `evidenceTooLong`（§5 P4 文字太长读数）∥ `taskBookOnDisk`（§7.1 B 在盘读数）∥ `overdue`
  *  （§3.7 出口态字串 ∥ null——机判单源 `overdueOf`）；`task_book` = 第 5 枚等值过滤（**原值等值**——列串直比，与 §3.3 选行的
  *  「文件部分解析同址」两径口径不同、各自单源）；`trigger` 过滤仅三枚举等值（`NULL` 不过滤）；
  *  `now` = 注入缝（确定性用例）。 */
@@ -108,36 +108,36 @@ export function ledgerQuery({ cwd, boundary, status = null, kind = null, board =
     if (task_book) { where.push("task_book = ?"); args.push(task_book) }
     const rows = db.prepare(`SELECT * FROM items${where.length ? ` WHERE ${where.join(" AND ")}` : ""} ORDER BY id`).all(...args)
     const base = baseOf(cwd, boundary)
-    return rows.map((r) => ({ ...r, aged: isRowAged(r, now), evidenceOversize: isEvidenceOversize(r), taskBookOnDisk: pointerOnDisk(r, base), overdue: overdueOf(r, { now, base }) }))
+    return rows.map((r) => ({ ...r, aged: isRowAged(r, now), evidenceTooLong: isEvidenceTooLong(r), taskBookOnDisk: pointerOnDisk(r, base), overdue: overdueOf(r, { now, base }) }))
   } finally { db.close() }
 }
 
-/** 计数单源（只读，全角色）：回报 `{ count, overdue, evidenceOversize }`（设计档 §7.1——原裸数出参
+/** 计数单源（只读，全角色）：回报 `{ count, overdue, evidenceTooLong }`（设计档 §7.1——原裸数出参
  *  改对象形，消费面同批改）。`count` = 未决四态行数；`overdue` = 其中命中出口态的行数（`overdueOf`
- *  机判单源）；`evidenceOversize` = 其中 `evidence` 超限行数（§5）。**一次 SELECT + 逐行判**——
- *  `evidenceOversize` 与 `overdue` 同一次遍历（零额外 IO；成本模型 = §7.2）；不设缓存（读数须反映
+ *  机判单源）；`evidenceTooLong` = 其中 `evidence` 文字太长的行数（§5）。**一次 SELECT + 逐行判**——
+ *  `evidenceTooLong` 与 `overdue` 同一次遍历（零额外 IO；成本模型 = §7.2）；不设缓存（读数须反映
  *  即时盘面）。库不在 = 三零。 */
 export function ledgerCount({ cwd, boundary, task_book = null } = {}) {
   const db = openLedger(cwd, { readOnly: true, boundary })
-  if (!db) return { count: 0, overdue: 0, evidenceOversize: 0 }
+  if (!db) return { count: 0, overdue: 0, evidenceTooLong: 0 }
   try {
     const where = [`status IN (${PENDING_STATUSES.map(() => "?").join(",")})`], args = [...PENDING_STATUSES]
     if (task_book) { where.push("task_book = ?"); args.push(task_book) }
     const rows = db.prepare(`SELECT * FROM items WHERE ${where.join(" AND ")}`).all(...args)
     const now = Date.now(), base = baseOf(cwd, boundary)
-    let overdue = 0, oversize = 0
+    let overdue = 0, tooLong = 0
     for (const r of rows) {
       if (overdueOf(r, { now, base }) !== null) overdue++
-      if (isEvidenceOversize(r)) oversize++
+      if (isEvidenceTooLong(r)) tooLong++
     }
-    return { count: rows.length, overdue, evidenceOversize: oversize }
+    return { count: rows.length, overdue, evidenceTooLong: tooLong }
   } finally { db.close() }
 }
 
-/** `evidence` 超限行数（设计档 §7.1 导出面——`count` 回报读数**同一单源**：本函数为其薄委托，
+/** `evidence` 文字太长的行数（设计档 §7.1 导出面——`count` 回报读数**同一单源**：本函数为其薄委托，
  *  不另立第二判定面）。 */
-export function ledgerEvidenceOversize({ cwd, boundary, task_book = null } = {}) {
-  return ledgerCount({ cwd, boundary, task_book }).evidenceOversize
+export function ledgerEvidenceTooLong({ cwd, boundary, task_book = null } = {}) {
+  return ledgerCount({ cwd, boundary, task_book }).evidenceTooLong
 }
 
 /** 新增（写命令，仅主 agent）：INSERT——入待讨论（六态状态机入口）。`row.resume_when` 可空（§3.4）。 */

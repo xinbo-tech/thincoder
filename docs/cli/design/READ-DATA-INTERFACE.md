@@ -120,7 +120,7 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | 方法 | params | result | 错误 |
 |---|---|---|---|
 | `ledger/list` | `{ cwd?, family?, full? }` | `{ projects: [...] }`（与 CLI 载荷逐字同形） | `-32602` INVALID_PARAMS（`cwd` 非字符串 / `family`·`full` 非布尔 / 解析类错误转述） |
-| `ledger/count` | `{ cwd? }` | `{ count, overdue, evidenceOversize }`（单源 = 核 `ledgerCount` 对象直传——未决四态计数 + 出口面 `overdue` + `evidence` 超限行数；处理器零包装） | 同上 |
+| `ledger/count` | `{ cwd? }` | `{ count, overdue, evidenceTooLong }`（单源 = 核 `ledgerCount` 对象直传——未决四态计数 + 出口面 `overdue` + `evidence` 文字太长行数；处理器零包装） | 同上 |
 | `batch/list` | `{ cwd? }` | `{ batches: [ { file, path, sections } ] }` | 同上 |
 
 - `sections` = `{ "§1" … "§6" }` 映射：`§1`–`§3` / `§5` = 已识别关键词 ∥ null；`§4` / `§6` = 字面 `无状态词`（§2.5）。
@@ -217,7 +217,7 @@ thincoder ledger list --json [--full] [--family] [--cwd <dir>]
 | RDI-4 | 边界 | (a) 旧库（旧 DDL——缺 executor、无 user_version）+ 读前读后哈希；(b) 无库项目读后仍无库；(c) 旧库 `schemaVersion` 读 = 0；(d) 写面开库后 = 2；(e) 文件在盘但非台账库（SQLite 可开、无 `items` 表） | 哈希等 ∥ 无新档 ∥ 0 ∥ 2 ∥ `projects: []` ∧ 文件零改 | 现行读即 DDL / ALTER |
 | RDI-5 | 正常 | 容器 + 双项目（A 2 行 ∥ B 3 行 + 无库兄弟）；读 A ∥ `--cwd B` ∥ `--family` | 单范围各出自身 ∥ family = 发现序逐项（对拍 `discoverFamily`）+ 无库兄弟不出项 | 命令不存在 |
 | RDI-6 | 边界 | 空容器 `--family` ∥ 族内混不可读库 | `{"projects":[]}` ∥ 不可读跳过 | 命令不存在 |
-| RDI-7 | 正常 | 同夹具：CLI 载荷 vs ACP `ledger/list` ∥ `ledger/count` ∥ `batch/list` | 深等 ∥ `count` = 核 `ledgerCount` 对象形（三键 `{ count, overdue, evidenceOversize }`——非 `{ count: <number> }` 单键包装） ∥ batches 形 | 方法不存在 |
+| RDI-7 | 正常 | 同夹具：CLI 载荷 vs ACP `ledger/list` ∥ `ledger/count` ∥ `batch/list` | 深等 ∥ `count` = 核 `ledgerCount` 对象形（三键 `{ count, overdue, evidenceTooLong }`——非 `{ count: <number> }` 单键包装） ∥ batches 形 | 方法不存在 |
 | RDI-8 | 正常 | 批基底夹具：全骨架档（§1 进行中 · §2 设计完成）∥ 无状态行档 ∥ 嵌套档 | sections 逐段对拍：§1–§3 / §5 关键词 ∥ null ∥ §4 / §6 = `无状态词` ∥ 嵌套档在列 | 方法不存在 |
 | RDI-9 | 正常 | `watcher.check()` 基线 → 核写一行 → check；再改批次档 → check；静默轮 → check | 基线静默 ∥ `ledger/changed` ∥ `batch/changed` ∥ 零新增（params `{cwd}`） | 观察器不存在 |
 | RDI-10 | 错误 | `ledger list`（缺 `--json`）∥ `--bogus` | exit 1 + usage（stderr） | 命令不存在 |

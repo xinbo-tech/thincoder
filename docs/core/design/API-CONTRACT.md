@@ -117,6 +117,8 @@
 | `SUMMARY_SIG` | `test/integration/fixtures/anthropic-endpoint.mjs:73` | `const` |
 | `isSummaryRequest` | `test/integration/fixtures/anthropic-endpoint.mjs:76` | `const` |
 | `fakeAnthropic` | `test/integration/fixtures/anthropic-endpoint.mjs:91` | `fn` |
+| `SILENCE_MS` | `test/integration/fixtures/fake-ssh-device.mjs:32` | `const` |
+| `buildShowRun` | `test/integration/fixtures/fake-ssh-device.mjs:43` | `const` |
 | `SESSION_COMMANDS` | `thincoder-cli/bin/disk-root-gate.mjs:16` | `const` |
 | `DISK_ROOT_MESSAGE` | `thincoder-cli/bin/disk-root-gate.mjs:19` | `const` |
 | `diskRootGateError` | `thincoder-cli/bin/disk-root-gate.mjs:26` | `fn` |
@@ -563,7 +565,7 @@
 | `buildObjectDeclarationBlock` | `thincoder-core/advisor/messages.mjs:29` | `fn` |
 | `buildDesignApprovalBlock` | `thincoder-core/advisor/messages.mjs:49` | `fn` |
 | `buildAdvisorUserMessage` | `thincoder-core/advisor/messages.mjs:79` | `fn` |
-| `resolveScopeFiles` | `thincoder-core/advisor/messages.mjs:287` | `fn` |
+| `resolveScopeFiles` | `thincoder-core/advisor/messages.mjs:288` | `fn` |
 | `identityLine` | `thincoder-core/advisor/notice.mjs:13` | `fn` |
 | `scopeSummary` | `thincoder-core/advisor/notice.mjs:18` | `fn` |
 | `withIdentityLine` | `thincoder-core/advisor/notice.mjs:25` | `fn` |
@@ -572,15 +574,17 @@
 | `settlementCriterion` | `thincoder-core/advisor/notice.mjs:93` | `fn` |
 | `criterionMeaning` | `thincoder-core/advisor/notice.mjs:116` | `fn` |
 | `buildSettlementConclusion` | `thincoder-core/advisor/notice.mjs:125` | `fn` |
-| `NO_GUIDE_NOTICE` | `thincoder-core/advisor/project-context.mjs:33` | `const` |
-| `NO_DOC_MAP_NOTICE` | `thincoder-core/advisor/project-context.mjs:36` | `const` |
-| `NO_STANDARDS_NOTICE` | `thincoder-core/advisor/project-context.mjs:37` | `const` |
-| `NO_GIT_NOTICE` | `thincoder-core/advisor/project-context.mjs:38` | `const` |
-| `findGuideRoot` | `thincoder-core/advisor/project-context.mjs:54` | `fn` |
-| `injectProjectGuide` | `thincoder-core/advisor/project-context.mjs:89` | `fn` |
-| `findDocumentMap` | `thincoder-core/advisor/project-context.mjs:170` | `fn` |
-| `injectDocumentMap` | `thincoder-core/advisor/project-context.mjs:187` | `fn` |
-| `injectProjectStandards` | `thincoder-core/advisor/project-context.mjs:217` | `fn` |
+| `NO_GUIDE_NOTICE` | `thincoder-core/advisor/project-context.mjs:35` | `const` |
+| `NO_DOC_MAP_NOTICE` | `thincoder-core/advisor/project-context.mjs:38` | `const` |
+| `NO_STANDARDS_NOTICE` | `thincoder-core/advisor/project-context.mjs:39` | `const` |
+| `NO_GIT_NOTICE` | `thincoder-core/advisor/project-context.mjs:40` | `const` |
+| `STANDARDS_UNREADABLE_NOTICE` | `thincoder-core/advisor/project-context.mjs:50` | `const` |
+| `STANDARDS_PARTIAL_NOTICE` | `thincoder-core/advisor/project-context.mjs:61` | `const` |
+| `findGuideRoot` | `thincoder-core/advisor/project-context.mjs:79` | `fn` |
+| `injectProjectGuide` | `thincoder-core/advisor/project-context.mjs:114` | `fn` |
+| `findDocumentMap` | `thincoder-core/advisor/project-context.mjs:195` | `fn` |
+| `injectDocumentMap` | `thincoder-core/advisor/project-context.mjs:212` | `fn` |
+| `injectProjectStandards` | `thincoder-core/advisor/project-context.mjs:259` | `fn` |
 | `findReviewRepos` | `thincoder-core/advisor/repos.mjs:16` | `fn` |
 | `collectRepoSnapshots` | `thincoder-core/advisor/repos.mjs:49` | `fn` |
 | `collectChangedFiles` | `thincoder-core/advisor/repos.mjs:81` | `fn` |
@@ -669,15 +673,17 @@
 | `injectBgResult` | `thincoder-core/agent-tools/bash-async.mjs:231` | `fn` |
 | `killBgTask` | `thincoder-core/agent-tools/bash-async.mjs:253` | `fn` |
 | `killBgPid` | `thincoder-core/agent-tools/bash-async.mjs:276` | `fn` |
-| `assertCloseoutChainComplete` | `thincoder-core/agent-tools/batch-closeout.mjs:60` | `fn` |
-| `assertCloseoutGates` | `thincoder-core/agent-tools/batch-closeout.mjs:80` | `fn` |
-| `readCloseoutSource` | `thincoder-core/agent-tools/batch-closeout.mjs:94` | `fn` |
-| `assertSectionFiveGate` | `thincoder-core/agent-tools/batch-closeout.mjs:103` | `fn` |
-| `reanchorReceiptLine` | `thincoder-core/agent-tools/batch-closeout.mjs:122` | `fn` |
+| `assertCloseoutChainComplete` | `thincoder-core/agent-tools/batch-closeout.mjs:65` | `fn` |
+| `assertCloseoutGates` | `thincoder-core/agent-tools/batch-closeout.mjs:85` | `fn` |
+| `readCloseoutSource` | `thincoder-core/agent-tools/batch-closeout.mjs:99` | `fn` |
+| `assertSectionFiveGate` | `thincoder-core/agent-tools/batch-closeout.mjs:141` | `fn` |
+| `reanchorReceiptLine` | `thincoder-core/agent-tools/batch-closeout.mjs:164` | `fn` |
+| `newDebtReasonOf` | `thincoder-core/agent-tools/batch-closeout.mjs:199` | `fn` |
+| `newDebtReasonReceiptLine` | `thincoder-core/agent-tools/batch-closeout.mjs:216` | `fn` |
 | `runBatchGate` | `thincoder-core/agent-tools/batch-gate.mjs:211` | `fn` |
 | `gateReceiptLine` | `thincoder-core/agent-tools/batch-gate.mjs:340` | `fn` |
 | `gateRefusalMessage` | `thincoder-core/agent-tools/batch-gate.mjs:351` | `fn` |
-| `createBatchRecord` | `thincoder-core/agent-tools/batch-ledger-bind.mjs:68` | `fn` |
+| `createBatchRecord` | `thincoder-core/agent-tools/batch-ledger-bind.mjs:83` | `fn` |
 | `collectMarkdownFiles` | `thincoder-core/agent-tools/batch-lifecycle.mjs:75` | `fn` |
 | `findInFlightBatch` | `thincoder-core/agent-tools/batch-lifecycle.mjs:96` | `fn` |
 | `statusBatchRecord` | `thincoder-core/agent-tools/batch-lifecycle.mjs:191` | `fn` |
@@ -713,18 +719,19 @@
 | `readSectionStatusWord` | `thincoder-core/agent-tools/batch-skeleton.mjs:194` | `fn` |
 | `ROUND_HEADING_RE` | `thincoder-core/agent-tools/batch-skeleton.mjs:222` | `const` |
 | `countRoundBlocks` | `thincoder-core/agent-tools/batch-skeleton.mjs:233` | `fn` |
-| `nextRoundNumber` | `thincoder-core/agent-tools/batch-skeleton.mjs:248` | `fn` |
-| `_V_PRE` | `thincoder-core/agent-tools/batch-skeleton.mjs:261` | `const` |
-| `_V_SUF` | `thincoder-core/agent-tools/batch-skeleton.mjs:262` | `const` |
-| `VERDICT_CHANGES_LINE` | `thincoder-core/agent-tools/batch-skeleton.mjs:263` | `const` |
-| `statusResetPlan` | `thincoder-core/agent-tools/batch-skeleton.mjs:285` | `fn` |
-| `INAPPLICABLE_SEGMENTS` | `thincoder-core/agent-tools/batch-skeleton.mjs:306` | `const` |
-| `sectionContentState` | `thincoder-core/agent-tools/batch-skeleton.mjs:334` | `fn` |
-| `sectionInapplicable` | `thincoder-core/agent-tools/batch-skeleton.mjs:352` | `fn` |
-| `inapplicableDeclarationError` | `thincoder-core/agent-tools/batch-skeleton.mjs:375` | `fn` |
-| `malformedInapplicableLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:388` | `fn` |
-| `sectionHasStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:405` | `fn` |
-| `batchSkeleton` | `thincoder-core/agent-tools/batch-skeleton.mjs:428` | `fn` |
+| `lastRoundBlock` | `thincoder-core/agent-tools/batch-skeleton.mjs:252` | `fn` |
+| `nextRoundNumber` | `thincoder-core/agent-tools/batch-skeleton.mjs:269` | `fn` |
+| `_V_PRE` | `thincoder-core/agent-tools/batch-skeleton.mjs:282` | `const` |
+| `_V_SUF` | `thincoder-core/agent-tools/batch-skeleton.mjs:283` | `const` |
+| `VERDICT_CHANGES_LINE` | `thincoder-core/agent-tools/batch-skeleton.mjs:284` | `const` |
+| `statusResetPlan` | `thincoder-core/agent-tools/batch-skeleton.mjs:306` | `fn` |
+| `INAPPLICABLE_SEGMENTS` | `thincoder-core/agent-tools/batch-skeleton.mjs:327` | `const` |
+| `sectionContentState` | `thincoder-core/agent-tools/batch-skeleton.mjs:355` | `fn` |
+| `sectionInapplicable` | `thincoder-core/agent-tools/batch-skeleton.mjs:373` | `fn` |
+| `inapplicableDeclarationError` | `thincoder-core/agent-tools/batch-skeleton.mjs:396` | `fn` |
+| `malformedInapplicableLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:409` | `fn` |
+| `sectionHasStatusLine` | `thincoder-core/agent-tools/batch-skeleton.mjs:426` | `fn` |
+| `batchSkeleton` | `thincoder-core/agent-tools/batch-skeleton.mjs:449` | `fn` |
 | `batchUnitTestFiles` | `thincoder-core/agent-tools/batch-unit-test-gate.mjs:56` | `fn` |
 | `assertUnitTestFilesCleared` | `thincoder-core/agent-tools/batch-unit-test-gate.mjs:103` | `fn` |
 | `SEGMENT_BY_ROLE, batchDocBases, resolveBatchDocPath` | `thincoder-core/agent-tools/batch.mjs:42` | `named` |
@@ -775,8 +782,9 @@
 | `makeDesignTokenRegex` | `thincoder-core/agent-tools/design-token.mjs:71` | `fn` |
 | `makeDesignTokenPrefixRegex` | `thincoder-core/agent-tools/design-token.mjs:81` | `fn` |
 | `stripDesignTokenEcho` | `thincoder-core/agent-tools/design-token.mjs:94` | `fn` |
-| `verdictGateFailure` | `thincoder-core/agent-tools/design-token.mjs:116` | `fn` |
-| `settleDesignReview` | `thincoder-core/agent-tools/design-token.mjs:161` | `fn` |
+| `VERDICT_PASS_LINE` | `thincoder-core/agent-tools/design-token.mjs:115` | `const` |
+| `verdictGateFailure` | `thincoder-core/agent-tools/design-token.mjs:117` | `fn` |
+| `settleDesignReview` | `thincoder-core/agent-tools/design-token.mjs:162` | `fn` |
 | `DIGEST_INJECT_BUDGET` | `thincoder-core/agent-tools/digest-budget.mjs:34` | `const` |
 | `digestBudgetOver` | `thincoder-core/agent-tools/digest-budget.mjs:51` | `fn` |
 | `_setDigestOffloadDirForTest` | `thincoder-core/agent-tools/digest-budget.mjs:60` | `fn` |
@@ -1387,7 +1395,7 @@
 | `overdueOf` | `thincoder-core/ledger-cmd.mjs:80` | `fn` |
 | `ledgerQuery` | `thincoder-core/ledger-cmd.mjs:99` | `fn` |
 | `ledgerCount` | `thincoder-core/ledger-cmd.mjs:120` | `fn` |
-| `ledgerEvidenceOversize` | `thincoder-core/ledger-cmd.mjs:139` | `fn` |
+| `ledgerEvidenceTooLong` | `thincoder-core/ledger-cmd.mjs:139` | `fn` |
 | `ledgerAdd` | `thincoder-core/ledger-cmd.mjs:144` | `fn` |
 | `ledgerUpdate` | `thincoder-core/ledger-cmd.mjs:168` | `fn` |
 | `ledgerClose` | `thincoder-core/ledger-cmd.mjs:186` | `fn` |
@@ -1407,7 +1415,7 @@
 | `PENDING_STATUSES` | `thincoder-core/ledger-db.mjs:134` | `const` |
 | `ROUND_MARKER` | `thincoder-core/ledger-db.mjs:139` | `const` |
 | `AGING_DAYS` | `thincoder-core/ledger-db.mjs:145` | `const` |
-| `EVIDENCE_SOFT_LIMIT` | `thincoder-core/ledger-db.mjs:150` | `const` |
+| `EVIDENCE_TOO_LONG_MAX` | `thincoder-core/ledger-db.mjs:150` | `const` |
 | `LEDGER_SCHEMA_VERSION` | `thincoder-core/ledger-db.mjs:155` | `const` |
 | `ALLOWED_MIGRATIONS` | `thincoder-core/ledger-db.mjs:162` | `const` |
 | `ensureColumn` | `thincoder-core/ledger-db.mjs:195` | `fn` |
@@ -1449,8 +1457,8 @@
 | `applyRowClose` | `thincoder-core/ledger-write-ops.mjs:154` | `fn` |
 | `assertBatchArg` | `thincoder-core/ledger-write-ops.mjs:175` | `fn` |
 | `resolveBatchRows` | `thincoder-core/ledger-write-ops.mjs:185` | `fn` |
-| `ledgerBindBatch` | `thincoder-core/ledger-write-ops.mjs:211` | `fn` |
-| `ledgerReclaimBatch` | `thincoder-core/ledger-write-ops.mjs:271` | `fn` |
+| `ledgerBindBatch` | `thincoder-core/ledger-write-ops.mjs:279` | `fn` |
+| `ledgerReclaimBatch` | `thincoder-core/ledger-write-ops.mjs:347` | `fn` |
 | `THRESHOLD_BOARD` | `thincoder-core/ledger.mjs:24` | `const` |
 | `THRESHOLD_POOL` | `thincoder-core/ledger.mjs:26` | `const` |
 | `REFRESH_MS` | `thincoder-core/ledger.mjs:28` | `const` |
@@ -1464,8 +1472,8 @@
 | `scopeMarkerOf` | `thincoder-core/ledger.mjs:123` | `fn` |
 | `formatDetailLine` | `thincoder-core/ledger.mjs:141` | `fn` |
 | `detailScans` | `thincoder-core/ledger.mjs:146` | `fn` |
-| `AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_SOFT_LIMIT, MAX_SIBLING_SCAN, ledgerChildren, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER, _setLedgerDirForTest, _resetLedgerDirForTest …（+2）` | `thincoder-core/ledger.mjs:156` | `named` |
-| `ledgerAdd, ledgerBatchRows, ledgerBindBatch, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerEvidenceOversize, ledgerQuery, ledgerReanchorBatch, ledgerReclaimBatch, ledgerUpdate, ledgerUpdateBatch, overdueOf` | `thincoder-core/ledger.mjs:157` | `named` |
+| `AGING_DAYS, ALLOWED_MIGRATIONS, EVIDENCE_TOO_LONG_MAX, MAX_SIBLING_SCAN, ledgerChildren, ledgerDbPath, ledgerKey, ledgerDirPath, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER, _setLedgerDirForTest, _resetLedgerDirForTest …（+2）` | `thincoder-core/ledger.mjs:156` | `named` |
+| `ledgerAdd, ledgerBatchRows, ledgerBindBatch, ledgerClose, ledgerCloseBatch, ledgerCount, ledgerEvidenceTooLong, ledgerQuery, ledgerReanchorBatch, ledgerReclaimBatch, ledgerUpdate, ledgerUpdateBatch, overdueOf` | `thincoder-core/ledger.mjs:157` | `named` |
 | `ledgerTool, ledgerReadTool, ledgerAddTool, ledgerCloseTool, ledgerCountTool, ledgerQueryTool, ledgerUpdateTool` | `thincoder-core/ledger.mjs:158` | `named` |
 | `runLedgerAudit, runLedgerMigrate` | `thincoder-core/ledger.mjs:159` | `named` |
 | `resolveExecutorStates, executorTail, _setExecutorProbeTtlForTest` | `thincoder-core/ledger.mjs:160` | `named` |
@@ -1493,9 +1501,9 @@
 | `resolveProjectRoot` | `thincoder-core/manifest-discovery.mjs:156` | `fn` |
 | `isValidDocRootValue` | `thincoder-core/manifest-schema.mjs:21` | `fn` |
 | `DEFAULT_MANIFEST` | `thincoder-core/manifest-schema.mjs:30` | `const` |
-| `MANIFEST_SCHEMA` | `thincoder-core/manifest-schema.mjs:46` | `const` |
-| `validateManifest` | `thincoder-core/manifest-schema.mjs:73` | `fn` |
-| `fillDefaults` | `thincoder-core/manifest-schema.mjs:134` | `fn` |
+| `MANIFEST_SCHEMA` | `thincoder-core/manifest-schema.mjs:50` | `const` |
+| `validateManifest` | `thincoder-core/manifest-schema.mjs:77` | `fn` |
+| `fillDefaults` | `thincoder-core/manifest-schema.mjs:138` | `fn` |
 | `MANIFEST_REL, discoverProjects, discoverRepos, owningProject, projectRootView, resolveProjectRoot, _setProjectRootForTest, _resetProjectRootForTest` | `thincoder-core/manifest.mjs:48` | `named` |
 | `DEFAULT_MANIFEST, MANIFEST_SCHEMA, isValidDocRootValue, validateManifest` | `thincoder-core/manifest.mjs:49` | `named` |
 | `projectView` | `thincoder-core/manifest.mjs:67` | `fn` |
@@ -4696,7 +4704,7 @@
 | `ledgerKey` | `(root)` | 库键（sha1 前 16 位） | 未填充——读码 | `docs/core/design/LEDGER.md` §7 |
 | `openLedger` | `(cwd)` | DatabaseSync 句柄 | ensureSchema（幂等建表） | `docs/core/design/LEDGER.md` §7 |
 | `ledgerQuery` | `({ cwd, status, kind, board })` | SELECT 行集 | 只读 | `docs/core/design/LEDGER.md` §7 |
-| `ledgerCount` | `({ cwd })` | `{ count, overdue, evidenceOversize }`（本档单源 = `docs/core/design/LEDGER.md` §7.1——未决四态计数 ∥ 超龄桶 ∥ `evidence` 超限数） | 只读 | `docs/core/design/LEDGER.md` §7 |
+| `ledgerCount` | `({ cwd })` | `{ count, overdue, evidenceTooLong }`（本档单源 = `docs/core/design/LEDGER.md` §7.1——未决四态计数 ∥ 超龄桶 ∥ `evidence` 文字太长数） | 只读 | `docs/core/design/LEDGER.md` §7 |
 | `ledgerAdd` | `({ cwd, row })` | 未填充——读码 | INSERT（写命令 · 主 agent） | `docs/core/design/LEDGER.md` §7 |
 | `ledgerUpdate` | `({ cwd, id, patch })` | 未填充——读码 | UPDATE（写命令 · 主 agent） | `docs/core/design/LEDGER.md` §7 |
 | `ledgerClose` | `({ cwd, id, status })` | 未填充——读码 | UPDATE status + `closed_at`（事务） | `docs/core/design/LEDGER.md` §7 |

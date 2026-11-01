@@ -144,10 +144,10 @@ export const ROUND_MARKER = "收尾链待跑"
  *  保公共面零变——LEDGER.md §13.4）。 */
 export const AGING_DAYS = 30
 
-/** `evidence` 软上限（字——设计档 `LEDGER.md` §5 P4 读数面单源）：超限**只出读数，不拒写**
- *  （软上限非闸门——用户裁定「无限机检反感」；读数面 = `query` 逐行 `evidenceOversize` ∥
- *  `count` 回报）。 */
-export const EVIDENCE_SOFT_LIMIT = 300
+/** `evidence` 判为太长的上限（字——设计档 `LEDGER.md` §5 P4 读数面单源）：过了这条线即判为太长，
+ *  但**只出读数，不拒写**（读数非闸门——用户裁定「无限机检反感」；读数面 = `query` 逐行
+ *  `evidenceTooLong` ∥ `count` 回报）。 */
+export const EVIDENCE_TOO_LONG_MAX = 300
 
 /** 台账库结构版本（N2 标记**单源**——`PRAGMA user_version` 落标：写面开库 `v < 本值 ⇒ 置`；
  *  读面如实回读（旧库未标 = 0）；结构变更（新列 / 新表）同步升号——2026-10-03 read-data-interface 批。
