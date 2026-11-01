@@ -238,6 +238,27 @@ export function countRoundBlocks(src, seg = 3) {
 }
 
 /**
+ * §N 段内**最后一个轮次块的文本**（纯函数 · 零 fs）：块首行 = 该 `### 轮次 N（评审子代理）` 标题行，
+ * 块尾 = 段体末尾——本函数只取最后一块，故不需要「到下一块止」的切分（后随行都属该块）。
+ * 消费面 = `§5` 写入门判据 2：「门所依赖的那个块，自己有没有说结论」（设计档
+ * `BATCH-LEDGER-REVIEW-UNIFY.md` §2.6）。
+ * **只切块、不判裁定**：裁定一律由两条既有锚判——`VERDICT_CHANGES_LINE`（本档）∥ `VERDICT_PASS_LINE`
+ * （签发面 `design-token.mjs`，经 import 取），判定面不在这里。切块形态消费 `ROUND_HEADING_RE`
+ * （与 `countRoundBlocks` / `nextRoundNumber` 同一份正则，不另写一套）。
+ * @param {string} src — 批档全文
+ * @param {number|string} [seg] — 段号（缺省 3——轮次块只落 §3）
+ * @returns {string|null} 末块文本（含块首行）∥ `null`（段头缺失 ∥ 段内无块）
+ */
+export function lastRoundBlock(src, seg = 3) {
+  if (typeof src !== "string") return null
+  const lines = sectionBodyLines(src, seg)
+  if (lines === null) return null
+  let start = -1
+  for (let i = 0; i < lines.length; i++) if (ROUND_HEADING_RE.test(lines[i])) start = i
+  return start < 0 ? null : lines.slice(start).join("\n")
+}
+
+/**
  * 段内**下一轮**轮次号（`countRoundBlocks + 1` 的组合名——**不二次实现计数**）：写入面
  * （`batch.mjs` 的 `insertIntoSection` 盖戳 `### 轮次 N`）与打回重置（`statusResetPlan` 的留痕行
  * 「第 N 轮打回」）必须取同一个 N——各算一遍，将来改了 `ROUND_HEADING_RE` 就会一处变一处不变。

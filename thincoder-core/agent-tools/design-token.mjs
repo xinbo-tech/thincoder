@@ -110,8 +110,9 @@ const TRUNCATED_ECHO_MARK = "注：回显被截断（uuid 之后缺失或不符�
 // 裁定行接受本地化等价形（GitHub #32 / #14）：评审席用中文回执很常见，
 // 只认英文会让 pass 落成 no-pass-line、凭证永不签发；判据仍只认整行逐字面，
 // 不做「句中含『通过』」这类模糊匹配——那样会把「未通过」也放过。
-// 锚（_V_PRE / _V_SUF）与打回正则住骨架档（写入面同读）；只有 pass 正则留本档——它只服务签发面。
-const VERDICT_PASS_LINE = new RegExp(
+// 锚（_V_PRE / _V_SUF）与打回正则住骨架档（写入面同读）；pass 正则住本档、**导出**给 `§5` 写入门
+// 共读（判定单源：同一份回执文本不在第二处另写字面）。
+export const VERDICT_PASS_LINE = new RegExp(
   _V_PRE + "(?:VERDICT:[ \\t]*(?:pass|通过|通过。)|结论[:：][ \\t]*(?:通过|pass))" + _V_SUF, "mi")
 export function verdictGateFailure(rawResult) {
   if (typeof rawResult !== "string") return "no-pass-line"

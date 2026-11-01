@@ -69,12 +69,20 @@ const runWrite = async (agent, rel) => {
   return res
 }
 
-test("14-1 §3 = 进行中 ⇒ append §5 拒；§3 = 评审通过 ⇒ 写入", async () => {
+test("14-1 §3 = 进行中 ⇒ append §5 拒；状态词过而末块无 pass 裁定 ⇒ 拒；末块携 pass 裁定 ⇒ 写入", async () => {
   const root = await freshRecord("14-1")
   const coder = batchTool(REC)
   const ctx = { depth: 1, agent: { ...agentOf(root, { designSlot: false }), _role: "eng-coder", _batchDoc: REC } }
   await assert.rejects(() => coder.execute({ action: "append", segment: "§5", text: "先写实现" }, ctx), (e) => /§5 append refused/.test(e.message))
+  // 判据 2（R-G2b）：状态词过了还不够——门所依赖的那个块得自己说结论（块内无裁定行 ⇒ 拒）
+  await review(root).execute({ action: "append", segment: "§3", text: "方案可行，另附两条补记。" }, { agent: agentOf(root) })
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
+  await assert.rejects(
+    () => coder.execute({ action: "append", segment: "§5", text: "先写实现" }, ctx),
+    (e) => /last §3 round block carries no pass verdict/.test(e.message) && /块内裁定 = 无裁定行/.test(e.message),
+  )
+  // 末块携 pass 裁定 ⇒ 两判据同过，写入
+  await review(root).execute({ action: "append", segment: "§3", text: "结论：通过。\n\nVERDICT: pass" }, { agent: agentOf(root) })
   assert.match(await coder.execute({ action: "append", segment: "§5", text: "实现落地" }, ctx), /appended/)
 })
 
@@ -116,15 +124,19 @@ test("14-4 收口含 1 在途 + 1 待讨论 ⇒ 分别 待核销 / 条件，回�
   assert.match(lines[1], /本批未动行 → 条件 1 行/)
 })
 
-test("14-5 兜底点名：回执点名「2 行由重锚默认推进，父侧未显式处置」", async () => {
+test("14-5 兜底点名：汇总行只点名，建议句各贴其行", async () => {
   const root = await freshRecord("14-5")
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
   const idle = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "没做完" }, boundary: root })
   ledgerUpdate({ cwd: root, id: idle, patch: { task_book: REC }, boundary: root })
   const msg = await parent.execute({ action: "close", path: recOf(root) }, ctx0(root))
   const work = rowsOf(root).find((r) => r.task_book === REC && r.id !== idle)
-  const last = msg.split("\n").find((l) => l.includes("由重锚默认推进"))
-  assert.match(last, new RegExp(`本批 2 行由重锚默认推进，父侧未显式处置：#${work.id}, #${idle} —— 做完的请在收口前 update → 待核销，没做完的 update → 条件 / 已废弃`))
+  const summary = msg.split("\n").find((l) => l.includes("由重锚默认推进"))
+  assert.match(summary, new RegExp(`本批 2 行由重锚默认推进，父侧未显式处置：#${work.id}, #${idle}$`), "汇总行只点名")
+  assert.doesNotMatch(summary, /做完的|没做完的/, "汇总行不给建议")
+  const lines = msg.split("\n").filter((l) => l.startsWith("[ledger reanchor]"))
+  assert.match(lines[0], /本批在途行 → 待核销 1 行：.*—— 认领行只有两种终局：做完的 close 勾销（待核销 → 已核销），判定不做的 update → 已废弃 并写判据（认领即承诺，没有第三种）$/, "认领行的建议贴在第一行")
+  assert.match(lines[1], /本批未动行 → 条件 1 行：.*—— 这些行不是本批的活（未认领却被绑在本档 = 点火违规）；已落 trigger = 条件 \+ 复启句，由下一批接手，本批不再处置$/, "未认领行的建议贴在第二行")
 })
 
 test("14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写当场可写", async () => {
@@ -164,7 +176,7 @@ test("14-7 核销后重开 ⇒ 行零改、逐 id 点名；两种重开并存 �
   assert.equal(rowsOf(root).find((r) => r.id === b).status, "已核销", "已核销行零改")
 })
 
-test("14-8 §3 已 pass 后同批打回 ⇒ 状态行重置、§5 拒；再 pass 后放行", async () => {
+test("14-8 §3 已 pass 后同批打回 ⇒ 状态行重置、§5 拒；补一块携 pass 裁定的轮次块后放行", async () => {
   const root = await freshRecord("14-8")
   const coder = batchTool(REC)
   const ctx = { depth: 1, agent: { ...agentOf(root), _role: "eng-coder", _batchDoc: REC } }
@@ -183,7 +195,13 @@ test("14-8 §3 已 pass 后同批打回 ⇒ 状态行重置、§5 拒；再 pass
     (e) => /§3 状态行 = 进行中，须 = 评审通过/.test(e.message),
   )
   assert.equal(readFileSync(recOf(root), "utf8"), src, "§5 拒后档字节不变")
-  // 评审再 pass ⇒ §5 恢复可写
+  // 评审再 pass：判据 2 要末块自己携 pass 裁定 ⇒ `status` 单写不足以开 `§5`（末块仍是携 changes-required 的那一块）
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
+  await assert.rejects(
+    () => coder.execute({ action: "append", segment: "§5", text: "实现落地" }, ctx),
+    (e) => /last §3 round block carries no pass verdict/.test(e.message) && /块内裁定 = VERDICT: changes-required/.test(e.message),
+  )
+  // 再 pass = 追加一块携 `VERDICT: pass` 的轮次块（块落进 §3 即可）⇒ 放行
+  await review(root).execute({ action: "append", segment: "§3", text: "缺陷已修，结论改为通过。\n\nVERDICT: pass" }, { agent: agentOf(root) })
   assert.match(await coder.execute({ action: "append", segment: "§5", text: "实现落地" }, ctx), /appended/)
 })

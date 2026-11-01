@@ -3,7 +3,7 @@ Run an independent review of your work. `type` is REQUIRED — one of exactly tw
 - `type="design"` — design review: reviews design / requirement documents BEFORE implementation. Pass `documents=[...]` (the explicit list), plus `batchDoc` when a batch record is in flight.
 - `type="code"` — code review: reviews the code you changed AFTER implementation. Pass `paths=[...]` to scope files/directories; `documents=[...]` adds acceptance-criteria context.
 
-`documents` — one rule: a relative path resolves against the session project root (e.g. `docs/core/design/ADVISOR-GUARDS.md`); an absolute path is used as-is.
+`documents` — one rule: a relative path resolves against the session project root (e.g. `docs/<area>/<name>.md`); an absolute path is used as-is.
 
 The relative form needs the session anchor to be inside a project. When the anchor is a workspace root (several projects below it, no manifest of its own) there is no single project root to resolve against, and a relative path is refused with `no-project-root` — write the absolute path there.
 

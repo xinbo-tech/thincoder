@@ -5374,6 +5374,105 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 | D-PS52 | **开批即接手（一句）= `thincoder-core/prompts/persona-engineering.md` 「台账」节 `Dedupe on booking` 条续行之后（`One row = one settlement unit` 条之前）增列 2 行**（规则 ∥ why；既有节内增列 ⇒ `##` ∥ `###` ∥ 标题节点零连带；+2 行）；**EN 逐字照 §6.59**；机制面 = `docs/core/design/LEDGER.md` §6.3（`batch` create 省略 `ledger` 的同面判门）；不写参数名进提示词（拒文自嚣） | 病因 = 开批为了做一条已在池里的债却又开一行，同一笔债两个持有者 ⇒ 收口时一行永远闭不成已核销，只能撤回（五实例；台账 `#1927`）。规则已在「台账」节（池里只有一条覆盖行 ⇒ 必须 `ledger:"#N"`），但它写在登记节、违规发生在于开批那一秒；唯一扫描义务（`:430`）扫的是登记面。落点贴 `Dedupe on booking` = 同一判据的登记面 / 开批面相邻（D2）。本批**同时**落机制门（与 §6.56 ∥ §6.57 不同——那两条只止血） |
 
+
+### 6.60 工具描述面的举例不得指向本仓档（`thincoder-core/tool-docs/advisor.md` · 一行换举例形）
+
+**来源**：用户 2026-11-01 11:51 逐字「2 也开批」。父侧同轮实扫 `thincoder-core/prompts`（16 档）+ `thincoder-core/tool-docs`（54 档），符合本病的只有 `thincoder-core/tool-docs/advisor.md:6` 一处。
+
+**机制（一句）**：工具描述是模型可见面，读到它的模型站在**用户的项目**里；举例里写死本仓的档路径，模型照举例去读，读到的是「文件不存在」。
+
+通用 agent 的描述面不得把自家仓的结构写成通用真理——同族病（注入面）的规则见 `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1。
+
+**L1 逐字目标形（实施席照此落笔 · 唯一副本 = 本节；现盘已与本节等值，由本批设计轮落笔）**
+
+```text
+`documents` — one rule: a relative path resolves against the session project root (e.g. `docs/<area>/<name>.md`); an absolute path is used as-is.
+```
+
+**规则本体零改**：`a relative path resolves against the session project root` ∥ `an absolute path is used as-is` 两句逐字在位（本席实读：各恰 1 次），只换括号里的举例。
+
+**读数（as-of 时点形 · 两笔各一条）**
+
+| 时点 | `:6` 的举例 | 读数（本席实跑） |
+|---|---|---|
+| 改前 · 提交 `e960502f` 的盘上内容（2026-11-01 设计轮落笔前） | `docs/core/design/ADVISOR-GUARDS.md` | `node scripts/prompt-refs-check.mjs` ⇒ 汇总 `命中 10`，其中一条 = 该行 token |
+| 改后 · 2026-11-01 本批**设计轮**落笔（工作树未提交） | `docs/<area>/<name>.md` | 同命令 ⇒ 汇总 `命中 9`（提示词面 70 档 · 代码面 476 档）；该行 J1 ∥ J3 各 `null` |
+
+**据实记录（越闸一笔）**：这一行是**本批设计轮（eng-designer 席）改的**，落在设计与评审之间。`write-face.mjs` 对该档判 `classify:doc`（放行面）⇒ 机械闸放行 ≠ 设计评审批准；§3 第 2 条即抓住「档已改、批档仍记旧扫描读数」这一点。事实面落此两行；实施轮对该行的义务只剩逐行 `===` 复核。
+
+**举例形选型 = 角括号占位形**（三条理由）：
+
+- **主判据 = 举例不得指向任何具体档；正则抓不抓得到不是判据**——抓不到才更危险：干名只含数字（或数字起头）时 J1 无 `[A-Z]` 起头、J3 无 `[a-z]` 起头，两式**皆不命中**（本席探针实测 `docs/core/design/2026.md` ⇒ J1 `null` ∥ J3 `null`），而那个形照样把具体档写死。⇒ 判据落在 A1 的形判上，不落在命中数上（C4 即此读数的用例）。
+- **旁证 = 具名形多数会落回机判命中**：`scripts/prompt-refs-check.mjs:33` 的 J1（`[A-Z][A-Z0-9-]{2,}\.md`）与 `:39` 的 J3（`[a-z][a-z0-9-]*\.md`）抓得到多数具名形——换成具体产品名（如 `DESIGN.md`）仍命中，那是**改址不是删引用**（§6.6 裁「删引用（非改址）」）。此条只作旁证：数字干名即反例，故不作主判据。
+- **形取本档已裁定者**：`:223` 逐字「路径形（`<…>` / `*` 紧邻）与全大写形天然不命中」——角括号占位形不构成具名 `*.md` token；`:214` 已把 `docs/batches/<batch>-<topic>.md` 列作**路径操作数**在册，与 `thincoder-core/prompts/persona-eng-designer.md:30` 的 `batches/<batch>-<topic>.md` 同一占位语法。⇒ 不新造占位语法，依据 = 本档既有判定，不是外部先例。
+
+**落点表**：
+
+| # | 档 | 位置 | 动作 |
+|---|---|---|---|
+| L1 | `thincoder-core/tool-docs/advisor.md` | `:6` 整行 | 举例换角括号占位形（行数 ±0；现盘已等值） |
+
+**验收**：
+
+| # | 判据（可机判） | 读法 |
+|---|---|---|
+| A1 | 举例形 = 角括号占位形（**形判**，不靠正则） | `node` 读 `thincoder-core/tool-docs/advisor.md:6`：`includes("docs/<area>/<name>.md")` = `true` **且** 两正则在该行各 `null`。**未达成 = 该行不含 `<…>` 占位形**（纯数字干名一类照样判未达成） |
+| A2 | 本仓设计档前缀举例清零（面判） | `grep -rn "docs/core/design" thincoder-core/tool-docs/` ⇒ 0 命中 · `grep -rn "ADVISOR-GUARDS" thincoder-core/tool-docs/` ⇒ 0 命中 |
+| A3 | 规则两句逐字在位 | `a relative path resolves against the session project root` ∥ `an absolute path is used as-is` 在该档各恰 1 次（本席实读 1 ∥ 1） |
+| A4 | 机判锁只减不增 | `node scripts/prompt-refs-check.mjs` 命中数 = 改前 − 1；改前读数 = 10（见上读数表第一行）⇒ 判 **9** |
+| A5 | 文档纪律 | `doc_check(mode:"gate")` 首行 `DOC-CHECK GATE: PASS` |
+
+本批无运行时可跑面（描述文本），验收即上面五条读数。
+
+**用例表**：
+
+| # | 场景 | 输入 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 模型读描述（用户项目里） | 用户项目内无 `docs/<area>/<name>.md` | 读者把举例当占位形，不照它 `read` 一个具体档 |
+| C2 | 边界 · 用户项目恰好有同名档 | 项目内真有 `docs/<area>/<name>.md` | 不影响判读——规则句说的是解析基准，与档在不在无关 |
+| C3 | 错误 · 举例再写成具名本仓档 | 把举例改成任何具名 `*.md`（如 `docs/core/design/DESIGN.md`） | A1 形判红（该行不含 `<…>`）；A4 亦红（J1 抓到） |
+| C4 | 边界 · 举例写成纯数字干名 | 把举例改成 `docs/core/design/2026.md` | **A1 形判红 · A4 反而绿**（J1 ∥ J3 双 `null`，本席探针实测）——「抓不到更危险」的读数：该形把具体档写死而机判不响 |
+
+**集成测试设计**：`none` —— 改动面 = 工具描述单行（举例形）+ 本设计档，零代码档。两条触发都不成立：① 不改既有用例断言的业务可观察结果——`documents` 的解析判据（相对形按会话项目根 ∥ 绝对形照用）一字未动，故事 6 五行断言的受理 ∥ 拒发结果与举例形无关；② 未新增业务上真需要的场景，也不是生产真出过的问题——模型照旧举例去 `read` 属描述面误导，从业务入口复现不出可机判结果。⇒ 破行 **0** · 冗余 **0** · 新增 **0**。
+
+**RTM 读数**（本席实读 2026-11-01 · `node` 实算）：`test/RTM.md` 305 行 / `^## ` 5（CLI ∥ VS Code ∥ Desktop ∥ 异常与更正 ∥ 签署面）/ `^### ` 23 个业务故事节 / 编号数据行 79。近面两节逐行读过：
+
+- 故事 6「设计评审的文档范围按项目根受理」（`:65`–`:76`，6-1–6-5）：本行举例正是该参数 `documents` 的说明；五行断言的是受理 ∥ 拒发的业务结果（拒因含 `criterion=scope-not-doc` ∥ `no-project-root` ∥ `outside-project`），不依赖举例形。
+- 故事 7「收口只判本批改过的档」（`:78`–`:93`，含 7-9 工具描述面）：本批不新增门、不改段判据，工具描述面仍受段长约束。
+
+⇒ 无行需破 ∥ 删冗 ∥ 补新（三条 delta 均为空）。
+
+**关键决策**：
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 举例取角括号占位形，不取任何具体档名 | 判据 = 「举例不得指向任何具体档」：具名形（含纯数字干名）都会被读成「照着去读这个文件」；占位形同时告诉读者「这是形，不是文件」 |
+| K2 | 主判据取形判（A1），不取命中数（A4） | A4 只在正则抓得到时响；数字干名两式皆 `null`（C4 实测）⇒ 以命中数为准会把不合规的形判成合格 |
+| K3 | 同批不动 `test/RTM.md` 的 4 处 | RTM 是本产品规定的集成索引位置：任何用本产品的项目都该有这个口径 —— 那是产品规矩，不是本仓的结构 |
+| K4 | 同批不动 `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1 ∥ `thincoder-core/advisor/project-context.mjs` | §5.1 治的是注入面（已收正），本节治描述面的举例；`project-context.mjs` 的派生逻辑本来就是对的 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.6（提示词面禁带文档引用 · J1/J2/J3 三锁，`:205`）∥ §6.59 形制（逐字目标形 + 落点表 + 验收 + 用例表 + 决策表，`:5229`）；**形制实现坐标** = `thincoder-core/prompts/persona-eng-designer.md:30`（`batches/<batch>-<topic>.md` 占位形的既有落笔）∥ 本档 `:214`（`docs/batches/<batch>-<topic>.md` 作路径操作数在册）∥ 本档 `:223`（路径形天然不命中——本档既有裁定）。
+
+偏离 = 本节不改任何规则句，只换举例 ⇒ 不新增 `Why` 行（举例不是规则，规则句一字未动）。
+
+**既有件三问（新增名）**：`existing: thincoder-core/prompts/persona-eng-designer.md:30 · name: "batches/<batch>-<topic>.md" · consumers: 设计席` ⇒ 照该占位形取举例，不新造占位语法；同形第二坐标 = 本档 `:214` 的 `docs/batches/<batch>-<topic>.md`（路径操作数在册），判据坐标 = 本档 `:223`；`none found` 项 = 无（本节不新增名字）。
+
+**勘察证据**（本席实读 2026-11-01）：
+
+- `docs/core/design/TOOLS.md` §1（工具描述文本的行本体住本档）· 本档 §6.6 `:205`（三锁判据）· 本档 `:214` ∥ `:223`（路径操作数在册 ∥ 路径形天然不命中）。
+- `thincoder-core/tool-docs/advisor.md`：28 行（`node` 实算 `split('\n').length − 1`）；`:6` 逐字见上围栏块；该行 J1 ∥ J3 各 `null`；规则两句各 1 次。
+- `thincoder-core/prompts/persona-eng-designer.md:30`（占位先例实读）· `scripts/prompt-refs-check.mjs:26`（域 = `prompts` + `tool-docs`）`∥:33-39`（J1/J2/J3 三正则）。
+- `node scripts/prompt-refs-check.mjs` 本轮实跑：`汇总：提示词面 70 档 · 代码面 476 档 · 命中 9`（改前读 10，见读数表）。
+- 探针实测（数字干名形）：`docs/core/design/2026.md` ⇒ J1 `null` ∥ J3 `null`（C4 的依据）。
+- `test/RTM.md`：305 行 / `^## ` 5 / `^### ` 23 / 编号数据行 79（`node` 实算）；近面 = 故事 6（`:65`）∥ 故事 7（`:78`）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（父侧 `manifest read` 实读）⇒ 独立公共源文档仓无，已查无相关。
+
+**档位结论**：两档皆无跨层、无拆分计划——`thincoder-core/tool-docs/advisor.md` 28 行（≤500 硬顶）；本档 5,515 行（本节落笔后 `node` 实读），属纯 `.md` 设计档 ⇒ 800 行硬顶只判代码档，本节靠**档类豁免**不触顶（豁免依据 = 档类，不是「测量通过」）。
+
+**边界（本节不做）**：不改规则语义（相对形解析基准 ∥ 绝对形照用一字不动）· 不动 `test/RTM.md` · 不动 `docs/core/requirements/ADVISOR-CONVERGENCE.md` §5.1 · 不动 `thincoder-core/advisor/project-context.mjs` · 不新增脚本 / CI / 机判门 · 不清 `prompt-refs-check` 的其余存量命中。
+
+**UI / 交互决策**：无界面面——本节只改模型可见工具描述文本与设计档。
+
 ## 8. 提示词承载（单源 · M9 落点）
 
 **定位**：提示词 = **产品代码**，唯一副本 = `thincoder-core/prompts/`（16 档，运行期直接加载）。规则的**人读权威** = 中文机制文档（`docs/core/design/` 纪律族）。变更路子 = 改规则 → 先改机制文档 → coder 依它改 EN（走产品代码面：需求 → 设计 → 评审 → coder）。**无机检门**（用户裁定不变）。

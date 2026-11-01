@@ -96,24 +96,21 @@
 - 不引入 basename 全局扫描 / 模糊匹配（零新增假命中）
 - 凭证值不落文档（N9）；不扩 A11 类「多审几次」触发范围（N3）
 
-## 5. 待设计需求（用户裁定：问题成立，待设计）
+## 5. 评审注入面：项目上下文从项目自述派生
 
 ### 5.1 评审注入的路径不得硬编码项目约定
 
-**问题**：`thincoder-core/advisor/messages.mjs` 向 advisor 注入项目上下文时硬编码了路径约定：
+**规则**：评审注入的项目上下文（项目指南 ∥ 文档地图 ∥ 项目标准）**只从被评审项目的自述派生**，不猜固定名。ThinCoder 是通用 coding agent——用户项目的文档布局不由我们定；把自家仓库的布局烧进产品，换个布局（`doc/`、`documentation/`、根级单文件…）就**静默丢掉评审维度**，用户看不见也修不了。**静默失败是最坏的一类：不可见、不可修。**
 
-| 注入面 | 硬编码 | 位置 |
+| 注入面 | 来源（派生，非硬编码） | 探不到时 |
 |---|---|---|
-| 文档地图 | `docs/README.md`（新）+ 旧 fallback（已随迁档退场） | `:245-254` |
-| 项目方法论 | 项目根 `METHODOLOGY.md` | `:236`、`:349` |
+| 项目指南 | `AGENTS.md`：从评审范围逐级上溯、以 cwd 为界（`thincoder-core/advisor/project-context.mjs` 的 `findGuideRoot`） | `NO_GUIDE_NOTICE` —— 要求拟合回落到对话 |
+| 文档地图 | manifest `docRoot` 的五面（design ∥ requirements ∥ specs ∥ modules ∥ batches；`findDocumentMap`：各声明根的 `README.md` 先、共同祖先次） | `NO_DOC_MAP_NOTICE` —— 明说「Document ownership 判据无法核」 |
+| 项目标准（方法论） | manifest `docRoot.standards`——**项目自己声明的标准档路径**（项目根相对的文件；单份 ∥ 多份数组）；三态判据与文案单源 = `docs/core/design/MANIFEST.md` §2.12 | 未声明 ⇒ `NO_STANDARDS_NOTICE`；**声明了但读不到 ⇒ `STANDARDS_UNREADABLE_NOTICE`**（点名声明路径 + 原因，**不得与未声明同形**） |
 
-根路径取 `guideRoot ?? agent.cwd`（= `injectProjectGuide` 从评审范围反查的项目根）——即**被评审项目**，不是 ThinCoder 自身（此点无错）。
+**边界**：不设「猜固定名」的便利 fallback —— `docs/README.md` ∥ 根级 `METHODOLOGY.md` 那类探测已退场，它正是静默失败的来源。标准档的路径**只从项目自己的声明取**（`docRoot.standards`）：声明是项目的口，猜是我们的口——这条界线不因本键而松，故本键**不带**任何默认路径（默认 = `null`）。
 
-**错在哪**：ThinCoder 是通用 coding agent——用户项目的文档布局不由我们定。布局不同（`doc/`、`documentation/`、根级单文件…）时探不到会**静默跳过**——「Document ownership」评审维度与方法论基准**无声消失**，用户不可见、不可修。等于把自家仓库的布局烧进产品。
-
-**待设计方向（不预设结果）**：① 配置项（`advisor.*` 指定地图 / 方法论路径）；② 由**项目自述**声明（AGENTS.md 声明指针行——项目层本就是项目自己的口）；③ 保留约定探测作便利 fallback（当前候选列表）。可组合。
-
-**验收方向**：项目可用非默认布局启用这两个评审依据；未声明时**要么降级可见（写进评审报告）、要么可配**——不得静默丢维度。
+**验收**：① 非默认布局的项目，地图从 `docRoot` 命中、评审拿到地图；② 声明缺失 ⇒ 评审报告出现对应降级句，且评审被要求把该限制写进发现；③ **任何一面都不得静默跳过**；④ 标准档声明指向不存在的档 ⇒ 降级句**点名声明路径与读不到的原因**，且与「未声明」句可机判区分（防作者回头去补一个其实已经有的声明）。
 
 ## 6. 并入面：上下文预算与失败护栏
 
@@ -184,7 +181,7 @@
   1. **硬墙中止形态**：墙判定以信号状态为主判据。**= 已消解**（中止形态 = 核单源——`thincoder-core/advisor/loop.mjs:100` · `:184`（返回「Advisor: interrupted.」尾）∥ `thincoder-core/advisor/run.mjs:178`（`AbortError` + `signal.reason.interrupt` 重抛））。
   2. **结算拒发不记账载体** = per-call `ctx._advisorRefused`（CLI 用 `agent._advisorRefusals` Set）——载体差异，语义零差——**形态（非登记项）**。
   3. **冻结窗口实现点** = `src/agent/execute-tools.mjs`（单一预闸点——VSC 无独立 dispatch 模块）；事件面 = 核 `_mutLog`（`noteMutations`）——**形态（非登记项）**（实现点各端自持，语义同源）。
-  4. **项目方法论指针** = 仅声明（`advisor.standardsDoc`——硬探针已退役）；文档地图 = 声明优先 → 兜底链——**形态（非登记项）**（指针形态；两端同机制）。
+   4. **项目方法论指针** = 仅声明（`docRoot.standards`）；文档地图 = 声明优先 → 兜底链——**形态（非登记项）**（指针形态；两端同机制）。
 
 **二态化裁定行**：① = **已消解**（端侧实现面不存在；中止形态 = 核单源）；② = **形态（非登记项）**（载体差异，语义零差）；③ = **形态（非登记项）**（实现点差异，语义同源）；④ = **形态（非登记项）**（指针形态，两端同机制）。
 - 差异若有 → 逐条补登记（不静默）；本档不代述对端正文。
