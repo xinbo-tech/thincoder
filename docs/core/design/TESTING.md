@@ -1032,7 +1032,7 @@ console.log('bad-column-rows', badColumnRows);
 不取「只加不删」——留着 `the scenarios this change earns` 就是留着本批被取代的起点口径（批 §1 已定：设计步起点 = 读 RTM 出 delta，不再是「这次要什么场景」），两套起点并存比删更坏。
 也不取「整项替换」——`#87` 的判据轴、注解与触发行是上一批的交付物，替换即删。保留件逐处列在各小条里。
 
-**折行形（三段共用）**：每段按语义断行、逐行 ≤300 字符（本席实测最大 241）；**折行不折字**——断行处只以一个空格换行，不加字、不减字、不加连字符。
+**写形（三段共用）**：一条规则一行、逐行 ≤300 字符（本席实测最大 241）；一段装不下 ⇒ **重新组织语言重写**——断行只在规则边界，不按字符数挪断点。
 三档提示词逐行 ≤300 是硬约束（现盘 persona 298 ∥ advisor 290 ∥ discipline 300，多一行超宽即破写形）。
 
 **① `thincoder-core/prompts/persona-eng-designer.md` 第 9 项（现 137–138 行）替换为**（保留件 = 字段句 `each row naming … business-observable point).`（含注解括注）与触发行，逐字不动）：
@@ -1238,7 +1238,7 @@ console.log('bad-column-rows', badColumnRows);
   A change that crosses components but starts from no user-visible entry earns no case — an integration case grows from exactly two entries: a business scenario the product really needs, or a problem production really produced.
 ```
 
-落点 ①–⑥ 逐行 ≤300 字符（本轮 `node` 逐行实读字符数：① 200 · ② 262 · ③ 251 · ④ 228 · ⑤ 230 ∥ 222 ∥ 171 ∥ 239 · ⑥ 231 ∥ 227）；折行不折字——断行处只以一个空格换行。
+落点 ①–⑥ 逐行 ≤300 字符（本轮 `node` 逐行实读字符数：① 200 · ② 262 · ③ 251 · ④ 228 · ⑤ 230 ∥ 222 ∥ 171 ∥ 239 · ⑥ 231 ∥ 227）——超 300 即重新组织语言重写。
 
 ### 13.3 受影响文件
 
@@ -1269,11 +1269,11 @@ console.log('bad-column-rows', badColumnRows);
 |---|---|---|
 | AC13-1 | 该档两处新文案逐字等于 §13.2 落点 ① ②（落笔后居 `:171`–`:172` ∥ `:179`–`:183`），全档 357 行 | 需求 §1.1「由此得到的两条判据」 |
 | AC13-2 | 全档 `interaction between components` 命中 = 1 处（集成测试定义句，落笔后 `:190`）；`touches … the interaction between components` 判据 0 命中 | 需求 §0（「组件」= 项目整体）+ §1.1 判据② |
-| AC13-3 | `doc_check(mode:"gate")` 对该档 PASS（提示词面行宽 ≤300；落笔后最长行仍 300，在 `:68`） | 本档 §11.17 折行形 |
+| AC13-3 | `doc_check(mode:"gate")` 对该档 PASS（提示词面行宽 ≤300；落笔后最长行仍 300，在 `:68`） | 本档 §11.17 写形 |
 | AC13-4 | 行为零改：`git diff --stat`（基线 = 本批起点 `#1796`）只含落点四档 + 本设计档 + `docs/core/design/PROMPT-SYSTEM.md`（§13.12 落点 ⑦–⑩ 的同批改） | 本设计 §13.7 边界 |
 | AC13-5 | 四档 `touches neither` = 0；单臂判据逐档在盘：`alters no business-observable result an existing case asserts` = 工程 1 ∥ 评审 2 ∥ 设计席 0 ∥ 普通 0（设计席 ∥ 普通以 `alters a business-observable result` 形承载）；`earns no case` = 工程 1 ∥ 设计席 1 ∥ 普通 1 ∥ 评审 0；`grows from exactly two entries` = 工程 1（落点 ②）∥ 设计席 1 ∥ 普通 1 ∥ 评审 1；`neither entry a case grows from` = 工程 1（落点 ③）∥ `adds no scenario the product really needs` = 评审 2（落点 ⑤ 两行）（按落点 ①–⑥ 替换模拟，本轮 `node` 实跑） | 需求 §1.1 判据② ∥ F34 两触发 |
 | AC13-6 | 四档行数 = 357 ∥ 155 ∥ 143 ∥ 315（实测口径 = `split('\n').length - 1`；与 §6.50 A6 的同组数字互校一致） | 本设计 §13.3 |
-| AC13-7 | 四档逐行 ≤300 字符（`>300 = 0`；新折行处 = 落点 ④ ∥ ⑥ 两处） | 本档 §11.17 折行形 |
+| AC13-7 | 四档逐行 ≤300 字符（`>300` = 0；落点 ④ ∥ ⑥ 各落成两行——一条规则一行） | 本档 §11.17 写形 |
 
 ### 13.6 用例表（读判据 · 正常 ∥ 边界 ∥ 错误）
 

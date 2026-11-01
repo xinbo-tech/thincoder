@@ -329,14 +329,14 @@ Spawn task-channel gate (role='<role>'): <offending names, " / " separated>. An 
 | `thincoder-core/agent-tools/subagent-spawn.mjs` | 435 | ≈+8 | 工程角色 input 改任务书行；拒收门落点（`batchDoc` 门之后、`round` 之前） |
 | `thincoder-core/agent-tools/audit-block.mjs` | 109 | ≈−37 | 删 `summarizeEngTaskBook` 与其 marker 表；审计块改注入 §2 路径 |
 | `thincoder-core/agent-tools/subagent.mjs` | 423 | ≈±2 | 删 `designPoints` 属性；七条 description 改口（工程角色不收 / 非工程角色才收） |
-| `thincoder-core/tool-docs/subagent.md` | 39 | ≈+25 → ≈64 | 任务书段重写 + 两条示例；A 块折行不折字（1→6 行）+ 存量 14 条 >300 行（`:4-12` ∥ `:19-21` ∥ `:31` ∥ `:33`）同法折行（语义零改，断行处 = 原空格）——落盘处非表格非围栏，批档写入门按整档判行宽 |
-| `thincoder-core/prompts/persona-engineering.md` | 473 | ≈−11 | 示例三处改形 + 五项参数块删除，换「任务书 = §2」一段；B 块首条折行（1→2 行，同 A 块归一规则） |
+| `thincoder-core/tool-docs/subagent.md` | 39 | ≈+25 → ≈64 | 任务书段重写 + 两条示例；A 块按一条规则一行写成 6 行 + 该档 >300 行存量 14 条（`:4-12` ∥ `:19-21` ∥ `:31` ∥ `:33`）同一处置 = 重新组织语言重写——落盘处非表格非围栏，批档写入门按整档判行宽 |
+| `thincoder-core/prompts/persona-engineering.md` | 473 | ≈−11 | 示例三处改形 + 五项参数块删除，换「任务书 = §2」一段；B 块首条一条规则一行（两行成条） |
 | `thincoder-core/prompts/discipline-normal.md` | 315 | ±0 | 「every spawn role」收窄为 normal-mode 角色 + 一行工程模式说明；P14 删 `:255` 的 `round` 行 |
 | `thincoder-core/prompts/discipline-engineering.md` | 345 | ±0 | 已核：`designPoints` ∥ `four core` ∥ `every spawn role` ∥ 五项参表述 0 命中（2026-10-24 22:55 全档 grep）——工程规则载体无同类表述，零改 |
 | `thincoder-core/permission.mjs` | 133 | ±0 | `:38` 预览句：拼装空 ⇒ 回退到 §2 路径句 |
 | `thincoder-core/agent/family-tools.mjs` | 206 | ±0 | `:99` 注释与 `:129` 审计通道描述随 KD-SC6 改（P15——现文仍指已删的 A2 摘要面） |
 | `bench/probe/data.mjs` | 217 | ≈−10 | 三族夹具：五参 → `{round, batchDoc}`，冲突内容移进夹具批档 §2 |
-| `bench/check/probe.check.mjs` | 306 | ≈−12 | 五参断言组改为拒收断言组；A 段逐字断言改行折叠归一比较（AC-SC-5） |
+| `bench/check/probe.check.mjs` | 306 | ≈−12 | 五参断言组改为拒收断言组；A 段逐字断言改整行逐字相等（AC-SC-5） |
 | `bench/check/probe-frozen.mjs` | 107 | ≈±0 | 按族随动；冻结面含 `:49` / `:139` 两句的期望文案随 P13 更新 |
 | `bench/probe/driver.mjs` | 267 | ±0 | 拼装点签名不变时零改 |
 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` | 855 | 本批 | §6.22 重写 + §6.30 描述块随改 + §6.7.1 `:21` / §6.7.2 `:42` / §6.24 / §6.30 四处 F 指针与跨节滞后改锚 + **§6.26 审计块契约改锚**（改后代码块 / D23-6 / 分类表第 3 行 / 受影响表两行——`summarizeEngTaskBook` 按 KD-SC6 删除）；行数已过 800 硬限，本批继续加行 ⇒ **拆分候选登记**：§6.22 提示词逐字面 + §6.30 描述面另立设计档 `SPAWN-TASK-CHANNEL`（下一批创建，本批不建档） |
@@ -365,7 +365,7 @@ Spawn task-channel gate (role='<role>'): <offending names, " / " separated>. An 
 | AC-SC-2 | 必填集合：eng-coder 缺 `batchDoc` / `round` / `designToken` 各出既有拒句（文案零变——**例外登记**：round 门 `:49` 的 five-task-book 句按 P13 改新口径）；eng-designer 缺 `batchDoc` / `round` 同 | `node --test bench/check/probe.check.mjs bench/check/probe-frozen.mjs` ⇒ exit 0（既有拒句冻结面） |
 | AC-SC-3 | 任务书行：工程角色 `input` 含批档绝对路径且写明「§2 = 唯一任务通道」；`_engTaskInput` 同值 | `node --test bench/check/probe.check.mjs` ⇒ exit 0（driver 放行态断言组） |
 | AC-SC-4 | 非工程角色零变：explore / plan / coder 四项核心 + `scope` 行为、拼装序、错误文案逐字不变（**例外登记**：`:139` 的 designPoints 指路句按 P13 改——原句称该名属于工程角色，与同档 `:83` 退役句互斥） | `node --test bench/check/probe.check.mjs bench/check/probe-frozen.mjs` ⇒ exit 0（非工程用例 + 冻结面） |
-| AC-SC-5 | 提示词面：`thincoder-core/tool-docs/subagent.md` 的新任务书段与 §6.22.8-A 逐字全等（行折叠归一：折行块按 `\n` 两侧空白折叠为单空格后比较）；两档整档无 >300 字符行；工程示例与工程段落不带任务书文本参数；**拒收名册只活在门的报错里，不进提示词**（提示词只正面陈述工程角色带什么）；提示词档无退役参数表述 | `node -e "const fs=require('fs');const c=(f,s)=>fs.readFileSync(f,'utf8').split(s).length-1;console.log(c('thincoder-core/prompts/persona-engineering.md','designPoints'),c('thincoder-core/prompts/persona-engineering.md','every spawn role'),c('thincoder-core/prompts/persona-engineering.md','four core'),c('thincoder-core/prompts/persona-engineering.md','goal='),c('thincoder-core/prompts/discipline-normal.md','designPoints'),c('thincoder-core/prompts/discipline-normal.md','every spawn role'),c('thincoder-core/prompts/discipline-engineering.md','designPoints'))"` ⇒ `0 0 0 0 0 0 0`（七列全 `0`：两档无退役参数、无「every spawn role / four core」旧口径、`persona-engineering.md` 内 `goal=` 示例零处）；`thincoder-core/tool-docs/subagent.md` 含 §6.22.8-A 段 1 处、按同一归一逐字全等（`node --test bench/check/probe.check.mjs` 断言组 exit 0）；`node -e "for(const f of ['thincoder-core/tool-docs/subagent.md','thincoder-core/prompts/persona-engineering.md'])console.log(f,require('fs').readFileSync(f,'utf8').split('\n').filter(l=>l.length>300).length)"` ⇒ 两行均 `0`（整档无 >300 行——A/B 折行与存量 14 行处置的判据） |
+| AC-SC-5 | 提示词面：`thincoder-core/tool-docs/subagent.md` 的新任务书段与 §6.22.8-A 逐字全等（整行 `===`；不做折叠归一——归一正是「字符不变只挪断点」的免检通道）；两档整档无 >300 字符行；工程示例与工程段落不带任务书文本参数；**拒收名册只活在门的报错里，不进提示词**（提示词只正面陈述工程角色带什么）；提示词档无退役参数表述 | `node -e "const fs=require('fs');const c=(f,s)=>fs.readFileSync(f,'utf8').split(s).length-1;console.log(c('thincoder-core/prompts/persona-engineering.md','designPoints'),c('thincoder-core/prompts/persona-engineering.md','every spawn role'),c('thincoder-core/prompts/persona-engineering.md','four core'),c('thincoder-core/prompts/persona-engineering.md','goal='),c('thincoder-core/prompts/discipline-normal.md','designPoints'),c('thincoder-core/prompts/discipline-normal.md','every spawn role'),c('thincoder-core/prompts/discipline-engineering.md','designPoints'))"` ⇒ `0 0 0 0 0 0 0`（七列全 `0`：两档无退役参数、无「every spawn role / four core」旧口径、`persona-engineering.md` 内 `goal=` 示例零处）；`thincoder-core/tool-docs/subagent.md` 含 §6.22.8-A 段 1 处、按整行逐字比较同一判法（`node --test bench/check/probe.check.mjs` 断言组 exit 0）；`node -e "for(const f of ['thincoder-core/tool-docs/subagent.md','thincoder-core/prompts/persona-engineering.md'])console.log(f,require('fs').readFileSync(f,'utf8').split('\n').filter(l=>l.length>300).length)"` ⇒ 两行均 `0`（整档无 >300 行——存量 >300 行按重新组织语言重写处置后的判据） |
 | AC-SC-6 | 审计块：含 `Batch record (batchDoc):` 行与 §2 指向句；`summarizeEngTaskBook` 符号 0 命中 | `node -e "console.log((require('fs').readFileSync('thincoder-core/agent-tools/audit-block.mjs','utf8').match(/summarizeEngTaskBook/g)||[]).length)"` ⇒ `0`（全 `thincoder-core` 扫同法）；审计块断言随 `node --test bench/check/probe.check.mjs` ⇒ exit 0 |
 | AC-SC-7 | 过渡：现存设计 / 需求档里以 `designPoints` 为落点的验收条款逐条改指 §2（清单见 §6.22.3） | `grep -rn "designPoints" docs/core/design docs/core/requirements` ⇒ 命中行仅剩「退役 / 改指 §2」表述（逐行核，清单 = §6.22.3 末段） |
 | AC-SC-8 | 引用面：本档无批档出处行（只留模板形 `docs/batches/<批档词干>.test.mjs`）；机检三式 = 批档路径形 ∥ 发现表编号形 ∥ 批档 §2 条目号形；任务书 §2 无批档坐标（人核，§2 内容不机检——KD-SC7） | `node -e "const t=require('fs').readFileSync('docs/core/design/AGENT-LOOP-SUBAGENT.md','utf8');console.log((t.match(/docs\/batches\/[0-9]{4}/g)||[]).length,(t.match(/发现表 F-[0-9]/g)||[]).length,(t.match(new RegExp('批次档 '+ '§2 条目','g'))||[]).length)"` ⇒ `0 0 0`（第三式字面被拼接断开，不自匹配本行） |
@@ -423,7 +423,7 @@ Spawn task-channel gate (role='<role>'): <offending names, " / " separated>. An 
 
 **提示词面只作正面陈述，不预演错误**：模型只会用列出的参数——把被拒的名字写进提示词，等于把那串名字变成候选项。拒收名册只活在门的报错里（命中时逐字点名，§6.22.1），提示词与工具描述都不预演错误。
 
-**§6.22.8-A（P1 的整段替换——折行不折字：断行处 = 原空格，逐行 ≤300；归一比较规则见 AC-SC-5）**：
+**§6.22.8-A（P1 的整段替换——一条规则一行，逐行 ≤300；整行逐字比较规则见 AC-SC-5）**：
 
 ```text
 Task book (normal-mode roles: explore / plan / coder): four core structured parameters — goal (goal & why), knownFacts (the facts you already verified), acceptance (machine-verifiable criteria), reportFormat (delivery-report format)
@@ -445,7 +445,7 @@ An eng-coder spawn also carries designToken — the write credential (the exact 
 - **Where §2 and the design doc disagree, the design doc is the criterion source of record**: §2 cites `design §N.M`, never restates a count or criterion.
 ```
 
-**折行依据**：A ∥ B 两块的落盘处（`thincoder-core/tool-docs/subagent.md:23` · `thincoder-core/prompts/persona-engineering.md:324`）非表格非围栏——批档写入门按整档判行宽（>300 即拒），单行 1000 ∥ 335 必破 ⇒ 折行不折字（断行处 = 原空格，归一后逐字全等已实测）；该档存量 14 条长行同理同法。
+**写形依据**：A ∥ B 两块的落盘处（`thincoder-core/tool-docs/subagent.md:23` · `thincoder-core/prompts/persona-engineering.md:324`）非表格非围栏——批档写入门按整档判行宽（>300 即拒），单行 1000 ∥ 335 必破 ⇒ 处置 = 重新组织语言重写（一条规则一行时按规则边界断，不按字符数挪断点）；该档存量 14 条长行同一处置。
 
 **§6.22.9 集成测试设计（本变更该得的场景与判据）**：
 
