@@ -255,11 +255,13 @@ export async function runTurnLoop(panel, deps) {
       }
       if (decision === "ask") {
         // Turn-cap exhaustion: offer to continue from the current context, NOT error
-        // (CLI agent-turn.mjs parity — "Ran N turns. Continue?"). Rebuilding the controller +
+        // (CLI agent-turn.mjs parity — "Ran N turns — M turns total. Continue?"). Rebuilding the controller +
         // resume re-runs the loop from the SAME history (the user message is already pushed;
         // resume=true skips re-pushing it). Unlimited continues — the user can Stop at any prompt.
+        // 两个数（TURN-CAP-CONTINUE.md §6.1 / §6.3 · D-TC10）：本段轮数 + 链内累计（`agent._turnSeq` 直读，
+        // 不加兜底——缺值印 0 会把「未跟踪」读作「零消耗」）；上限不印（§6.2 撞帽点两个上限均 ≡ 已示轮数）。
         const willContinue = await askInPanel(
-          `Agent reached ${e.turn} turns (limit). Continue from here?`,
+          `Agent reached ${e.turn} turns — ${agent._turnSeq} turns total. Continue from here?`,
           ["Continue", "Stop"],
         )
         if (willContinue === "Continue") {

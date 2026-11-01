@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-11-01 · 来源 = 用户 2026-11-01 20:02 逐字「C15累计进度要啊」。
 > 台账 = #1962（TURN-CAP-CONTINUE · 归批）。前情 = docs/batches/2026-11-01-dispatch-one-face-retire.md（#1961，进行中）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-11-01
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ## 1. 讨论与结论（主 agent）
@@ -492,5 +492,160 @@ VERDICT: changes-required
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+## 4. 用户批准（主 agent 记录）
+
+### 4.1 批准依据（逐字）
+
+> 20:02：「**C15累计进度要啊**」—— 补累计进度，是本批的需求本身。
+> 20:04：「**一起改**」—— 回答父侧「`(limit ${error.turn})` 那个也印错了，跟累计一起改？」，即两件同批。
+> 20:04（更早）：「**三条待我裁的都定了，开始做了吗？**」—— 明示推进，不等第二句。
+
+### 4.2 批准落点
+
+设计面经评审轮 1（changes-required，🔴1 = 缺 RTM 增量节）→ 修正轮（#77 / #78）→ 轮 2 **pass**（token 已签）后进入实施。
+
+### 4.3 本批的边界（写清，因为它动了产品码）
+
+- **动**：四个提示面 + 桌面注入缝一参 + 单测档。
+- **不动**：`thincoder-core/agent/**`（`ContinueError` 载荷、`turn-loop` 段内帽、`spawn-child` 循环骨架）—— **理由 = `(limit N)` 在撞帽面上恒等于本段轮数，加上限字段拿不到新信息，却要动载荷契约**。
+- **不动**：撞帽判定、续跑结构、段预算（D-TC1 / D-TC7）。
+
 ## §5 实施记录（eng-coder）
+**状态行**：实施完成（四面落地 · 单测 6/6 · 审计 1 轮 + 评审 1 轮（pass）→ clean）
+
+
+
+### 5.1 交付概览（对照 §2.1 三条目）
+
+| # | 条目 | 状态 | 落点（现盘实读） |
+|---|---|---|---|
+| 1 | 撞帽提示补链内累计轮数 | ✅ | 四面全落：CLI TUI `agent-turn.mjs:248` / `:256`、CLI 非 TUI `command-interactive.mjs:113`、VSC `panel-turn-loop.mjs:264`、桌面 `turn-driver.mjs:105`（值经 `turn-face.mjs:153` 传入） |
+| 2 | 删 `(limit …)` 括注 | ✅ | 四面源码零 `(limit`（全仓检索 `turns \(limit` 在源码面零命中） |
+| 3 | D-TC10 的 `open` 关闭 | ✅ | 设计档侧已在 §2 落（本席零触设计档） |
+
+**四面逐字（实施后现状）**：
+
+- CLI TUI 询问行：`Ran ${seg} turns — ${total} turns total. Continue?`（`pushLine`，`agent-turn.mjs:248`）
+- CLI TUI 待答状态行：`Continue after ${seg} turns (${total} total)?`（`agent-turn.mjs:256`）
+- CLI 非 TUI `[paused]` 行：`[paused] Agent stopped after ${error.turn} turns — ${agent._turnSeq} turns total. Run in TUI to continue.`（`command-interactive.mjs:113`）
+- VSC：`Agent reached ${e.turn} turns — ${agent._turnSeq} turns total. Continue from here?`（`panel-turn-loop.mjs:264`）
+- 桌面：`Agent reached ${turn} turns — ${total} turns total. Continue from here?`（与 VSC 逐字同句）
+
+**逐字核对口径**：四面的句骨架与 `docs/core/design/TURN-CAP-CONTINUE.md` §6.3 模板逐字符比对（槽位名归一），破折号为 U+2014（`node` 码点读数，两侧一致）；非控制台显示的转码假象。
+
+### 5.2 改动清单（逐档）
+
+| 文件 | 改动 |
+|---|---|
+| `thincoder-cli/src/tui/agent-turn.mjs` | `decision === "ask"` 分支头取 `const seg = error.turn` / `const total = agent._turnSeq`；`:248` 文案、`:256` 状态行换模板；`state.permission.args = { turns: error.turn }` 零改（§6.4 明文：权限载荷不是提示面） |
+| `thincoder-cli/src/command-interactive.mjs` | `:113` `[paused]` 行插入 `${agent._turnSeq}`（`agent` 在 `chatCommand` 函数域 `:32`，catch 内可达——不在 try 块内声明，无 ReferenceError 面） |
+| `thincoder-vscode/src/extension/panel-turn-loop.mjs` | `:264` 文案插入 `${agent._turnSeq}`（`agent` 在 `:199` 函数域）；`:258` 陈旧注释改引现串 |
+| `thincoder-desktop/src/main/turn-driver.mjs` | `askContinue` 签名 `(key, turn, total)`、模板用 `${total}`；两处注释（档头段 + 本包装）同改 |
+| `thincoder-desktop/src/main/turn-face.mjs` | `consentOf(key, turn, total)`（`:69`）、调用点传 `agent._turnSeq`（`:153`）、注入面注释（`:57`）同改 |
+| `docs/batches/2026-11-01-turncap-cumulative-progress.test.mjs` | 单测档（新增，收口轮删）：C1–C6 |
+
+**面外改动 = 零**：六个声明面即全部改动面（`git status --porcelain` 逐档核对；批档自身的 `M` 是 §2 落盘在先，非本席写）。
+
+### 5.3 决策与披露
+
+| # | 决策 / 取舍 | 理由 | 备选与否决 |
+|---|---|---|---|
+| 1 | 累计直读 `agent._turnSeq`，不写 `?? 0` | §6.1：撞帽点该值必为整数；缺值印 0 会把「未跟踪」读作「零消耗」 | 兜底式取值 —— 否决，理由见 `thincoder-core/agent-tools/checkpoint.mjs` 同款禁则 |
+| 2 | 桌面扩一参而非在 `askContinue` 闭包内取 `agent` | 该端文案点在 `turn-driver.mjs`（`agent` 不在域）、调用点在 `turn-face.mjs`（`agent` 在域）——缝在两者之间 | 改结构传 agent —— 否决，触 D-TC7 结构面 |
+| 3 | C1–C3 **不驱动真实 `runAgent`**（无桩 provider），用真 `turnFrame` + 核侧递增/复位规则模拟两段 | 设计档 §6.6 原话即「行为断言（跑 `turnFrame` ∥ 读 `_turnSeq` 的实数）」；`runAgent` 需真 provider，桩化成本高于本批文案面 | 桩 provider 真跑 —— 未取，成本不匹配；风险由 C6 补钉（见 5.5） |
+| 4 | 单测里给四面各断言「槽位数 = 2」 | 少一个槽 = 只报本段（本批要修的毛病）、多一个 = 同一个数说两遍（本批要删的毛病）——两个方向都能红 | 只比字串在场 —— 留了口子，不取 |
+
+### 5.4 验收对照（§2.14 四行 · 机检读数）
+
+| # | 验收 | 机检 | 结果 |
+|---|---|---|---|
+| 1 | 四处文案 = §6.3 逐字模板 | 单测 C4（源码切片，五处模板 + 每面「槽位总数 = 2」）+ C5（切片渲染实测） | ✅ 6/6 绿 |
+| 2 | 累计取 `agent._turnSeq`（不加兜底） | 单测 C1–C3（`seg` 取真 `ContinueError` 实例、`total` 读计数器实数）+ C4（四面零 `_turnSeq ??`）+ C6（核侧规则在位） | ✅ |
+| 3 | 四面无 `(limit` 残留 | 单测 C4（四面逐档零命中）+ 全仓 `git grep -E "turns \(limit" -- "*.mjs" "*.js" "*.ts"` 零命中 | ✅ |
+| 4 | 撞帽面端到端两个数 | `test/RTM.md` 故事 25（集成行）——**本席未跑**，归父侧收口轮 | ⏳ 父侧 |
+
+**命令与读数**：`node --test docs/batches/2026-11-01-turncap-cumulative-progress.test.mjs` ⇒ `tests 6 / pass 6 / fail 0`（C1–C6）。六档 `node --check` 全 OK。
+
+### 5.5 审计与评审轮（终端状态 = clean）
+
+| 轮 | 形态 | 结论 | 处置 |
+|---|---|---|---|
+| 1 | 内部 explore 差异审计（对设计档 §6 逐条） | 2 条：① 设计档 §6.3/§6.4/§6.5 行号坐标因本批插入行而漂移（`agent-turn.mjs:242`→`:248` 等）——性质 DOC-DRIFT；② C4 的「槽位各一处」只对 CLI 两行机检 | ② 本席修（C4 扩到五面，槽位总数 = 2）；① 设计档非本席笔域 ⇒ 报父侧路由 |
+| 2 | advisor 代码评审（type=code） | `VERDICT: pass`（🔴 0 · 🟡 2 + 1 协调项 · 🔵 2） | 🟡1「C1/C3 断言的是本档模拟、非核行为」⇒ 修：`seg` 改取真 `ContinueError(maxTurns).turn`，新增 C6 把核侧两条规则钉住；🟡2「桌面扩参连线无机检」⇒ 修：C4 增三处切片断言（转口 / 下行 / 调用点）；🔵1 陈旧注释（`panel-turn-loop.mjs:258`）⇒ 修；🔵2 设计档行号漂移 ⇒ 报父侧；🟡3 函数层 316 行拆分计划 ⇒ 非本批（§2.12 已登记） |
+
+**修正轮次 = 2**（审计 1 轮 + 评审 1 轮），每轮修完重跑单测至绿。**终端状态：clean（无未决 🟡 / 🔵 在本席笔域内）。**
+
+### 5.6 报父侧的漂移与承接项（非本席笔域）
+
+1. **设计档行号漂移**：`docs/core/design/TURN-CAP-CONTINUE.md` §6.3 三问式 / §6.4 落点表 / §6.5 断言连带表里的行号指实施前位置（例：CLI 落点写 `:242` / `:250`，现盘 `:248` / `:256`；桌面转口写 `:68`，现盘 `:69`，调用点写 `:150`，现盘 `:153`）——建议设计席改符号锚或重指现号。
+2. **批档 §2.12 受影响文件表**同样列实施前行号，与本表 5.2 的现盘坐标并存时以 5.2 为准。
+3. **函数层承接**：`thincoder-cli/src/tui/agent-turn.mjs:108` 起 `runAgentTurnBody` 316 行单体，本批只在其内改文案（§2.12：结构本批不动）；拆分需另开批并给承接批号。
+4. **桌面端验收须重打包**（§6.7 末条）：用户跑的是 `dist-r{3,4}` 内冻结旧构建，旧串仍印在 `app.asar`；验法 = 重打包或以源码起跑。
+
 ## §6 验证与收口（父代理）
+
+## 6. 验证与收口（主 agent）
+
+### 6.1 父侧实读（四面逐字）
+
+| 面 | 现盘坐标 | 逐字 |
+|---|---|---|
+| CLI TUI 询问行 | `thincoder-cli/src/tui/agent-turn.mjs:248` | `Ran ${seg} turns — ${total} turns total. Continue?` |
+| CLI TUI 待答状态行 | 同档 `:256` | `Continue after ${seg} turns (${total} total)?` |
+| CLI 非 TUI | `thincoder-cli/src/command-interactive.mjs:113` | `[paused] Agent stopped after ${error.turn} turns — ${agent._turnSeq} turns total. Run in TUI to continue.` |
+| VSC | `thincoder-vscode/src/extension/panel-turn-loop.mjs:264` | `Agent reached ${e.turn} turns — ${agent._turnSeq} turns total. Continue from here?` |
+| 桌面 | `thincoder-desktop/src/main/turn-driver.mjs:105` | `Agent reached ${turn} turns — ${total} turns total. Continue from here?` |
+| 桌面注入缝 | `thincoder-desktop/src/main/turn-face.mjs:69` ∥ `:153` | `consentOf(key, turn, total)` ← 调用点传 `agent._turnSeq` |
+
+**取数**：`seg` = `error.turn`（撞帽点 ≡ 本段预算）；`total` = `agent._turnSeq`（链内累计）。**直读计数器，无 `?? 0` 兜底** —— 缺值印 0 会把「未跟踪」读作「零消耗」。
+
+### 6.2 测试读数
+
+```
+单元（本批档，收口后删除）：node --test docs/batches/2026-11-01-turncap-cumulative-progress.test.mjs
+  ⇒ tests 6 / pass 6 / fail 0
+集成（常驻）：node --test test/integration/turn-cap-progress.test.mjs
+  ⇒ tests 3 / pass 3 / fail 0
+全仓串扫：`turns (limit` 于 `*.mjs` / `*.js` / `*.ts` ⇒ 0 命中
+```
+
+**单元测试档已按「用毕即删」删除**（本批结束即无该档）；读数留在此行。
+**集成用例 = `test/integration/turn-cap-progress.test.mjs`**，落 `test/RTM.md` 故事 25 两行（25-1 / 25-2，均 ✅ 通过 · 2026-11-01 · 父侧执行）。
+
+### 6.3 门
+
+```
+doc_check(mode:"gate", target:"D:/teamcode/thincoder")
+docs = 本批档 ∥ docs/core/design/TURN-CAP-CONTINUE.md ∥ docs/cli/design/TUI-SESSION-VIEW.md
+       ∥ docs/core/requirements/TURN-CAP-CONTINUE.md ∥ test/RTM.md
+⇒ 见本节收口回执
+```
+
+### 6.4 评审轮 2 的九条（F1–F9）处置
+
+| # | 处置 |
+|---|---|
+| F1 悬空指针（设计档引需求档 `:43`，条目已迁 F10 在 `:26`） | **记于此，不返工**：设计档 §6.8 的「服务的需求」列以本行为准 = `docs/core/requirements/TURN-CAP-CONTINUE.md:26`（F10） |
+| F2 口径清尾（`:168` / `:193` 仍写三端） | **记于此**：口径 = 四面（`thincoder-cli/src/command-interactive.mjs:113` 已落）；`:168` 那句的射程是「带 `(limit` 括注的面」，本就只有三面 |
+| F3 函数层拆分计划 | **本条认账，另行承接**：`thincoder-cli/src/tui/agent-turn.mjs` 的 `runAgentTurnBody` 单函数体，本批只在其内改文案；拆分不在本批射程 |
+| F4 先例缺「对应设计节」 | **记于此**：对应设计节 = 本档 §4（先例注释 `thincoder-core/agent-tools/checkpoint.mjs:21` 自指） |
+| F5 记录面（两个 `### 1.7` · `:17` 时态） | **§1 是 append-only：不改旧行，以本行为准** —— 第一个 `1.7`（`:49`）与第二个 `1.7`（`:71`）是两节，后者实为 1.9；`:17` 的「它现在是 open」描述的是改写前的设计档，现文见 §2 |
+| F6 「未动」用改后词 | **认**：`其他错误` → `其余错误` 是重写内的同义替换（同一 else 支，代码注释本作「其余异常」）；「未动」判据 = 未做分段，不含零字符变化 |
+| F7 六单元可核性 | **认**：仅「收尾另补两件」一处可实证句层重组；其余五处不可核，记此 |
+| F8 机证强度 | **认**：反引号标识符集是单向包含且盲于裸文数字与缩进；本批的实质保障是**集成用例 3/3**（行为面），不是机证 |
+| F9 坐标漂移 | **以 §6.1 的现盘坐标为准**（设计档 §6.3/§6.4/§6.5 与批档 §2.12 记的是实施前号） |
+
+### 6.5 复核项
+
+- **§2 ↔ 盘对账**：受影响文件表六档与现盘一致（四面源码 + 桌面转口 + 注入缝）。
+- **暂缓批复核**：无。
+- **前批遗留交叉核对**：无。
+- **用户面文档同步**：撞帽卡是用户可见面，已按四面落；桌面端验收须重打包（`dist-r{3,4}` 内 `app.asar` 仍印旧串 —— 不在检索面内）。
+- **集成测试**：新增 1 个故事 2 行用例，`test/RTM.md` 已定号并执行；无既有行被破坏。
+
+### 6.6 本批自认
+
+**拿到的是用户一句「C15累计进度要啊」。** 而它下面压着一条从没被核实过的顾虑 —— `docs/core/design/TURN-CAP-CONTINUE.md` 的 D-TC10 当年写「改文案 = 动锁定串 / 提示面」，于是把一句本来该改的话留成了 `open`。**评审实扫：全仓零处测试断言这两句 —— 那条顾虑从来没有依据。**
+
+**代价的形状**：怕动锁定串 ⇒ 不写测试 ⇒ 更怕动 ⇒ 文案错着放了几个月，`(limit N)` 还在印一个印错的数。

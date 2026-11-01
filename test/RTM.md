@@ -291,8 +291,8 @@
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 25-1 | CLI 会话把 `agent.maxTurns` 调小，发一个跑得比它长的任务，撞帽后在卡上选 Continue，第二段再撞帽 | 第二张卡的两行都同时含两个数：`Ran 3 turns — 6 turns total. Continue?` 与 `Continue after 3 turns (6 total)?`——本段 3、累计 6，零 `(limit` | 待执行 | — | — | — | `test/integration/turn-cap-progress.test.mjs` |
-| 25-2 | 同一会话首段即撞帽（未续跑） | 首张卡 = `Ran 3 turns — 3 turns total. Continue?`（累计等于本段，两个数都在） | 待执行 | — | — | — | `test/integration/turn-cap-progress.test.mjs` |
+| 25-1 | CLI 会话把 `agent.maxTurns` 调小，发一个跑得比它长的任务，撞帽后在卡上选 Continue，第二段再撞帽 | 第二张卡的两行都同时含两个数：`Ran 3 turns — 6 turns total. Continue?` 与 `Continue after 3 turns (6 total)?`——本段 3、累计 6，零 `(limit` | ✅ 通过 | 2026-11-01 | 父侧（主 agent） | — | `test/integration/turn-cap-progress.test.mjs` |
+| 25-2 | 同一会话首段即撞帽（未续跑） | 首张卡 = `Ran 3 turns — 3 turns total. Continue?`（累计等于本段，两个数都在） | ✅ 通过 | 2026-11-01 | 父侧（主 agent） | — | `test/integration/turn-cap-progress.test.mjs` |
 
 ## VS Code 端（thincoder-vscode）
 

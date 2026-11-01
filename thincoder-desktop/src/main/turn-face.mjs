@@ -54,7 +54,8 @@ function techInfoOf(err) {
  *  `flights` = 在飞表（key → AbortController —— 单驱动器不变量）·
  *  `queuedPickup(key)` = 步边界取批缝供面（「回合中插入」批 —— 返回核 `consumeQueuedInput` 回调 ∥ `null`；缺省 ⇒ 不接缝）·
  *  `turnGate` = 回合代次面（`{ stamp(key, agent), revoked(key, agent) }` —— 中止墓碑两查位同源；缺省 ⇒ 零落位 ∥ 恒不判失）·
- *  `askContinue(key, turn)` = 撞帽询问缝（R3 · #505 —— 返回是否同意续跑；缺省 ∥ 非函数 ⇒ 视为拒绝：收口零静默续）·
+ *  `askContinue(key, turn, total)` = 撞帽询问缝（R3 · #505 —— `turn` = 本段轮数、`total` = 链内累计（两数入提示）；
+ *  返回是否同意续跑；缺省 ∥ 非函数 ⇒ 视为拒绝：收口零静默续）·
  *  `onCapCancelled(key, message)` = 撞帽拒径携文**核结算通知**（#543 裁定 A ∕ #656 · KD-52 ④ —— 询问按取消结算且本代 reason 携消息时单点消费；
  *  入队单点已前移至 `interrupt` 入口 ⇒ 本缝零二次入队；缺省 ⇒ 零动作）·
  *  `injectUserText(text)` = 用户文本注入缝（#632 · @ 文件引用对齐 —— 用户回合起跑前单点；缺省 ∥ 非函数 ⇒ 原样，向后兼容）。
@@ -65,7 +66,7 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
   const revokedTurn = (key, agent) => turnGate?.revoked?.(key, agent) === true
   /** 撞帽询问（R3 · #505 —— `askContinue` 注入面转口）：缺注入 ⇒ 视为拒绝（收口不静默续）；
    *  返回是否同意续跑（**严格布尔** —— 作答串比对住注入面 `turn-driver.mjs`）。 */
-  const consentOf = async (key, turn) => (typeof askContinue === "function" ? (await askContinue(key, turn)) === true : false)
+  const consentOf = async (key, turn, total) => (typeof askContinue === "function" ? (await askContinue(key, turn, total)) === true : false)
   /** 回合尾结算（#517 · KD-41）：标题生成 → 落盘 → **施加顺延**（`applyPendingPrefs`——2026-10-04 解锁批 · R3）；
    *  单实现（成功 ∕ 失败两径同源；两查位同源 = 回合代次面）。标题先于落盘 ⇒ 渲染面回合尾刷新读到即新值；
    *  等界 = 核件自持 10s（非致命，自吞错不在本档承担）。 */
@@ -147,7 +148,9 @@ export function createTurnFace({ post, run, bridge, postUsage, flights, queuedPi
               }
               return "stopped" // 无人值守档（消化 ∕ 上行 ∕ timer 轮）⇒ cap 即收口（核 D-TC15 同支，零自续）
             }
-            const consent = await consentOf(key, err.turn)
+            // 两个数（TURN-CAP-CONTINUE.md §6.1）：`err.turn` = 本段轮数、`agent._turnSeq` = 链内累计
+            // （直读计数器本身，不加 `?? 0` 兜底）；累计值只在本函数域可取 ⇒ 于此传参。
+            const consent = await consentOf(key, err.turn, agent._turnSeq)
             if (consent !== true || revokedTurn(key, agent)) { // 拒绝 ∥ 会话已中止（墓碑命中）⇒ stopped 结算
               // #543（裁定 A · 用户输入零丢失）∥ #656（KD-52 ④）：待答期携消息的 Ctrl+I（`interrupt` ⇒ `abort({ interrupt,
               // message })` + `denyGates` ⇒ 本询问按取消结算）—— 本代 `signal.reason` 携消息 ⇒ 经注入缝作**核结算通知**

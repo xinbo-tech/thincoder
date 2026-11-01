@@ -93,14 +93,16 @@ export function createTurnDriver({
   /** 撞帽待答登记（#656 · KD-52 ②）：key → 登记令牌 —— `interrupt` 入口预检判据（cap 待答 ∧ 携文）；
    *  询问结算（作答 ∥ 打断拒结算）即清（`.finally`；守卫 = 本次令牌 —— 防迟到清位误抹后次待答）。 */
   const capPending = new Map()
-  /** 撞帽续跑询问（R3 · #505 · KD-T8 薄形 —— 载体 = 既有待决门）：文案随 VSC `bindPanelAgent`
-   *  原文（词面内容权 = 主 agent —— 沿 R1 先例登记）；缺注入 ⇒ `null`（turn-face 按拒绝收口）。
+  /** 撞帽续跑询问（R3 · #505 · KD-T8 薄形 —— 载体 = 既有待决门）：文案 = TURN-CAP-CONTINUE.md §6.3
+   *  桌面模板（与 VSC 逐字同句——词面内容权 = 主 agent，沿 R1 先例登记）；缺注入 ⇒ `null`（turn-face 按拒绝收口）。
+   *  两数（同档 §6.1）：`turn` = 本段轮数、`total` = 链内累计——累计值在本档域外，由调用点
+   *  （`turn-face.mjs` 的 `agent` 在域处）传入。
    *  #656：待答态按会话键登记（`capPending` —— `interrupt` 入口预检判据，落点 = 本包装）。 */
   const askContinue = typeof askQuestion === "function"
-    ? (key, turn) => {
+    ? (key, turn, total) => {
       const token = {}
       capPending.set(key, token)
-      return askQuestion(key, `Agent reached ${turn} turns (limit). Continue from here?`, ["Continue", "Stop"])
+      return askQuestion(key, `Agent reached ${turn} turns — ${total} turns total. Continue from here?`, ["Continue", "Stop"])
         .then((answer) => answer === "Continue")
         .finally(() => { if (capPending.get(key) === token) capPending.delete(key) })
     }

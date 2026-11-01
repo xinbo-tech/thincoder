@@ -238,8 +238,14 @@ async function runAgentTurnBody(ctx, text, opts) {
           break
         }
         if (decision === "ask") {
+          // TURN-CAP-CONTINUE.md §6.1 ∕ §6.4（D-TC10）：撞帽提示给两个数——
+          // seg = 本段轮数（`ContinueError.turn`，撞帽点 ≡ 本段预算）、total = 链内累计（`_turnSeq` 计数器本身）。
+          // 直读 `agent._turnSeq`，不加 `?? 0`：缺值印 0 会把「未跟踪」读作「零消耗」（§6.1）。
+          // 上限不印（§6.2）：撞帽点本段上限 ≡ 本段轮数、累计上限 ≡ 累计轮数，印出来只有重复。
+          const seg = error.turn
+          const total = agent._turnSeq
           pushLabel(`❯ Continue`, ansi.bold + C.warn)
-          pushLine(`Ran ${error.turn} turns (limit ${error.turn}). Continue?`, C.warn)
+          pushLine(`Ran ${seg} turns — ${total} turns total. Continue?`, C.warn)
           // Pause to ask: reuse permission mechanism
           const willContinue = await new Promise((resolve) => {
             state.permission = {
@@ -247,7 +253,7 @@ async function runAgentTurnBody(ctx, text, opts) {
               args: { turns: error.turn },
               resolve,
             }
-            state.status = `Continue after ${error.turn} turns?`
+            state.status = `Continue after ${seg} turns (${total} total)?`
             render()
           })
           state.permission = null

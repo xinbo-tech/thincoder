@@ -108,7 +108,9 @@ export async function chatCommand(args, ctx) {
   } catch (error) {
     // 用 name 判断而非 instanceof：不依赖"与 runAgent 同一个模块实例"这一隐式约定
     if (error.name === "ContinueError") {
-      console.error(`\n[paused] Agent stopped after ${error.turn} turns. Run in TUI to continue.`)
+      // 两个数（TURN-CAP-CONTINUE.md §6.1 / §6.3 · D-TC10）：本段轮数 + 链内累计（直读 `agent._turnSeq`，
+      // 不加兜底——缺值印 0 会把「未跟踪」读作「零消耗」）；上限不印（§6.2 撞帽点两个上限均 ≡ 已示轮数）。
+      console.error(`\n[paused] Agent stopped after ${error.turn} turns — ${agent._turnSeq} turns total. Run in TUI to continue.`)
       exitSoon(0)
     } else {
       console.error(`\n[error] ${error.message}`)
