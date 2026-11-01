@@ -157,14 +157,15 @@
 
 ### 13. 建批档就有台账
 
-> 目的：`batch create` 一次调用同时成立「档」与「台账行」——不传号新建、传号接管；已归档 / 已结账 / 他批占用的行拒。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4；三态（行序）= 13-1 正常 · 13-2 正常 · 13-3 错误。
+> 目的：`batch create` 一次调用同时成立「档」与「台账行」——不传号新建、传号接管；已归档 / 已结账 / 他批占用的行拒；**同面有未决行时新建须声明新事**。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.4 ∥ `docs/core/design/LEDGER.md` §6.3（13-1 前提 ∥ 13-4 同面判）；四态（行序）= 13-1 正常 · 13-2 正常 · 13-3 错误 · 13-4 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 13-1 | 不传 `ledger` 建一档 | 台账 +1 行：`status = 在途` · `task_book` = 该档 · `trigger = 归批`；档头 `> 台账 = #N（… · 归批）` 写真实行号（无 `#<编号>` 占位） | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
+| 13-1 | 同面无未决行时不传 `ledger` 建一档 | 台账 +1 行：`status = 在途` · `task_book` = 该档 · `trigger = 归批`；档头 `> 台账 = #N（… · 归批）` 写真实行号（无 `#<编号>` 占位） | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
 | 13-2 | 传一条 `待讨论` 行的号建一档 | 该行变 `在途`、指针回填本档；不新建行（行数不变） | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
 | 13-3 | 传一条 `已核销` 行的号建一档 | 拒（拒文含 `an archived row cannot carry a new batch record`）；档零落盘；行逐列零改 | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
+| 13-4 | 同一 `board` 面预置一条未决行（`待讨论`），再省略 `ledger` 建一档；随后改携 `newDebt` 重试 | 第一次拒：拒文列该行（`#<id> <status> <title>`）、批档零落盘、台账零行写入；第二次成功：档落盘、新行 `evidence` 含 `新事理由：` 前缀、本批收口回执引该理由一行 | 待执行 | — | — | — | `test/integration/batch-ledger-bind.test.mjs` |
 
 ### 14. 评审过、收口清、重开回
 

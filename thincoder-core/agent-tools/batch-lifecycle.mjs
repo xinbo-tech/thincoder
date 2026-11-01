@@ -40,7 +40,7 @@ import {
   findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, sectionHasStatusLine, sectionHeaderRe,
   updateSectionStatusLine,
 } from "./batch-skeleton.mjs"
-import { assertCloseoutGates, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
+import { assertCloseoutGates, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
 import { assertSingleLineNote, reclaimOnReopen, reopenReasonError, reopenReceiptLine, rewriteAsReopen, todayLocal } from "./batch-reopen.mjs"
 import { gateReceiptLine } from "./batch-gate.mjs"
 import { batchPathKey, executeConsumeDesignAction, unionBatches, unionSlots } from "./design-slots.mjs"
@@ -262,7 +262,7 @@ export async function statusBatchRecord({ args, ctx, review, pickTarget, onWritt
   // `reanchorOnClose`（不复制 close 径逻辑）；次序位 = 状态行写盘之后。本笔被任一拒因拒 ⇒ 上面各门
   // 早 throw，台账零写（被拒的收口没有收口）。一次收口只出一份清单。
   const reanchor = closingValue && readBatchStatusLine(src) !== "closed" ? await reanchorOnClose(abs, ctx?.agent?.cwd) : null
-  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}`
+  return `batch: §${seg} status line updated to ${JSON.stringify(lineValue)} — the freeze gate (§1) is a read-only domain for non-§1 writes (frozen truth stays = the §1 line).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}`
 }
 
 /**
@@ -291,7 +291,7 @@ export async function closeBatchRecord({ args, ctx, review, pickTarget, onWritte
   onWritten?.(ctx?.agent ?? {}, abs)
   // 收口重锚（§6.2 · C · AC-M2-30）：顺序位 = 全部拒因通过、§1 状态行写盘**之后**——close 被拒 ⇒ 台账零写。
   const reanchor = await reanchorOnClose(abs, ctx?.agent?.cwd)
-  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}`
+  return `batch: §1 status line → 「已收口 ${date}」 — the record is frozen: append is refused from now on, and status is refused except the reopen conjunction (§1 → 进行中 with a note) (整档冻结；改 = 新批新档; §6 内容与台账核销仍走既有通道).${gateReceiptLine(gate)}${designTokensReceiptLine(designTokens)}${reanchorReceiptLine(reanchor)}${newDebtReasonReceiptLine(reanchor)}`
 }
 
 // ─── 收口自动消费本批设计凭证（DESIGN-TOKEN-SETTLEMENT §10——单源，close ∥ status 两通路同调）──
@@ -340,15 +340,27 @@ function designTokensReceiptLine(result) {
  *  `cwd` = **批档所属项目根** = `resolveLedgerRoot(dirname(<batchDoc>), boundary)?.root`——**不用会话锚**
  *  （多根工作区锚会收到别的项目根 ⇒ 选行零命中 ⇒ 唯一的机器写静默失效）。
  *  `boundary` = 上溯上界 = **会话锚**（**必传**——缺值即当场失败，回执以 `failed` 点名；不落进程 cwd）。无根 ⇒ 传 `null`（核心不取行、不重锚，`failed` 点名）。
- *  `batch` = 项目根相对路径（复启句的 `<批名>` 即其文件部分）。失败**不抛**（台账忙 ∥ 无根均不否决收口）。 */
+ *  `batch` = 项目根相对路径（复启句的 `<批名>` 即其文件部分）。失败**不抛**（台账忙 ∥ 无根均不否决收口）。
+ *  **返回形** = `ledgerReanchorBatch` 返回形 + `newDebtReasons`（本批行中 `evidence` 带 `新事理由：` 前缀者；
+ *  取不到本批行 ⇒ 空集）——**只取不写**，格式化成回执段的是 `newDebtReasonReceiptLine`。 */
 async function reanchorOnClose(abs, boundary) {
   try {
-    const { ledgerReanchorBatch, resolveLedgerRoot } = await import("../ledger.mjs") // 动态 import：ledger-db 静态引 node:sqlite（W8 契约②）
+    const { ledgerBatchRows, ledgerReanchorBatch, resolveLedgerRoot } = await import("../ledger.mjs") // 动态 import：ledger-db 静态引 node:sqlite（W8 契约②）
     const root = resolveLedgerRoot(dirname(abs), boundary)?.root ?? null
     // 句内路径统一正斜杠（与 `task_book` 列值同形——`<批名>` 是给人读的事实句，不是平台路径）
-    return ledgerReanchorBatch({ cwd: root, batch: root ? relative(root, abs).replace(/\\/g, "/") : abs, boundary })
+    const batch = root ? relative(root, abs).replace(/\\/g, "/") : abs
+    const result = ledgerReanchorBatch({ cwd: root, batch, boundary })
+    // 新事理由读面（设计档 §6.3）：本批行（任意状态）中 `evidence` 带 `新事理由：` 前缀者随返回形带回——
+    // **只引不写**（行改写语义零动）；取不到本批行 ⇒ 空集（不出该段、收口不被否决，同 `failed` 降级口径）
+    let newDebtReasons = []
+    try {
+      newDebtReasons = ledgerBatchRows({ cwd: root, batch, boundary })
+        .map((r) => ({ id: Number(r.id), reason: newDebtReasonOf(r.evidence) }))
+        .filter((r) => r.reason !== null)
+    } catch { newDebtReasons = [] }
+    return { ...result, newDebtReasons }
   } catch (e) {
     // 非预期异常（模块加载失败 ∥ 根推导内读声明抛）同样不得否决收口——降为同一返回形（台账零写）
-    return { batch: abs, reanchored: [], alreadyAnchored: [], failed: String(e?.message ?? e) }
+    return { batch: abs, reanchored: [], alreadyAnchored: [], failed: String(e?.message ?? e), newDebtReasons: [] }
   }
 }

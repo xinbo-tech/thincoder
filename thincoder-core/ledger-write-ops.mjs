@@ -19,7 +19,7 @@
  */
 import { resolve } from "node:path"
 
-import { ALLOWED_MIGRATIONS, nowIso, openLedger, resolveLedgerRoot, ROUND_MARKER } from "./ledger-db.mjs"
+import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER } from "./ledger-db.mjs"
 import { resolveDeclaredRef } from "./declaration.mjs"
 import { assertCloseOutProof, filePartOf, namesPointer } from "./ledger-close-proof.mjs"
 
@@ -193,6 +193,66 @@ const bindArchivedError = (n, status) => `batch: ledger entry #${n} is ${status}
 const bindOwnedError = (n, path) => `batch: ledger entry #${n} is 在途 and its task_book points at ${path} — another batch owns it; a record may take over a row only when its task_book points at this record. Nothing was written.`
 const bindSettledError = (n) => `batch: ledger entry #${n} is 待核销 — a row already settled to 待核销 cannot carry a new batch record (reopen the record that owns it with batch status, or open a new row instead). Nothing was written.`
 
+// ─── 开批同面判（设计档 §6.3 · AC-M2-37；判点 = 写形开户之前）──────────────────────────
+
+/** 新事理由的 `evidence` 前缀（单源 = 设计档 §6.3「参数面」；写入侧造前缀、收口侧按同一字面取文——
+ *  读面对 = `thincoder-core/agent-tools/batch-closeout.mjs` 的 `newDebtReasonOf`，两处同一字面、
+ *  不进公共导出面）。 */
+const NEW_DEBT_EVIDENCE_PREFIX = "新事理由："
+/** 候选逐行上限（§6.3「上限」——超出改出计数句；一眼读完才叫「见该接哪行」）。 */
+const SAME_FACE_LIST_LIMIT = 10
+
+/** 面归一等（§6.3「面 = 本笔 `board`」）：缺省 / 空串 / 全空白 ⇒ `null` = **无板面**（`board IS NULL`）。 */
+const faceOf = (board) => {
+  const v = board == null ? "" : String(board).trim()
+  return v === "" ? null : v
+}
+
+/** 同行是否在本面（**等值口径同 §7.1 `board` 过滤——零新口径**）：无板面 = `board IS NULL`（严格 NULL，
+ *  不是「空白串也算无板面」）；有板面 = 与行值严格相等（SQL `board = ?` 的同一判等）。 */
+const onSameFace = (rowBoard, face) => (face === null ? rowBoard == null : rowBoard === face)
+
+/** 同携拒文（逐字 = 设计档 §6.3 第二段围栏；`newDebt` 与 `ledger` 语义互斥）。 */
+const newDebtAndLedgerError = () => `batch: newDebt and ledger are mutually exclusive — take over a debt already in the pool with ledger:"#N"; declare a new debt with newDebt:"<reason>". Both together is ambiguous. Nothing was written.`
+
+/**
+ * 同面拒文（逐字 = 设计档 §6.3 第一段围栏）：首行点名面与未决数 + 逐行候选（`id` 升序、至多 10 行）+
+ * 截断时的计数句与自取命令 + 收尾 `Nothing was written.`。无板面 ⇒ 面名 `no board`，自取句不带
+ * `board` 参数（无板面没有板名可填；不带过滤的查询回全池，余数仍准）。
+ * @param {string|null} face — 面（`null` = 无板面）
+ * @param {{id:number, status:string, title:string}[]} candidates — 本面未决行（`id` 升序）
+ */
+function sameFaceRefusal(face, candidates) {
+  const shown = candidates.slice(0, SAME_FACE_LIST_LIMIT)
+  const rest = candidates.length - shown.length
+  const lines = [
+    `batch: ${candidates.length} unsettled row(s) already exist on this face — create refuses to open a new ledger row silently (face = ${face ?? "no board"}). Either take one over with ledger:"#<id>", or declare a genuinely new debt with newDebt:"<one line: why it is not one of these>". Candidates:`,
+    ...shown.map((r) => `  #${r.id} ${r.status} ${r.title}`),
+  ]
+  if (rest > 0) {
+    lines.push(face === null
+      ? `… ${rest} more not listed — read the rest with the ledger tool (action query).`
+      : `… ${rest} more not listed — read the rest with the ledger tool (action query, board:"${face}").`)
+  }
+  lines.push("Nothing was written.")
+  return lines.join("\n")
+}
+
+/**
+ * 同面取集（设计档 §6.3「候选行集与次序」）：`ledgerQuery` 取全行、核内按面与状态筛——零新 SQL、
+ * 零新导出。取集走**读形**开户（`ledgerQuery` 内部 `openLedger(readOnly)` ⇒ `create` 缺省假、库档不在
+ * 即返空集），故此步不建库档。`ledger-cmd` 反向 import 本档（防环）⇒ 此处动态 import。
+ * @returns {Promise<{n:number, m:number, candidates:object[]}>} 本面未决数 ∥ 他面未决数（读数）∥ 候选
+ */
+async function sameFaceScan({ cwd, boundary, face }) {
+  const { ledgerQuery } = await import("./ledger-cmd.mjs")
+  const pending = ledgerQuery({ cwd, boundary }).filter((r) => PENDING_STATUSES.includes(r.status))
+  const mine = pending.filter((r) => onSameFace(r.board, face))
+  // 排序即判据（§6.3）：`id` 升序 = 最老欠条优先（与 §3.7 出口面 `aged` 同轴）——候选表读作「从上往下先看」
+  mine.sort((a, b) => Number(a.id) - Number(b.id))
+  return { n: mine.length, m: pending.length - mine.length, candidates: mine }
+}
+
 /**
  * 建档 = 建台账行（设计档 §2.4——单事务在台账侧，档写在事务窗口内，**落档先于指针写入**）：
  *   `BEGIN IMMEDIATE` → （新建）INSERT 一行 `待讨论`（无指针；`trigger` 不填——`trigger=归批` 与
@@ -203,12 +263,27 @@ const bindSettledError = (n) => `batch: ledger entry #${n} is 待核销 — a ro
  * 崩在窗口内（行已 INSERT ∥ 已改、`COMMIT` 未执行、档已落盘）：SQLite 回滚事务 ⇒ 行回原态；档在盘且无行
  * 指它 ⇒ 不是活批档（锁照拦）。清理只删**本笔所建**的档（`created` 由调用方按返回值判断——`wx` 撞已有
  * 同名档时抛 EEXIST，无条件 unlink 会删掉别人的档）。
- * @param {{cwd:string, ledgerNo:number|null, targetAbs:string, taskBook:string, title:string, kind:string,
- *   board:string|null, boundary?:string, executorSessionId?:string|null, agent?:object}} o
+ *
+ * **开批同面判**（设计档 §6.3 · AC-M2-37）：省略 `ledger` ∧ 同面（本笔 `board`；未给 ⇒ `board IS NULL`）
+ * 存在未决四态行 ⇒ 必须显式声明 `newDebt:"<一句理由>"`，否则**在写形开户之前**拒（逐行列候选）。
+ * 因此「零写 = 二件」（无行写入 ∥ 无批档写入）是结构挣来的，不靠判后回滚；判前取集走读形开户，不建库档。
+ * 理由落本笔新开行的 `evidence`（前缀 `新事理由：`）；`ledger:"#N"` 在场 ⇒ 本节零判（接手路径零回归）。
+ * @param {{cwd:string, ledgerNo:number|null, newDebt:string|null, targetAbs:string, taskBook:string, title:string,
+ *   kind:string, board:string|null, boundary?:string, executorSessionId?:string|null, agent?:object}} o
+ *   `newDebt` = 非空字符串（为什么这不是候选里那几条）；空串 ∥ 全空白 ⇒ 按未给判；与 `ledger` 同携 ⇒ 拒。
  * @param {(id:number)=>void} writeRecord — 写批档（`wx` 独占创建；真实行号已可得）
- * @returns {{id:number, created:boolean, tookOver:"new"|"discussed"|"designed"|"live"}}
+ * @returns {Promise<{id:number, created:boolean, tookOver:"new"|"discussed"|"designed"|"live",
+ *   sameFace:{face:string|null, n:number, m:number, declared:string|null}|null}>} `sameFace` = 同面判读数
+ *   （`null` = 接手路径）；`n` = 本面未决数 · `m` = 他面未决数（读数，不拦）· `declared` = 声明的新事理由
  */
-export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, title, kind = "tech_todo", board = null, boundary, executorSessionId = null, agent = {} }, writeRecord) {
+export async function ledgerBindBatch({ cwd, ledgerNo = null, newDebt = null, targetAbs, taskBook, title, kind = "tech_todo", board = null, boundary, executorSessionId = null, agent = {} }, writeRecord) {
+  const face = faceOf(board)
+  const newDebtReason = typeof newDebt === "string" && newDebt.trim() !== "" ? newDebt.trim() : null // 空串 ∥ 全空白 ⇒ 按未给判
+  if (ledgerNo != null && newDebtReason) throw new Error(newDebtAndLedgerError()) // 语义互斥：`ledger` 在场即接手，不是新事
+  // 开批同面判（§6.3）：判点 = 写形开户之前；`ledger` 在场 ⇒ 本节零判（接手路径零回归）
+  const scan = ledgerNo == null ? await sameFaceScan({ cwd, boundary, face }) : null
+  if (scan && scan.n > 0 && !newDebtReason) throw new Error(sameFaceRefusal(face, scan.candidates))
+  const sameFace = scan ? { face, n: scan.n, m: scan.m, declared: newDebtReason } : null
   const db = openLedger(cwd, { create: true, boundary })
   try {
     const base = baseOf(cwd, boundary)
@@ -218,10 +293,11 @@ export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, tit
       let id = null
       let created = false
       if (ledgerNo == null) {
-        // 步 2：先落一行不带指针的 `待讨论`（`在途` 被 DDL 咬合 CHECK 强制非空指针）+ `trigger` 不填
+        // 步 2：先落一行不带指针的 `待讨论`（`在途` 被 DDL 咬合 CHECK 强制非空指针）+ `trigger` 不填；
+        // 声明新事者同拍带理由入 `evidence`（步 4 的值计算在 `patch.evidence` 缺省时保留行现值）
         const now = nowIso()
-        const r = db.prepare(`INSERT INTO items (kind, status, title, board, created_at, updated_at) VALUES (?, '待讨论', ?, ?, ?, ?)`)
-          .run(kind, title, board, now, now)
+        const r = db.prepare(`INSERT INTO items (kind, status, title, board, evidence, created_at, updated_at) VALUES (?, '待讨论', ?, ?, ?, ?, ?)`)
+          .run(kind, title, board, newDebtReason ? `${NEW_DEBT_EVIDENCE_PREFIX}${newDebtReason}` : null, now, now)
         id = Number(r.lastInsertRowid)
         created = true
         row = db.prepare("SELECT * FROM items WHERE id = ?").get(id)
@@ -238,7 +314,7 @@ export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, tit
           // 接管（不动状态、零台账写）：档可能已不在盘（残留态）——照写一次 `wx`，撞已有档时由调用方报
           writeRecord(id)
           db.exec("COMMIT")
-          return { id, created: false, tookOver: "live" }
+          return { id, created: false, tookOver: "live", sameFace }
         }
       }
       // 步 3：落档——必须先于步 4（写门两形都判「解析出的档在盘」）
@@ -246,7 +322,7 @@ export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, tit
       // 步 4：行写入走同一函数体（迁移表 → 标记门 → 机检 → executor → 写门 → UPDATE），不直写 SQL
       applyRowUpdateTx(db, cwd, row, { status: "在途", task_book: taskBook, trigger: "归批" }, executorSessionId, boundary, { base, agent })
       db.exec("COMMIT")
-      return { id, created, tookOver: created ? "new" : row.status === "待设计" ? "designed" : "discussed" }
+      return { id, created, tookOver: created ? "new" : row.status === "待设计" ? "designed" : "discussed", sameFace }
     } catch (e) {
       try { db.exec("ROLLBACK") } catch { /* 事务未开 / 已结 */ }
       throw e

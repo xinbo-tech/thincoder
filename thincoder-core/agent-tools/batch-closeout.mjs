@@ -134,3 +134,37 @@ export function reanchorReceiptLine(result) {
   }
   return lines.join("")
 }
+
+/** 新事理由的 `evidence` 前缀（单源 = `docs/core/design/LEDGER.md` §6.3「参数面」；写入侧由
+ *  `thincoder-core/ledger-write-ops.mjs` 的 `NEW_DEBT_EVIDENCE_PREFIX` 造，本档按同一字面取文）。 */
+const NEW_DEBT_PREFIX = "新事理由："
+/** `evidence` 追加相接符（追加形 `旧｜新` 零空格——§6.3「取文」）。 */
+const EVIDENCE_JOINER = "｜"
+
+/**
+ * 取一行新事理由（设计档 §6.3「取文」）：`evidence` 中 `新事理由：` 之后、至首个 `｜`（追加相接符）
+ * 或串尾的一段。无该前缀 ∥ 取到空串 ⇒ `null`（负向锁：不是本机制写的行不引）。**只读**——不改入参。
+ * @param {string|null} evidence — 行 `evidence` 原值
+ * @returns {string|null} 理由原文 ∥ `null`
+ */
+export function newDebtReasonOf(evidence) {
+  const s = String(evidence ?? "")
+  const at = s.indexOf(NEW_DEBT_PREFIX)
+  if (at < 0) return null
+  const rest = s.slice(at + NEW_DEBT_PREFIX.length)
+  const cut = rest.indexOf(EVIDENCE_JOINER)
+  const value = (cut < 0 ? rest : rest.slice(0, cut)).trim()
+  return value === "" ? null : value
+}
+
+/**
+ * 收口回执的新事理由引文段（逐字 = 设计档 §6.3「理由的读面与时点」：`  新事理由（#<id>）：<理由原文>`）。
+ * 读者 = 本批收口那一笔的主 agent · 时点 = 本批收口。**零新清单、只引不写**：纯格式化、零库访问、
+ * 不改入参；一条理由一行。取不到本批行 ⇒ 入参无该键 ⇒ 不出该段（收口不被否决）。
+ * @param {{newDebtReasons?:{id:number, reason:string}[]}|null} result — `reanchorOnClose` 返回形
+ * @returns {string} 以换行起头；无引文 ⇒ 空串
+ */
+export function newDebtReasonReceiptLine(result) {
+  const rows = result?.newDebtReasons ?? []
+  return rows.map((r) => `\n  新事理由（#${r.id}）：${r.reason}`).join("")
+}

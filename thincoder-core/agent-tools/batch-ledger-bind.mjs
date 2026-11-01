@@ -52,18 +52,33 @@ function parseLedgerNo(raw) {
   if (v == null || v === "") return null
   const m = /^#?\s*(\d+)$/.exec(String(v).trim())
   if (!m) {
-    throw new Error(`batch: ledger must be a ledger entry number (e.g. "#1830") — got ${JSON.stringify(raw)}. Pass an existing number, or omit ledger and let create open a new row. Nothing was written.`)
+    throw new Error(`batch: ledger must be a ledger entry number (e.g. "#1830") — got ${JSON.stringify(raw)}. Pass an existing number, or omit ledger — with no unsettled row on the same face that opens a new row; otherwise pass newDebt:"<why this is a new debt>". Nothing was written.`)
   }
   return Number(m[1])
+}
+
+/** `newDebt` 参归一（设计档 §6.3「参数面」）：trim；空串 / 全空白 ⇒ `null`（按未给判——没声明新事）。 */
+function normalizeNewDebt(raw) {
+  const v = typeof raw === "string" ? raw.trim() : ""
+  return v || null
+}
+
+/** 同面判回执增量（设计档 §6.3「回执增量（成功路径）」逐字）：面名 + 本面未决数 + 他面未决读数。
+ *  `n = 0` 半幅也打（免得把「本面无候选」读成「池子空」——他面读数同列）；接手路径无此段（该径零判）。
+ *  `declared` 缺省 ⇒ `—`（本仓「无值」的既有形，同档头 `台账 = #N（… · —）`）。 */
+function sameFaceReceiptLine(check) {
+  if (!check) return ""
+  return `\nsame-face check: face = ${check.face ?? "no board"} · unsettled on this face = ${check.n} (n = 0 ⇒ nothing to take over; n > 0 ⇒ declared a new debt: ${check.declared ?? "—"}) · unsettled on other faces = ${check.m} (a reading; never blocks).`
 }
 
 /**
  * create——建档（§4.11 + §2.4，仅 depth-0）：六段骨架一次预齐，台账行同拍成立。
  * 不传 `ledger` ⇒ 新建一行（`在途` · `kind` = `board` 给则 `requirement` 否则 `tech_todo` · `title` = `topic` ·
- * `task_book` = 本档相对指针 · `trigger` = `归批`）；传 `#N` ⇒ 接管该行（`待讨论` / `待设计` → `在途`；
+ * `task_book` = 本档相对指针 · `trigger` = 归批）——**同面（本笔 `board`）无未决行时如此；有则须 `newDebt:"<一句理由>"`，
+ * 两者皆无 ⇒ 拒并列候选**（设计档 `docs/core/design/LEDGER.md` §6.3）；传 `#N` ⇒ 接管该行（`待讨论` / `待设计` → `在途`；
  * `在途` 且指针指回本档 ⇒ 零台账写；其余 ⇒ 三形拒文，见 §2.4）。
  * 档头 `台账` 行由**真实行号**填（`board` 未给 ⇒ 括注 `—`，不拒）。
- * @returns {Promise<string>} 成功消息（含落盘绝对路径与行号）
+ * @returns {Promise<string>} 成功消息（含落盘绝对路径、行号与同面判读数）
  */
 export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritten }) {
   assertMainAgentOnly(ctx, "create", review)
@@ -95,6 +110,7 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
   }
   const board = normalizeBoard(args?.board)
   const ledgerNo = parseLedgerNo(args?.ledger)
+  const newDebt = normalizeNewDebt(args?.newDebt)
   const date = typeof args?.date === "string" && args.date.trim() ? args.date.trim() : todayLocalIso()
   // F11-B：prev 幂等 strip——调用方自带「前情 = 」前缀（单或重复）一并剥净；默认值形态「零变」。
   const prevRaw = typeof args?.prev === "string" ? args.prev.trim() : ""
@@ -133,6 +149,7 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
     result = await ledgerBindBatch({
       cwd: root,
       ledgerNo,
+      newDebt,
       targetAbs: abs,
       taskBook,
       title: topic,
@@ -155,7 +172,7 @@ export async function createBatchRecord({ args, ctx, review, cwd, bases, onWritt
     throw wrapped
   }
   const took = result.tookOver === "new" ? "opened" : result.tookOver === "live" ? "taken over (already live — zero ledger write)" : "taken over"
-  return `batch: created ${abs} — six-section skeleton written (§1 status line carries the gate-legal 「进行中」 placeholder); ledger row #${result.id} ${took} in the same call (row status = 在途 · task_book = ${taskBook} · trigger = 归批). header 台账 line filled (#${result.id} · ${board ?? "—"}).`
+  return `batch: created ${abs} — six-section skeleton written (§1 status line carries the gate-legal 「进行中」 placeholder); ledger row #${result.id} ${took} in the same call (row status = 在途 · task_book = ${taskBook} · trigger = 归批). header 台账 line filled (#${result.id} · ${board ?? "—"}).${sameFaceReceiptLine(result.sameFace)}`
 }
 
 /** 本地今天（YYYY-MM-DD）——create 的缺省 date。 */

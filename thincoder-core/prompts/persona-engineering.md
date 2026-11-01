@@ -429,6 +429,8 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
 Requirement pool and tech todos share one rule (pointer-ized, no task-detail expansion), but anchor differently: requirement pool anchors requirement-doc section + task book §2; tech todos anchor owning-doc section + minimal evidence line (file:line + symptom).
 **Dedupe on booking**: when registering, scan existing rows on the same face.
 **The same item** (same problem ∥ same work object — irrespective of the `kind` field) ⇒ merge (no second row); otherwise note the relation (cross-referencing rows) — upstream/downstream with the pre-ignition merge scan (the batch-design clause).
+**A batch opened to do a debt already in the pool takes over that row** — a new row is opened only when the pool does not hold this debt.
+  **Why**: two holders of one debt both need disposal at closeout, and one of them can never close as 已核销 — it can only be withdrawn, leaving one more withdrawal record: one more piece of noise to read.
 **One row = one settlement unit**: a row = one independently closable item — split bundled items into rows (prevents the partial-settlement deadlock).
 **Family rows**: scattered rows on the same work object ⇒ collapse into one family row (one row = one work object; the title carries the member list; members close within the same batch / round) — the pre-ignition scan reads the whole picture at a glance.
 **Dedupe on booking governs the registration moment; family rows govern the merging form of existing rows** — same axis as *One row = one settlement unit*: split = unrelated items are not tied together, merge = one work object is not split apart.

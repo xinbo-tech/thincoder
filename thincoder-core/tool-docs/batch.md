@@ -1,4 +1,6 @@
-Batch-record lifecycle tool (一段一作者 — six append-only sections, one author each). actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation)
+Batch-record lifecycle tool (一段一作者 — six append-only sections, one author each). actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation;
+
+ledger:"#N" takes over an existing row, and omitting ledger opens a new row only when no unsettled row exists on the same board — otherwise create is refused with the candidate list and you pass newDebt:"<why this is a new debt>" or ledger:"#<id>")
 
 · append (add text to the END of YOUR section — existing lines are never rewritten or deleted)
 

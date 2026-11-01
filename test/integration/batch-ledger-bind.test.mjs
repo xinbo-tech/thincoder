@@ -36,6 +36,20 @@ function makeProject(tag) {
   return root
 }
 const ctxOf = (root) => ({ depth: 0, agent: { cwd: root, config: { agent: { engineering: true } } } })
+/** 收口用 ctx：`engineering: false` ⇒ 零设计凭证段（本例只断言理由引文行）。 */
+const closeCtxOf = (root) => ({ depth: 0, agent: { cwd: root, config: { agent: { engineering: false } } } })
+/** 补齐收口链（§2 / §3 / §4 / §6 各有内容 + §3 状态行 = 评审通过）—— 13-4 要跑真收口。 */
+function fillChain(root, rel) {
+  const abs = join(root, rel)
+  const out = []
+  for (const line of readFileSync(abs, "utf8").split("\n")) {
+    const m = /^## §(\d)/.exec(line)
+    if (!m) { out.push(line); continue }
+    out.push(line, "", `集成夹具内容（§${m[1]}）。`, "")
+    if (m[1] === "3") out.push("**状态行**：评审通过", "")
+  }
+  writeFileSync(abs, out.join("\n"))
+}
 const tool = batchTool(null)
 const rowsOf = (root) => ledgerQuery({ cwd: root, boundary: root })
 const headerOf = (root, rel) => readFileSync(join(root, rel), "utf8").split("\n").find((l) => l.startsWith("> 台账"))
@@ -81,4 +95,28 @@ test("13-3 传 已核销 号 ⇒ 拒，档零落盘、行零改", async () => {
   )
   assert.equal(existsSync(join(root, "docs/batches/new.md")), false, "档零落盘")
   assert.deepEqual(rowsOf(root).find((r) => r.id === id), before, "行零改")
+})
+
+test("13-4 同面有未决行：省略 ledger ⇒ 拒并列该行（零写）；携 newDebt ⇒ 档落盘 + 理由入 evidence", async () => {
+  const root = makeProject("13-4")
+  const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "池里的旧欠条", board: "core" }, boundary: root })
+  const before = rowsOf(root)
+  await assert.rejects(
+    () => tool.execute({ action: "create", path: "docs/batches/v.md", topic: "v", source: "集成夹具", board: "core" }, ctxOf(root)),
+    (e) => {
+      assert.match(e.message, /^batch: 1 unsettled row\(s\) already exist on this face/)
+      assert.ok(e.message.includes(`  #${id} 待讨论 池里的旧欠条`), "拒文列该行")
+      return true
+    },
+  )
+  assert.equal(existsSync(join(root, "docs/batches/v.md")), false, "批档零落盘")
+  assert.deepEqual(rowsOf(root), before, "台账零行写入")
+  await tool.execute({ action: "create", path: "docs/batches/v.md", topic: "v", source: "集成夹具", board: "core", newDebt: "这是另一件事" }, ctxOf(root))
+  const created = rowsOf(root).find((r) => r.task_book === "docs/batches/v.md")
+  assert.equal(created.evidence, "新事理由：这是另一件事", "理由入新行 evidence")
+  assert.equal(created.status, "在途")
+  // 理由读面：本批收口回执引一行（设计档 LEDGER.md §6.3「理由的读面与时点」）
+  fillChain(root, "docs/batches/v.md")
+  const receipt = await tool.execute({ action: "close", path: "docs/batches/v.md" }, closeCtxOf(root))
+  assert.ok(receipt.includes(`  新事理由（#${created.id}）：这是另一件事`), "本批收口回执引该理由一行")
 })

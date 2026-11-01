@@ -303,7 +303,11 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         ledger: {
           type: "string",
-          description: "create only — optional: an existing ledger entry number to take over (e.g. \"#1830\"; a leading # is optional). Omit it and create opens a NEW ledger row in the same call (status 在途 · task_book = this record · trigger 归批); pass an archived / settled / foreign-owned row and create is refused. create and the ledger row are one action — there is no separate registration step.",
+          description: "create only — optional: an existing ledger entry number to take over (e.g. \"#1830\"; a leading # is optional). Omit it and create opens a NEW ledger row in the same call (status 在途 · task_book = this record · trigger 归批) — but only when no unsettled row exists on the same face (board); otherwise create is refused and lists the candidates, and you pass either ledger:\"#<id>\" to take one over or newDebt:\"<why this is not one of them>\". Pass an archived / settled / foreign-owned row and create is refused. create and the ledger row are one action — there is no separate registration step.",
+        },
+        newDebt: {
+          type: "string",
+          description: "create only — optional: one line saying why this batch is a NEW debt rather than one of the unsettled rows already on the same face (board). Required only when you omit ledger while that face has unsettled rows; the reason lands in the new row's evidence and is quoted in this record's closeout receipt. Omit both ledger and newDebt while unsettled rows exist ⇒ create is refused with the candidate list.",
         },
         board: {
           type: "string",

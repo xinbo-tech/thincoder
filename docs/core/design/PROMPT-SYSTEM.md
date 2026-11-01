@@ -5226,6 +5226,97 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 1. 〔父侧 · 知会〕句一的 why 按包分开写，与 §1.3 中文定稿的「让该包 `npm test` 恒红」分叉：实读五面各归其面——cli ∥ core 包入口无条件 exit 1（`thincoder-cli/test/run.mjs:40-41` ∥ `thincoder-core/test/run.mjs:39-40`），错位档只把常态说明串换成收集面拒串；vscode ∥ desktop 空集 exit 0、未登记即 fail（`thincoder-vscode/test/run.mjs:48` ∥ `thincoder-desktop/test/run.mjs:36`）⇒ 绿→红；render-core 单层 glob 顶层档照跑（`thincoder-render-core/test/run.mjs:81`，只有嵌套档判错位 `:38-40`）⇒ 假绿。读数面落在 `docs/core/design/TESTING.md` §2.3 表（`:126` 改实读 ∥ `:128` 拆面）∥ §2.4。
 2. 〔父侧 · 编号〕§7 本席落 D-PS50（顺 D-PS49 下一位）；编号可由父侧收口时改。
 
+### 6.59 开批即接手（`thincoder-core/prompts/persona-engineering.md` · 条文 +2 行）
+
+**来源**：本批 §1（父侧实测五实例：`#1912` 建批时自动开新行而同面 `#1900` / `#1909` / `#1910` / `#1911` 四条未决；今晚 `#1924` 被 `#1926` 再开一行 ⇒ 只能按重复撤回）· 台账 `#1927`。
+
+**判（本席本轮实读）**
+
+- **规则在，位置错**：池里只有一条覆盖行 ⇒ 必须 `ledger:"#N"` 接手——该句写在「台账」节，而违规发生在**开批那一秒**（那一刻的心思是「我要做一件新事」），两处不相邻即不触发。
+- **既有唯一扫描义务扫错面**：`thincoder-core/prompts/persona-engineering.md:430` 逐字 `**Dedupe on booking**: when registering, scan existing rows on the same face.`——它扫的是**登记面**，不是「我十天前写下的欠条」。
+- **两句分工**：结构兜底管「开不出来」（机械，`docs/core/design/LEDGER.md` §6.3——拒文自带候选清单：`id` 升序 = 最老欠条优先、至多 10 行、超出行数给计数与自取命令 ⇒ 读者一眼见该接哪行）；提示词管「知道该接谁」（判断）。
+- **为什么提示词治不了**：项目判据（`docs/core/design/TESTING.md` §3.5）立论——每条纪律要能回答「靠哪个结构兜底」；本句落笔前无结构，只靠自觉。今晚 `#1925` 做对是因为刚被坑过（记忆），不是机制。
+
+**落点表（内容锚，不用行号）**
+
+| # | 文件 | 落点（内容锚） | 动作 | Δ 行 |
+|---|---|---|---|---|
+| I1 | `thincoder-core/prompts/persona-engineering.md` | `**The same item** (same problem ∥ same work object — irrespective of the \`kind\` field) ⇒ merge (no second row); otherwise note the relation (cross-referencing rows) — upstream/downstream with the pre-ignition merge scan (the batch-design clause).` 那一行**之后**（下一条 `**One row = one settlement unit**` 之前） | 两行到位（规则 ∥ why）；与邻条同形：无 dash 的粗体领起 + 两空格缩进的续行 | +2 |
+
+**I1 逐字目标形（实施席照此落笔 · 唯一副本 = 本节）**
+
+```text
+**A batch opened to do a debt already in the pool takes over that row** — a new row is opened only when the pool does not hold this debt.
+  **Why**: two holders of one debt both need disposal at closeout, and one of them can never close as 已核销 — it can only be withdrawn, leaving one more withdrawal record: one more piece of noise to read.
+```
+
+**验收（A1–A5 · 机判）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 两行逐字在盘 | 快判 = 全档扫词面锚 `takes over that row` ∥ `two holders of one debt` 各 ≥1；硬判 = 插入处两行与本节围栏块**逐行整行相等**（`node` 逐行 `===`） |
+| A2 | 行数 | 该档 = 改前 + 2（关系式；改前读数 = 本席本轮实读 490 行，实施席落笔后报 §5） |
+| A3 | 计数面零连带 | `^## ` ∥ `^### ` ∥ 标题节点零变（既有节内增列，不新建节） |
+| A4 | 写形零回归 | 新增两行均 ≤300 字符（137 ∥ 202——本席本轮 `node` 实算）；全档 `>300` = 0 保持 |
+| A5 | `doc_check` | `doc_check(mode:"gate", docs=["thincoder-core/prompts/persona-engineering.md","docs/core/design/PROMPT-SYSTEM.md","docs/core/design/LEDGER.md"])` 首行 `PASS` |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 池里有这条债 | 父侧要开批做一条已在池里的债 | 传 `ledger:"#N"` 接手——不新开行 |
+| C2 | 正常 · 真新事 | 池里无此债 | 省略 `ledger` ⇒ 同面零未决行则照常开行；同面有未决行 ⇒ 携 `newDebt:"<理由>"` |
+| C3 | 错误 · 照旧开新行 | 池里有这条债仍省略 `ledger` 又不给 `newDebt` | 机制拒（`docs/core/design/LEDGER.md` §6.3）：拒文列候选；本条是提示词侧的问句——「我要做的这条，池里是不是已有了？」 |
+| C4 | 错误 · 恒填旗绕过 | 每次都填 `newDebt:"顺手"` | 机制不拦（字符入行 `evidence`）；本条外加同面 `Dedupe on booking` 的「同一件事不开第二行」仍管辖，且理由句可被下一读者核对 |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 句落 `Dedupe on booking` 条之后，不另起条 | 那条讲**登记面**扫同面存量；本条讲**开批面**接已有行——同一判据的两个面，相邻即一处判据两个出口（D2 单一权威源） |
+| K2 | 提示词句不写 `newDebt` ∥ `ledger` 参数名 | 参数面在拒文里自嚣（机制面），写进提示词即两处维护；提示词只承载「该接谁」这个判断 |
+| K3 | why 取「两持有者 ⇒ 一行永远只能撤回」 | 这是后果面，读者能拿它推没见过的场合：不是「因为规定」，而是撤回记录就是多一笔要读的噪音 |
+| K4 | 提示词行内不写文件行号 ∥ 批次名 ∥ 日期 | 该档既有纪律（承 §6.56 K5）：维护者注一律进设计档 |
+
+**先例 ∥ 偏离**：先例 = §6.56 ∥ §6.57（同节内紧贴锚条增列 · 逐字目标形只此一份 · 计入面零连带 · 验收走关系式）。偏离 = 本条第一次与**机制门**同批落笔（§6.56 ∥ §6.57 都只是提示词面止血，机制栏明写「另议」）——两句分工已写进 §6.3 与本节。
+
+**既有件三问（新增名）**
+
+`existing` = `thincoder-core/prompts/persona-engineering.md:430`（`**Dedupe on booking**: when registering, scan existing rows on the same face.`）· consumers: 两模式主会话的台账登记面——本条紧接它的续行之后写，补「开批面」半句。
+
+`existing`（机制面）= `thincoder-core/ledger-write-ops.mjs:211` `ledgerBindBatch`（create 路径建档建行单事务）· consumers: `thincoder-core/agent-tools/batch-ledger-bind.mjs:133`（唯一调用点）——本节不改它一字，门体落点见 `docs/core/design/LEDGER.md` §6.3。
+
+`none found` = `takes over that row` ∥ `two holders of one debt` ∥ `opened to do a debt`：本席本轮对 `thincoder-core/prompts/` 全 16 档实扫零命中。
+
+**勘察证据行（本席实读 · 2026-11-01）**
+
+- `thincoder-core/prompts/persona-engineering.md`：490 行（`read` 尾行读数）；锚实读 `:430` = `**Dedupe on booking**: when registering, scan existing rows on the same face.` ∥ `:431` = `**The same item** (same problem ∥ same work object — irrespective of the \``kind\`` field) ⇒ merge (no second row); …` ∥ `:432` = `**One row = one settlement unit**: …`。
+- 机制面实读：`thincoder-core/agent-tools/batch-ledger-bind.mjs:97`（`const ledgerNo = parseLedgerNo(args?.ledger)`）· `:96`（`const board = normalizeBoard(args?.board)`）· `:108`（动态 import `../ledger.mjs`）· `:133`（`ledgerBindBatch({…})` 调用）；`thincoder-core/agent-tools/batch.mjs:304`–`:307`（`ledger` 参数描述）· `:308`–`:311`（`board`）；`thincoder-core/ledger-write-ops.mjs:211`（`export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, title, kind = "tech_todo", board = null, boundary, executorSessionId = null, agent = {} }, writeRecord)`）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席本轮 `manifest read` 实读）⇒ 独立公共源文档仓无，已查无相关。
+- 集成面读数：`test/RTM.md` 304 行 / `^## ` 5 / `^### ` 23 / 表行 110（本席本轮 `node` 实算）。
+
+**集成测试设计**：**单源 = `docs/core/design/LEDGER.md` §6.3「集成测试设计」**（六列 + delta 结论）——本节不复制。三行读数：破行 **1**（13-1 题设补「同面无未决行」前提）· 冗余 **0** · 新增 **1**（13-4，号已定；实施轮写入 `test/RTM.md` 故事 13 并落 `test/integration/batch-ledger-bind.test.mjs`）。
+
+**受影响文件**
+
+| 文件 | 改动 | 备注 |
+|---|---|---|
+| `thincoder-core/prompts/persona-engineering.md` | I1 +2 行 | 产品代码面，落笔 = eng-coder（本席不写提示词） |
+| `docs/core/design/PROMPT-SYSTEM.md` | 本节 + §7 D-PS52 | 本席笔 |
+| `docs/core/design/LEDGER.md` | §6.3 + AC-M2-37 + T125–T132 + §9 边界 | 本席笔 |
+| `test/RTM.md` | 13-1 题设补前提 · 新增 13-4 行 | 集成索引面（随用例落笔） |
+
+**档位结论**：三个 `.md` 设计档 + 一个提示词 `.md`——提示词档虽 `.md` 但属**产品代码面**（§6.1 首条实读：提示词 = 产品代码面，单笔域 = eng-coder）⇒ 跨档位存在、**无拆分义务**（同一席一次落笔）。
+
+**边界（本节不做）**：不改机制（门体 = `docs/core/design/LEDGER.md` §6.3）· 不写 `newDebt` ∥ `ledger` 参数名 ∥ 文件行号 ∥ 批次名进提示词 · 不动 `thincoder-core/prompts/persona-engineering.md:430` 原文一字（只在其后续行之后增列）· 不改需求档 · 不动 advisor 层。
+
+**UI / 交互决策**：无界面面——本节只改模型可见提示词文本与设计档。
+
+**上抛项（处置状态）**
+
+1. 〔知会〕机制面拒文取**英文**——与 `batch` 既有拒文同语域（实读 `thincoder-core/agent-tools/batch-ledger-bind.mjs:91` 逐字 `batch: create requires source — the record's origin line（来源 = …）`）；模型面英文串另在本节围栏块（提示词面）。拒文逐字单源 = `docs/core/design/LEDGER.md` §6.3，本节不复制。
+2. 〔父侧 · 编号〕§7 本席落 D-PS52（顺 D-PS51 下一位）；编号可由父侧收口时改。
+
 ## 7. 关键决策记录
 
 | # | 决策 | 理由 |
@@ -5280,6 +5371,8 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | D-PS49 | **一个批档只服务一个并发 spawn = `thincoder-core/prompts/persona-engineering.md`「Implementation dispatch structure」节内增列 3 行**（`batchDoc is mandatory` bullet 的收尾句 `:334` 之后：规则 ∥ 顺序交接边界 ∥ why；不取 `:333` Why 行之后，见 A9）+ **并行派发示例两行的 `batchDoc` 占位符改为 `<batch record path A>` ∥ `<batch record path B>`**（该两行以引文定位——收尾分别是 `batchDoc=<batch record path A>` ∥ `batchDoc=<batch record path B>` 的那两行；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:438` ∥ `:439`）；零 `##` 块计数连带（17）· 标题节点 22 不变 · 475 ⇒ 478 行。**不写子席侧判据**（子席看不见 `files`，无信号分席，见 K4）；不改机制、不动 `it IS the task book this spawn implements` ∥ `The task book is batch record §2` 既有两句（引文为准；行号 as-of 本次读数 = `:331` ∥ `:345`）、不动需求档 | 病因 = 三席共用一本批档后各按 §2 全表动手，同档两写者、其中一席按行号批删写出语法坏档（台账 `#1871`）；缺口在「是**谁的**任务书」这半句——`it IS the task book this spawn implements` ∥ `The task book is batch record §2` 两句只讲「是任务书」（引文为准；行号 as-of 本次读数 = `:331` ∥ `:345`）。规则的对象是**并发**：`thincoder-core/prompts/discipline-engineering.md:257` 已定「一个批次 = 一个实现轮次 = 一本批档」，一个批次正常顺序派设计席 → 实施席 → 修正轮 ⇒ 只写「一批档 = 一 spawn」会与那条相抵并把标准流程判成违规，故新增边界行（K2）。示例改字面 = 模板即被照抄的东西，两行原样相同就是复用示范（K3）。**本行落点一律以引文定位、行号只作 as-of 读数**：同节 A5 ∥ A6 ∥ A9 已取此形，一处写死行号则同一事实必出两个号（A5 说 `:438`、此处却停在改前的那个号），读者无从判断哪个是现状。被否 = 在 `## Parallel dispatch` 节另起一条（与 `:331` 拆成两处，D2）∥ 子席侧「读到像多席就上抛」（`The files parameter is a SCHEDULING channel…` 那一 bullet 子席看不见 `files`；引文为准，行号 as-of 本次读数 = `:351`，写规则 = 每次派单变猜）∥ 本批改机制（§1.5 明确不改） |
 | D-PS50 | **两句 = 单测档落点 + 先例必须在盘，都落 `thincoder-core/prompts/discipline-engineering.md` 既有两条内**（句一接 `Delete on use` 条之后 ∥ 句二并入 `Closest-precedent survey` 条；既有节内增列 ⇒ `##` 11 · `###` 7 · 标题节点 18 全不变；+5 行）；**句一的人读权威 = `docs/core/design/TESTING.md` §2.4**（本批新增；同批按 §1.5 收窄边界把 §2.3 表 `:126` ∥ `:128` 两行改成实读——`:126` 的 cli 读数与代码相反）· **句二的人读权威 = §6.58**；**EN 按 §6.58 逐字于实施轮落笔**；不加 `doc_check` 路径存在机检 ∥ 不清存量坐标（台账 `#1925`）∥ 不动人格层 ∥ `thincoder-core/prompts/common.md` ∥ advisor 层 | 病因 = 设计席把批内单测档写成 `<包>/test/xxx.test.mjs`，同一形状复发两次（`2026-10-30` ∥ `2026-11-01`）；规则本体在 `docs/core/design/TESTING.md` §2 ∥ §3.1 ① 早就对（行号 as-of：`:90` ∥ `:130` ∥ `:159`），提示词层零覆盖（`docs/batches` 16 档 0 命中）⇒ 纪律层只给生命周期、不给位置。第二半 = 先例库已死：旧坐标还教旧形，而「先对齐先例」会忠实抄回（`:76` 逐字 `Survey how **similar / same-kind features currently do it** … **align first**`）。被否 = 两句分两档落（两模式共读面对普通模式误导，K1）∥ 给 `thincoder-core/prompts/common.md:353` 加交叉指（引用面 vs 落点面两条平行轴，K3）∥ 同时加机检（存量一次全红，违零假阳优先） |
 | D-PS51 | **一份工作 = 一本账 = `thincoder-core/prompts/persona-engineering.md`「并行派发与多任务」节内 `:444` 之后增列 2 行**（规则 ∥ why；锚条 = `Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain` 那一行）；零 `##` 块计数连带（17）· `###` 5 · 标题节点 22 不变；478 ⇒ 480 行。**不写「N 棵树 ⇒ N 本档」特例式**；不动 `:335`–`:337` 三行 ∥ 不动 `:444` 原文 ∥ 不改机制 ∥ 不改需求档 | 缺口 = 「什么算一份」这半句不在任何一处：`:335` 讲能不能共用（约束面），本条讲计量单位（一份 = 一棵树 ∥ 一个席 ∥ 一个文件域）。11:34 事故的形是三个**文件域**而不是三棵树，特例式只覆盖字面树形，下一个说法即绕过（§1.3）；限定词 `running in parallel` 防与 `:336` 顺序交接边界相抵（K4）。被否 = 接半句到 `:444` 行尾（两规则一行，违该档一条规则一行写形（K1））∥ 另起节（与 `:444` 拆成两处，D2）∥ 本批改机制（§1.5：机制拦在 `#1883`） |
+
+| D-PS52 | **开批即接手（一句）= `thincoder-core/prompts/persona-engineering.md` 「台账」节 `Dedupe on booking` 条续行之后（`One row = one settlement unit` 条之前）增列 2 行**（规则 ∥ why；既有节内增列 ⇒ `##` ∥ `###` ∥ 标题节点零连带；+2 行）；**EN 逐字照 §6.59**；机制面 = `docs/core/design/LEDGER.md` §6.3（`batch` create 省略 `ledger` 的同面判门）；不写参数名进提示词（拒文自嚣） | 病因 = 开批为了做一条已在池里的债却又开一行，同一笔债两个持有者 ⇒ 收口时一行永远闭不成已核销，只能撤回（五实例；台账 `#1927`）。规则已在「台账」节（池里只有一条覆盖行 ⇒ 必须 `ledger:"#N"`），但它写在登记节、违规发生在于开批那一秒；唯一扫描义务（`:430`）扫的是登记面。落点贴 `Dedupe on booking` = 同一判据的登记面 / 开批面相邻（D2）。本批**同时**落机制门（与 §6.56 ∥ §6.57 不同——那两条只止血） |
 
 ## 8. 提示词承载（单源 · M9 落点）
 

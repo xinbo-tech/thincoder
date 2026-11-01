@@ -81,7 +81,8 @@ test("12-2 文档面 .md 与仓根 scripts/*.mjs ⇒ 照写（同一会话、无
 test("12-3 两个活批档并存 ⇒ 产品码照写（锁只问存在否）", async () => {
   const root = makeProject("12-3")
   await openBatch(root, "a")
-  await openBatch(root, "b")
+  // 第二本 = 同面（无板面）已有未决行 ⇒ 按开批同面判要么接手、要么声明新事——本例刻意要两本并存
+  await openBatch(root, "b", { newDebt: "并存两批的夹具：第二本与第一本各自独立" })
   assert.equal(ledgerQuery({ cwd: root, boundary: root }).filter((r) => r.status === "在途").length, 2)
   const agent = agentOf(root)
   const target = join(root, "thincoder-core/agent/y.mjs")
