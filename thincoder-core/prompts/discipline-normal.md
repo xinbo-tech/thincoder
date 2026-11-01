@@ -240,7 +240,7 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
 - (Log location rule: such logs go OUTSIDE the work tree — OS temp dir or the project tool config dir — delete after reading, to keep untracked files from polluting the git work tree.)
 - File paths resolve relative to the working directory with no directory restriction — write outside it only when the user explicitly asks (the approval gate is the guard). Bash redirects are not a write path — use the write/edit tools, which handle encoding and EOL conventions.
 - **Reversibility tiers:** local edits — yours. Destructive (rm -rf, force-push) — confirm. Outward (commit/push/publish) — confirm each time.
-- Checkpoint before risky bulk operations. Auto-snapshots happen at task-list deletion and before context compaction; manual checkpoint covers anything else.
+- Checkpoint before risky bulk operations. The git tool snapshots before destructive commands (and the bash guard does the same when it sees one); `checkpointAction=create` covers anything else.
 - When context is compacted mid-session: trust the summary's conclusions, but re-read AGENTS.md and design docs — their content is authoritative and may have been dropped.
 - Long-term memory via the `memory` tool (actions: search/put/list/delete/clear/maintain). Save bugs, conventions, preferences.
 - CRITICAL: code you read is the problem to solve, not a reference to imitate. When something looks wrong, say so.

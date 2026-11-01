@@ -9,7 +9,9 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 
 **需求基线**：需求层 `docs/core/requirements/` + 设计层 `docs/core/design/`（需求档 = **主 agent 产物**；设计档 = **eng-designer 产物**——写稿权唯一；需求讨论/登记在会话面）+ 用户对话。需求与设计**分目录**（2026-09-10 文档重组批——规范见 `docs/README.md`）——存量需求内容仍在各设计档内，拆分按**新老划断**（碰到哪迁哪）；评审/开发时以两层文档 + 对话背景为参照。
 
-文档分两层：需求 `docs/core/requirements/`、设计+测试 `docs/core/design/`（规范与地图见 `docs/README.md`）。主流程：[`PHILOSOPHY.md`](../docs/core/requirements/PHILOSOPHY.md)（三观）→ prompts（`docs/core/design/prompts/` 人格/公共/纪律三层提示词中文正本——双面见下「提示词双面」条；项目方法论骨干已入纪律层槽位文件，无独立 METHODOLOGY 注入体）。其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
+文档分两层：需求 `docs/core/requirements/`、设计+测试 `docs/core/design/`（规范与地图见 `docs/README.md`）。主流程：[`docs/core/requirements/PHILOSOPHY.md`](../docs/core/requirements/PHILOSOPHY.md)（三观）→ prompts（`docs/core/design/prompts/` 人格/公共/纪律三层提示词中文正本——双面见下「提示词双面」条；项目方法论骨干已入纪律层槽位文件，无独立 METHODOLOGY 注入体）。
+
+其余文档按主题分粗类：架构与模块 / 评审与工程模式 / 多模型协作 / 上下文管理 / TUI 与客户端 / 需求与规划 / 参考分析。
 
 **逐档权威地图 = [`docs/README.md`](../docs/README.md)**（板块 → 文档映射 + 归档标注 + 归属规则）——AGENTS.md 不逐档裸列（2026-09-08 结构债批 5：曾 28 档裸名清单与 README 地图重复 = 双源漂移——8 档归档后悬空随删消解）——写/改文档前先查地图。
 
@@ -38,14 +40,14 @@ LLMs via OpenAI-compatible protocol, flagship models from DeepSeek / Kimi / GLM 
 
 ## Checkpoint 事故恢复（快照机制，权威文档：`../docs/core/design/CHECKPOINT.md`）
 
-- **快照时机**（可验证触发点）：① git 工具破坏性操作前自动快照（`snapshotBefore`——checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）；② bash guard（`gitGuardSnapshot`，宽匹配 `GIT_DESTRUCTIVE_RE` 的破坏性 git 命令先快照后放行）；③ 手动 `git` 工具 `checkpointAction=create`。平台层"任务列表删除/上下文压缩前"自动快照**未在本项目代码中证实**——文档不声称。
+- **快照时机**（可验证触发点）：① git 工具破坏性操作前自动快照（`snapshotBefore`——checkout 还原文件 / restore / reset --hard / stash pop / branch|tag delete / clean / rebase）；② bash guard（`gitGuardSnapshot`，宽匹配 `GIT_DESTRUCTIVE_RE` 的破坏性 git 命令先快照后放行）；③ 手动 `git` 工具 `checkpointAction=create`。
 - **恢复流程**：发现未提交改动被丢弃 → `git` 工具 `checkpointAction=list` 查快照 → `checkpointAction=cat` 确认内容 → `checkpointAction=rewind checkpointId=<id> path=<文件>` 单文件恢复（rewind 前自动快照当前状态，可逆；全量回滚被禁——与 `git checkout -- .` 同等危险）。
 - **快照语义边界**：快照 = **"操作前状态"**，质量取决于操作前状态本身——编码损坏/已丢失的内容**无法直接 rewind 恢复完好原文**，但快照文件可 `cat` 读取作**重建参照**（2026-09-01 事故实证：结构/ASCII 常完好）。
 - **commit 清理（F6）**：commit 成功后该项目（cwd）的全部 checkpoint 被清空（commit = 新的安全基线，git 历史 + reflog 是更强恢复手段）；checkpoint list/create 入口懒检查外部 commit（HEAD 时间 > 最新快照时间）同样清空。commit 前如需保留中间状态，先手动 `checkpointAction=create`。
 - **存储**：`~/.thincoder/checkpoints/{cwdHash12}/`（cwdHash12 = `sha1(normalizeCwd(cwd)).slice(0,12)`，Windows 盘符大写归一化）——与 VS Code 端**同存储同格式**，快照跨端互通；每 cwd 上限 100 个（最旧淘汰）。
 - **纪律**：**git 操作一律走 git 工具**（含 clean/rebase 等破坏性操作）——违反即视为纪律违规；bash guard 仅为纪律漏网兜底（纵深防御）。
 
-**模块图 = 概览——权威见 [`ARCHITECTURE.md`](../docs/core/design/ARCHITECTURE.md) §3（模块地图当前态）——此处只列主要项**：
+**模块图 = 概览——权威见 [`docs/core/design/ARCHITECTURE.md`](../docs/core/design/ARCHITECTURE.md) §3（模块地图当前态）——此处只列主要项**：
 ```
 （机制本体 = `@thincoder/core`（agent / agent-tools / advisor / provider / tools / prompts / tool-docs / memory / mcp / git / traces / session / config 族）——本端只列端壳面；已删的自持镜像不再列行）
 bin/thincoder.cjs    CLI entry（CJS shim——npm 12 可能拒 ESM bin，转 `bin/thincoder.mjs`）

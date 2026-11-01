@@ -14,7 +14,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
-| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（VSC `thincoder-vscode/src/agent.mjs:36`（类）/ `:371`（抛点）；继续 = `resume:true` 重跑同一执行体 |
+| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（类 `thincoder-core/agent/helpers.mjs:239`（唯一实现；VSC `thincoder-vscode/src/agent.mjs:9` 只剩转口）/ 抛点 `thincoder-core/agent/turn-loop.mjs:316`）；继续 = `resume:true` 重跑同一执行体 |
 | **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs:141`） |
 | **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs:85`/`:175`）· 飞刀（现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs:310`） |
 | **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs:195`/`:199`，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
@@ -23,6 +23,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 | **F7** | 编号跨段累计 | 触发回合帽续跑后，面向上层的逐轮编号**跨段累计为唯一单调序列**（不重置、不倒退）——展示口径 `turn n/max`：n = 链内累计已跑轮数，max = 累计已授予预算（段数 × 段预算）；双端同源（各端独立实现） |
 | **F8** | 撞帽即续期检查点（裁定 A） | 撞帽（`ContinueError`——核 `thincoder-core/agent.mjs:439`）**不再静默自动续期**：**异步族**（后台子代理 / 异步飞刀 / 会诊）⇒ **向父代理报请**（ask；答「续期」⇒ `resume:true` 重入 · 答「停」⇒ 部分成果 + turn-cap 标记）；**同步族**（阻塞子代理 / 同步飞刀）⇒ **用户卡路径保留**（父代理被本次调用阻塞 · 应答不可达）；depth-0 ⇒ 回用户；**AUTO 一律不再自动批准续期**（无人应答 ⇒ partial）；续期**留痕** = 累计轮次 / 段数可查；**撞帽检查 = 无条件**（**有无产出皆检查**——**不设零产出阈值**，裁定 D） |
 | **F9** | 载入面自证（裁定 E） | **运行面**必须可自证：① **启动期一行诊断** = 记录当前 core 的**实体路径 + 版本**；② **打包面机检** = 扩展打包内 core 须含撞帽检查点接线（`checkpoint.mjs` + `subagent-run.mjs` 接线）——防「仓内已修、运行面仍旧」✗（实盘教训 = 安装面冻结旧构建 ⇒ 静默续段半天） |
+| **F10** | 撞帽提示带累计 | 撞帽提示必须同时给出**本段轮数**与**链内累计轮数**，并删掉 `(limit …)` 括注（各可交互面同一信息集）。只报本段，用户判不出「已经转了 40 轮」还是「刚转 12 轮」，而继续 / 停的决断正好取决于这个量级；`(limit N)` 在撞帽面上恒等于本段轮数（`ContinueError(maxTurns)` 于循环跑满后抛出 ⇒ 同一个数说两遍；VSC / 桌面更印成无数字的断头句） |
 
 ## 3. 非功能性需求
 
@@ -40,6 +41,5 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 - 不建 live 头逐轮跳动（需桥通道——登记保持开放；本项只修**值语义**）。
 - 不改段内帽判定（`turn < maxTurns`）与 `ContinueError` 载荷；**续期决策点改由检查点裁定**（F8）——续跑循环结构与 `resume` 语义不变。
 - **无人值守的已知后果**（F8 接受）：无父代理 / 无人应答 ⇒ **停在段边界交付部分成果**（F4），不再无限续跑；脚本 / CI / headless 侧按此预期调整。
-- **撞帽提示 = 本段轮数 + 链内累计轮数**，并删掉 `(limit …)` 括注（三端同一信息集；用户 2026-11-01 20:02 裁定补累计、20:04 裁定「一起改」）。只报本段，用户判不出「已经转了 40 轮」还是「刚转 12 轮」，而继续 / 停的决断正好取决于这个量级；`(limit N)` 在撞帽面上恒等于本段轮数（`ContinueError(maxTurns)` 于循环跑满后抛出 ⇒ 同一个数说两遍），VSC / 桌面更印成无数字的 `(limit)` 断头句。
 - 不做分段显式显示（段号 + 段内号——`turn 30/100 · seg 2` 形态）：选型 = 跨段累计（协议字段零新增）。
 - 不设继续次数上限（N1）。

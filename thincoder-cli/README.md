@@ -4,12 +4,13 @@
 
 **A "thin" AI coding agent: pure `.mjs`, no build step, zero third-party dependencies, native Node.js.**
 
-The "Thin" in ThinCoder doesn't mean "feature-poor" — it means **sharp thinking, straight to the point** — like a blade.
-While every AI agent races to be "all-powerful", ThinCoder plays the opposite card: **restraint, precision, no filler**.
-Its persona is a geek engineer of few words who cuts to the bone: give it a complex requirement, get back a clean implementation.
+The "Thin" in ThinCoder doesn't mean "feature-poor". It means **sharp thinking, straight to the point** — like a blade.
 
-Design philosophy (the entire meaning of the name): if the Node standard library can do it, no third-party dependency is allowed. The project's `node_modules` contains no third-party packages — only the first-party `@thincoder/core` shared core (a local link in development,
-resolved from the npm registry for releases).
+While every AI agent races to be "all-powerful", ThinCoder plays the opposite card: **restraint, precision, no filler**. Its persona is a geek engineer of few words who cuts to the bone — give it a complex requirement, get back a clean implementation.
+
+Design philosophy (the entire meaning of the name): if the Node standard library can do it, no third-party dependency is allowed.
+
+So `node_modules` holds no third-party packages — only the first-party `@thincoder/core` shared core, a local link in development and resolved from the npm registry for releases.
 
 ## Features
 
@@ -17,18 +18,26 @@ resolved from the npm registry for releases).
 - **Checkpoint system**: auto-snapshot before every user task, `list`/`create`/`rewind` tools for the model, single-file restore — rewinding itself is reversible (pre-rewind state auto-saved)
 - **Codebase understanding** ⭐0.5.0: `repo_outline` (dependency outline, auto-injected at startup), `code_search` (source FTS5 + vectors + JSDoc extraction), `doc_search` (docs chunked by ## headings) — background indexing, auto-incremental updates on file writes, three tools
 guided by "structure → intent → details"
-- **Model adaptation** ⭐: top-tier only, latest only. Built-in flagship models from twenty-five providers — DeepSeek / Kimi / Kimi For Coding / GLM / GLM Coding Plan (智谱 Coding) / Qwen / Qwen Token Plan / MiMo (小米) / MiMo Token Plan (小米套餐) / MiniMax / OpenAI / Claude / Gemini / Gemini (OpenAI-compatible — same key) /
-Grok / Mistral / Volcengine Ark (豆包) / Hunyuan (腾讯混元) / Tencent TokenHub (腾讯混元网关) / Huawei Cloud MaaS (华为云 MaaS) / SiliconFlow (硅基流动) / OpenRouter / Groq / OpenCode Go (same key for both protocol sides: OpenAI-compatible + Anthropic Messages). No legacy model compatibility. Auto-matched context windows, truncation-resume protocols (prefix/partial), thinking-mode APIs (thinking.type /
-reasoning_effort), reasoning_content echo strategies (reasoningEcho), output limits, temperature range clamping — all deeply adapted.
+- **Model adaptation** ⭐: top-tier only, latest only. Built-in flagship models from twenty-five providers — DeepSeek / Kimi / Kimi For Coding / GLM / GLM Coding Plan (智谱 Coding) / Qwen / Qwen Token Plan / MiMo (小米) / MiMo Token Plan (小米套餐) / MiniMax / OpenAI / Claude / Gemini / Gemini (OpenAI-compatible — same key).
+
+  Further presets: Grok / Mistral / Volcengine Ark (豆包) / Hunyuan (腾讯混元) / Tencent TokenHub (腾讯混元网关) / Huawei Cloud MaaS (华为云 MaaS) / SiliconFlow (硅基流动) / OpenRouter / Groq / OpenCode Go (same key for both protocol sides: OpenAI-compatible + Anthropic Messages).
+
+  No legacy model compatibility. Context windows are auto-matched.
+
+  The same deep adaptation covers truncation-resume protocols (prefix/partial), thinking-mode APIs (thinking.type / reasoning_effort), reasoning_content echo strategies (reasoningEcho), output limits and temperature range clamping.
 - **Toolset**: `read` / `write` / `edit` / `bash` / `glob` (supports `**`) / `grep` / `websearch` / `ls` / `fetch` + `read_image` (image/video paste) + three retrieval tools + MCP — all zero-dependency, file tools confined to the working directory
 - **Memory system**: three layers (personal/project/team), FTS5 + vector RRF hybrid retrieval, git-friendly markdown format
 - **Two-phase tool scheduling**: permission prompts serialized, read-only tools parallelized, side-effect tools serialized
 - **Session persistence** ⭐0.5.0: unlimited archive slots, `/session` to switch anytime, tool results visible after restore. Process-level isolation — multiple instances in the same directory each get their own session slot
 - **Concurrent subagents**: five roles — `explore`/`plan`/`coder`/`eng-coder`/`eng-designer` — dispatched in parallel, streaming output visible, reports land in the conversation; per-subagent model override (`subagent` tool `model` arg or `agent.subagentModel` config — e.g.
 discuss with `glm-5.2`, let `deepseek-v4-flash` implement)
-- **Multi-model consultation 会诊 + 飞刀 (escalate)** ⭐0.12.30: `consult_start`/`consult_stop` run several configured models in parallel as independent read-only consultants (each with its own TUI activity card, `main_history` access to the failure trail); when every model settles,
-the full verdict digest is delivered automatically (R17 — consult_check retired). `escalate` flies in a stronger model for a single expert implementation run with full write access (default-async since R17 — the post-op report arrives automatically with its mutations merged).
-Candidate pool = `agent.consultModels` ([{ provider, model, effort? }], up to 5); budgets via `agent.consultTurns` / `agent.consultTimeoutMs`
+- **Multi-model consultation 会诊 + 飞刀 (escalate)** ⭐0.12.30: `consult_start`/`consult_stop` run several configured models in parallel as independent read-only consultants (each with its own TUI activity card, `main_history` access to the failure trail); when every model settles.
+
+  The full verdict digest is then delivered automatically (R17 — consult_check retired).
+
+  `escalate` flies in a stronger model for a single expert implementation run with full write access. It is default-async since R17, so the post-op report arrives automatically with its mutations merged.
+
+  Candidate pool = `agent.consultModels` ([{ provider, model, effort? }], up to 5); budgets via `agent.consultTurns` / `agent.consultTimeoutMs`.
 - **Plan Mode**: read-only exploration + design, implement after user approval
 - **AUTO mode**: `/auto` full authorization, no confirmations on long tasks
 - **Task tracking**: `task` tool breaks down multi-step work, status bar ✓n/m live progress, auto-filters completed items
@@ -77,10 +86,15 @@ npm install -g thincoder
 thincoder
 ```
 
-First launch walks you through a setup wizard: arrow keys to pick a provider (built-in presets or a custom endpoint) → enter API key → optionally enter an embedding key (SiliconFlow, enables vector memory search, skippable) → arrow keys to pick a model — no hand-editing config
-files. Adjust anytime with `/model` (add/remove providers, set keys, custom endpoints) or `/config embedkey`. `chat`/`distill` also offer in-place interactive setup when no key is configured in a terminal (in pipes/CI they exit with an error and instructions).
+First launch walks you through a setup wizard: arrow keys to pick a provider (built-in presets or a custom endpoint) → enter API key → optionally enter an embedding key (SiliconFlow, enables vector memory search, skippable) → arrow keys to pick a model.
 
-Any OpenAI-compatible endpoint works without a built-in preset: pick **add provider → custom** in `/model` (name + baseURL + model), or hand-write the entry in `providers[]`. Regional endpoint variants work the same way — e.g. Huawei Cloud MaaS `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`.
+Nothing is hand-edited in config files. Adjust any of it later with `/model` (add/remove providers, set keys, custom endpoints) or `/config embedkey`.
+
+`chat`/`distill` also offer in-place interactive setup when no key is configured in a terminal; in pipes/CI they exit with an error and instructions.
+
+Any OpenAI-compatible endpoint works without a built-in preset: pick **add provider → custom** in `/model` (name + baseURL + model), or hand-write the entry in `providers[]`.
+
+Regional endpoint variants work the same way — Huawei Cloud MaaS, for example, is `https://api-ap-southeast-1.modelarts-maas.com/openai/v1`.
 
 You can also hand-write `~/.thincoder/config.json` (see "Configuration" below), then:
 
@@ -107,14 +121,23 @@ thincoder upgrade
 
 Running from source: replace `thincoder` above with `node bin/thincoder.mjs`.
 
-Slash commands in the TUI: `/help`, `/model` (two-level picker: first select provider, then model; also add/remove providers, set keys, custom endpoints; `/model <provider>:<name>` switches directly), `/submodel` (subagent models per type — picker over global +
-explore/plan/coder/eng-coder/eng-designer slots, or `/submodel <type> <provider:model>` directly), `/shell` (platform-aware picker of available shells — e.g. `/shell` → pick Git Bash/pwsh, or `/shell "C:\Program Files\Git\bin\bash.exe"`, `/shell reset`; fixes win11 cmd
-encoding/command issues), `/think` (thinking mode toggle and reasoning effort), `/config` (view config; no-argument form opens the interactive menu — e.g. default model, embedding key, proxy; `/config embedkey` sets the embedding key directly), `/session` (list/switch archived
-sessions), `/reindex` (rebuild the index), `/extract` (extract knowledge from the current session), `/restore` (restore checkpoint), `/clear`, `/exit`. High-frequency commands support abbreviations: `/h` `/x` `/m` `/p` `/t` `/c` `/n`. Typing `/` shows live matching hints in the
-status bar. Model picker supports search/filter — type to narrow down results.
+Slash commands in the TUI cover the whole loop. `/help` prints help, and `/model` opens a two-level picker (provider first, then model) that also adds or removes providers, sets keys and edits custom endpoints; `/model <provider>:<name>` switches directly.
 
-Configuration comes exclusively from `~/.thincoder/config.json` — the single source of truth. Sensitive value fields (e.g. a provider's `apiKey` or `websearch.apiKey`)
-may hold a `${env:VAR}` reference, resolved at use time — the value is then taken from the environment variable. There is no environment-variable-only configuration channel and no env-only override.
+Subagents get the same treatment. `/submodel` picks their models per type, from global plus the explore/plan/coder/eng-coder/eng-designer slots, or takes `/submodel <type> <provider:model>` directly.
+
+`/shell` opens a platform-aware picker over the available shells — pick Git Bash/pwsh, or pass `/shell "C:\Program Files\Git\bin\bash.exe"`, or `/shell reset`. It also fixes win11 cmd encoding/command issues.
+
+`/think` toggles thinking mode and reasoning effort. `/config` views configuration, and with no argument opens the interactive menu (default model, embedding key, proxy), while `/config embedkey` sets the embedding key directly.
+
+`/session` lists and switches archived sessions; `/reindex` rebuilds the index; `/extract` pulls knowledge from the current session; `/restore` restores a checkpoint; `/clear` and `/exit` do what they say.
+
+High-frequency commands support abbreviations: `/h` `/x` `/m` `/p` `/t` `/c` `/n`. Typing `/` shows live matching hints in the status bar, and the model picker supports search/filter — type to narrow down results.
+
+Configuration comes exclusively from `~/.thincoder/config.json` — the single source of truth.
+
+Sensitive value fields — a provider's `apiKey` or `websearch.apiKey`, for instance — may hold a `${env:VAR}` reference, resolved at use time, when the value is taken from the environment variable.
+
+There is no environment-variable-only configuration channel and no env-only override.
 
 > **Kimi note**: Kimi has **two separate platforms with non-interchangeable API keys** — Moonshot (`https://api.moonshot.cn/v1`, keys `sk-...`, platform.moonshot.cn) and **Kimi For Coding** (`https://api.kimi.com/coding/v1`, keys `sk-kimi-...`, platform.kimi.com, model ID `k3`).
 > Use the `kimi` preset for Moonshot and `kimi-code` for Kimi For Coding — putting one platform's key on the other's endpoint fails with 401 (a hint is appended when the key/baseURL look mismatched).
@@ -324,10 +347,10 @@ Chinese output on win11.
 
 ### 0.12.9 (2026-08)
 - **Prompt-system quality pass (both CLI and VS Code extension, byte-identical sync):**
-  - **Advisor-after-code rule moved from system.md to discipline.md** — engineering mode no longer receives the conflicting "call advisor after changing code" instruction (its review-timing rules say do not call unprompted). Standard mode behavior unchanged.
-  - **engineering.md delivery-review semantics unified** — the mandatory-flow step and the state table now both say: eng-coder self-reviews inside the subagent; the architect verifies against acceptance criteria and re-reviews only when asked or when the delivery looks wrong.
+  - **Advisor-after-code rule moved from the `system` prompt to the `discipline` prompt** — engineering mode no longer receives the conflicting "call advisor after changing code" instruction (its review-timing rules say do not call unprompted). Standard mode behavior unchanged.
+  - **`engineering` prompt delivery-review semantics unified** — the mandatory-flow step and the state table now both say: eng-coder self-reviews inside the subagent; the architect verifies against acceptance criteria and re-reviews only when asked or when the delivery looks wrong.
 (Previously the step forced a parent-side advisor code review that the hard rules contradicted.)
-  - **checkpoint description aligned with actual auto-snapshot triggers** (task-list deletion + context compaction; manual checkpoint for the rest).
+  - **checkpoint description aligned with actual auto-snapshot triggers**.
   - **advisor round budget wording fixed** — prompts advertise a 30-round budget; the mechanical hard cap is 100 rounds (loop guard). Both layers are now named explicitly.
 
 ### 0.12.8 (2026-08)
@@ -340,9 +363,11 @@ only; expanded blocks are exempt from the consecutive-dim folding so nothing fol
 - **Fix: wide tables misaligned in narrow terminals** — a many-column table that still exceeded the terminal width after column shrinking (e.g. 8 columns at 40 cols) wrapped at the terminal and misaligned. Table rows are now clipped with an ellipsis instead of ever exceeding the width.
 
 ### 0.12.6 (2026-08)
-- **Checkpoint v2 — full-file-copy snapshots** — snapshots now store complete copies of changed files (tracked + untracked) instead of a git diff patch: rollback works even after commits happened post-snapshot. New `versions` checkpoint action lists a file's historical copies
-across snapshots (time / size / content hash) and restores a specific version. **Full rollback is disabled** (as dangerous as a working-tree reset — silently discards post-snapshot work); oversized files (>5MB) are skipped with an explicit notice; files created after a snapshot
-are never deleted by a restore.
+- **Checkpoint v2 — full-file-copy snapshots** — snapshots now store complete copies of changed files (tracked + untracked) instead of a git diff patch: rollback works even after commits happened post-snapshot. New `versions` checkpoint action lists a file's historical copies.
+
+  That listing spans snapshots by time, size or content hash, and a specific version can be restored from it.
+
+  **Full rollback is disabled** — as dangerous as a working-tree reset, since it silently discards post-snapshot work. Oversized files (>5MB) are skipped with an explicit notice, and files created after a snapshot are never deleted by a restore.
 - **Git destructive-command protection** — `checkout --` / `restore` / `reset --hard` / `clean -f` (including bypass variants like `checkout HEAD -- .`) auto-snapshot every uncommitted file **before** running, then execute without blocking — a model rollback can no longer destroy
 uncommitted work. Snapshot triggers slimmed to: destructive-git guard, pre-restore, manual.
 - **Fix: bash no longer hangs on background processes** — `start /b`, `&`, `nohup` children that hold the output pipe no longer stall the tool until timeout (resolves after a short grace with a notice).
@@ -354,9 +379,13 @@ with click-to-expand — folding now has real objects in everyday sessions.
 - **Fix: inline code styling** — markdown code spans now render with underline instead of reverse video (less harsh on the eyes)
 
 ### 0.12.4 (2026-08)
-- **Context compaction unified spec** — CLI/VS Code now share one compaction semantics (`docs/design/CONTEXT-COMPACTION.md`): window-adaptive tail size (`max(10, ctx/100K×30)`, ≤40% of history), measured prompt-token baseline preferred, pure-estimation path includes system+tools
-overhead, head/tail tool-call pairing protection on both sides, 3-tier fallback (LLM summary → deterministic truncation after 3 failures → per-message shrink), compaction summaries are silent to the frontend (no streaming into the conversation), task re-injection deduplicated.
-Unknown model names now warn once instead of silently degrading to the 128K default
+- **Context compaction unified spec** — CLI/VS Code now share one compaction semantics (`docs/core/design/CONTEXT-COMPACTION.md`): window-adaptive tail size (`max(10, ctx/100K×30)`, ≤40% of history), measured prompt-token baseline preferred, pure-estimation path includes system+tools overhead.
+
+  Head/tail tool-call pairing is protected on both sides, and the fallback runs in 3 tiers: LLM summary → deterministic truncation after 3 failures → per-message shrink.
+
+  Compaction summaries stay silent to the frontend — nothing streams into the conversation — and task re-injection is deduplicated.
+
+Unknown model names now warn once instead of silently degrading to the 128K default.
 - **Kimi For Coding support** — new `kimi-code` preset (`api.kimi.com/coding/v1`, model `k3`, platform.kimi.com, `sk-kimi-` keys — NOT interchangeable with Moonshot); `MODEL_SPECS` gains the `k3` alias (1M context / multimodal / partialMode / reasoningEcho); 401 errors hint at
 the two-platform key mismatch; README documents the split
 - **Ctrl+C double-confirm** — idle-state first Ctrl+C only warns (3s window), second press exits; picker-cancel and in-flight abort semantics unchanged
@@ -403,7 +432,7 @@ limits output to 50KB, enforces 30s timeout, and blocks private IPs in fetch. Sc
 - **Lifecycle Hooks** — `PreToolUse` / `PostToolUse` / `PostToolUseFailure` / `Stop` events. User-defined shell commands in config, with per-tool regex matching, timeout control, and `block`/`allow`/`notify` actions. Implemented in `thincoder-core/hooks.mjs`, integrated into tool dispatch.
 - **Built-in Skills (5)** — `pdf-create`, `xlsx-create`, `frontend-design`, `code-review`, `api-design` ship with the installation. Each is a standalone markdown instruction file using zero-dependency approaches (Chrome headless for PDF, PowerShell for Excel, etc.).
 - **Conversation message folding** — Long tool result blocks (>8 consecutive dim lines) auto-collapse to first 2 lines + "… N more lines — Enter to expand". `/fold on|off` toggles globally.
-- **Tree-shaped tasks** — `checklist` tool now supports hierarchical task IDs (`T1`, `T1.1`, `T1.2.1`) with auto-assigned numbering. `add` accepts `parent` parameter for subtree positioning. Indentation-based persistence in `checklist.md`.
+- **Tree-shaped tasks** — `checklist` tool now supports hierarchical task IDs (`T1`, `T1.1`, `T1.2.1`) with auto-assigned numbering. `add` accepts `parent` parameter for subtree positioning. Indentation-based persistence in the checklist file.
 - **AI-native MCP config** — `/mcp add` picker now includes "Describe with AI" option. Describe a server in natural language → model generates config JSON → preview + confirm → save and connect.
 - **Goal judge model** — `goal complete` now runs an independent LLM check: goal criteria + recent agent activity → judge model verifies YES/NO. Prevents false completion claims during autonomous work.
 - **`/undo` command** — Tracks up to 50 write/edit/delete operations in `agent._undoStack`. `/undo` opens a picker showing each operation's file and original content size. Select to revert.
@@ -437,17 +466,19 @@ extensions, Office add-ins, Program Files)
 - **Refactor: `embed-config.mjs`** — simplified to only read API key via `resolveEmbedKey()`, base URL and model are fixed constants; VSCode SecretStorage dependency removed
 
 ### 0.8.11 (2026-07)
-- **Feat**: `checklist` tool — persistent project task tracking in `.thincoder/checklist.md`. Add/mark/list items, auto-archive done items to `checklist-done.md`. Injected at session start (pending + in_progress only)
+- **Feat**: `checklist` tool — persistent project task tracking in a checklist file under `.thincoder/`. Add/mark/list items, auto-archive done items to a separate done file. Injected at session start (pending + in_progress only)
 - **Feat**: updated prompts — four-step workflow (requirements→design→development→testing), three-step debugging strategy (logs→docs→binary search), working checklist discipline
-- **Feat**: methodology docs — `docs/design/METHODOLOGY.md` rebuilt, `PHILOSOPHY.md` expanded with worldview #6 (official docs over guessing)
+- **Feat**: methodology docs — `docs/core/requirements/METHODOLOGY.md` rebuilt, `docs/core/requirements/PHILOSOPHY.md` expanded with worldview #6 (official docs over guessing)
 - **Bugfix**: vision guard — `read_image` now refuses non-vision models before reading the file, the agent loop injects a system reminder instead of image parts for text-only models, and `stripImagesForTextModel` sanitizes image parts at send time (history untouched, restored
 when switching back to a vision model). Previously a single image in history made text-only APIs (e.g. DeepSeek) reject EVERY subsequent request with 400, bricking the conversation
 - **Improvement**: silent `catch {}` blocks now log to stderr (checkpoint file copies, MCP notify/close, session incremental save, clipboard paste, provider picker, team-memory rebase abort, tool dispatch) — failures are visible for debugging instead of disappearing
 
 ### 0.8.10 (2026-07)
-- **Bugfix**: pasted text now lands in the active TUI text target — the API key prompt when adding a provider via `/model` (and any free-text `askQuestion`) now accepts paste correctly. Previously, bracketed-paste injection in the terminal was always written to the main input
-box, so pasting into a question prompt appeared as "nothing happened" and orphaned the text into the input box after the question closed. Both bracketed-paste (Windows Terminal / most modern terminals) and Ctrl+V-as-key-event (legacy conhost) now route through a single
-`insertPastedText` helper that targets the question answer, options-list (ignored), or main input box as appropriate
+- **Bugfix**: pasted text now lands in the active TUI text target — the API key prompt when adding a provider via `/model` (and any free-text `askQuestion`) now accepts paste correctly. Previously, bracketed-paste injection in the terminal was always written to the main input box.
+
+  Pasting into a question prompt therefore appeared as "nothing happened", and the text was orphaned into the input box after the question closed.
+
+  Both bracketed-paste (Windows Terminal / most modern terminals) and Ctrl+V-as-key-event (legacy conhost) now route through a single `insertPastedText` helper. It targets the question answer, the options-list (ignored), or the main input box as appropriate.
 
 ### 0.8.9 (2026-07)
 - **Bugfix**: `wizardProviderItems` was defined inside `createWizard()` but not included in the return statement, causing key-handler to crash with `TypeError` during provider selection on first launch (/ new config)
@@ -458,7 +489,7 @@ box, so pasting into a question prompt appeared as "nothing happened" and orphan
 - **Feat**: auto update check on startup + `/upgrade` command
 
 ### 0.8.3 (2026-07)
-- **Output panels**: tools with `outputPanel` flag stream to scrolled panel, auto-collapse to summary on completion (bash, long tool results)（机制已于 2026-08-30 废除——D6 清理，见 AGENT-LOOP.md）
+- **Output panels**: tools with `outputPanel` flag stream to scrolled panel, auto-collapse to summary on completion (bash, long tool results)（机制已于 2026-08-30 废除——D6 清理，见 docs/core/design/AGENT-LOOP.md）
 - **Checkpoint enhancements**: `cat` for file preview from snapshots, per-file rewind, auto-recover on apply failure, escape-hatch hints on errors
 - **Bash safety**: `checkpoint-before-destructive` discipline rule; bash guard guides checkpoint instead of just commit/stash
 - **Code review fixes**: output friendliness, readability, English-only strings, TUI polish

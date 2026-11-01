@@ -284,6 +284,16 @@
 | 24-2 | 同一夹具把声明值改成不存在的路径，再发起一次设计评审 | 注入面出现态 2 句（含该声明路径字面 + `no such file`），**且与 24-3 的句子不等**；零正文注入 | 待执行 | — | — | — | `test/integration/review-standards-injection.test.mjs` |
 | 24-3 | 同一夹具删掉该键（或整档），再发起一次设计评审 | 注入面出现 `NO_STANDARDS_NOTICE`；零正文、零路径字面、零 `declared` | 待执行 | — | — | — | `test/integration/review-standards-injection.test.mjs` |
 
+### 25. 撞帽了，用户看得见自己转了多久
+
+> 目的：撞帽卡上同时给出本段轮数与链内累计轮数——用户据此判「继续还是停」。
+> 节注：回指 = `docs/core/requirements/TURN-CAP-CONTINUE.md`（撞帽提示条目）；判据 = `docs/core/design/TURN-CAP-CONTINUE.md` §6；交互组件 = 核回合环（每轮 `++_turnSeq` ∥ `ContinueError` 抛点）⟷ CLI 撞帽分支（询问行 ∥ 待答状态行）；进入口 = CLI 会话里让一个任务连撞两次轮帽，读第二次的卡面；两态（行序）= 25-1 正常 · 25-2 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 25-1 | CLI 会话把 `agent.maxTurns` 调小，发一个跑得比它长的任务，撞帽后在卡上选 Continue，第二段再撞帽 | 第二张卡的两行都同时含两个数：`Ran 3 turns — 6 turns total. Continue?` 与 `Continue after 3 turns (6 total)?`——本段 3、累计 6，零 `(limit` | 待执行 | — | — | — | `test/integration/turn-cap-progress.test.mjs` |
+| 25-2 | 同一会话首段即撞帽（未续跑） | 首张卡 = `Ran 3 turns — 3 turns total. Continue?`（累计等于本段，两个数都在） | 待执行 | — | — | — | `test/integration/turn-cap-progress.test.mjs` |
+
 ## VS Code 端（thincoder-vscode）
 
 **尚无集成用例**——本端集成层尚未建立；故事节随首个用例设立（编号先行：先定 RTM 编号，再落用例标题 `test('<编号> …')`）。
