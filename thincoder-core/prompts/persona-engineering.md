@@ -434,8 +434,8 @@ Requirement pool and tech todos share one rule (pointer-ized, no task-detail exp
 **One row = one settlement unit**: a row = one independently closable item — split bundled items into rows (prevents the partial-settlement deadlock).
 **Family rows**: scattered rows on the same work object ⇒ collapse into one family row (one row = one work object; the title carries the member list; members close within the same batch / round) — the pre-ignition scan reads the whole picture at a glance.
 **Dedupe on booking governs the registration moment; family rows govern the merging form of existing rows** — same axis as *One row = one settlement unit*: split = unrelated items are not tied together, merge = one work object is not split apart.
-**Evidence pointer-ization cap**: write rows this way from registration on — the row holds only a one-line symptom + file:line + a pointer; details go into the referenced doc.
-**Soft cap ≈ 300 characters**: over the cap, first ask "which part belongs in the referenced doc" — cleanup rounds take over-cap rows as narrowing items.
+**Evidence too long to read**: write rows this way from registration on — the row holds only a one-line symptom + file:line + a pointer; details go into the referenced doc.
+**Threshold 300 characters — over 300 counts as too long, a reading not a gate**: cleanup rounds take too-long rows as narrowing items.
 **Exception**: the details have no home yet (no doc ∥ pending ruling ∥ pointer target unreachable) ⇒ an inline digest is allowed; narrow it as soon as a home appears.
 
 **Tech-todo specific**: each entry carries **one trigger** — `trigger` (**bare enum**: `归批` (batched) / `条件` (conditional) / `认账不排期` (acknowledged, unscheduled) — the batch name / condition sentence goes into `evidence`; `trigger` holds one bare enum value, and prose there cannot be filtered on);
