@@ -147,7 +147,7 @@
 - **undo 快照**：副作用工具执行前 `snapshotForUndo`（写前文件内容入内存栈），`/undo` 回滚；快照为全量副本（检查点面权威 = 本层 `CHECKPOINT.md`）。
 - **hooks**：PreToolUse / PostToolUse / PostToolUseFailure / Stop 四事件用户脚本——配置位 = `~/.thincoder/config.json` 的 `hooks` 键（`{ matcher?, command, args?, timeout?, action? }`，action = allow/block/notify）；`action: "block"` 时按**退出码**定夺（0 = 放行、非 0 = 阻断）。
   - **载荷含工具结果全文**：`PostToolUse` ∥ `PostToolUseFailure` 的 stdin JSON 携 `result`（原始返回值）与 `toolArgs`——hook 是用户自己配置的可执行命令，与自己直接跑脚本同权（可读任意文件）；日志面的 `SECRET_FORM` 剥离（形态扫描常量 = `thincoder-core/log.mjs:43`；脱敏函数 `redactSecret` = 同档 `:149-180`）不覆盖该面。配置第三方 hook 前须自行确认它会怎样处理这段正文。
-  - **本披露行的先例与调研**：先例 = `thincoder-core/log.mjs:43` 的 `SECRET_FORM` 形态扫描 ∥ 同档 `:149-180` 的脱敏函数（日志面既有口径，本行沿用不改）；调研 = 查过 `thincoder-core/log.mjs` 的脱敏面与 hooks 配置位——无既有「hook 载荷分级」面 ⇒ 本批只落披露句，收窄 ∥ 脱敏 ∥ 可选开关留待用户裁（安全纪律⑤）。
+  - **hook 载荷不脱敏（已定）**：hook 是用户自己在 `~/.thincoder/config.json` 里配的可执行命令，**与自己直接跑一条脚本同权**——脚本本来就能读任意文件。给载荷脱敏防的是「自己配的程序偷自己」，不是威胁模型；且脱敏只能靠日志面那套 `SECRET_FORM` 形态匹配（`thincoder-core/log.mjs:43` / 同档 `:149-180`），**漏一种形态就是假安全，而假安全比没有更坏**（安全纪律⑤：自加的安全机制默认不立）。
 - **dispatch console 回显**：工具执行期间的 console 输出回显到结果（调试价值）——调度细节权威 = AGENT-LOOP 板（本层 `AGENT-LOOP.md`）。
 
 ### 6.4 安全边界
@@ -162,7 +162,7 @@
 | 文件 | `MAX_READ_LINES = 2000` / `MAX_OUTPUT_CHARS = 200_000`（超限落盘，模型见预览）；`normalizeEOL`（CRLF 统一）；write 前 `autoSyntaxCheck`（JS 文件自动 `node --check`） |
 | lint | `node --check` fast path + 语言级联（tsc / ruff / cargo / go vet）；`scripts/check-syntax.mjs` 替代 eslint 级联（零依赖） |
 | lsp | 按需 spawn LSP server（`config.lsp.servers` 的 `command` 直跑，无 shell——`thincoder-core/tools/lsp.mjs:148`），语义级诊断 / 跳转兜底 |
-| hooks | 用户脚本与 agent 同权（可读任意文件）：载荷含工具结果全文（`result` ∥ `toolArgs`），`SECRET_FORM` 剥离不覆盖 hook stdin（机制与披露句 = §6.3 hooks 行）；收窄 ∥ 脱敏 ∥ 可选开关三选一 = **未建立**（安全纪律⑤——不默认加防护，待用户裁） |
+| hooks | 用户脚本与 agent 同权（可读任意文件）：载荷含工具结果全文（`result` ∥ `toolArgs`），`SECRET_FORM` 剥离不覆盖 hook stdin（机制与披露句 = §6.3 hooks 行）；**不做载荷脱敏**——hook 与用户自跑脚本同权，脱敏防的不是威胁模型（理由 = §6.3 hooks 行） |
 
 **execute 边界**：纯净 node ESM 子进程，与 bash 同边界——顶层 await / 动态 `import()` / `require()` / `console` / `fetch` / `process` 全可用；**无 import 阻断、无 require 禁、无目录限制、无伪沙箱、无预置全局**。文件能力唯一入口 = 专用工具。超时 SIGKILL 强杀（默认 30s，上限 600s）。
 
@@ -1771,14 +1771,14 @@ export function gateDesignToken(parent, args) {
 
 **UI / 交互决策**：无界面面——本条改的是模型可见文本与错误出口。
 
-**实施拆分（两舱 · 按面）**：
+**实施拆分（两舱 · 文件集不重叠）**：
 
 | 舱 | 变更面 | 文件 | 验收 |
 |---|---|---|---|
 | 舱 A · 文本面 | 模型可见说明与提示词 | `thincoder-core/tool-docs/subagent.md` · `agent-tools/subagent.mjs:146` · `thincoder-core/prompts/persona-engineering.md` | A1 + §6.35 A1–A4 |
 | 舱 B · 代码 + 测试面 | 门分支与拒句 | `agent-tools/subagent-spawn.mjs` · 核单测档 | A2 / A4 / A5 |
 
-不合并的理由：两个变更面各自有独立验收面（文本子串 vs 单测分支），且按派单尺寸纪律「跨面 ⇒ 按面拆」；两舱文件不重叠，可并行派工，`dependsOn` 不需要。
+不合并的理由：两舱文件集不重叠 ⇒ 可并行派工、`dependsOn` 不需要——`files` 本就是调度通道（冲突检测用），不是切面依据；验收面是同一份 A1–A5，两舱各读其中一部分。
 
 ## 9. checklist 废除
 

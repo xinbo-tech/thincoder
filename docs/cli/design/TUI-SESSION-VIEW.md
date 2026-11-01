@@ -65,24 +65,22 @@
    `role#id/` 前缀分流到子 agent 活动区块；`onToolCall` / `onToolResult` 工具载体与 settle；`onUsage` 累计 token；
    `onCompress` 压缩提示；`onTaskUpdate` 任务行；`onTurnEnd` 增量落盘；**权限 / 批权限 / 问答 handler 按 ctx 提供与否条件接线**
    （手动档 auto-turn 传 null → denied 不弹面板、question 报错不挂起）。
-4. `runAgent` 循环：正常完成 → `flushStream`；`AbortError` → **interrupt 区分**——`reason.interrupt && message`（Ctrl+I）= 重建 controller 续跑；
-   `reason.interrupt` 无 message（Ctrl+C 首按）= break 不续跑 + 回滚无 message 注入产生的尾部垃圾 + `[stopped]` 行；
-   `ContinueError` → 询问 "Continue after N turns?"（**autoTurn 消化轮例外：无面板——AUTO 档自动 resume、手动档静默拒绝**，
-   部分消化留在历史不丢）；其他错误 → `[error] <首行（URL 脱敏）>` + `→ Provider` / `→ Model` 诊断两行 + Retry 询问（同意 ⇒ `resume` 重入；形态与边界 = `docs/cli/design/TUI.md` §4.3——本档不复述）。
-5. **finally 收尾**：停 ticker、清 processing、**挂起决策**——回合正常结束且后台池仍 live → 子 agent 区块**不冻结**
-   （各 settle 事件自行处理），本次回合 controller 记为会话中止句柄 + abort 集合快照（= 链条内全部 controller）；
-   池空 / 中断 / 错误 → `freezeAllSubTasks`（中断态块标 interrupted）；挂起会话内回合由会话层逐条回收；
-   **释放窗口守卫**（willSuspend 判定后、挂起会话启动前——期间 `processing = false` 且 `suspended` 未置位，
-   无守卫会并发开第二个 `runAgentTurn`——双驱动器竞态）；`sweepToolBlocks`；`ensureSessionTitle`；
-   distill flush 有界等待（超时上限——退出路径不挂死）→ `saveSession` 增量落盘。
+4. `runAgent` 循环：
+   - 正常完成 → `flushStream`。
+   - `AbortError` → **interrupt 区分**——`reason.interrupt && message`（Ctrl+I）= 重建 controller 续跑；`reason.interrupt` 无 message（Ctrl+C 首按）= break 不续跑 + 回滚无 message 注入产生的尾部垃圾 + `[stopped]` 行。
+   - `ContinueError` → 询问 "Continue after N turns?"（**autoTurn 消化轮例外：无面板——AUTO 档自动 resume、手动档静默拒绝**，部分消化留在历史不丢）。
+   - 其他错误 → `[error] <首行（URL 脱敏）>` + `→ Provider` / `→ Model` 诊断两行 + Retry 询问（同意 ⇒ `resume` 重入；形态与边界 = `docs/cli/design/TUI.md` §4.3——本档不复述）。
+5. **finally 收尾**：
+   - 停 ticker、清 processing、**挂起决策**——回合正常结束且后台池仍 live → 子 agent 区块**不冻结**（各 settle 事件自行处理），本次回合 controller 记为会话中止句柄 + abort 集合快照（= 链条内全部 controller）。
+   - 池空 / 中断 / 错误 → `freezeAllSubTasks`（中断态块标 interrupted）；挂起会话内回合由会话层逐条回收。
+   - **释放窗口守卫**（willSuspend 判定后、挂起会话启动前——期间 `processing = false` 且 `suspended` 未置位，无守卫会并发开第二个 `runAgentTurn`——双驱动器竞态）；`sweepToolBlocks`；`ensureSessionTitle`；distill flush 有界等待（超时上限——退出路径不挂死）→ `saveSession` 增量落盘。
 6. **交接消息按批合并续发**：busy 提交入队列（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1——吞面收敛四）+ **合并消费**（`planQueuedInput` 攒批——连续非 `/` 且 ≤8 条 ∧ 合并 ≤2000 字符 ⇒ 合并为一条、一次回合；超批截批先行；单条 > 2000 字符直发；`/cmd` 逐条保序）——
    `state.queue` 为**残项单容器**（释放窗口兜底池空转正 / 挂起中止残余——零丢失）；回合尾按批直发（**残项路径**——队列主消费 = **步边界 pickup**：机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8「步边界 pickup」）；
    释放窗口期入 `pendingInput` 的条目在池已空时按计划转回队列。
 7. **挂起会话**（`suspension-drive.mjs`——状态机行表以 `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.8 为权威，本档不复制）：
-   队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——**挂起内 busy 与普通 busy 同判据入队**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）；
-   **挂起空闲输入开放**（Enter 走 `pendingInput` 队列——键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）、settle 事件驱动 auto-turn 消化轮、
-   状态行「后台 N 子代理运行中 · M 待消化」、池空 + 无待处理输入 → 补发 done 冻结自然退出；
-   彻底中止后会话退出**复位中止标志**（防粘滞——不清则中止后池再 live 永不重新进入挂起态）并把残余输入**按合并计划**转回队列（不静默丢）。
+   - 队列清空后池仍 live 且非 skipSession 且未中止 → 进入挂起态——**挂起内 busy 与普通 busy 同判据入队**（受理判据 = `docs/cli/design/TUI-INPUT-BOX.md` §4.1）。
+   - **挂起空闲输入开放**（Enter 走 `pendingInput` 队列——键面契约见 `docs/cli/design/TUI-INPUT-BOX.md` §4）、settle 事件驱动 auto-turn 消化轮、状态行「后台 N 子代理运行中 · M 待消化」、池空 + 无待处理输入 → 补发 done 冻结自然退出。
+   - 彻底中止后会话退出**复位中止标志**（防粘滞——不清则中止后池再 live 永不重新进入挂起态）并把残余输入**按合并计划**转回队列（不静默丢）。
 
 ## 5. 显示层内存有界（字符维额度）
 
@@ -153,11 +151,11 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 - **保底**：最小步进下常规内容稳态窗口 ≈ 额度/行宽 ≈ 1000 行，
   胖行场景下限 = `LINES_TRIM_FLOOR`（200 行——≥8 屏@24 行制）。
 - **恢复 / 翻页记账**：恢复 / 切槽 / 清空路径全部经既有对账（直算重对账或逐行入账 + 重跑对账 / 同步归零）——**例外 = 翻页路径的占位行移除**（见下条限定）；每次恢复 / 翻页 materialize 后立即对账裁剪。
-- **记账口径**：`state.lines` 的一切增删都必须过账——
-  增 = 逐行 `accountLine`（`thincoder-cli/src/tui/display-budget.mjs:137`）/ 批算 `accountAll`（同档 `:146`）；
-  **删 = 同额负向出账**（新增导出 `releaseLine(state, l)` = `state._linesChars -= lineChars(l)`，钳 0）——`:170` `loadOlder` 移除占位行即归此列。
-  不变式 = `state._linesChars === Σ lineChars(l)`（`:147` 恢复路径的直算对账即该式）。
-  **复用不可**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs:137-143`）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故需新增导出。
+- **记账口径**：`state.lines` 的一切增删都必须过账。
+  - 增 = 逐行 `accountLine`（`thincoder-cli/src/tui/display-budget.mjs:137`）/ 批算 `accountAll`（同档 `:146`）。
+  - **删 = 同额负向出账**（新增导出 `releaseLine(state, l)` = `state._linesChars -= lineChars(l)`，钳 0）——`:170` `loadOlder` 移除占位行即归此列。
+  - 不变式 = `state._linesChars === Σ lineChars(l)`（`:147` 恢复路径的直算对账即该式）。
+  - **复用不可**：既有 `accountLine` 以行对象 `_budgetChars` 为基、幂等（`display-budget.mjs:137-143`）——行已从 `state.lines` 脱落后再调用，增量值恒 0 ⇒ 不产生负向出账，故需新增导出。
 - **限定**：`loadOlder` 占位行移除（`thincoder-cli/src/tui/startup.mjs:170`）不出账 ⇒ 直算账对 Σ 有高估（数十码元 / 页）；`thincoder-cli/src/tui/display-budget.mjs:175` 的 `!Number.isFinite(_linesChars)` 守卫对该路径不触发（账仍有限）⇒ 不重算、漂移逐页累积。**处置 = `shift()` 处补同额出账**（对比表紧随本节）。
 
 **选型对比**：占位行移除的记账处置两候选——
@@ -178,17 +176,20 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
   - 痕起跑 ∥ 收尾 = `thincoder-cli/src/tui/suspension-drive.mjs` `digestTurn`：起跑（`:101` 两行同点）⇒ `{ kind:"digest", status:"start", n:pend0, tier:upstream?"ask":"digest", ...(ask ?? {}) }`；
     收尾（`:116`）⇒ `{ kind:"digest", status:"end", ok:outcome==="ok", ms }`（`ms` 与行文案 `seconds` **同值单算式**——`(ms/1000).toFixed(1)`）。
   - cap = `thincoder-cli/src/tui/agent-turn.mjs:233-235`（`cap-stop` 分支——`:235` 行同点）⇒ `{ kind:"digest", status:"cap", mode:"stop", turns:error.turn }`（CLI 现无 auto 档产者——读取面按契约前向兼容）。
-  - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`：`meta` = 冻结时点块头事实（`key`（写面归一 = 规范形 `sub:<role>#<id>`）
-    ∥ `role ∥ model ∥ startedAt(=sub.started) ∥ doneAt ∥ turn ∥ maxTurns ∥ status` ∥ `pool?` ∥ `queued?`——`stopped` ⇒ `"stopped"` ∥ `lastError` 在场 ⇒ `"error"` ∥ 其余 `"done"`；
-    `pool` = `sub.async === true` 显式两写（非排队）∥ 排队 ⇒ `queued:true` 且 `pool` 不写；字段文法单源 = core `SESSION.md` §6.26）；`rows` = `sub.blocks` 行集（条目形 `{kind,text}` 同备）+ `sub.dropped > 0` ⇒ 前置省略标记行（行数真值）。
+  - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`。
+    - `meta` = 冻结时点块头事实（`key` 写面归一 = 规范形 `sub:<role>#<id>`）∥ `role ∥ model ∥ startedAt(=sub.started) ∥ doneAt ∥ turn ∥ maxTurns ∥ status` ∥ `pool?` ∥ `queued?`。
+    - `status` 面词：`stopped` ⇒ `"stopped"` ∥ `lastError` 在场 ⇒ `"error"` ∥ 其余 `"done"`（字段文法单源 = `docs/core/design/SESSION.md` §6.26）。
+    - `pool` = `sub.async === true` 显式两写（非排队）∥ 排队 ⇒ `queued:true` 且 `pool` 不写。
+    - `rows` = `sub.blocks` 行集（条目形 `{kind,text}` 同备）+ `sub.dropped > 0` ⇒ 前置省略标记行（行数真值）。
   - 追加失败不阻断（核尽力面）；`state._agent` ∥ `ctx.agent` 缺席（headless / 子代理内）⇒ 零动作。
   - **承载件** = `thincoder-cli/src/tui/lifecycle-records.mjs`（记录形构建 ∥ 痕行文本（live ∥ 重建同调——单一实现零副本）∥ rows 保尾 ∥ 终态行回扫——三写点 + 恢复面同调）。
 - **恢复重建**（`thincoder-cli/src/tui/startup.mjs` `historyToLines` 增记录分支——渲染面零改）：
   - **复列 = 全量**：多轮 `digest` 记录逐轮按其记录位次复列——**记录序 ≡ 恢复序**（零截点；未结轮照现——无 `end` 记录 ⇒ 起跑行 ∥ 计数行 ∥ cap 行照出；三端同判）。
   - `digest` 记录 ⇒ 痕行：`start` ⇒ 标签行（`tier==="ask"` 携 `from`/`msg` 取 `digest.turnLabelAsk` ∥ `digest.turnLabel`）+ `n>0` 计数行（`digest.start`）；`cap` ⇒ `digest.capStop`（`turns`）；`end` ⇒ 终态行（`ok!==false` ⇒ `digest.done`（`n` + `seconds`）∥ `digest.aborted`（`seconds`）——**文案与活流同算式**）。
   - **终态行 `n` 解析**：页内（含 ±1 页沿）有本轮 `start` ⇒ 直用；缺席（跨页分裂）⇒ **存储回扫**（`store.page` 向更早逐段回读，至命中本轮 `start` 止）⇒ **跨页零损（容差①于 CLI 不成立——绑定态；模式 F 未绑 ⇒ 不适用——模式 F = 未绑定，单源 = `docs/core/design/SESSION.md` §6.26）**。解析由调用面（`restoreLines` ∥ `createLoadOlder`——持有存储读口）预完成；`historyToLines` 仅增分支（形零改）。
-  - `subagent` 记录 ⇒ 冻结载体行 `{ text:"subagent activity: <key>", color:C.dim, _frozenSubTask: 合成件 }`——合成件 = 由 `meta`/`rows` 构建（`key`（剥 `sub:` 前缀——显示 = 本地无前缀形；行文取值同源自合成件 `key`）
-    ∥ `role ∥ model ∥ done:true ∥ doneAt ∥ blocks(=rows 行集) ∥ stopped ∥ errored ∥ _charCount(=行集字符和——账实一致 §5.4）` ∥ `async(= meta.pool === true)` ∥ `queued(= meta.queued === true)`），**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费——模式词 waiting/async/sync 三态照出）。
+  - `subagent` 记录 ⇒ 冻结载体行 `{ text:"subagent activity: <key>", color:C.dim, _frozenSubTask: 合成件 }`——**渲染端零改**（`render-segments.mjs` 折叠头 + tail-3 原式消费——模式词 waiting/async/sync 三态照出）。
+    - 合成件 = 由 `meta` / `rows` 构建，字段取值同源自合成件（`key` 剥 `sub:` 前缀——显示 = 本地无前缀形）。
+    - 合成件字段 = `key` ∥ `role` ∥ `model` ∥ `done:true` ∥ `doneAt` ∥ `blocks(=rows 行集)` ∥ `stopped` ∥ `errored` ∥ `_charCount(=行集字符和——账实一致 §5.4）` ∥ `async(= meta.pool === true)` ∥ `queued(= meta.queued === true)`。
     **停面词判据**：合成件 `stopped` = 记录 `status` 停止面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
     **错误面词判据**：合成件 `errored` = 记录 `status` 错误面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
   - 负控 = 记录缺 ⇒ 恢复面逐字等价；未绑（模式 F）⇒ 既有径零改（无 sidecar 存储侧——记录入人读线、落盘随既有保存链）。

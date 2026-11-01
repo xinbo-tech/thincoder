@@ -73,7 +73,9 @@
 2. **bash guard `gitGuardSnapshot`**：bash 破坏性 git 命令前自动快照（`thincoder-core/tools/bash.mjs` `GIT_DESTRUCTIVE_RE` 宽匹配）——为「git 操作一律走 git 工具」纪律漏网兜底。
 3. **手动 `checkpointAction=create`**。
 
-平台层「任务列表删除 / 上下文压缩前」自动快照**未在本项目代码中证实**——文档不声称，留待平台层确认。
+**触发点集合 = 上面三路，本节是单源**。产品面文本 `thincoder-cli/AGENTS.md` 的「快照时机」行是同一组断言的第二载体——**改一条，两处同轮改**。
+
+> **多载体同轮清（纪律）**：同一条断言同时落在设计档与产品面文本两处时，只清一处等于没清——`thincoder-cli/AGENTS.md` 是模型每次启动读的入口，模型照入口那一句行事，把设计档已否定的东西再当既成事实用一次。2026-11-01 实证：一条未证实的快照触发点曾同时落在本节与 `thincoder-cli/AGENTS.md` 的「快照时机」行，载体不同、断言同一句。
 
 ### 6.3 存储、id 与上限
 

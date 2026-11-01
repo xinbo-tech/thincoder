@@ -352,7 +352,9 @@ And `wait_for` is a **blocking** call — using it to wait for a report leaves t
       **The citation direction is batch record → state doc only**, and not the reverse — the reverse breaks the moment the record is deleted.
     - A clause reading "the criterion is batch X §2" (or naming a batch's `.test.mjs`) dies the moment that batch closes or its file is deleted.
     - **A change-trail line names what changed and where (file:line / section), not which batch carried it** — provenance lives in git and in the batch record itself.
-    - **Existing instances are violations too — no exemption** (a dedicated cleanup batch is required).
+    - **Existing instances are violations too — no exemption.** Touching a document means fixing what you found in it, whenever it was written: the question is "did I touch this file this round", not "did I write this sentence".
+      **The why**: everything in this repo was written here, by these same hands — calling a hit "pre-existing" only hands you a reason not to fix it.
+      And a "cleanup batch" is that same reason wearing a different name — which is why the old half-sentence about one is gone.
 12. Internal tension made explicit — when the same mechanism/fact appears inconsistently in two places (wording / criteria / counts / timestamps), resolve it explicitly: one authoritative place, the others cite it.
     Report on discovery — silently picking one side leaves two versions live, and nobody can tell which is current.
 

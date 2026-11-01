@@ -631,7 +631,7 @@ seg === 1 ∧ depth0 ∧ ¬review ∧ stripDecorations(value) === 进行中 ∧ 
 
 ⇒ `batch-lifecycle.mjs` ≈ **346 行**（≤±30）；三新档 150 / 95 / 55。依赖仍单向：`skeleton ← closeout ← bind ← reopen ← lifecycle`。
 
-**分舱（需求档 `docs/core/requirements/ENGINEERING-MODE-V2.md:333`「一舱一单面 ≤15 档」）**：22 档按变更面分五舱，舱内不跳面，舱间按依赖排序。
+**分舱（该批的调度选择：舱内文件集不重叠 ⇒ 可并行；舱间按依赖排序）**：22 档分五舱；表里「面」列记的是各舱实际落在哪类档上，是记录、不是拆单依据。
 
 | 舱 | 面 | 档 | 先后 |
 |---|---|---|---|

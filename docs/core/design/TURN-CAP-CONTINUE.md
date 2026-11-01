@@ -10,7 +10,7 @@
 
 | # | 条目 | 判据 |
 |---|---|---|
-| 1 | **撞墙** | `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（核 `thincoder-core/agent/turn-loop.mjs:243`（抛点）；VSC `thincoder-vscode/src/agent.mjs:7`（核单类转口导入）/ `:46`（再导出）/ `:441`（抛点）） |
+| 1 | **撞墙** | `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（核 `thincoder-core/agent/turn-loop.mjs:316`（抛点）；VSC `thincoder-vscode/src/agent.mjs:7`（核单类转口导入）/ `:46`（再导出）/ `:441`（抛点）） |
 | 2 | **继续** | `resume:true` 重跑**同一执行体**：不重新注入任务文本、保留 history 与改动记录、每次全新轮数预算（核 `thincoder-core/agent.mjs:85`（`runAgent` 入口 + 签名解构——`resume` 经 `opts`）；双端同源） |
 | 3 | **拒绝 / headless** | 无 `onQuestion` 或无权限 handler → 返回部分成果 + turn-cap 标记——`TURN_CAP_MARK = "stopped: turn cap reached"`（常量单源 = `thincoder-core/agent/child-marks.mjs`——`agent/spawn-child.mjs:35` 原样再导出；尾部附 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」。**触发面**：无 handler / headless ∨ 检查点未获续期（父答停 ∨ 父不可达 ∨ 会话中止——#7） |
 | 4 | **用户 Stop 优先** | 中止路径（`AbortError` / `signal.aborted`）恒优先于继续提示——不弹卡、不自动续跑 |
@@ -31,11 +31,12 @@
 预算默认值单源 = `thincoder-core/agent/helpers.mjs:24`（`DEFAULT_MAX_TURNS = 200`）· `:25`（`DEFAULT_SUBAGENT_TURNS = 100`）；
 参数族权威 = `docs/core/design/AGENT-PARAMS.md`（本档只列名，不重述默认值表）。
 
-**CLI 侧继续通道**（与上表 VSC 用户卡对位）：同步子代 = 权限请求 `onPermissionRequest("continue", {turns, agent})`
-（核单点 `thincoder-core/agent-tools/subagent.mjs:293-314`——`enqueueAsk(parent, "_permQueue", …)` 串行；卡面渲染 `thincoder-cli/src/tui/render-frame.mjs:329` / `:356`）；
-同步飞刀 = 直问用户（无 permQueue——`thincoder-core/agent-tools/subagent-actions.mjs:455` 注）；
-主 agent = TUI 权限面板（`thincoder-cli/src/tui/agent-turn.mjs:194` 捕 `ContinueError` → `:203-224` 弹 `name: "continue"` 卡，每次重建 controller 续跑）；
-**AUTO 档**：`thincoder-cli/src/tui/interaction.mjs:68` 的 AUTO 短路对 `continue` 名**取消放行**（不再自动批准续期）。
+**CLI 侧继续通道**（与上表 VSC 用户卡对位）：
+
+- 同步子代 = 权限请求 `onPermissionRequest("continue", {turns, agent})`——核单点 `thincoder-core/agent-tools/subagent.mjs:293-314`（`enqueueAsk(parent, "_permQueue", …)` 串行）；卡面渲染 `thincoder-cli/src/tui/render-frame.mjs:329` / `:356`。
+- 同步飞刀 = 直问用户（无 permQueue——`thincoder-core/agent-tools/subagent-actions.mjs:455` 注）。
+- 主 agent = TUI 权限面板（`thincoder-cli/src/tui/agent-turn.mjs:194` 捕 `ContinueError` → `:203-224` 弹 `name: "continue"` 卡，每次重建 controller 续跑）。
+- **AUTO 档**：`thincoder-cli/src/tui/interaction.mjs:68` 的 AUTO 短路对 `continue` 名**取消放行**（不再自动批准续期）。
 
 ## 3. 实现坐标（双端）
 
@@ -45,7 +46,7 @@
 |---|---|---|
 | `ContinueError` | `thincoder-core/agent.mjs:17`（导入）· `:38`（再导出——编排面随档重排） | 在位 |
 | `runAgent` 入口（`resume` 参数） | `thincoder-core/agent.mjs:85` | 在位 |
-| 每轮编号帧调用点 | `thincoder-core/agent/turn-loop.mjs:65`（`const frame = turnFrame(++agent._turnSeq, turn, maxTurns)`）· `:66-67`（`_currentTurn` / `_maxTurns` 回填） | 在位 |
+| 每轮编号帧调用点 | `thincoder-core/agent/turn-loop.mjs:98`（`const frame = turnFrame(++agent._turnSeq, turn, maxTurns)`）· `:99-100`（`_currentTurn` / `_maxTurns` 回填） | 在位 |
 | 编号帧纯函数 | `thincoder-core/agent/helpers.mjs:274`（`export function turnFrame(seq, turn, maxTurns)`） | 在位 |
 | 续跑支（子代理） | `thincoder-core/agent-tools/subagent-run.mjs`（`resume` 分支） | 在位（子代理轮帽语义面） |
 | 续跑支（会诊） | `thincoder-core/agent-tools/consult.mjs:307-312`（注释：每次 continue = 新回合预算 + 重挂 watchdog）· `:331`（`continueQueue`）· `:334-336`（watchdog 重挂） | 在位 |
@@ -53,7 +54,7 @@
 | 主 agent 续跑（CLI） | `thincoder-cli/src/tui/agent-turn.mjs:194`（`ContinueError` 分支）· `:203-224`（`name: "continue"` 权限卡）· `:132`/`:137`（`makeController` 定义 / 每段重建 controller 登记 abort 集合） | 在位 |
 | **撞帽检查点（构造 / 挂起 / 兑现）** | `thincoder-core/agent-tools/checkpoint.mjs`（**新增零依赖叶**——导出集 / 幂等口径 / 兑现调用点见本表表注） | 新增 |
 | 检查点判定点（段边界） | `thincoder-core/agent/spawn-child.mjs:253`（`askContinue(e)` 调用点 = 段边界**唯一**判决动作）· `:248`（续跑循环头）· `:255` 起（`onDeclined` 降级分支） | 在位 |
-| 撞帽抛点（核） | `thincoder-core/agent/turn-loop.mjs:243`（`throw new ContinueError(maxTurns)`）· `:237`（`injectPostTurn(...)` 调用——回合尾单点） | 在位 |
+| 撞帽抛点（核） | `thincoder-core/agent/turn-loop.mjs:316`（`throw new ContinueError(maxTurns)`）· `:307`（`injectPostTurn(...)` 调用——回合尾单点） | 在位 |
 | 异步族报请面 | `thincoder-core/agent-tools/subagent-run.mjs:174`（async 子代 askContinue——**回调体内登记**）· `agent-tools/escalate-async.mjs:252`（async 飞刀——同形）· `agent-tools/consult.mjs:329-340`（会诊——`session.continueQueue` **闭包内登记**（串行保留）；续期 ⇒ `clearTimeout(watchdog)` + 重挂） | 在位 |
 | 裁定通道（答复侧） | `thincoder-core/agent-tools/subagent-actions.mjs:46`（`executeSendAction`——续期 + 文本作新段首条指令；**兑现调用点两处见本表表注**）· `agent-tools/subagent-async.mjs:245`（`executeCancelAction`——停 ⇒ partial；**±0 行**）· 报请入队 / 唤醒 = `agent-tools/parent-channel.mjs`（`pushChildUpstream` + `wakeAsyncWaiters`——复用，零新建） | 在位 |
 | 池条目留痕（段数 / 累计轮次） | `thincoder-core/agent-tools/subagent-actions.mjs:36`（status 面——转口 `subagent-actions-query.mjs`）/ `:263`（observe 面）——`{ turnCap: turnCapTrace(entry) }` 入摘要**文本**（桥字段零新增） | 新增行 |
@@ -108,12 +109,12 @@
 
 - **编号帧（纯函数）**：`turnFrame(seq, turn, maxTurns) → { turn: seq, maxTurns: seq - turn - 1 + maxTurns }`——差额项 = 本段开始前的链内累计。
   段内帽判定**不读**该帧（循环条件仍只读段内 `turn < maxTurns`）。
-- **唯一新增状态**：`agent._turnSeq`（链内累计序数，agent 级）——复位条件 `!opts.resume` 且**仅此一处**（复位落点 = `thincoder-core/agent/run-start.mjs:66-70`——`!resume` 守卫 `:66` + 编号复位 `:70`）；递增 = 每轮无条件 +1（与回调存在与否无关）。
-- **段数留痕**：`agent._continueSegments`（链内段数，agent 级）——`resume` 重入 +1、首段 = 1；复位条件同 `_turnSeq`（`!opts.resume`——复位落点 `thincoder-core/agent/run-start.mjs:66-70`；`_continueSegments` 承载式赋值 `:62`）。消费面 = 摘要**文本**（§3.1 池条目留痕行）⇒ 桥字段零新增；#7 检查点的载荷与留痕口径同读此值。
+- **唯一新增状态**：`agent._turnSeq`（链内累计序数，agent 级）——复位条件 `!opts.resume` 且**仅此一处**（复位落点 = `thincoder-core/agent/run-start.mjs:109-113`——`!resume` 守卫 `:109` + 编号复位 `:113`）；递增 = 每轮无条件 +1（与回调存在与否无关）。
+- **段数留痕**：`agent._continueSegments`（链内段数，agent 级）——`resume` 重入 +1、首段 = 1；复位条件同 `_turnSeq`（`!opts.resume`——承载式赋值 `thincoder-core/agent/run-start.mjs:104`：`resume ? (_continueSegments ?? 1) + 1 : 1`，链起点归 1）。消费面 = 摘要**文本**（§3.1 池条目留痕行）⇒ 桥字段零新增；#7 检查点的载荷与留痕口径同读此值。
 - **段间载体（端差面）**：VSC 子代理面每段续跑 = **新 agent 对象** ⇒ `_turnSeq` 不跨段存活 ⇒ 经 `opts._turnSeqBase` 回传
   （仅 `_turnSeq == null` 时落，非空不覆盖）；核侧同一 child 对象跨段 ⇒ `_turnSeq` 非空 ⇒ 种子零作用。
   **同结果、异载体**——语义同源，实现形态各端自持。
-- **消费面零改动**：编号经既有回调与终态快照消费——**桥消息字段零新增**、webview 显示文件零改动（值语义改动即生效）。
+- **消费面**：编号经既有回调与终态快照消费——**桥消息字段零新增**、webview 显示文件零改动（值语义改动即生效）；撞帽提示文案直读 `_turnSeq` 本身（§6），同样零新增字段。
 - **零改动面**：终态快照、webview 显示文件（`webview/activity.js` / `activity-view.js`）、出生 / queued 事件、段内帽判定与 `ContinueError` 载荷。
 
 ## 5. 关键决策记录
@@ -129,7 +130,7 @@
 | D-TC7 | 段内帽 / 续跑循环结构 / `ContinueError` 载荷零改动 | 累计只作用于编号值 |
 | D-TC8 | **编号帧复用 `_currentTurn` / `_maxTurns`**（approval 事件读同一对字段——CLI `thincoder-core/agent/dispatch.mjs:301` 零改动） | 只改 turn 事件载荷而状态行字段仍段内 ⇒ 同链内两类事件交替驱动块头、显示值来回跳 |
 | D-TC9 | **depth 无关**（主会话续跑同构同修） | 同一缺陷结构在主会话续跑（Ctrl+I / AUTO 续跑）同存——只修 depth>0 = 留同构错误。**代价如实披露：主会话状态行编号同样累计**（同源结果） |
-| D-TC10 | **继续提示文案不动**（`Ran ${error.turn} turns (limit …)` 描述**本段**撞墙事件） | 改文案 = 动锁定串 / 提示面——`open`：是否补「累计进度」口径留待用户 / 后续批 |
+| D-TC10 | **撞帽提示 = 本段轮数 + 链内累计轮数，并删掉 `(limit …)` 括注**（三端同一信息集——逐字模板 / 落点 / 断言清单见 §6） | ① 只报本段，用户判不出「已经转了 40 轮」还是「刚转 12 轮」，而继续 / 停的决断正好取决于这个量级（用户 2026-11-01 20:02 裁定）；② `(limit N)` 在撞帽面上恒等于同一个数——`ContinueError(maxTurns)` 于循环跑满后抛出（`thincoder-core/agent/turn-loop.mjs:89` / `:316`），VSC / 桌面更印成无数字的 `(limit)` 断头句；累计上限在撞帽点同样 ≡ 累计已跑，印不出新信息（用户 2026-11-01 20:04「一起改」） |
 | D-TC11 | escalate 与子代理**共用 `ctx._subagentKey`**（`thincoder-core/agent-tools/subagent-actions.mjs:475`） | 继续 / 完成的 TUI 冻结与记账语义一致 |
 | D-TC12 | 检查点 = **段边界挂起**（不 settle、不重派新 child） | 保留同一 child 对象 ⇒ `resume` 后 history / 记账 / 累计编号全保活（F2「同一执行体」天然满足） |
 | D-TC13 | 裁定通道 = **既有 `subagent action:'send'`（续期）/ `'cancel'`（停）**——**零新建** | send 已是「父 → 子注入」单点（`subagent-actions.mjs:293`），自然映射「续期 + 新段首条指令」；cancel 已是既有停面 |
@@ -139,3 +140,84 @@
 | D-TC19 | **载入面自证取最小**：① 启动期一行诊断（core 实体路径 + 版本）② 打包面机检（vsix 内 core 含检查点接线）——**不动机制语义**（只加可核面） | 实况触发 = 运行面跑的是安装包内冻结旧构建 ⇒「以为在跑新码」必须可自证 |
 
 - **检查点逃逸三分档**（D-TC12）：① **兑现**——`send` 面两处（§3.1 表注：池直注入 + 会诊未命中分支）；② **中止信号**——Stop / `cancel` / 会话中止 ⇒ 登记 `signal` abort ⇒ resolve(false) ⇒ `onDeclined` partial + `TURN_CAP_MARK`；③ **不可答降级**——`child._upstream?.parent` 缺席 ∨ 同步族 ⇒ **不登记** ⇒ 走既有路径（同步族 = 用户卡面；无 handler = partial）。
+
+## 6. 撞帽提示文案（三端同口径）
+
+**判据**：撞帽提示必须同时给出**本段跑了多少轮**与**链内累计跑了多少轮**。
+
+只报本段，用户判不出「已经转了 40 轮」还是「刚转 12 轮」——而继续 / 停的决断正好取决于这个量级（用户 2026-11-01 20:02 逐字「C15累计进度要啊」；决策 = D-TC10）。
+
+三端信息集相等，**端差即缺陷**。
+
+### 6.1 两个数，各自单源
+
+| 量 | 取值 | 单源 |
+|---|---|---|
+| 本段轮数 `seg` | `ContinueError.turn` | 抛点 `thincoder-core/agent/turn-loop.mjs:316`；`for (let turn = 0; turn < maxTurns; turn++)`（`:89`）跑满后抛 ⇒ `seg` 恒等于本段预算 |
+| 链内累计 `total` | `agent._turnSeq` | 每轮无条件 +1（`thincoder-core/agent/turn-loop.mjs:98`）；`!resume` 链起点复位（`thincoder-core/agent/run-start.mjs:109-113`）——§4 的累计计数器本身 |
+
+- **读计数器本身**，不读 `_currentTurn` 显示帧：帧值是同值镜像，同一时刻恒等，读计数器少一层间接。
+- **先例** = 检查点载荷与池条目留痕（`thincoder-core/agent-tools/checkpoint.mjs:29`：`accumulated ${child?._turnSeq ?? 0} turns`）——同一取值口径、同一英文形态。
+- **公开源** = `PROJECT-MANIFEST.json` 的 `index.publicRepos` 为 `[]`（本批实读）⇒ 无外部公共源可比面；仓内规范面已扫（本档 / `docs/core/requirements/TURN-CAP-CONTINUE.md` / `docs/cli/design/TUI-SESSION-VIEW.md`）。
+
+### 6.2 上限不印（删掉 `(limit …)`）
+
+**结论**：三端一律删掉 `(limit …)` 括注，一个上限数都不印。
+
+- **本段上限 ≡ 本段轮数**：`ContinueError(maxTurns)` 在循环跑满后抛出（`thincoder-core/agent/turn-loop.mjs:89` / `:316`）⇒ `Ran N turns (limit N)` 把同一个数说了两遍。
+- **累计上限 ≡ 累计轮数**：帧公式 `seq - turn - 1 + maxTurns` 在最后一轮取值恰为 `seq`（`thincoder-core/agent/helpers.mjs:277`）⇒ 撞帽点上任何上限都不带新信息。
+- **现盘更差**：VSC / 桌面印的是无数字的 `(limit)`——断头句，读者无从填。
+- **`ContinueError` 不加上限字段**：载荷增字段 = 动续跑契约（D-TC7 / 需求 N6 零改动），而值恒等于已示数；三端用 `error.turn` + `agent._turnSeq` 两个既有值即可，端差为零。
+
+### 6.3 逐字模板
+
+| 端 | 逐字 |
+|---|---|
+| CLI | `Ran ${seg} turns — ${total} turns total. Continue?` |
+| VSC | `Agent reached ${seg} turns — ${total} turns total. Continue from here?` |
+| 桌面 | `Agent reached ${seg} turns — ${total} turns total. Continue from here?`（与 VSC 逐字同句） |
+
+CLI 待答状态行（同一张卡的第二行）：`Continue after ${seg} turns (${total} total)?`——信息集与上一行相同，不留「只报本段」的第二处。
+
+### 6.4 落点
+
+| 端 | 落点 | 改法 |
+|---|---|---|
+| CLI | `thincoder-cli/src/tui/agent-turn.mjs:242`（`pushLine` 文案）· `:250`（`state.status`） | 分支头取一次 `const total = agent._turnSeq`，两行同用 |
+| VSC | `thincoder-vscode/src/extension/panel-turn-loop.mjs:262` | `agent` 在本函数域声明（`:199`），catch 内直达 |
+| 桌面 | `thincoder-desktop/src/main/turn-face.mjs:68`（`consentOf` 转口）· `:150`（调用点，`agent` 在域）· `thincoder-desktop/src/main/turn-driver.mjs:103`（注入面 `askContinue`） | 注入面签名扩一参 `askContinue(key, turn, total)`，调用点传 `agent._turnSeq`；两处注释（`turn-face.mjs:57` / `turn-driver.mjs:99-100`）同改 |
+
+`state.permission.args`（CLI `:247`，`{ turns: error.turn }`）**零改**——权限载荷不是提示面。
+
+### 6.5 断言连带（锁定串清单）
+
+本批实扫：**全仓无测试用例断言这两句**——要改的只有源码面与规范面。
+
+| 面 | 坐标 | 改法 |
+|---|---|---|
+| CLI 文案 | `thincoder-cli/src/tui/agent-turn.mjs:242` | 换 §6.3 模板 |
+| CLI 状态行 | `thincoder-cli/src/tui/agent-turn.mjs:250` | 换 §6.3 第二行 |
+| VSC 文案 | `thincoder-vscode/src/extension/panel-turn-loop.mjs:262` | 换 §6.3 模板 |
+| 桌面文案 | `thincoder-desktop/src/main/turn-driver.mjs:103` | 换 §6.3 模板 + 签名 |
+| 桌面转口 / 调用点 | `thincoder-desktop/src/main/turn-face.mjs:68` / `:150` | 传累计值 |
+| 需求档 | `docs/core/requirements/TURN-CAP-CONTINUE.md:43`（「不改继续提示文案」） | 与本裁定冲突——**主 agent 落**，设计侧只报 |
+| CLI 设计档 | `docs/cli/design/TUI-SESSION-VIEW.md:70`（引用旧询问串） | 待对齐 —— 本批不动：该档整档未过段落长度门，与本批文案一并由主 agent 安排修 |
+
+- 检索串 = `turns \(limit` ∥ `Continue from here` ∥ `Ran \d` ∥ `Continue after`；命中面 = 三处源码 + 本档 + 需求档 + 归档档，**测试档零命中**。
+- 归档档（各端 `docs/_archive/*`）不追改——历史面。
+- **不新增机检**（用户明定）。
+
+### 6.6 用例（实施轮自测口径）
+
+| # | 输入 | 期望 |
+|---|---|---|
+| C1 | 首段 `maxTurns: 3` 跑满 | `seg = 3` · `total = 3` |
+| C2 | 段 1 跑满后续跑一次（段 2，`maxTurns: 3`）跑满 | `seg = 3` · `total = 6` |
+| C3 | 新链（`resume: false`）首段跑满 | `total` = 本段轮数（不继承上一链） |
+
+### 6.7 边界
+
+- 不改撞帽判定 / 续跑结构 / 段预算（D-TC1 · D-TC7），`ContinueError` 载荷零改。
+- 卡标题 `thincoder-cli/src/tui/render-frame.mjs:304`（` Continue? (y/n) `）零改。
+- `ContinueError` 自身 message（`thincoder-core/agent/helpers.mjs:241`）零改——那是错误路径回显，不是提示面，且抛点取不到 agent 的累计值。
+- 检查点载荷 / 池条目留痕文案 / 后端帧零改。
