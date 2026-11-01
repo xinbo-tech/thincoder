@@ -1,7 +1,7 @@
 # 工作区约定：技能 · 规则 · 同伴 · 台账（WORKSPACE）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 
@@ -46,6 +46,7 @@
 - **作用域规则（三端同面）** —— 目录 `.cursor/rules/*.md` / `*.mdc`；frontmatter `globs` / `alwaysApply` / `description`。
   读取 = 核 `thincoder-core/rules.mjs`（`matchesGlob` ∕ `simpleGlobMatch` 入核单源）；**三分类 = 按序判定（互斥）**：
   ① `alwaysApply: true` ⇒ **常驻集**（**先判**——`globs` 同在不改分类）；② 有 `globs` ⇒ **作用域集** = 命中路径的工具派发前置提醒（会话级去重）；
+
   ③ 无 `globs` 且无 `description` ⇒ **常驻集**；④ 仅 `description`（Cursor 的 agent-requested 语义）⇒ **不注入**（本端无该机制——登记 · 边界）。
   常驻集落点 = [4] 层尾块；desk ∕ CLI 端同得该目录两面（尾块 + 作用域 JIT——核单源取得）。
 - **消费单源** = 核 provider `chat()`（`streamRules` + `firedPatterns`）——两端同引；abort / warn 两分支同式。
@@ -57,8 +58,3 @@
 ## 4. 对外契约影响
 
 **本子系统无 §2.12.2 处置表行**。
-
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
-**核内落点行数** → §2.8.1「核内逐档行数与拆分计划」（本子系统面：`thincoder-core/ledger-surface.mjs`——#174）。

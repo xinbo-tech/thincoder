@@ -284,31 +284,6 @@ node prompt-fixture/compare.mjs <a.json> <b.json>
 
 呈现面（md 文案、列序、表格样式）变化**不 bump**。bump 是人工 + 评审可见的动作，不设自动推导。
 
-## 3 受影响文件表
-
-| 文件 | 现状行数 | 本批动作 | 预计行数（增量） |
-|---|---|---|---|
-| `docs/core/design/PROMPT-FIXTURE.md` | 改写前 247 | 改写（本设计，已落档；本轮修正后实测 392 行） | 392（整档替换） |
-| `docs/README.md` | 107 | 改：§4 其余档清单登记本档（新增分组行）+ `:74` 计数 39→40 + `:83` 对账行「实档 61 = 本图登记 61」→「62 = 62」 | +1（一处新增行、两处就地改） |
-| `prompt-fixture/data.mjs` | — | 新增 | ~50 |
-| `prompt-fixture/materialize.mjs` | — | 新增 | ~160 |
-| `prompt-fixture/scenarios.mjs` | — | 新增 | ~150 |
-| `prompt-fixture/tools.mjs` | — | 新增 | ~120 |
-| `prompt-fixture/runner.mjs` | — | 新增 | ~190 |
-| `prompt-fixture/stats.mjs` | — | 新增 | ~110 |
-| `prompt-fixture/report.mjs` | — | 新增 | ~150 |
-| `prompt-fixture/compare.mjs` | — | 新增 | ~90 |
-| `prompt-fixture/run.mjs` | — | 新增（CLI） | ~140 |
-| `prompt-fixture/scenarios/write-constraint.json` | — | 新增 | ~35 |
-| `prompt-fixture/variants/demo.json` | — | 新增 | ~12 |
-| `prompt-fixture/dry-run.json` | — | 新增 | ~30 |
-| `prompt-fixture/README` | — | 新增（纯文本用法：入口、产物、边界） | ~70 |
-| `prompt-fixture/test/*.test.mjs` | — | 新增（本批单测，收口删除） | ~280 |
-
-**零改动面**（AC-12 / AC-14 机检）：`thincoder-core/**`（含 `prompts/` 三档与全部 `.mjs`）· 其它跑批工具目录 · `test/RTM.md` · 各产品包 `package.json`。
-
-拆分计划：新增档单档 ≤ 250 行；`runner.mjs` 若超 300 行，工具环拆成 `pipeline.mjs`，同目录内拆，零跨域移动。
-
 ## 4 关键决策（含被否候选）
 
 | # | 决策 | 理由 | 被否候选（为何不行） |

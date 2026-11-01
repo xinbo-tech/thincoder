@@ -522,16 +522,6 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 （行 1 ∥ 行 2 = VSC 单元清单 ∥ VSC 集成清单。）**CLI ∥ 核的收集面故障文本唯一 home = §10.3 ①**——本表不复制（两包文案随收集面收窄改写）。
 6. **「零用例行」判据模式**（「自检先于测试运行」的机判面）：自检失败输出**不得含** `node --test` 的测试标记行（`ℹ tests <n>` / `ℹ pass <n>` / `ℹ fail <n>` 等 `ℹ ` 计数行——实测：跑过即打印 `✔ <用例名>` + `ℹ tests 1`）**且不得含** `✔ ` 用例行；`✖ test manifest check failed: ` 行自身 = 自检故障行（非用例行）。判据 = 命中该前缀行 **∧** 零 `ℹ ` 计数行。
 
-**受影响文件与判据**：
-
-| 文件 | 现量 | Δ（本条目，已落地） | 判据 |
-|---|---|---|---|
-| `thincoder-vscode/test/run.mjs` | 见 §10.3 面差登记 | +~12（② 分身两域 + 头注一行） | A-RC1：临时落 `test/__reverse-probe.test.mjs`（未登记）⇒ `node test/run.mjs` **exit 1** 且输出命中单元测试**完整样例行**（**先于** `node --test`——零 `ℹ ` 计数行）；删档复原 |
-| `thincoder-cli/test/run.mjs` | 见 §10.3 受影响文件表 | +~14（SC-1 段 + 头注） | A-RC2：临时落 `test/__reverse-probe/x.test.mjs`（收集面外）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
-| `thincoder-core/test/run.mjs` | 见 §10.3 受影响文件表 | +~14（SC-1 段 + 头注） | A-RC5（核面先红）：临时落 `test/__reverse-probe/x.test.mjs`（核 = 零目标集合，任何位置皆收集面外）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原 |
-| 三包 `test/` 现盘 | — | 0 | A-RC3：零假阳——健康树面上自检不误报：cli（`test/` 顶层零档、零 `*.test.mjs`）⇒ 零 `uncollected test file`、出口 = 空集说明器（exit 1 ∧ 仓根指引——集成层在仓根，§10.3 A-SL3）；核（`test/` 零 `*.test.mjs`）⇒ 零 `uncollected test file`、出口 = 空集说明（exit 1 ∧ `requirement N20`——§10.3 A-SL4）；VSC 面 = 面差 ②（分层未落），读数不引为「已验」 |
-| VSC 集成测试自检 ② | 既有 | 0 | A-RC4：既有反向断言（集成测试域）逐字零回归 |
-
 **不做（明确出界）**：
 
 - **不给 CLI / 核引入清单文件**——三包收集机制差异 = §10 F2 的既有设计（**CLI = 单层 glob · 核 = 零目标集合 · VSC 显式清单**）；本条目只补反向断言，不改收集机制（改机制 = 另案）。
@@ -785,24 +775,13 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 **取舍注**：29119-3 未读到 ⇒ 本文档字段**以 GB/T 25000.51-2016 §6.4 为准**（同为公开可读、与 29119 系列同旨）。
 
-### 11.8 受影响文件
+**反向探针判据（A-RC1–A-RC5 · 收集面自检）**：
 
-| 文件 | 本批 |
-|---|---|
-| `docs/core/design/TESTING.md`（本档自身） | 设计轮落 |
-| `docs/core/requirements/TESTING.md` | 父侧落 |
-| `thincoder-core/prompts/persona-eng-designer.md` | 实施轮落 |
-| `thincoder-core/prompts/advisor-design.md` | 实施轮落 |
-| `thincoder-core/prompts/discipline-engineering.md` | 实施轮落 |
-| CLI 包 `<包>/test/RTM.md` | 实施轮建 |
-| CLI 包 `test/integration/*.test.mjs`（5 档） | 实施轮落 |
-| `docs/batches/2026-10-24-rtm-index.check.mjs`（机判脚本） | 实施轮落 · 收口删 |
-| vsc ∥ desktop 包 `<包>/test/RTM.md` | 实施轮建 |
-| `docs/core/design/PROMPT-SYSTEM.md` §6.6（操作数族判据源） | 实施轮落 · 与提示词同批 |
-| `docs/core/design/DOC-DISCIPLINE.md`（操作数族判据源） | 实施轮落 · 与提示词同批 |
-| `thincoder-core/doc-check/anchors.mjs` | 实施轮落 · 与提示词同批 |
-| `scripts/prompt-refs-check.mjs`（仓根） | 实施轮落 · 与提示词同批 |
-| `thincoder-core/tool-docs/doc_check.md` | 实施轮落 · 与提示词同批 |
+- **A-RC1**（VSC 面）：临时落 `test/__reverse-probe.test.mjs`（未登记）⇒ `node test/run.mjs` **exit 1** 且输出命中单元测试**完整样例行**（**先于** `node --test`——零 `ℹ ` 计数行）；删档复原。
+- **A-RC2**（CLI 面）：临时落 `test/__reverse-probe/x.test.mjs`（收集面外）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原。
+- **A-RC3**（零假阳）：健康树面上自检不误报——cli（`test/` 顶层零档、零 `*.test.mjs`）⇒ 零 `uncollected test file`、出口 = 空集说明器（exit 1 ∧ 仓根指引——集成层在仓根，§10.3 A-SL3）；核（`test/` 零 `*.test.mjs`）⇒ 零 `uncollected test file`、出口 = 空集说明（exit 1 ∧ `requirement N20`——§10.3 A-SL4）；VSC 面 = 面差 ②（分层未落），读数不引为「已验」。
+- **A-RC4**（零回归）：既有反向断言（集成测试域）逐字零回归。
+- **A-RC5**（核面先红）：临时落 `test/__reverse-probe/x.test.mjs`（核 = 零目标集合，任何位置皆收集面外）⇒ `node test/run.mjs` **exit 1** 且输出含 `uncollected test file`；删目录复原。
 
 **操作数族登记面的检索读数（本席实跑 2026-10-24）**：检索式 = `CANON_OPERANDS` ∥ `CANON 操作数` ∥ `Six names` ∥ `六名`，域 = 跟踪面（`docs/**` 非批档 ∥ `thincoder-core/**` ∥ `scripts/**`；批档 ∥ `.thincoder/tmp/**` ∥ `_archive` = 记录面，不入判）。
 

@@ -52,10 +52,6 @@
 |---|---|---|---|---|---|---|
 | 8 | `provider/list-models` 失败形态（空清单 → 明确报错） | 输出 | 取并集 | 登记 + CHANGELOG | `PROVIDER.md` 同步 + 用例 | 已裁 · 按建议（§2.5.1 A20） |
 
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
-
 ## 6. 机制面
 
 > **本节内容**：(a) 机制 / 契约的实质描述 · (b) 实现细节与坐标 · (c) 关键决策依据（§7）。
@@ -566,7 +562,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 `thincoder-core/config.mjs:93-109` 现按 `provider.context` 二值判来源（`provider-override` ∥ `spec`）——新链下 L1 / L3 命中都会误报成 `spec`。
 改读 `providerSpecResolution(provider)` 的 `source`，闭集五值：`modelContext`（L1）∥ `provider-override`（L2）∥ `list`（L3）∥ `spec`（L4）∥ `default`（L5）。
 
-唯一消费点 = `thincoder-core/agent-tools/context.mjs:101` 的 `Request budget: window <n> (<source>)`：**映射 = 恒等**（五个枚举值原样入括号；现文案就是原样插值枚举），**不并类**——并成「人工声明 / 列表 / 静态」会丢掉 L1/L2 的分辨力，而该行的用途正是判来源。该档入受影响文件表（Δ = ±0：只换来源取值，零新分支）。
+唯一消费点 = `thincoder-core/agent-tools/context.mjs:101` 的 `Request budget: window <n> (<source>)`：**映射 = 恒等**（五个枚举值原样入括号；现文案就是原样插值枚举），**不并类**——并成「人工声明 / 列表 / 静态」会丢掉 L1/L2 的分辨力，而该行的用途正是判来源。该档零改动：只换来源取值，零新分支。
 
 **未知模型告警的口径**
 
@@ -650,41 +646,8 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 
 **G-1**：`grep -rn "setContextFlow" thincoder-cli/src` ⇒ 零命中。**G-2**：`grep -rn --include=*.mjs --include=*.js "\.context *= " thincoder-cli/src thincoder-vscode thincoder-desktop thincoder-server` ⇒ 零命中（核面只留 ②③ 两处非产键写者）。
 
-**受影响文件（行数口径 = `wc -l`；读数日期 = 2026-10-23）**
-
-| 文件 | 现量 | Δ | 性质 |
-|---|---|---|---|
-| `thincoder-core/model-context.mjs` | **99**（收口轮 wc -l 实读） | +~100；本批 **净删 12**（111 → 99） | 缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`；本批净删 = 两处撞键分支与告警文案（`:78-84` · `:97-103`）及文件头/注释里的撞键描述；读面撞键 ⇒ 取一条 |
-| `thincoder-core/model-specs.mjs` | **442**（`wc -l` 实读 · 2026-10-23） | 本批 ±0 | 上一批已落链 ∥ 量级守卫（L1 ∥ L2）∥ `providerSpecResolution` ∥ `formatContextK` ∥ `formatDeclaredContextK`；本批零改（入口本体）。拆点判定：442 ≤ 500 软线 ⇒ **拆点未触发**（零表块位移、零结构重整——§13.6 口径） |
-| `thincoder-core/provider/list-models.mjs` | **199** | +~15 | openai 分支收集 id→窗口，返回前写缓存 |
-| `thincoder-core/config.mjs` | **438** | +~20 | `modelContext` 装载归一 ∥ `requestBudget` 改读 `providerSpecResolution().source` |
-| `thincoder-core/agent-tools/context.mjs` | **181** | ±0 | `:101` 只换来源枚举值（恒等映射，零新分支） |
-| `thincoder-core/CHANGELOG.md` | **311**（批后 `wc -l`） | +6 条（`:10-18`，含 A7 迁移说明一条） | §「旧键 `providers[].context`（K）退役形态」末条要求该档 |
-| `thincoder-cli/src/tui/provider-admin.mjs` | **417** （本轮 `wc -l` 实读） | 展示串批 +2；本批 **净删 ~14** | `setModelContextFlow` 新增（含第 4 步清除确认，`confirmDelete` 复用）∥ `setContextFlow`（`:174-221`）删除；四处窗口串经核 `formatDeclaredContextK`（`:243` · `:272` · `:328` · `:370`）；本批净删 = 三处撞键拒写径（`:237-241` 预检 · `:266-269` 清除前判 · `:280`/`:289`/`:300-303` 盘面写窗）与相关注释；清除径删全部命中键 |
-| `thincoder-cli/src/tui/model-picker.mjs` | **322** | +~6 ∥ −5 | L1 管理项改 `Set context window (K)…` / `action:"model-context"`；`fmtContextK`（`:39`）上提核 |
-| `thincoder-vscode/webview/settings-providers.js` | **180** | +~35；展示串批 −12 | 渠道行动作簇 `Context…` 钮 + 弹窗装配；展示串批：行面改渲染宿主 `modelContextText`，删自拼串与其旧理由注释 |
-| `thincoder-vscode/webview/settings-provider-dialog.js` | **499**（`wc -l` 实读 · 2026-10-23） | 本批 **±0**（不碰该档） | 上下文编辑弹窗体（既有件）；撞键拒写径在宿主 `provider-context.mjs` 与三端写面，本档无守卫代码（`blocked` 与撞键拒写标识零命中）⇒ 不在本批射程；拆点判定：499 ≤ 500 软线 ⇒ **拆点未触发**（口径同 `model-specs.mjs` 行） |
-| `thincoder-vscode/src/extension/settings.mjs` | **444** （本轮 `wc -l`） | +~25；展示串批 ±0 | 转口 + 两键入载荷：`providerStatus()` 增 `modelContext` + `context`；`saveProviderModelContext` 按设计坐标 re-export——实现体已迁 `provider-context.mjs`（理由 = 本档经 `provider-flows.mjs` 引 `vscode`，Node 里不可 import、单测无法跑）；展示串批：`modelContextText` 随 `providerContextFields(entry)` 展开进载荷，本档零改 |
-| `thincoder-vscode/src/extension/panel-messages-settings.mjs` | **326** | +~12；展示串批 +1 | 新 case `saveProviderModelContext`；展示串批：回执载荷增 `kText`（宿主 `formatDeclaredContextK(k)` 出词） |
-| `thincoder-vscode/locales/zh.json` · `en.json` | **361** · **361**（`wc -l` 实读 · 2026-10-23） | +8 键 / 端；展示串批 ±0 | 八键 zh ∥ en 字面；展示串批：两键（`contextSaved` · `contextClearConfirm`）× zh ∥ en 去模板尾 `K`（值改用核出词串） |
-| `thincoder-vscode/src/extension/provider-context.mjs` | **97** （新；本轮 `wc -l`） | +88；本批 **净删 ~9** | 读面两键（`providerContextFields`）∥ 写面体（`saveProviderModelContext`：值校验 · 末段尺子改写）；纯 Node、零 `vscode` 依赖（可单测）；本批净删 = 撞键拒写径（`:64` 报错串 · `:71-72` 预检 · `:82` 写窗复判 · `blocked` 管路）与相关注释；清除径改删全部命中键 |
-| `thincoder-vscode/src/extension/panel-messages.mjs` | **400**（本轮 `wc -l`） | +~2 | 分发 `case "saveProviderModelContext"`（`:318`） |
-| `thincoder-vscode/webview/chat-messages.js` | **301**（本轮 `wc -l`） | +~3；展示串批 ±0 | 回执消费 `providerContextSaved`（`:170`——转发行内保存行，`kText` 原样透传） |
-| `thincoder-vscode/webview/settings.js` | **204**（本轮 `wc -l`） | +~2 | 关面板同清上下文弹窗族（含确认族遮罩——`:176`） |
-| `thincoder-desktop/renderer/views/settings-sections-providers.mjs` | **308** | +~30 | 渠道行 `Context…` 钮 + `providerContextBody` 弹窗体 |
-| `thincoder-desktop/renderer/views/settings.mjs` | **463** | +~10 | `providerContext` 弹窗支 |
-| `thincoder-desktop/renderer/mount-settings-segments-providers.mjs` | **330** | +~30 | handlers 增编辑 ∥ 保存出口 |
-| `thincoder-desktop/renderer/settings-confirm.mjs` | **83** | +~5 | 既有确认弹层增正文参数（清除确认带当前值；默认焦点 ∥ 框内 Esc ∥ 背板语义零改） |
-| `thincoder-desktop/renderer/mount-settings-reads.mjs` | **222** | +~8 | `provider:list` 回执透传两键；候选切片 `settings.model.models` 只读（零改） |
-| `thincoder-desktop/src/main/providers.mjs` | **405**（收口轮 `wc -l` 实读） | +~10；本批 **净删 1**（406 → 405） | `provider:list` 行面增 `modelContext` + `context` 两键（**不加 `models` 键**——候选不从此回执取）；本批净删 = 撞键预检与拒写（`:286` 注 · `:299` 预检 · `:308` 写窗复判 · `:319` `reason:"ambiguous"`）；写面撞键全改写、清除删全部命中键 |
-| `thincoder-desktop/renderer/i18n-settings.mjs` | **230** | 展示串批 −1 键 | 七键（`contextSaved` 死键已删）；本批零改 |
-| `thincoder-server/public/model-specs-snapshot.mjs` | **102** | ±0（一 token + 注改） | 第三载体随正（§17） |
-| 单元测试档（新增，收口删） | 0 | +~185 | P-1..P-13 ∥ W-1..W-20 ∥ G-1..G-2 |
-| 单元测试档（**展示串批**新增，收口删） | 0 | +~60 | W-9 ∥ W-9b ∥ R33③ 源扫（五档判据见下「R33③ 源扫」） |
-
 `thincoder-core/model-specs.mjs` 入口本体零改；桌面 i18n 七键（`contextSaved` 死键已删）、展示面已接 `modelContextText` ⇒ 本批只动 `thincoder-desktop/src/main/providers.mjs`（撞键守卫回收）。
 
-本表读数 = `ReadAllLines().Length` 实读（2026-10-23，与 `wc -l` 同值）；标注「本轮」的六行为 VSC 面交付后复测值，其余为设计轮读数；标注「展示串批」的 Δ 为展示串统一批的预估值；标注「本批净删」的 Δ 为撞键守卫回收批的预估删量。
 
 **R33③ 源扫（机检判据 · 五档射程）**
 
@@ -705,7 +668,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 | 新增件 | 答复 |
 |---|---|
 | `providers[].context`（既有配置键） | **existing but unusable**：坐标 = `thincoder-core/config.mjs:257-265`（装载归一）∥ 乘点 `thincoder-core/model-specs.mjs:379`；失败面 = ① 粒度 = 渠道级（用户 17:31 裁定按模型）② 单位事故两起（K 当 token 填 ⇒ ×1024 后 2.68 亿 / 10.7 亿 token）⇒ 不复用为 L1，退居 L2 |
-| `modelContext`（既有键名） | **existing**: `thincoder-core/config.mjs:272-289`（装载归一）∥ `thincoder-core/model-context.mjs` `manualContextK`（L1 取值）∥ 三端写面 ∥ 载荷（受影响文件表在册） |
+| `modelContext`（既有键名） | **existing**: `thincoder-core/config.mjs:272-289`（装载归一）∥ `thincoder-core/model-context.mjs` `manualContextK`（L1 取值）∥ 三端写面 ∥ 载荷 |
 | `model-context.mjs`（既有模块） | **existing**: `thincoder-core/model-context.mjs`（111 行——缓存 ∥ 键归一 ∥ `manualContextK` ∥ `listedContextTokens`） |
 | `providerSpecResolution` / `formatDeclaredContextK`（既有导出） | **existing**: `thincoder-core/model-specs.mjs:358` `providerSpecResolution` · `:323` `formatDeclaredContextK`（收 K）；token 口径另为 `:314` `formatContextK`（收 token）——两导出分工见「读面回显」节末 |
 | 八键 i18n / `Context…` 钮文案 | **existing**: `thincoder-vscode/locales/zh.json:129-136` 八键已落（`:132` `contextSaved` · `:133` `contextClearConfirm`，模板尾不带 `K`）；桌面 `thincoder-desktop/renderer/i18n-settings.mjs:73-80` 同名键七键（`contextSaved` 死键已删） |
@@ -802,25 +765,7 @@ W-9b = R33 ① 的判别形；W-9 只能验「显示什么」，验不了「经�
 - ④ 端名沿用既有端名（`vscode` 而非 `vsc`）——端名单源在 `session-slots.mjs`，新词表会让同一概念有两个名字。
 - ⑤ embedding 纳入消费点——同一次上游模型请求，不纳入就在这条通路上留一处无名。
 
-**本项受影响文件（行数口径 = `read` 报的总行数；本轮抽 4 档对读 `wc -l` 各小 1——`command-table.mjs` 202/201 ∥ `list-models.mjs` 200/199 ∥ `generate-title.mjs` 147/146 ∥ `embedding.mjs` 155/154，`read` 把末尾换行后的空行计一行）**：
-
-| 文件 | 现况 | 预期增量 |
-|---|---|---|
-| `thincoder-core/client-identity.mjs` | 新建 | ≈55 行 |
-| `thincoder-core/provider/core.mjs` | 494 | +2（1 行装配 + 1 import） |
-| `thincoder-core/provider/anthropic.mjs` | 367 | +2 |
-| `thincoder-core/provider/google.mjs` | 298 | +2 |
-| `thincoder-core/provider/responses.mjs` | 317 | +2 |
-| `thincoder-core/generate-title.mjs` | 147 | +2 |
-| `thincoder-core/provider/list-models.mjs` | 200 | +3（三处装配） |
-| `thincoder-core/embedding.mjs` | 155 | +2 |
-| `thincoder-cli/src/command-table.mjs` | 202 | +3（import + 读版本 + 一次声明） |
-| `thincoder-desktop/src/main/session-slots.mjs` | 272 | +3 |
-| `thincoder-vscode/src/extension/session-slots.mjs` | 77 | +3 |
-| `thincoder-server/bin/thincoder-server.mjs` | 360 | +3（`:359` 有 main-guard，import 不跑 `run()`） |
-
-tier 判定：最大 = server 363 ∥ CLI 205，全在 500 行软线内，不触发拆分。
-desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树整目录实拷（`:25` `PACKAGES` 两核包；`:31` 排除面仅 `test` ∥ `.thincoder`）⇒ 新件 `client-identity.mjs`（根级 `.mjs`）随目录镜像带入，无需清单加行。
+desktop 物化面：`thincoder-desktop/scripts/materialize-deps.mjs` 按源树整目录实拷（`:25` `PACKAGES` 两核包；`:31` 排除面仅 `test` ∥ `.thincoder`）⇒ 根级新件随目录镜像带入，无需清单加行。
 
 **用例表（正常 ∥ 边界 ∥ 错误）**：
 
@@ -1202,16 +1147,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | `healImageRejection(agent, error)` | `thincoder-core/agent/image-heal.mjs`（拟新增——新档：判定 ∥ 剥除 ∥ 注记 ∥ streak 记账单源 ∥ 清零接口 `clearImageFailStreak`） | 返回 `{ healed, dropped }`；零抛（失败面不阻断回合驱动） |
 | catch 接线（判定 → 剥除 → 单次重发） | `thincoder-core/agent/chat-call.mjs` `callModelTurn` | AbortError 分支零改（先于本支）；成功路径调 `clearImageFailStreak`（清零调用点——记账单源 = heal 档） |
 
-**受影响文件清单（行数口径 = `wc -l`）**：
-
-| # | 文件 | 现量 | Δ | 动作 |
-|---|---|---|---|---|
-| 1 | `thincoder-core/agent/image-heal.mjs`（**已落**） | 0 | **+65** | 新档（判定 ∥ 剥除 ∥ 注记 ∥ 记账） |
-| 2 | `thincoder-core/agent/chat-call.mjs` | 68 | **+13** | catch 自愈接线 + 单次重发 + streak 清账 |
-| 3 | `thincoder-core/provider/normalize.mjs` | 138 | **+30** | 占位常量 + `stripRejectedImages` + `capHistoryImages` 占位参 |
-| 4 | `thincoder-core/provider/errors.mjs` | 126 | **+8** | `IMAGE_REJECTION_RE` + `looksLikeImageRejection` |
-| 5 | 批内单元测试档（**已落**） | 0 | **+288** | 批内单元档（用例见下） |
-
 **零改面（显式）**：`record-results.mjs`（注入面——图必须进上下文；15MB 单图闸 ∥ 32MB 累计闸既有）· `context.mjs` / `context-degrade.mjs`（两兜底面——零改，见 D-PR40）· `thincoder-core/provider/core.mjs`（重试族零改）· 规格表 / 预设 / 三端 UI（零触）。
 
 **用例表（批内档——正常 / 边界 / 错误）**：
@@ -1317,13 +1252,6 @@ reasoning 档位落 patch（`src/extension/reasoning-mode.mjs`——`"off"` ⇒ 
 | T-14 | I1–I4 | 混合历史（assistant 开头 ∥ 连续 tool ∥ 图文混排） | 四条不变量全成立 |
 | T-15 | I5 | 任意夹具 | 入参 `JSON.stringify` 前后相等；`out.messages !== messages` |
 | T-16 | 告警投递 | T-7 夹具直调 + 假 fetch 驱动 `chat()` | `result._warnings` 含该条；`run-stages.mjs:44-45` 消费（桩断言） |
-
-**受影响文件清单（行数口径 = `read` 行号；`wc -l` 读数各差 1——末尾换行计一行，Δ 与结论不变）**：
-
-| # | 文件 | 现量（实施后实读） | 动作 ∥ 本层增量 |
-|---|---|---|---|
-| 1 | `thincoder-core/provider/anthropic.mjs` | 363 | 新增 `convertMessages`（`:97`，R1–R13）+ `chat()` 接转换（`:169`）与告警并入 `_warnings`（`:234`）；批前 240 ⇒ +123 |
-| 2 | `thincoder-core/provider/core.mjs` | 479 | anthropic 分支（`:151`）加 `messages = normalizeToolPairing(messages)`（`:155`）——本层两行 |
 
 tier 判定：363 ∥ 479，均在 500 行软线内，不触发拆分；`normalize.mjs` 零改（复用既有函数）。
 

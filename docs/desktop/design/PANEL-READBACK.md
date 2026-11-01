@@ -40,7 +40,9 @@
 - **判据映射**（门控序）：`key` 规范化命中块（**键规范化——有意放宽且两端同宽**：`sub:` 前缀剥除后比对，桌面 ∥ CLI 皆接受 `sub:advisor#27` 与 `advisor#27` 两写法；命中后②③④与发射全用规范化键）⇒ ① `awaitingDigest === true`（否 ⇒ 逐态拒因，文案沿运行时块 ∥ `region === "flow"` 追加拒因——已入流 = 已归档，无卡可收）② 池归属查 ③ pending 单容器查 ④ consult 子块消费判据——②③④**复用既有函数逐字**。
 - **发射**（消费端 = 渲染面归档机——零新消费者）：门控通过 ⇒ `ctx.callbacks.onToken("${规范化键}/⟦ev⟧done\x1e0\x1e0\x1edone\x1e")`（sub 块 = `role#id` ∥ consult 子块 = `consult#N`）——**与 CLI 面同字面**。
   链路：桌面主会话 callbacks = 桥面（`thincoder-desktop/src/main/turn-face.mjs:114` `run(agent, body, bridge(key), …)`）⇒ `bridge.onToken` relay 分流（`thincoder-desktop/src/main/agent-bridge.mjs:153-158`）⇒ `relayEventToSubPatch` 表（`thincoder-render-core/subblocks/relay.mjs:135`）
+
   ⇒ `ev:subagent {status:"done"}` ⇒ 态机排收 done ⇒ 归档（awaitingDigest 收 done ⇒ `archive atBoundary`）⇒ 归档入流 + **`record:append` 落档**（`thincoder-desktop/renderer/subagent-reduce.mjs:125-138`——trio 缺的正是这份记录）。
+
   `sub:` 前缀**必须**在发射前剥除（relay 前缀文法 `^([\w-]+)#(\d+)\//` 不吃 `:`——`thincoder-render-core/subblocks/relay.mjs:22`；带前缀发出会漏入内容面）。
 - 幂等：重复 freeze ⇒ 二次 done 命中已归档块 ⇒ 态机 `drop-frozen` 丢弃（`thincoder-render-core/subblocks/state.mjs:236-240`）——零重复归档、零重复记录。
 - 工具描述收正（语义）：`agent-tools/subagent.mjs:135` freeze 参数说明的「requires the CLI TUI panel mirror」随改述（桌面回读源在列）；`thincoder-core/tool-docs/subagent.md:10` 的「exactly as the user sees them」句**逐字保留**（把它变成真）。
@@ -68,6 +70,7 @@
 | ⑤ | 自愈扫补发（beat 级——谓词同 §2.4 自愈扫条） | `thincoder-desktop/src/main/suspension-drive.mjs:77-95`（发射 = `:93`） | `[suspension-drive] sweep-digested-stuck` |
 
 **双痕落点与读法**：宿主侧 `[suspension-drive] reemit-done` ∥ `[suspension-drive] sweep-digested-stuck`（`console.error`——主进程 stderr；四径共用点 + 逐拍命中表）。
+
 渲染侧 `[subagent-trace] <name> <key>`（devtools 控制台——`thincoder-desktop/renderer/subagent-reduce.mjs:189-194`；丢弃径零静默——`thincoder-render-core/subblocks/state.mjs:36-39` 桌面诊断面「到期」兑现；丢弃径名 = `drop-frozen` ∥ `drop-tombstone` ∥ `late-terminal-stub` 等）。
 
 **生效面 = 新进程**。机制句单源 = 本节；家族决策行 = `docs/desktop/design/ACTIVITY.md` §1 KD-34。
@@ -93,27 +96,6 @@
 
 **新通道**：`panel:state`（渲染 → 主 · 白名单末位 **48**）——载荷 `{ key, blocks }`；回执 `{ ok:true }` ∥ `{ ok:false, reason }`（形沿 `theme:state`——`thincoder-desktop/src/main/ipc.mjs:271` 邻位；主侧缓存与处理体同 `panel-live.mjs`）。登记面（§2 该行 ∥ 白名单面）住 `docs/desktop/design/IPC.md`。
 
-## 4. 受影响文件表（口径 = 内容行数（文末换行不计）；+ 预算 delta）
-
-| 文件 | 现 | Δ 预算 | 改动 |
-|---|---|---|---|
-| `thincoder-core/agent/suspension.mjs` | 300 | +12/−6 | 回收恒达窗（三支）+ `finishSuspension` 返回 `{ injected, left, error }` + 调用点 reclaim（§2.2） |
-| `thincoder-core/agent-tools/subagent-panel.mjs` | 189 | +55/−10 | 回读源链 + 桌面 freeze 门控映射 + digested 交叉复用 |
-| `thincoder-core/agent-tools/subagent.mjs` | 399 | +2/−1 | ctx 传 `readout`（`:191` 邻位）+ freeze 参数描述收正（`:135`） |
-| `thincoder-desktop/src/main/panel-live.mjs` | 0（新） | ~45 | 回读缓存（report/get + `receivedAt`） |
-| `thincoder-desktop/src/main/ipc.mjs` | 283 | +14 | `panel:state` 处理体（校验 + report + 回执） |
-| `thincoder-desktop/src/main/ipc-registry.mjs` | 92 | +1 | handler 注册（白名单闭合——表行 = 白名单逐项） |
-| `thincoder-desktop/src/preload/preload.cjs` | 83 | +1 | `CHANNELS` 47 ⇒ 48（`"panel:state"` 末位） |
-| `thincoder-desktop/src/main/agent-host.mjs` | 322 | +3 | 装配挂 `agent._panelReadout`（per-key） |
-| `thincoder-desktop/renderer/panel-readout.mjs` | 0（新） | ~60 | 快照构形 + 签名去重 + 上报（纯函数 + 注入面 `queryDom` ∥ `invoke`——平 node 直测） |
-| `thincoder-desktop/renderer/app.mjs` | 321 | +4 | 帧出口挂 readout settle（`applyFrame` 尾） |
-| 单元测试档 | 0（新） | ~260 | 单元测试档（用例清单 = §6） |
-| `docs/desktop/design/PANEL-READBACK.md` | 0（新） | 本档 | 设计单源 |
-| `docs/desktop/design/IPC.md` | 543 | +6/−4 | `panel:state` 行 + 白名单面 ∥ §3.1 47 ⇒ 48 + 档头 ∥ §3.1 行数齐平 |
-| `docs/README.md` | — | +2/−1 | 部分档行登记（desktop 设计 14 ⇒ 15 · 全档 52 ⇒ 53） |
-
-行数闸：全部改动档 ≤ 800 硬限内；**超 500 顾问线登记**：零档（四档 399–400 ∕ 300→306 ∕ 322→325 ∕ 321→325 均 ≤ 500）。
-其余改动档 <500（`subagent-panel.mjs` 189 → ~234；新增两档均 <500）。**无跨限拆分触发**。
 
 ## 5. 四交付面落点表（对 §2 验收）
 

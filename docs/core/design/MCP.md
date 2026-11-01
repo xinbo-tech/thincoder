@@ -1,7 +1,7 @@
 # MCP 客户端（MCP）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 > **机制面**（§6–§7）：机制 / 契约的实质描述 · 关键决策——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策）。
@@ -42,10 +42,6 @@
 
 **本子系统无 §2.12.2 处置表行**；相关端差（配置面板 / 监视面 = 端特有段）见 §1 与上文行「端差处置」列。
 
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
-
 ## 6. 机制面
 
 > **本节 = 机制 / 契约的实质描述 · 实现细节与坐标 · 关键决策依据**（§7）。
@@ -82,6 +78,7 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 - **启动装配**：顶层 agent 装配时批量连接 `config.mcp.servers`——读取项目级 `.mcp.json`（`mcpServers` 为**对象**形态时并入——`config.json` 同名 server 优先；数组形态非规范 → 跳过并记录）；并发连接（`Promise.allSettled`）；
    **失败不阻塞**（死 server 只记 warning，`agent._mcpWarnings` 携带；**消费面 = CLI ∥ 桌面 ∥ VSC**（三端同形）——装配后入 `agent._pendingReminders`
    （CLI `thincoder-cli/src/command-interactive.mjs:161-168` ∥ 桌面 `thincoder-desktop/src/main/agent-host.mjs:185-189` 装配尾；
+
    VSC `thincoder-vscode/src/agent/setup.mjs` 装配尾），下一条 user 消息注入提醒（消费 = `thincoder-core/agent/setup.mjs:172-176`）；
    末行指路 = 端可达出口（CLI `/mcp connect <name>`；桌面 ∥ VSC = 设置面 MCP 段 Reconnect）；成功展开的工具并入 `agent.tools`。
 - **项目文件源裁定（CLI ∕ 桌面同判）**：**发现面** = 项目根单层（`join(cwd, ".mcp.json")`，无向上多级搜索；文件缺 ⇒ 零读零效果）；**信任面** = 装配期零交互确认（项目文件与 `config.mcp.servers` 同信任域，不设首次信任 ∕ 端别门）；读 ∕ 解析失败非致命——记录不阻断装配。（VSC 端第三面已并；三端同判。）
@@ -103,12 +100,17 @@ MCP（Model Context Protocol）客户端把外部 MCP server 的 `tools/list` �
 **不得因 `eventSource == null` 误判死**（曾致无意义重连循环）；主动 close 与 legacy SSE 流真实断开仍判死 + 走重连。Streamable POST 规范路径：所有通道统一先注册 pending（直接 JSON body / SSE 流 / 202 等待都经 pending resolve）；响应带 `Mcp-Session-Id` 记入后续请求头。
 - **会话过期自愈（D-MC18）**：POST 收 **404**（MCP 会话失效语义）⇒ transport 内三步——清 `sessionId` ⇒ 重新 `initialize`
   （+ `notifications/initialized`；参数单源 = 建连时 `setInitPayload` 注入）⇒ 重试原请求**一次**（每原请求至多一次；重建进行中并发 404 共享同一重建——单飞）。
-  重建失败 / 二次 404 ⇒ 照旧报错 + `fireDead`（既有退避重连链兜底）；`isAlive` 对未修复的会话死态返 false（`sessionDead` 标记）⇒ 下次 `ensureAlive` 走重连。非 404 错误行为不变。**射程 = Streamable POST 面（含 postOnly）；legacySSE 分支零触**——无会话语义（不读写 `sessionId`；非 2xx 直映射照旧）。
+  重建失败 / 二次 404 ⇒ 照旧报错 + `fireDead`（既有退避重连链兜底）；`isAlive` 对未修复的会话死态返 false（`sessionDead` 标记）⇒ 下次 `ensureAlive` 走重连。非 404 错误行为不变。
+
+  **射程 = Streamable POST 面（含 postOnly）；legacySSE 分支零触**——无会话语义（不读写 `sessionId`；非 2xx 直映射照旧）。
 - **stdio**（`transport-stdio.mjs`）：本地子进程 `stdioTransport(command, args, env)`——env 合并到 `process.env` 之上；JSON-RPC over stdio。
   **树杀（`killTree`）**：win32 = `taskkill /pid <pid> /T /F` **同步形**（`spawnSync`——退出路径 `process.on("exit")` 仅同步合法，异步 `spawn` 不落地 ⇒ 子进程退出泄漏）；
+
   POSIX = **detached 新进程组 + 组杀**：正常相位 = 组 `SIGTERM` → 2s 组 `SIGKILL` 升级（组杀覆盖孙进程）；
   **退出相位**（升级 timer 不触发——`process.on("exit")` 无事件循环）⇒ 同步组 `SIGKILL` 直达——忽略 SIGTERM 的子进程亦必死。
+
   相位判定 = `transport-stdio.mjs` 加载期注册的 exit 钩子置的模块级标志（注册序恒早于宿主 cleanup）；
+
   组杀 = `process.kill(-child.pid, sig)`（detached 组长 = 组 id，非组长负 pid 内核返 ESRCH——不误杀；内核级实证 + Node 文档负 pid 组杀语义）。
   **`detached` 副作用**：终端 `SIGINT` / `SIGHUP` 不再直传 MCP 子进程（生命周期由 close 链负责）；父进程被 `SIGKILL` 等非正常终止时子进程孤儿化存留概率上升——处置 = 接受登记（对冲如需另批）。§7 D-MC19。
 - **WS**（`transport-ws.mjs`）：`isAlive` = `!closed && ws?.readyState === WebSocket.OPEN`；连接死亡经 `onDead` / `fireDead`；认证经 subprotocol；上层 signal abort 即刻作废 pending + 发 `notifications/cancelled`。
@@ -150,8 +152,10 @@ server 行 action 用 `@name:` 命名空间（与 `add` / `refresh` 保留动作
 - **VSC 无 `/mcp` 命令面（结构性端差）**：CLI 有 `/mcp` TUI（§6.8）；VS Code 配置 / 连接全在 **Settings 面板
 MCP 页**——`pushMcpStatus`（`thincoder-vscode/src/extension/panel-mcp.mjs:96`）推 `mcpStatus { servers: [{ name,
 desc, connected, toolCount, config }] }`（●/○ 连接态 + N tools + 原始 config 供表单预填）。动作消息 →
+
 `reconnectMcp`（`:116`——断开 + 重连）、`testMcp`（核 `probeMcpServer`）、`editMcp`（`saveMcpServer` =
 add-or-update 原位 → 推状态）。面板 [Edit] 与 [Add] 复用同一表单（已存在 ⇒ 原位 update；add 侧失败（含并发冲突）原串上抛）。工具展开器
+
 （行内 [tools]）载荷 = 面板契约投影 `{ name, description, inputSchema }`（端壳 `panelToolList` 自核原生
 工具投影——schema 取 `parameters`；工具名 = 原生 `{server}_{tool}` 名）。
 - **config-mcp.mjs（config.json `mcp.servers[]` 读写——纯 Node，extension host 外可做单元测试）**：`loadMcpServers`

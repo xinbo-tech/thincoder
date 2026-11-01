@@ -1,7 +1,7 @@
 # 会话与历史（SESSION）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 > **机制面**（§6–§7）：机制 / 契约的实质描述 · 关键决策——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策）。
@@ -54,10 +54,6 @@
 | # | 项 | 为何无法兼容（实测 / 证据） | 上抛形态（四要素） | 裁定状态 |
 |---|---|---|---|---|
 | 3 | **会话 / 历史面** | **已兼容**（无需上抛）：两端读写同一批档同一 `version`（1 / 2）+ 旧短哈希迁移面**单源**（核 `session-migrate.mjs`——经核 `sessionPath` 首次访问时调用，`thincoder-core/session-slots.mjs:58-61`）⇒ 归一后历史可直接续读 | 登记为「已兼容」· 兼容形态 = 复用现成迁移函数 | 已兼容（登记） |
-
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期** · **产品测试**。
 
 ## 6. 机制面
 
@@ -449,7 +445,6 @@ git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `p
 | 删槽 | `deleteSlot` 既有释放语义不动（条目 + 文件 + 记录存储 + marker 置空） |
 | 混合版本 | 旧版端只增不减（单向纪律）；新版释放后旧版端认领 ⇒ 本端再切入判占 + fork（同「目标被占」行） |
 
-尺度结论：本节为既有档内增量——**无档位拆分需要**。
 
 **验收回指（需求档 §2.3 四条）**：① 切换释放 + 重认领 = 核 / CLI 两档；② 拒绝路径四不动 = 组⑮（四不动断言）+ 端壳零写；③ 他端认领后本端再切入 = 判占 + `allocateFresh` fork（integration 档）；④ 双端对称 = 核三原语 × 端壳三件同判据（保留集口径 / `deletions` 落盘 / 占用判据单源 `slotOccupancy`）。
 
@@ -851,8 +846,6 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 
 **边界情形**：空目录 / 无匹配 ⇒ `[]`；sessions 根不存在 ⇒ ENOENT 吞 ⇒ `[]`；数千档 ⇒ 条目全数入列（**`readdir` 全条目面 + `stat` 计入 O(N) 成本**——本户 1781 条目 readdir ≈60 ms（实测）；元数据按预算降级）；并发写窗口 ⇒ rename 原子性（读到旧档或新档，不见半档）；摘要 mtime 判据的已知缺口 = 现场回填（`.bak` 改名不改 mtime 序）⇒ 表头可能陈旧一轮（数据面仍直读盘、影响限于表头）。
 
-尺度结论：`thincoder-core/session-slots.mjs` 落 **309 行**——**500 硬线内 · 无档位拆分需要**（>300 软线承既有形态）；新档 `thincoder-core/session-slot-scan.mjs` = **299 行**。
-本节另触档 `thincoder-core/session-lifecycle.mjs`（切换准入——判据句 4）：现读 **354 行** · 净增 **≈ +2**（切换准入判据 + 随附注释）⇒ >300 软线承既有形态（拆档审视 = §6.24 尺度结论同档条）。
 
 **验收回指（需求档 §4.1 F5）**：① 判定句（文件在盘 ⇒ 可见 · 文件删除 ⇒ 消失 · manifest 无条目 ⇒ 不隐形）→ 判据句 1（用例组 1–3）；② 读放大上界（单次 ≤ 4 MiB ∧ 单档 ≤ 256 KiB ∧ fresh 摘要 0 字节）→ 判据句 2（用例组 4 / 5——读计数桩）；
 ③ 降级阶梯（坏档入列不筛 · 标题回退链 · 计数 `0`）→ 判据句 3（用例组 6–10）；④ 可达性扩展（盘在 ⇒ 可开 / 可删 / 可恢复 + 负断言）→ 判据句 4（用例组 11–16）。
@@ -898,7 +891,6 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 
 **边界情形**：① 同名 `.corrupted` 已存在 ⇒ 改名覆盖（单槽位 · last-wins——改名覆盖语义本机实测通过 · 既行为）；② 首建 TOCTOU（ENOENT 检出后他进程创建 ⇒ 其新档被本次覆盖）——既有窗口、不改；③ 拒写期间的 `deletions` 意图延后至下一次成功保存生效；④ 锁释放 / 外部修复 ⇒ 下一次保存正常合并；⑤ 连续损坏 ⇒ 逐次拒写 + 逐次改名（现场 last-wins）。
 
-尺度结论：`thincoder-core/session-slots-manifest.mjs` **500 硬线内 · 无档位拆分需要**；**拆档审视：承既有形态（既有裁定）**。
 
 **验收回指**：① 护栏判据（可机检）→ 判据句 1–3（用例组 G1–G8）；② 自愈边界 / 明裁不做 → 判据句 5；③ 用例（护栏触发 + 故障注入）→ 一次性用例表（G1–G11）；④ 行数尺度 → 上段；⑤ 与 §6.22 零交叠 → 判据句 6。
 
@@ -931,8 +923,6 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 
 ④ 表外档位 / 类型脏载与本读数无关（只读 `provider.model` / `provider.context` 两键——不入类型判定链）。
 
-尺度结论：`thincoder-core/session-lifecycle.mjs` **500 硬线内 · 无档位拆分需要**；**拆档审视：承既有形态（既有裁定）**。
-同批随动两档：`thincoder-core/session.mjs`（`sessionReading` 同名 re-export 随动——无结构改动）；桌面端壳 `thincoder-desktop/src/main/session-slots.mjs`（口径 = 该档总增量——`pageHistory` 出 `seed` + `openingSeed` 投影；判据句 3 的出参装配 + 有效门为其一部分）。
 
 **验收回指（D17 补句）**：① 打开 / 切换既有会话 ⇒ 读数切片以槽数据播种（`tasks` 直取 + `usage` 本出口）→ 判据句 1–3（用例组 D17-*）；② 恢复态与 CLI 同见 → 判据句 2（同源同式）；③ 缺席降级 / 零假造 → 判据句 1 / 3 + 播种注。
 
@@ -971,7 +961,7 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 - **不可信谓词（单源）**：`needsVerify(entry, mtime)` = 条目**缺失** ∨ 条目 `ts < mtime`（陈旧）∨ **计数两字段任一非数**（不可得）。**真 0 不触发**（盘面实读 0 ∥ 摘要带数值 0 = 可信）；不可得（`null`）触发——即用户「碰到 0〔不可得的 0〕或没有就核实」的设计形。
 - **落点 A（打开 / 切槽顺手补写 · 零额外读 + 零额外写）**：新出口 `healDigest(m, slot, data, mtime)`（住 `thincoder-core/session-slots-manifest.mjs`）——数据已在手 ⇒ **零额外槽文件读**；置入调用方 manifest 对象 ⇒ 随 `claimSlot` / `switchToSlot` **既有那次** `saveManifest` 落盘（`thincoder-core/session-lifecycle.mjs:334`）⇒ **零额外写**。
   `resumeSlot`（`thincoder-core/session-slots.mjs`）**读序前移**：`loadSlotFile` 先于认领落盘——纯读 + 认领决策树 / 保留集 / 端标记 / `.unreadable` 与 `.corrupted` 改名语义逐条零变。
-- **落点 B（读面懒核实）**：扫描在装配行时收集**不可信档清单**（`needsVerify` 为真者，按 **mtime 降序** = 用户最可能看的行先核）；`listSlots` **同步返回后**将清单交**核实面**调度（新档 `thincoder-core/session-slot-verify.mjs`——落点详下「落点与测试」段）——**调度本身 = 纯内存登记 + 启动窗外延迟拍**（`VERIFY_TICK_DELAY_MS` = 3s；见下「启动窗关系」条）：零 I/O / 零同步阻塞 ⇒ 首答 F-SL1 50 ms 不被拖慢。
+- **落点 B（读面懒核实）**：扫描在装配行时收集**不可信档清单**（`needsVerify` 为真者，按 **mtime 降序** = 用户最可能看的行先核）；`listSlots` **同步返回后**将清单交**核实面**调度（新档 `thincoder-core/session-slot-verify.mjs`）——**调度本身 = 纯内存登记 + 启动窗外延迟拍**（`VERIFY_TICK_DELAY_MS` = 3s；见下「启动窗关系」条）：零 I/O / 零同步阻塞 ⇒ 首答 F-SL1 50 ms 不被拖慢。
   · **启动窗关系（D-SE39 实证直导）**：`setImmediate` 点火与启动链同循环（pass 在跑时 `resumeSlot` 126 ms → 1.9 / 3.8s、无参启动拒印 2.96 / 4.16s——验收 ≤2s ✗）⇒ 核实拍 = **与 `GC_PASS_DELAY_MS` 同款延迟拍**（`setTimeout`——3s，自调度点起；`unref`——不持活）⇒ 核实起点 ≥ 调度点 + 3s = 结构落于启动窗外；**启动路径纳入 N-L1 机检**（结构 + 行为两断言）。
 
   · **核实 = 单档流式结构扫描**：读该档**整档**（唯一能取计数的源——③ 早键截读面不含计数，D-SE56）；分块粒度 `VERIFY_CHUNK_BYTES` = 1 MiB ∧ **逐块 `await` 让出**（宏任务让位——`setImmediate`）**⇒ 零 ≥50 ms 连续同步段**。
@@ -1032,19 +1022,6 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
 ⑧ 核实失败（坏档 / 不可读）⇒ **负缓存**（同 mtime 不重试——防每轮重读同一坏档；
 
 文件变更 ⇒ 重新可核）· ⑨ 「从不列表的 cwd」⇒ 摘要不愈合（无消费方 ⇒ 零影响——懒核实射程内**明裁**，不做全量扫）· ⑩ 核实回写撞 §6.23 拒写窗口 ⇒ 本轮成果丢弃、下轮重核（预算内重复读——零新增争用面）；(b)(c) 改名解封 ⇒ 次轮走首建分支、一轮收敛；循环有界（`refused` 已由 `ledgerHealth(cwd)` 可见）。
-
-尺度结论（行数口径 = `wc -l`）：
-`thincoder-core/session-slots-manifest.mjs` 现读 **421 行**——**500 硬线内**；**拆档审视：承既有裁定**（§6.23）——不拆。
-`thincoder-core/session-slot-scan.mjs` **299 行**（≤300 维持——不新增登记）。
-`thincoder-core/session-slots.mjs` **326 行**（>300 承既有形态——登记在册）。
-`thincoder-core/session-lifecycle.mjs` **382 行**。
-
-新档 `thincoder-core/session-slot-verify.mjs` 落 **299 行**（读面懒核实面：不可信清单调度 / 单飞 / 负缓存 / 预算 / 分块流式扫描；本节唯一新档，≤300 达成）。
-
-端侧随动档：`thincoder-cli/src/tui/cmd-session.mjs`（≈136）· `thincoder-cli/src/tui/startup.mjs`（≈300：**≈300 线位**〔未越 300 顾问线〕——该树无机械登记面〔core-hygiene 仅扫 core 树〕，**登记一行**：拆点候选 = 启动屏族 / 后台索引族外提（`backgroundIndex` 已函数化）；触发条件 = 越 500 硬限 ∥ 该档下次实质改动）。
-
-  【现读 **322**；增量 ≤ +10（行级非结构性——home 判据 + 提示行）⇒ ≤332 ⇒ 拆分窗口顺延；触发条件不变。】·
-`thincoder-vscode/webview/session-bar.js`（≈139）· `thincoder-core/agent-tools/read-history.mjs`（**408 行**）。
 
 **验收回指（需求档 §4.6 F-L1–F-L5）**：F-L1 → 判据句 1（用例组 L1）· F-L2 → 判据句 2（L2）· F-L3 → 判据句 3（L3）· F-L4 → 判据句 4（L4）· F-L5 → 判据句 5（L5）。
 

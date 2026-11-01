@@ -118,22 +118,6 @@ guard 侧同形（`thincoder-core/session-guard.mjs:69-78`），但今日 catch 
 
 **导出方向**：`render-frame.mjs` 直接 import `status-line.mjs` 的 `singleLineTitle`（同目录，无新依赖方向）。
 
-## 4. 受影响文件表
-
-| 文件 | 当前行数 | 预期增量 | 变更 |
-|---|---|---|---|
-| `thincoder-core/session-slot-write.mjs` | 235 | ≤+6 | import + 轮转成功 / 异常两支事件 |
-| `thincoder-core/session-guard.mjs` | 80 | ≤+6 | import + guard 轮转 / 异常两支事件（含 `preserved` 跟踪） |
-| `thincoder-core/session-slots-manifest.mjs` | 244 | ≤+4 | import + 拒写 / 读回失败事件 |
-| `thincoder-core/session-slot-claims.mjs` | 231 | ≤+5 | import + `slot:allocate` |
-| `thincoder-core/session-lifecycle.mjs` | 404 | ≤+18 | `slot:new` + `resetSessionState` 未过期计数与返回值 + `applySession` 中继返回对象 |
-| `thincoder-core/token-ttl.mjs` | 297 | ≤+10 | `restoreEngTokens` 离开集度量 + 返回值 |
-| `thincoder-cli/src/tui/status-line.mjs` | 198 | ≤+10 | 正则 / `singleLineTitle` / 两处应用 |
-| `thincoder-cli/src/tui/render-frame.mjs` | 322 | ≤+2 | import + status 行兜底 |
-| `thincoder-cli/src/tui/cmd-new.mjs` | 39 | ≤+4 | 读返回值 + 警示行 |
-| `thincoder-cli/src/tui/cmd-session.mjs` | 140 | ≤+8 | `:122` 取返回值存局部量 + `:137` 之后警示行 |
-
-行数为本档写作时 `read` 读数。**跨文件行数上限**：本仓单档 500 行口径；最大 `session-lifecycle.mjs` 404 → ≤422，`render-frame.mjs` 322 → ≤324，均无跨限，不需拆分计划。
 
 ## 5. 关键决策记录
 

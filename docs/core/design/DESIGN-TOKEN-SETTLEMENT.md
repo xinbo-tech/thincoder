@@ -203,7 +203,6 @@
 | 动作表 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7.2（673 行） | design-slots 行 `:50` | 逐字 = 「描述面 / 提示面」表动作表行建议文本（参数列 `designId?`；返回列含 `expiresAt`） |
 | 英文运行期面 | `thincoder-core/prompts/persona-engineering.md`（220 行） | 同源句 `:141` | 逐字 = 同表英文运行期面行建议文本 |
 
-行数口径 = 末行行号（文件末换行不计额外行）；本节坐标 = 设计读数时的现行行号——删行后行号随动，判据以删除面 + U-SL14 的内容机检为准。
 
 **删除面（改前 → 改后——删净为机制本体；落定后由 U-SL14 机检）**：
 
@@ -220,20 +219,6 @@
 | D9 | `thincoder-core/agent-tools/subagent.mjs:152` | `reveal` schema 键（`true = reveal … one slot at a time … masked`） | 删净（参数 schema 无 `reveal` 键） |
 | D10 | 同档 `:8` | 档头「design-slots 回收读口——`designId` 过滤 + `reveal:true` 单槽揭值」句 | 删行（历史归 git——D8） |
 | D11 | 同档 `:148` | `designId` 描述末句「— REQUIRED with reveal:true」 | 删末句（描述 = 「描述面 / 提示面」表 `subagent.mjs:148` 行建议文本） |
-
-**受影响文件清单（行数口径 = 末行行号）**：
-
-| # | 文件 | 现行行数 | 预计 Δ | 500 软线 | 拆分结论 |
-|---|---|---|---|---|---|
-| 1 | `thincoder-core/agent-tools/design-slots.mjs` | **305** | ±0（本节面；本批已落地 245 → 305） | 未触 | 不拆 |
-| 2 | `thincoder-core/agent-tools/subagent.mjs` | **422** | ±0（本节删除面已落地：`:152` ∥ `:8` 已删、`:148` 已改；现读数含其后其它批次的增行） | 未触 | 不拆 |
-| 3 | `thincoder-core/tool-docs/subagent.md` | **44** | −1（→ **43** 实读；`:11-12` 并一；`:10` 行内改） | 不适用（工具描述档） | 不拆 |
-| 4 | `thincoder-core/agent/dispatch-gates.mjs` | 151 | 0 | 未触 | 不拆 |
-| 5 | `thincoder-vscode/src/agent/tool-table.mjs` | 187 | 0 | 未触 | 不拆 |
-| 6 | `docs/core/design/AGENT-LOOP-SUBAGENT.md` | 673 | ±0（`:50` / `:350` / `:400` 行内改） | 文档·不适用 | 不拆 |
-| 7 | `thincoder-core/prompts/persona-engineering.md` | 220 | ±0（`:141` 行内改） | 文档·不适用 | 不拆 |
-| 8 | `docs/batches/2026-10-17-token-visibility-simplify.test.mjs`（U-SL1–U-SL14 宿主——批档同目录） | 0（未建） | 新建 **274** 实读 | 不适用（测试档） | 单档 |
-| 9 | `thincoder-core/log.mjs` | **214** | ±0（`:21-22` 注释收正——去掉以 reveal 为主体的表述；`SECRET_FORM` ∥ 字段黑名单零动） | 未触 | 不拆 |
 
 测试宿主口径：单元测试档随批档存放（`docs/batches/<batch>-<topic>.test.mjs`），收口删、零留存；U-SL1–U-SL9（清点 / 消费回归）+ U-SL10–U-SL13（直读面）+ U-SL14（删除面机检）同宿一档。
 
@@ -380,21 +365,6 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | 同上 | 同上 | F-D8 |
 
 落点：两行编号与文字落 `test/RTM.md`、用例落 `test/integration/batch-close-token-consume.test.mjs`（实现轮由 eng-coder 落，见下表）。
-
-**受影响文件清单**（行数口径 = 末行行号；本轮实读）：
-
-| # | 文件 | 现行行数 | 本笔 Δ | 改动面 |
-|---|---|---|---|---|
-| 1 | `thincoder-core/agent-tools/design-slots.mjs` | 305 | +60（已落） | 批档绝对路径派生出成可复用函数；清点「批」列改读旁列（注册表兜底）；`unionBatches` 增严格读开关（收口面用）；`executeConsumeDesignAction` 零改（被收口通路复调） |
-| 2 | `thincoder-core/token-ttl.mjs` | 370 | +64（已落；严格读 +18 ∥ 槽号解析外提 +7） | 旁列序列化（`engTokenSlotFields`）+ restore 读入 + `readEngTokenBatchesFromSlot` 两形（内层 `ENOENT` 短路 + 外层按读形 + 槽号解析提到 `try` 之外）+ `persistEngTokens` 一字段复制 |
-| 3 | `thincoder-core/agent-tools/design-token.mjs` | 200 | +16 | `settleDesignReview` 同拍写 / 删旁列（失败 ⇒ settle 失败，与 D1 同语义） |
-| 4 | `thincoder-core/agent-tools/batch-lifecycle.mjs` | 612 | +56（已落） | `consumeBatchDesignTokens` 薄壳 + 两通路调用点 + 回执段 + 严格读接入 |
-| 5 | `thincoder-core/session-slot-write.mjs` | 260 | +20 | `mergeEngTokenBatchesForSave`（并集；核内零调用点——见「写面如实登记」） |
-| 6 | `thincoder-core/session-slots-manifest.mjs` | 264 | +17（已落） | `loadManifest(cwd, { strict })` 两形：缺省宽容（现行全部调用点零改）/ strict 形 `ENOENT` ⇒ 空账本、其余错 ⇒ 抛（manifest 层同判） |
-| 7 | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | 本档 | 本节 | 设计单源 |
-| 8 | `test/RTM.md` | —（本行不记该档行数：该档随各批增行，记死必漂；行数以当轮实读为准） | 新故事 10 两行 | 集成索引（编号先落；另含前序批的故事 8 ∥ 9） |
-| 9 | `test/integration/batch-close-token-consume.test.mjs` | 0（新建） | 新建（本批） | 集成用例 10-1 ∥ 10-2 |
-| 10 | `docs/batches/2026-10-26-pen-gate-batch-scope.test.mjs` | 0（新建） | 新建（随批删） | 当批单测 U-BG1–U-BG16 |
 
 行数与坐标 = 本轮实读（行号口径 = 末行行号）；实施轮的行号随动——判据以内容机检为准（U-BG9 ∥ U-SL14 同口径），行号只用于定位。
 

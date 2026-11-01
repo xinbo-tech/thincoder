@@ -1,7 +1,7 @@
 # 配置系统（CONFIG）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 
@@ -66,11 +66,6 @@
 | 2 | `$schema` 注入与否（VSC 写盘注入 / CLI 不注入） | 配置 | 取一侧 + 登记 | 登记 + README 键面同步 | 同第 1 行 + 配置读写用例 | 已裁 · 按建议（§2.5.1 A4） |
 | 3 | `settings` 工具的类型校验面（错类型是否拒写） | 输出（工具回话） | VSC = 拒绕并报错（同 CLI） | 登记 + CHANGELOG（工具行为条目） | `SETTINGS-TOOL.md` 同步 + VSC 用例 | 已裁 · 按建议（§2.5.1 A5） |
 | 4 | `agent.engineering` 的写盘范围（VSC 双写共享 `config.json`） | 配置 | 取 CLI（只进会话） | 旧行为撤回 ⇒ CHANGELOG + 登记 | `SESSION.md` / `docs/core/design/ENGINEERING-MODE-V2.md` 同步 | 已裁 · 按建议（§2.5.1 A6） |
-
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **对外契约兼容面（S0 登记 / S2 落地）**。
-**核内落点行数** → §2.8.1「核内逐档行数与拆分计划」（本子系统面：`thincoder-core/config.mjs`（越软线——拆分计划见 §2.8.1 第 1 行，台账 #1612）· `thincoder-core/config-defaults.mjs` · `thincoder-core/config-normalize.mjs` · `thincoder-core/config-io.mjs` · `thincoder-core/config-presets.mjs`）。
 
 ## 6. 机制面
 
@@ -153,6 +148,7 @@
 
 **生效面（v1 五族）**：`providers[].apiKey` ∕ `providers[].headers.*` ∕ `mcp.servers[].token` 与 `.headers.*` ∕ `.env.*` ∕ `websearch.apiKey` ∕ `embedding.apiKey`——
 解析点 = 各消费口（provider 聊天入口 ∕ 清单拉取入口 ∕ MCP 传输建连 ∕ websearch 读点 ∕ embedding 读点 ∕ **会话标题生成径**——`thincoder-core/generate-title.mjs`）——**六处**；
+
 标题径解析抛错落其既有非致命兜底（标题回落 `null`——不破坏回合）；引用串不再按原文上线（401 静默回落消解）。
 
 **语义**：值内嵌与整值同解（`sk-${env:K}` 式）；同一值可含多引用；**变量未设或为空串 = 消费点抛错**（点名变量；无「未设即缺省」回退——不静默字面透传）；

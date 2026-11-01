@@ -123,20 +123,11 @@
 | U-9 ∥ U-10 | 判据 1 的「本轮」与读失败：上一轮已有块 ∥ 本轮一字未写 ⇒ `no-section3-block`；点火基线 `null` ∥ 结算时档被移走 ⇒ `batch-unreadable` |
 | U-11 ∥ U-12 | 射程回归：changes-required 已写 §3 ⇒ 裁定闸标记（不是记录不合格）∥ changes-required **未**写 §3 ⇒ `no-section3-block` |
 
-**受影响文件（本笔）**——行数口径 `\n` 计数（= 本仓 `wc -l` 口径），按判时读盘取数：
+**落点坐标（单源）**：读档 + 判据 1（回显闸后、裁定闸前）+ 判据 2（裁定闸后）+ 标记常量 = `thincoder-core/agent-tools/design-token.mjs`；`batchAbsPathOfRun` 两源定序导出 · 清点面 `batchOf` 取同一派生 = `thincoder-core/agent-tools/design-slots.mjs`；
 
-| # | 文件 | 现量（判时读盘） | 改动面 |
-|---|---|---|---|
-| 1 | `thincoder-core/agent-tools/design-token.mjs` | **266** | 读档 + 判据 1（回显闸后、裁定闸前）+ 判据 2（裁定闸后）+ 标记常量 |
-| 2 | `thincoder-core/agent-tools/design-slots.mjs` | **305** | `batchAbsPathOfRun` 两源定序导出 · 清点面 `batchOf` 改取同一派生 |
-| 3 | `thincoder-core/agent-tools/batch-skeleton.mjs` | **449** | 导出 `ROUND_HEADING_RE` ∥ `countRoundBlocks`（读侧单源） |
-| 4 | `thincoder-core/agent-tools/batch.mjs` | **356** | 私有正则 / 计数改取 skeleton 导出（写入面语义零变） |
-| 5 | `thincoder-core/agent-tools/advisor.mjs` | **280** | 绑批档时读点火基线（`run.batchDoc` 落点同拍；读不到 ⇒ `section3BlocksAtStart = null`） |
-| 6 | `docs/batches/<批档词干>.test.mjs` | —（收口即删） | U-1–U-12 单测档 |
-| 7 | `test/integration/batch-close-token-consume.test.mjs` | **182** | 集成宿主（10-1 夹具改写 + 10-4 新增） |
-| 8 | `test/integration/advisor-record-gate.test.mjs` | **119** | 集成宿主（17-1 ∥ 17-2） |
+导出 `ROUND_HEADING_RE` ∥ `countRoundBlocks`（读侧单源）= `thincoder-core/agent-tools/batch-skeleton.mjs`；私有正则 / 计数取该导出（写入面语义零变）= `thincoder-core/agent-tools/batch.mjs`。
 
-500 软线：五档产品码现量最大 = `batch-skeleton.mjs` **449**，均未触线——读数按判时读盘取数。
+绑批档时读点火基线（`run.batchDoc` 落点同拍；读不到 ⇒ `section3BlocksAtStart = null`）= `thincoder-core/agent-tools/advisor.mjs`；集成宿主 = `test/integration/batch-close-token-consume.test.mjs`（10-1 ∥ 10-4）∥ `test/integration/advisor-record-gate.test.mjs`（17-1 ∥ 17-2）。
 
 ## 2. 凭证链启动 / 全程守卫（B 族）
 
@@ -566,21 +557,6 @@ export function outputReserve(provider, spec) {
 **收面（仓根放宽）**：受理 = **项目内任意 `.md` 文档**——仓根级文档（项目根下直挂的 `.md`，典型如 `METHODOLOGY` 说明档）与非 `docRoot` 树下的仓内文档（如 `thincoder-core/tool-docs/advisor.md`）一律受理；`docRoot` 五键不再充当评审受理边界。`REVIEW_ROOT_KEYS` / `resolveReviewRootsFor` 保留（写门 `resolveReviewTargetPaths` 的面），评审受理不再消费。
 
 **冻结窗同源**：在途设计评审的 docAbs（`thincoder-core/agent-tools/advisor-async.mjs:399`）取同一 `resolved` ⇒ 放宽受理的文档**同受 D5 冻结**（零新增代码；`inflightDesignReviewConflict` 判据不动）。
-
-**受影响文件与行数增量**（现量 = `\n` 计数实测，2026-10-25；读盘逐行显示 = 现量 +1，末段空行）：
-
-| 面 | 文件 | 现量 | 变更 | 编辑点 | 增量预算 |
-|---|---|---|---|---|---|
-| 源 | `thincoder-core/agent-tools/review-facts.mjs` | 158 | 重写 `resolveReviewDocPaths`；删 `sessionReviewRoots` / `candidateRoots` / 四分支注释 | `:53-56` · `:58-125` · `:144-158` | 净 −30～−45（改后 ≤130） |
-| 源 | `thincoder-core/agent-tools/advisor.mjs` | 276 | 删歧义拒发分支 + 诊断尾按新形渲染 + `documents` schema 描述改单一规则 | `:62-66` · `:114-119` · `:120-146` | 净 ≈ −16（实落 260） |
-| 源 | `thincoder-core/tool-docs/advisor.md` | — | `DESC("advisor")` 描述单源：删已退场的「会话 cwd 试探 + 候选项目根 + 祖先目录」句，换 §12 单规则；同档按段长阈值拆段（逐句保留） | 描述段 | 实落（清单外——实施轮披露并获追认） |
-| 源 | `thincoder-core/agent-tools/advisor-async.mjs` | 499（读盘 500——恰在 500 行硬限上） | **零改**：`docAbs` 取同一 `resolved` | `:398-400` | **Δ = 0**（零新增代码） |
-| 文档 | `docs/core/design/ADVISOR-GUARDS.md` | —（本行不记本档行数：本档随其它节增删，记死必漂；行数以当轮实读为准） | 本节 + 判据枚举收正 + A-AG19–21 + 集成验收段 + 用例设计段 | 同左 | 已落 |
-| 文档 | `docs/core/design/MANIFEST.md` | 1198 | 评审门条 + 消费点表行 5 + 随动面 + T78 ③ 期望（workspace 锚下评审 documents 相对形 ⇒ 当场拒发） | 见该档 §2.5 ∥ §3 T78 | 已落（行内改写 + T78 ③ 一格；Δ = 0） |
-| 文档 | `docs/core/design/DESIGN-TOKEN-SETTLEMENT.md` | 264 | §8 定位句 ∥ F3 ∥ AC-M6-3 收正 | `:116` · `:124` · `:134` | 已落（同格改写，Δ = 0） |
-| 测试 | `test/RTM.md` | —（本行不记该档行数：该档随各批增行，记死必漂；行数以当轮实读为准） | 故事 6 补 6-4 + 节注收正 | `:69` · `:73` · `:76` | 已落（+1：6-4 一行） |
-| 测试 | `docs/batches/2026-10-25-review-scope-widen.test.mjs` | 0 | 单元测试档（U1–U10——收口即删） | — | 新建 |
-| 测试 | `test/integration/review-doc-scope.test.mjs` | 0 | 集成用例 6-1 … 6-4 | — | 新建 |
 
 **集成验收（起点 = `test/RTM.md` 故事 6「设计评审的文档范围按项目根受理」——delta 三答）**
 

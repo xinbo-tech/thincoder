@@ -1,7 +1,7 @@
 # agent 主循环与子代理（AGENT-LOOP）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 > **机制面**：机制 / 契约的实质描述 · 关键决策（§7）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策）。
@@ -174,30 +174,6 @@
 ## 4. 对外契约影响
 
 **本子系统无 §2.12.2 处置表行**（对外事件面的兼容策略模板住 `CORE-UNIFICATION.md` §2.12.1「事件语义」类；行为面变更见上文各行「影响面」列）。
-
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）** · **对外契约兼容面（S0 登记 / S2 落地）**。
-**核内落点行数** → §2.8.1「核内逐档行数与拆分计划」（本子系统面：`thincoder-core/permission.mjs`（#165）· `thincoder-core/undo-stack.mjs`（#149））。
-
-**空响应复位语义（本轮）受影响文件**：
-
-| 文件 | 现行（`wc -l`） | 预计 | 改什么 |
-|---|---|---|---|
-| `thincoder-core/agent/completion.mjs` | 171 | ≤+14 | 判空句 `:44` 之旁抽出具名导出谓词 `isSubstantiveResponse(response)`（判空面语义零变）；`handleCompletion` 内改读该谓词 |
-| `thincoder-core/agent/turn-loop.mjs` | 317 | ≤+8 | 取到响应后单点复位（`:153` 之后）；`:14` 的 import 增补 `isSubstantiveResponse`——同档已 import，无新依赖档 |
-| `thincoder-core/agent/run-start.mjs` | 159 | 0 | per-run 复位保留（`if (!resume)` 块内，`:134`） |
-| `thincoder-vscode/src/agent/agent-state.mjs` · `setup.mjs` | 168 · 322 | 0 | `setup.mjs:58` = 字段初值；`agent-state.mjs:37`（`resetRunState` 函数头 `:27`）内的复位面；与核 `agent.mjs:78` 初值同值 |
-| `test/integration/empty-response-retry.test.mjs`（新增） | 180（落定后实读；设计时 = 新增 0） | 0 | 15-1 / 15-2 / 15-3 三例（§6.5 集成测试设计）；收口时跑，不在改动内跑 |
-
-**跨端**：该计数器的行为面只在核——判空与递增各一处（`thincoder-core/agent/completion.mjs:44` ∥ `:52`）；端侧只有字段初值（VSC `setup.mjs:58`）与每 run 复位（`agent-state.mjs:37`），不构成第二份机制 ⇒ 本笔零跨端改动。
-
-**VSC「续跑不清零」靠结构，不靠同形代码（S2 装配对位义务）**：
-
-- 核侧：`thincoder-core/agent/run-start.mjs:109` 的 `if (!resume)` 门——续跑不进复位块。
-- VSC 侧：`resetRunState` 只在链首段装配时被调用（`thincoder-vscode/src/extension/panel-turn-loop.mjs:214` 的 `if (!agent)` 门内），续跑段不经过该门。
-- **对位义务**：将来若把 hydrate / 装配挪进每段，VSC 侧「续跑不清零」会静默失效 ⇒ 届时须在每段入口补 `resume` 等价门。此条写成结构句，不靠记忆。
-
 
 ## 6. 机制面
 
@@ -390,6 +366,8 @@ PreToolUse hooks → 阻断
    - **代价（如实）**：额度从「本 run 累计 2 次」变为「每连续 2 次」⇒ 空-实质交替的模型可在一个 run 内多跑几次空重试，上界 = `maxTurns`（每轮恰一次模型调用）。不另立 run 级总额度：那会复活本判据要治的形（偶发空但中途成功的会话照样在总数用尽后抛），且是新常数、无现场。
    - **现场（本分支的场景）**：用户 2026-10-27 报告「deepseek-flash 一直报 empty response，点 retry 又能继续」。可复现序列（单 run）= 空 → 带正文且带工具调用 → 空 → 空 → 正文：中间那轮**必须带工具调用**——零工具调用的带正文响应在 `thincoder-core/agent/turn-loop.mjs:251`（`return cr.content`）就收束本 run，序列跨到下一个 run 会被其起手复位（`thincoder-core/agent/run-start.mjs:134`）抹平。修前读数（按 `completion.mjs:51`–`:52` 推）：首个空计 1 → 中间正文不清零 → 第二空计 2 → 第三空当场抛 `LLM returned empty response`；修后中间轮回 0，两空各计 1 / 2 后重试成功。「点 retry 又能继续」= **重发一条消息**（新 run，`resume:false`）走 `thincoder-core/agent/run-start.mjs:109` 的 `if (!resume)` 门内 `:134` 置 0；`resume` 续跑**不**清零（§6.2 保留集）。
    - **先例（最近 · 同级同形）**：`_zeroWriteStreak` 族——`thincoder-core/agent/run-start.mjs:129` 在 `if (!resume)` 块内（`:109`）置 0，续跑不清零，即「链起点复位 / 续跑不清零」。本笔沿用该形；**偏离一处**：清零点不在环头而在环内取响应处（`turn-loop.mjs:153`），因为清零要读的正是本轮响应本身，环头那时它还不存在。
+   - **端侧对位坐标（单源）**：端侧只有字段初值（`thincoder-vscode/src/agent/setup.mjs:58`）与每 run 复位（`thincoder-vscode/src/agent/agent-state.mjs:37`，`resetRunState` 函数头 `:27`，与核 `thincoder-core/agent.mjs:78` 初值同值）——不构成第二份机制；核内判空与递增各一处（`thincoder-core/agent/completion.mjs:44` ∥ `:52`）。
+   - **VSC「续跑不清零」靠结构，不靠同形代码（装配对位义务）**：`resetRunState` 只在链首段装配时被调用（`thincoder-vscode/src/extension/panel-turn-loop.mjs:214` 的 `if (!agent)` 门内），续跑段不经过该门。**对位义务**：将来若把 hydrate / 装配挪进每段，VSC 侧「续跑不清零」会静默失效 ⇒ 届时须在每段入口补 `resume` 等价门。
    - **勘察证据（本笔实取）**：查过 `test/RTM.md`（十四故事；`11-1`–`11-4b` 只覆盖越窗 / 压缩线，无空响应用例）· `AGENT-LOOP-ASYNC-POOL.md` §6.31.8（`:1023`–`:1025`，述判空加宽、不述复位）· 本档 §6.2（`:243` per-run 复位清单 ∥ `:263` resume 保留集，两处与本笔同义）。外部公开源：本笔未查——判据全在仓内既有段与代码，无外部协议面。
    - **验收（可机判 · 宿主 + 命令）**：宿主 = 本批批内单测档（`docs/batches/<本批档名>.test.mjs`——名随批档、用毕即删，读数一行留批档 §5；形态口径 = `docs/core/design/TESTING.md:43`），命令 = `node --test docs/batches/<本批档名>.test.mjs`。四组断言：① `isSubstantiveResponse` 三形——有正文 ⇒ 真 · 纯空白 ⇒ 假 · 无正文且零工具调用 ⇒ 假；② 取响应处复位——连续两空后出现带正文（或带工具调用）的响应 ⇒ `_emptyRetries === 0`；③ 续跑不清零——`resume` 段起手后 `_emptyRetries` 保持前值；④ 三次连续空、中间无实质响应 ⇒ 第 3 次抛 `LLM returned empty response`。集成半（`test/integration/empty-response-retry.test.mjs` 的 15-1 ∥ 15-2 ∥ 15-3）按收口分工移入收口行报告，不在改动内跑。
 

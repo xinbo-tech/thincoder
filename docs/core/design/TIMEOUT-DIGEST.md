@@ -162,31 +162,6 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 **代价认账**：首 chunk 窗默认取 600s ⇒「响应头已回、此后永不出字节」的发现时间由 120s 变为 600s。与「调大 `agent.bodyIdleTimeoutMs`」那条被拒选项的代价同源（§4 D7），本设计认这笔账：换来的是长上下文 prefill 不再被腰斩。缩短的旋钮只有一个且已在：`agent.fetchTimeoutMs`。
 
-## 3. 受影响文件（行数 = 实读；本表是机制落点清单）
-
-| 文件 | 当前行数 | 本层 Δ | 改动 |
-|---|---|---|---|
-| `thincoder-core/config-defaults.mjs` | 100 | +3 | `DEFAULT_BODY_IDLE_MS = 120000` 单源常量（`:17`）；`DEFAULTS.agent.bodyIdleTimeoutMs` 登记（`:30`） |
-| `thincoder-core/config.mjs` | 462 | +4 | `:371-372` 提升 `provider.fetchTimeoutMs`；`:375-376` 提升 `provider.bodyIdleTimeoutMs` |
-| `thincoder-core/provider/core.mjs` | 494 | 0（两行改写） | `:80-83` `effectiveBodyIdleMs` 唯一解析点；`:265` / `:285` / `:429` 三处读它；`:265` / `:285` 另传 `firstChunkMs` |
-| `thincoder-core/provider/sse.mjs` | 311 | +6 / −2 | `:93` `readSSE` 收 `idleMs = DEFAULT_BODY_IDLE_MS` + `firstChunkMs`；`:207-224` `gotFirstChunk` 两态臂（窗 / 文案 / 相位串按态取） |
-| `thincoder-core/provider/google.mjs` | 308 | +5 / −1 | `:139` 读 `effectiveBodyIdleMs`；`:144` `parseGeminiStream` 收 `idleMs` + `firstChunkMs`；`:178` 形参缺省单源；`:230-245` 两态臂 |
-| `thincoder-core/provider/anthropic.mjs` | 367 | +1 / −1 | `:229` 代理分支 `_bodyIdleMs` |
-| `thincoder-core/provider/responses.mjs` | 317 | +3 / −3 | `:252` / `:271` / `:289` 三条传输分支 `_bodyIdleMs` |
-| `thincoder-core/proxy.mjs` | 54 | +2 / −1 | `:52` 缺省 `DEFAULT_BODY_IDLE_MS` |
-| `thincoder-core/proxy-transport.mjs` | 300 | +3 / −2 | `:43` 形参缺省 + `:234` 读 `opts?._bodyIdleMs`，均落 `DEFAULT_BODY_IDLE_MS` |
-| `thincoder-core/agent/helpers.mjs` | 500 | +5 / −3（净 +2） | `:157` `offloadToolResult` 收 `{ force }`；`:158-173` 渲染二分 + 写盘失败两形态（§2.2 表） |
-| `thincoder-core/agent-tools/subagent-async.mjs` | 485 | +3 / −2 | `:388-389` 两条路都落盘 + 缝取值 |
-| `thincoder-core/agent-tools/digest-budget.mjs` | 78 | +1 | `:62` `_digestOffloadDirForTest()` 无参读取面 |
-| `thincoder-core/agent/completion.mjs` | 171 | +2 / −1 | `:77` 合取 `!poolLive(agent)`；`:11` import 自 `suspension.mjs` |
-| `docs/core/design/PROVIDER.md` | 1411 | 0 | §6.3 的 body 阶段超时值来源指本档 §2.1（`agent.bodyIdleTimeoutMs`） |
-| `docs/core/design/AGENT-LOOP.md` | 636 | 0 | §9 第 2 条 pending tasks 提醒以 `!poolLive` 为前置判据 |
-| `docs/core/design/TIMEOUT-DIGEST.md`（本档） | — | — | 本档自身：§1–§9 |
-
-**行数口径**：本表每个行数 = `wc -l` 实读（项目统一口径，`docs/core/design/MODEL-SPECS.md:261`）；`split('\n').length` 会把末尾空串多算一行，本档不采用该口径。
-
-**复核面**：机制改动面本批复核的三行 = `provider/core.mjs` / `provider/sse.mjs` / `provider/google.mjs`；全表行数与坐标按同一轮盘面实读。
-
 单文件最大 = `thincoder-core/agent/helpers.mjs` 500 行，位于 500 行咨询档上沿，不越档、不拆分。若该档继续增长越档，拆点 = 把 offload / 预览族整块外移为 `thincoder-core/agent/offload.mjs`（原档保留 re-export，消费面零改），仅此一处。
 
 批内用例落 `docs/batches/` 而非 `thincoder-core/test/`：后者是常驻机检档目录（`advisor-project-context` / `doc-check-*` / `manifest-five-keys` / `subagent-design-token-gate` 等），混入一次性档会让「零留存」不可读（`docs/core/design/TESTING.md:92-94` 的口径 = `docs/batches/*.test.mjs`，随批删）。

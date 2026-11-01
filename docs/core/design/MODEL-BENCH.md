@@ -756,76 +756,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 
 **不分档理由**（一档承载三条测量面）：§1–§9 QA 套件 · §10 矛盾上抛探针 · §11 工具面探针共用同一结果家（`bench/results/`）与报告骨架（§2.3）与数据面单源；三条版本轴已各自分立（`SUITE_VERSION` / `PROBE_VERSION` / `TOOL_PROBE_VERSION`）⇒ 版本已单源，拆档只把同一套结果 schema 切成三处。
 
-**受影响文件表（行数单源 · 实读 `node` UTF-8 逐行计数）**
-
-> **量法（单源）**：`node -e "const s=require('fs').readFileSync(process.argv[1],'utf8');console.log(s.split('\n').length)" <档>`——按 UTF-8 逐行切分。全部档以换行结尾 ⇒ 读数 = 文本行数 + 1（与 `read` 工具的行号一致）。
->
-> **为什么不用 PowerShell 的 `(Get-Content <档>).Count`**：PS 5.1 默认按 ANSI 解码 UTF-8 中文 ⇒ 吞行。同一档实测 `(Get-Content).Count` = 149 ∥ `(Get-Content -Encoding UTF8).Count` = 154 ∥ `node split('\n').length` = 155（`bench/check/metrics.check.mjs`）。
-> 全表 58 档默认量法少记 3–33 行（代码档）；中文越密差越多——本 md 同法少记 553 行。**用它会漏判「是否越 500 线」**，而 500 线是拆分触发条件。
->
-> 档位判据 = 工作区指南 `AGENTS.md`：≤500 行建议 / ≤800 行硬限。「Δ」= 本批（bench 批 B）写入面的预期增减；未列即「结构不变」。全表最大 311（`bench/run.mjs` ∥ `bench/probe.mjs`，并列）⇒ 无档越 500 线，无拆分计划。
-
-| 文件 | 当前行数 | Δ | 档位 | 拆分计划 |
-|---|---|---|---|---|
-| `bench/check/metrics.check.mjs` | 155 | +3（`tmpDirs` 声明 + `push` + `after`）/ import 两行改 | 在限内 | 无 |
-| `bench/check/run.mjs` | 112 | +1（末行条件追加） | 在限内 | 无 |
-| `bench/lib/grade.mjs` | 280 | ±0 | 在限内 | 无 |
-| `bench/lib/pipeline.mjs` | 290 | ±0 | 在限内 | 无 |
-| `bench/lib/prices-judge.mjs` | 170 | ±0 | 在限内 | 无 |
-| `bench/lib/recompute.mjs` | 68 | ±0 | 在限内 | 无 |
-| `bench/lib/report-review.mjs` | 165 | ±0 | 在限内 | 无 |
-| `bench/lib/report-tables.mjs` | 289 | ±0 | 在限内 | 无 |
-| `bench/suites/code.mjs` | 66 | ±0 | 在限内 | 无 |
-| `bench/suites/index.mjs` | 69 | ±0 | 在限内 | 无 |
-| `bench/suites/manual.mjs` | 22 | ±0 | 在限内 | 无 |
-| `bench/run.mjs` | 311 | 结构不变 | 在限内 | 无 |
-| `bench/preflight.mjs` | 122 | 结构不变 | 在限内 | 无 |
-| `bench/probe.mjs` | 311 | 结构不变 | 在限内（距 500 线尚余 189 行；并入即越线，故不并——KD-53①） | 无 |
-| `bench/toolcall.mjs` | 263 | 结构不变 | 在限内 | 无 |
-| `bench/lib/client.mjs` | 202 | 结构不变 | 在限内 | 无 |
-| `bench/lib/haystack.mjs` | 57 | 结构不变 | 在限内 | 无 |
-| `bench/lib/judge-fallback.mjs` | 88 | 结构不变 | 在限内 | 无 |
-| `bench/lib/judge.mjs` | 279 | 结构不变 | 在限内 | 无 |
-| `bench/lib/metrics.mjs` | 97 | 结构不变 | 在限内 | 无 |
-| `bench/lib/output.mjs` | 66 | 结构不变 | 在限内 | 无 |
-| `bench/lib/params.mjs` | 124 | 结构不变 | 在限内 | 无 |
-| `bench/lib/png.mjs` | 88 | 结构不变 | 在限内 | 无 |
-| `bench/lib/prices.mjs` | 161 | 结构不变 | 在限内 | 无 |
-| `bench/lib/rejudge.mjs` | 134 | 结构不变 | 在限内 | 无 |
-| `bench/lib/report-params.mjs` | 36 | 结构不变 | 在限内 | 无 |
-| `bench/lib/report-speed.mjs` | 40 | 结构不变 | 在限内 | 无 |
-| `bench/lib/report-time.mjs` | 50 | 结构不变 | 在限内 | 无 |
-| `bench/lib/report.mjs` | 215 | 结构不变 | 在限内 | 无 |
-| `bench/lib/roster.mjs` | 77 | 结构不变 | 在限内 | 无 |
-| `bench/lib/sanitize.mjs` | 70 | 结构不变 | 在限内 | 无 |
-| `bench/lib/tools.mjs` | 89 | 结构不变 | 在限内 | 无 |
-| `bench/check/graders.check.mjs` | 281 | 结构不变 | 在限内 | 无 |
-| `bench/check/harness.mjs` | 71 | 结构不变 | 在限内 | 无 |
-| `bench/check/helpers.mjs` | 205 | 结构不变 | 在限内 | 无 |
-| `bench/check/judge-fallback.check.mjs` | 234 | 结构不变 | 在限内 | 无 |
-| `bench/check/judge.check.mjs` | 301 | 结构不变 | 在限内 | 无 |
-| `bench/check/preflight.check.mjs` | 140 | 结构不变 | 在限内 | 无 |
-| `bench/check/probe-frozen.mjs` | 107 | 结构不变 | 在限内 | 无 |
-| `bench/check/probe-report.check.mjs` | 167 | 结构不变 | 在限内 | 无 |
-| `bench/check/probe.check.mjs` | 306 | 结构不变 | 在限内 | 无 |
-| `bench/check/recompute.check.mjs` | 171 | 结构不变 | 在限内 | 无 |
-| `bench/check/report-present.check.mjs` | 308 | 结构不变 | 在限内 | 无 |
-| `bench/check/report-render.check.mjs` | 303 | 结构不变 | 在限内 | 无 |
-| `bench/check/roster.check.mjs` | 192 | 结构不变 | 在限内 | 无 |
-| `bench/check/suite.check.mjs` | 229 | 结构不变 | 在限内 | 无 |
-| `bench/check/timing.check.mjs` | 111 | 结构不变 | 在限内 | 无 |
-| `bench/check/toolcall-frozen.mjs` | 137 | 结构不变 | 在限内 | 无 |
-| `bench/check/toolcall-report.check.mjs` | 162 | 结构不变 | 在限内 | 无 |
-| `bench/check/toolcall.check.mjs` | 298 | 结构不变 | 在限内 | 无 |
-| `bench/suites/instructions.mjs` | 65 | 结构不变 | 在限内 | 无 |
-| `bench/suites/json.mjs` | 67 | 结构不变 | 在限内 | 无 |
-| `bench/suites/longctx.mjs` | 95 | 结构不变 | 在限内 | 无 |
-| `bench/suites/multiturn.mjs` | 109 | 结构不变 | 在限内 | 无 |
-| `bench/suites/reasoning.mjs` | 53 | 结构不变 | 在限内 | 无 |
-| `bench/suites/tools.mjs` | 105 | 结构不变 | 在限内 | 无 |
-| `bench/suites/vision.mjs` | 67 | 结构不变 | 在限内 | 无 |
-| `docs/core/design/MODEL-BENCH.md` | 1844 | 本档自身（文档不计代码行限） | 文档（无代码行限） | 无 |
-
+> 档位判据 = 工作区指南 `AGENTS.md`：≤500 行建议 / ≤800 行硬限；越 500 线触发拆分评审。存量在限内的档不列拆分计划——拆分计划逐档住批次档 §2。
 **验证方式（本套件的测试面）**：
 
 - **定位（与测试体系的边界）**：`bench/` 是产品——性能评估是它的产品功能，`bench/check/` 是它的**测试代码**。项目测试体系的两种定义（`docs/core/requirements/TESTING.md` §0）都以**批次寿命 / 前端业务场景**为载体：单元测试按批次结算、用毕即删；集成测试住三前端入口。
@@ -905,7 +836,7 @@ const j = await ctx.judge()   // → { verdict: "pass" | "fail" | "error", reaso
 | KD-50 | **变体构造 = 声明式变换**：V0 = 实面逐字 · V1 = 枚举块（5 档）+ V0 文本逐字 + 参数描述唯一缺口补齐（`edit.edits[].*` 7 项）· V2 = 路由句（取句规则）+ 实面参数面逐字 | ① 实读所得：参数面（`type` / `required` / `enum` / `items`）在现形已近饱和（103 带类型参数 / 7 缺描述，全在 `edit.edits[].*`——`thincoder-core/tools/file.mjs:240-251`）⇒ 可动自变量主要是**描述文本（= 选择面）**；② V1 样本 = 近邻枢纽档（`read` / `grep` / `bash` / `git` / `edit`——逐档证据 = `thincoder-core/tool-docs/*.md` 的路由散文）；③ V2 取句 = 确定性规则（不涉判断）；④ 差异面可机检（V1 − V0 = 5 档描述 + 7 项嵌套参数描述；V2 参数面逐字节等值） |
 | KD-51 | **三轴判据与分母口径（冻结）**：轴① = 首调用名（`expect.name === null` ⇒ 判「无调用」）· 轴② = 全调用 schema 合法 · 轴③ = 轴① ∧ 逐例参数谓词；分母 = 轴① 全有效 run（`terminal ∉ {error, skipped}`）· 轴② / ③ 期望有调用的 run；无调用 run 逐轴按轴表判（轴① 期望无调用者 `true` / 期望有调用者 `false`；轴② / ③ 期望有调用者 `false`、期望无调用者 `null`）+ 单列 `noCall` | ① 需求面三轴逐例机读；② 「首调用」= 单点判定面（多调用 run 单列 `multiCall`，不改主判定面）；③ 分母显式成文（承 §10 评审 🔴#1 教训——截断 / 失败面不入分母，读数不漂移）；④ `perfect = legal ∧ semOk`（完全正确率 = 四率之一，可拆解） |
 | KD-52 | **上下文成本读数 = 静态 + 实测两路**：静态 = 逐变体载荷 `chars` / `bytes` / `descriptionChars`（确定性）；实测 = 逐 run `usage.prompt_tokens` → 逐变体中位 + Δ vs V0（同案同模型差分） | ① 「散文 vs 结构」的核心代价 / 收益就是上下文成本；② 静态读数零网络可复跑、实测读数同源核 usage（不估）；③ 差分法消掉提示 / 模型面常数 |
-| KD-53 | **独立 runner + 自持版本轴与落档前缀**：`bench/toolcall.mjs`（**已落**；行数与档位见 §3 受影响文件表）· `TOOL_PROBE_VERSION` · 标签必 `toolcall-` 起 · JSON `kind` / `toolProbeVersion` | ① `bench/probe.mjs` 行数与档位见 §3 受影响文件表（§10 面）⇒ 并入即越 500 线；② 两探针形态不同（多轮行为面 vs 单发工具选择面）⇒ CLI 合同与版本轴分立（§10.2 同源理由）；③ 单一 `bench/results/` 家 + 文件名自描述（KD-46 体例） |
+| KD-53 | **独立 runner + 自持版本轴与落档前缀**：`bench/toolcall.mjs`（**已落**）· `TOOL_PROBE_VERSION` · 标签必 `toolcall-` 起 · JSON `kind` / `toolProbeVersion` | ① `bench/probe.mjs` 并入即越 500 线（§10 面）；② 两探针形态不同（多轮行为面 vs 单发工具选择面）⇒ CLI 合同与版本轴分立（§10.2 同源理由）；③ 单一 `bench/results/` 家 + 文件名自描述（KD-46 体例） |
 | KD-54 | **产品面零改：V0 载荷经产品单点构造**（`builtinTools`（`thincoder-core/tools/index.mjs:19-27`）+ `toOpenAISchema`（`thincoder-core/tools/shared.mjs:169`）+ 能力位判据 `:64`）——探针只做载荷级变换，不写 `tool-docs/**` / schema 本体 / 注册面 | ① 边界红线（产品面零改）；② V0 必须 = 用户真实所见（否则测的不是现形）；③ 变体只在夹具内构造 ⇒「没改产品面而改的描述面」可审计（`git diff` 零命中） |
 | KD-55 | **版本轴独立**：`TOOL_PROBE_VERSION` 单源（夹具 / 用例 / 判据 / system / 参数口径变化 ⇒ +1；呈现面不 bump）；`SUITE_VERSION`（恒 7）/ `PROBE_VERSION` / `judge.json.frozenAtSuiteVersion` / `bench/suites/` 零触 | ① 三轴与夹具 = 测量口径 ⇒ 版本轴承载（同 §10.2 / KD-27 体例）；② 本面不参与既有两条版本轴——三条轴各管自己的面（QA 判分面 / 行为面 / 本面） |
 | KD-56 | **建议面归报告外收口**：报告只出读数；「要不要结构补强 / 怎么补」= 人工判读（父侧 / 用户笔），并接池内 #15 并案 | ① 报告面纪律 = 模板化读数、禁主观评价词（§2.3《关键发现》同源）；② 建议是**判断**——须在读数之上由人（或父侧）作；③ 报告是对外可留档物，掺评价会失真 |

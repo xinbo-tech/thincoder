@@ -102,17 +102,6 @@
 
 **勘察行**：查过 `thincoder-core/ledger-cmd.mjs`（close / update / 批量三径）∥ `agent/light-round.mjs` ∥ `ledger.mjs` re-export 面 ∥ `docs/core/design/LEDGER.md` §3 / §3.1；公共源 = §2.9 勘察行结论（`index.publicRepos: []`——无公开源仓，无相关）。
 
-**受影响文件（本件 · 现量 = 本席实读 2026-10-25）**：
-
-| 文件 | 现量 | Δ（估值） | 形态 / tier |
-|---|---|---|---|
-| `thincoder-core/ledger-cmd.mjs` | 431 行 | +~12（两共函数各一判 + import + 头注句）→ ~443 | 判据新增（结构零改）；低于 500 顾问线（`docs/core/requirements/ENGINEERING-MODE-V2.md:653` F12：>300 软线 = 触发拆分评审 · >500 硬线 = 超限档本批拆，两线只约束程序代码）⇒ 不触发拆分评审；超 300 软线 = 既有存量，非本批新增。**两条口径各管各的面**（500 顾问线 / 800 硬线 = 全仓通用；650 = 仅 `batch-lifecycle.mjs` 的单点拆分触发）= `docs/core/design/LEDGER.md` §3.5「两口径管辖面」段（本处不重述——D2） |
-| `thincoder-core/ledger-db.mjs` | 266 行 | +3（`ROUND_MARKER` 常量 + 注释）→ ~269 | 常量区增员 |
-| `thincoder-core/ledger.mjs` | 159 行 | ±0（re-export 行内增名） | 公共面形零改 |
-| `thincoder-core/agent/light-round.mjs` | 67 行 | −3 / +1（删本地常量、动态 import 解构增名）→ ~65 | 消费面改源 |
-| `thincoder-core/tool-docs/ledger.md` | — | close 条 +1 句 ∥ update 条 +半句（拒面登记） | 工具描述同步（提示词面——实施轮 eng-coder 落笔） |
-| `thincoder-core/prompts/persona-engineering.md` | — | 轻通道块 +1 行（逐字 EN 见下） | 提示词面（实施轮 eng-coder 落笔） |
-
 **提示词面逐字 EN**（`thincoder-core/prompts/persona-engineering.md` 轻通道块「The round ledger row's title carries …」行后 +1 行——实施席照此落笔）：
 
 ```text
@@ -251,14 +240,6 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 不改 `prepared` ∥ 不改 dispatch 门 ∥ 零文件扫描 ∥ 零 DB 访问。
 
-**受影响文件（现量 + Δ · tier 判定；`.md` 档按豁免不列）**：
-
-| 文件 | 现量 | Δ（实现读数） | 形态 | tier |
-|---|---|---|---|---|
-| `thincoder-core/agent/unbooked-pen.mjs` | 62 行 | 新档 | 谓词叶（`PEN_TOOLS` ∥ `unbookedPenText()` ∥ `unbookedPenNotice()`） | 新档——免拆分 |
-| `thincoder-core/agent/record-results.mjs` | 199 行（挂接点 `:29-30` ∥ `:87-90`） | +5 | 结构不变（不拆函数、不增导出） | 低于 300 软线 ∥ 500 顾问线（`docs/core/requirements/ENGINEERING-MODE-V2.md:653` F12）⇒ 不触发拆分评审 |
-| `test/integration/unbooked-pen.test.mjs`（仓根） | 264 行 | 新档（3 例：I1–I3） | **常驻集成档**（收口不删）——单元档随批删、集成档常驻，两者是两个对象 | 新档——免拆分 |
-
 **不改面**：轻通道准入判据（§2.1）· 代码笔闸（§2.8）· 全链放行 · 提示词面（规则已在 persona-engineering:218-222，本件只装触发点）· 批档 ∥ 台账机制本体 · 无新配置键。
 
 **边界**：
@@ -309,15 +290,6 @@ The same marker is also the settlement gate credential: settling the row (close 
 - `:117` 行使线 —— `routing = the main agent judges per pen and discloses per pen (the user can overrule)` ⇒ `routing = the main agent proposes the route per pen as a choice question (both routes side by side, a recommendation allowed but not a default) and the user picks; nothing moves before the pick`。
 
 **为什么是选择题而不是点头**（同需求 §2.2）：点头是二元确认——默认采纳被提议的那条，被问的人要先想到拒绝才能不默认；选择题里没有天然预设，两条路放在同一行，选的才是真选。
-
-**受影响文件（现量 = 本席实读 2026-10-25；行数口径 = 内容行数，不含末尾空行——同档 `split(/\r?\n/).length` 因末尾换行各 +1 = 460 ∥ 350）**：
-
-| 文件 | 现量 | Δ | 形态 |
-|---|---|---|---|
-| `thincoder-core/prompts/persona-engineering.md` | 459 行 | 轻通道块 7 行 → 8 行（bullet 头起整段改写）+ 两处句内改 ⇒ +1 行（第 6 行写成两行） | 提示词面——实施轮 eng-coder 落笔 |
-| `thincoder-core/prompts/discipline-engineering.md` | 349 行 | 六处句内改（首句 + 同行收尾句 ∥ `:102` 归类 ∥ `:104` 归类 ∥ 附则 ∥ 轮次形 ∥ 行使线）⇒ +1 行（`:97` 首句写成两行） | 提示词面——实施轮 eng-coder 落笔 |
-| `docs/core/design/LIGHT-CHANNEL.md` | 474 行（含本批落笔） | §1 定位 / §2.1 / §2.2 / §2.10 / §3 两处 / §4 ② / §7 K4 / §8 | 设计档——本席笔（本批） |
-| `docs/core/design/PROMPT-SYSTEM.md` | 4,402 行 | §6.12 分层归属一句（改为选择题形） | 设计档——本席笔（本批） |
 
 **行宽门会强制改写（写逐字块即须预见）**：提示词面逐行裸判 300 字符、无结构豁免（`docs/core/design/DOC-DISCIPLINE.md:949-952`）⇒ 逐字块里写入超长句必撞门（`doc_check(mode:"gate")` = REFUSED），处置 = 该句重新组织语言重写（一条规则一行时按规则边界断，不按字符数挪断点）。故标「±0 行」前先核块内每行 ≤ 300 字符——本块两行超限（persona 第 6 行 316 字符 ∥ discipline `:97` 首句 336 字符）。
 

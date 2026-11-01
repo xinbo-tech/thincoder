@@ -89,24 +89,6 @@ win32 只用于决定「config.shell 空时读 %COMSPEC% 还是 SHELL」这一 s
   **同笔补取值表枚举**——取值表行并入 `thincoder-desktop/src/main/prompt-injections.mjs`（三端面枚举齐：CLI ∥ VSC ∥ 桌面）；
   `CORE-UNIFICATION.md` §2.13.2「工具面 2 锚保留（待工具面 review 统一）」行同笔收正（bash 锚已处置；question 锚仍待 review——**该行保留 question 半边**）。
 
-## 4. 受影响文件清单（当前行数 → 预计增量）
-
-| # | 档 | 现行数 | 增量 | 动作 |
-|---|---|---|---|---|
-| 1 | `thincoder-core/shell-identity.mjs` | 0 | +≈70 | 探测单源（§3.1） |
-| 2 | `thincoder-core/tool-docs/bash.md` | 38 | 0（行替换） | `:33` 死写句 → 零断言替形（§3.3） |
-| 3 | `thincoder-core/tools/bash.mjs` | 289 | +≈6 | hint 身份门（§3.3） |
-| 4 | `thincoder-cli/src/prompt-injections.mjs` | 20 | +≈4 | import 期求值（§3.2） |
-| 5 | `thincoder-desktop/src/main/prompt-injections.mjs` | 22 | +≈4 | 同上 |
-| 6 | `thincoder-vscode/src/prompt-injections.mjs` | 21 | +≈4 | 同上 + terminal 行拼接（§2） |
-| 7 | `thincoder-vscode/src/tools/shell.mjs` | 331 | −≈8 | 死常量 SHELL_NOTES 删除（§3.3） |
-| 8 | 批次本地单元测试档（随批归档——不入 `thincoder-core/test/` 集成测试树） | 0 | +≈80 | 单元测试（§6 用例表转测——§6.10 教义：开发期工具不占集成测试树） |
-| 9 | `docs/core/design/TOOLS.md` | 1230 | +1 | §6.2 指针行（§3.4） |
-| 10 | `docs/core/design/PROMPT-SYSTEM.md` | 650 | 0（行内收正） | §6.3 处置语（§3.4） |
-| 11 | `docs/core/design/CORE-UNIFICATION.md` | 2054 | 0（行内收正） | §2.13.2 处置语（§3.4） |
-
-档位判定：新档 `shell-identity.mjs` ≈70 行 ≤500 软线 ✓；`bash.mjs` 289 +6 = ≈295 仍 ≤500 ✓；`shell.mjs` 331 −8 = ≈323。单元测试档不入集成测试树（单元测试随批归档）。
-
 ## 5. 关键决策记录
 
 | # | 决策 | 理由 |

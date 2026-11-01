@@ -374,59 +374,6 @@ Escape 面 = 既有机制自带（`autoApprove`/AUTO 模式 ∥ 批量许可）�
 
 启动参数（沿 walkthrough `:123`）：`--headless=new`（按模式）· `--disable-gpu` · `--no-first-run` · `--hide-scrollbars` · `--user-data-dir=<profile>` · `--remote-debugging-port=0` · `--window-size=1440,900` · `about:blank`；`stdio:"ignore"`；POSIX `detached:true`（组杀前提）。
 
-## 5. 受影响文件清单与拆分决定（实读 · `readFileSync` 口径）
-
-| 文件 | 实施后实读 | 说明 |
-|---|---|---|
-| `thincoder-core/browser/queue.mjs`（新档） | 199 | 串行队列 ∥ 动作预算表 ∥ 动作控制器（超时 / 取消单点）∥ 步名跟踪 ∥ abort 快速失败 |
-| `thincoder-core/browser/session.mjs` | 498 | 会话健康（探针 ∥ `failSession` ∥ 自愈注记）∥ 队列接线 ∥ 步名 |
-| `thincoder-core/browser/cdp.mjs` | 161 | 命令缺省帽 15s ∥ 断连回调 ∥ `connectCdp` 帽 10s ∥ `/json/new` 帽 5s |
-| `thincoder-core/browser/actions.mjs` | 163 | 步名标注 ∥ wait 余量口径 |
-| `thincoder-core/browser/input-actions.mjs` | 197 | `scroll settle` / html5 拦截步名 |
-| `thincoder-core/browser/launch.mjs` | 200 | 启动帽 25s 缺省 + env `BROWSER_START_TIMEOUT_MS` 覆盖（钳 2–30s）；超时前已杀树（`:168`） |
-| `thincoder-core/browser/{snapshot,input,clipboard}.mjs` | 270 ∥ 256 ∥ 142 | 零改 |
-| `thincoder-core/agent-tools/browser-async.mjs`（新档） | 198 | 池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点 ∥ wait 判据 ∥ subject 标签（复用 bg 族单点——D2） |
-| `thincoder-core/tools/browser.mjs` | 161 | `async` 参 ∥ `timeoutMs` 描述收正 ∥ depth 第二道 ∥ 起跑动态 import |
-| `thincoder-core/tools/ops.mjs` | 346 | kill id 路由（先 bg 后 browser）∥ `wait_for` 条件 `browser id:N done` |
-| `thincoder-core/agent/helpers.mjs` | 490 | `excludeSubagentTools` 删参面覆盖 `browser` |
-| `thincoder-core/agent/suspension.mjs` | 351 | `poolLive` +`_browserTasks` ∥ 中止收尾调用 |
-| `thincoder-core/agent/run-stages.mjs` | 295 | 回合尾中止收尾调用 |
-| `thincoder-core/agent-tools/async-settle.mjs` | 327 | `getAsyncPool` role 分支（`browser` → `_browserTasks`） |
-| `thincoder-core/agent-tools/async-discard.mjs` | 220 | `BROWSER_SPEC` ∥ 导出 `discardAbortedBrowserTasks` |
-| `thincoder-core/agent-tools/subagent-async.mjs` | 477 | 注入分发分支 |
-| `thincoder-core/agent-tools/subagent-scheduler.mjs` | 450 | 取号扫描域 +`_browserTasks` |
-| `thincoder-core/tool-docs/browser.md`（prompt 面） | 48 | `async` ∥ 超时 / 外部关闭语义 ∥ 「现实环境实践」段（F-BT19） |
-| `thincoder-core/tool-docs/{wait_for,process}.md`（prompt 面） | 24 ∥ 14 | 条件枚举 ∥ kill 靶面 |
-| 单元测试 A 组（批次本地单元测试档 · 新档） | 334 | 机检单元测试（假传输 ∥ 假子进程事件——零真实浏览器） |
-| 单元测试 B 组（批次本地单元测试档 · 新档） | 386 | B 组（agent 集成 ∥ 异步通道 ∥ kill / 收尾面——夹具同 A 组） |
-| 冒烟探测档（批次本地 · 新档） | 173 | 真 Edge 冒烟 S19–S22（硬超时 ∥ 自愈重开 ∥ 异步 ack+摘要 ∥ kill） |
-| `docs/core/design/TOOLS.md` | 1,739 | §6.7 browser 条 +`async` / 预算 / 会话自愈；§6.19 后台任务族 +`browser`（wait_for / kill 路由随动 ∥ +合并错误句——回填轮）；设计轮 3 处行内改；回填轮 1 处；变更记录 2 条 |
-| `docs/core/design/API-CONTRACT.md` | 3345 | 生成区随动——收口时跑 `node scripts/api-contract.mjs --write`（新档导出行 + 行号——生成器唯一笔） |
-
-**本批受影响面（启动窗旋钮 + 冷启预算；行数 = `split("\n").length − 1` 实读 · 2026-10-24）**：
-
-| 档 | 改动前 | 本批 Δ | 实施后（实读）∥ 说明 |
-|---|---|---|---|
-| `thincoder-core/browser/launch.mjs` | 189 | +11 | **200** — 导出 `browserStartTimeoutMs(env)` · `START_TIMEOUT_MS` = 25_000 · `launchBrowser` 缺省参数改调用（`:159`） |
-| `thincoder-core/browser/queue.mjs` | 171 | +28 | **199** — `pauseBudget` / `resumeBudget` 成对（`:71-83`）+ `extendBy`（`:87-94`）：自启段预算钟暂停、就绪后回补；`remaining()` 暂停期读暂停点（`:65-67`）；`:15` `navigate` 注释改「不含自启」 |
-| `thincoder-core/browser/session.mjs` | 494 | +4 | **498** — 冷启段暂停 / 恢复接线（`:199-208`）——失败腿与就绪腿都恢复（§2.9 冷启预算） |
-
-主表其余行 = 上一批实施后读数，本批零触。
-
-**拆分决定**：**拆出新档 `thincoder-core/browser/queue.mjs`**（现读 199；`session.mjs` 现读 498）——域界 = 「调度策略（排队 ∥ 预算 ∥ 控制器 ∥ 步名）」∥「会话机制（生命周期 ∥ 页原语 ∥ 安全助手 ∥ 健康）」。
-
-**档位处置（有 Δ 者与新档——不拆；触发条件 = 下次实质改动时核 ∥ 越 800 即拆）**：`tools/ops.mjs`（346，余 454 行）∥ `helpers.mjs`（490，余 310 行）∥ `suspension.mjs`（351，余 449 行）∥ `async-settle.mjs`（327，余 473 行）∥
-
-`subagent-scheduler.mjs`（450，余 350 行）∥ `subagent-async.mjs`（477，余 323 行）∥ `session.mjs`（**498——距 500 建议线余 2 行、距 800 硬限余 302 行；最紧面**——下批任何实质改动先做拆分评审，不等越线）∥ `queue.mjs`（199——新档，本批 +28，两线均远）∥ `agent-tools/browser-async.mjs`（198——新档）∥ 单元测试档两档（A 334 ∥ B 386；不拆）。余量 = 距 800 硬限（实读）。
-
-**域界（增行）**：异步桥 = `agent-tools/browser-async.mjs`（族名对齐 bash-async / subagent-async / advisor-async——池 ∥ 起跑 ∥ 结算 ∥ 注入 ∥ 杀单点）；入径 = `tools/browser.mjs` ∥ `tools/ops.mjs` **动态 import**（W8 契约②——agent-tools 静态链达 node:sqlite；端壳静态闭包零命中）。
-
-**依赖单向无环**：`tools/browser.mjs` → `session.mjs` → {`actions` / `input-actions` / `clipboard`} → {`input` / `snapshot` / `cdp`}；`session → queue`；`queue → actions`（wait 帽常量——`thincoder-core/browser/queue.mjs:11`）；`browser-async → session`（入队面）+ agent-tools 族单点——无环。
-
-**click / type 不拆不迁**（裁决项②——§6 KD-10）。
-
-**零触面（如实登记）**：`thincoder-core/tools/index.mjs`（注册面——工具已在册）∥ `thincoder-core/permission.mjs` ∥ `thincoder-core/agent/dispatch-gates.mjs`（分类不随 `async` 变）∥ `thincoder-core/config.mjs`（零新配置键）∥ `thincoder-vscode/**`（越批登记：VSC 自持 `async-discard.mjs` 未随 bg 并入——按 bg 先例核心收编，VSC 侧一致性另行）。
-
 ## 6. 关键决策记录
 
 | # | 决策 | 理由 |

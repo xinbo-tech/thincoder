@@ -256,7 +256,7 @@
 
 **本文件自身**增删零越线；**两档单元测试档现越 300 软线**（395 行 · 304 行）——增量均来自 `[onboard]` / `B-1…B-6` 段；硬限 500 未越。
 
-越线两档的**拆分计划** = 「不拆档——单档内聚」+ 消解窗口（登记面 = `docs/core/design/CORE-UNIFICATION.md` §2.8.1 子表）；另一档单元测试档（221 行）仍 < 300。
+越线两档的**拆分计划** = 「不拆档——单档内聚」+ 消解窗口（登记面 = 本节）；另一档单元测试档（221 行）仍 < 300。
 
 `thincoder-core/auto-think.mjs` / `thincoder-core/agent/spawn-child.mjs` / `thincoder-core/config.mjs` /
 `thincoder-core/tools/index.mjs` /
@@ -1580,21 +1580,6 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 
 **裁定 = 登记（不闭）**：闭该方向 = 改既有「仅清 null」语义（越本节条目）。**复评条件** = ① 该组合的服务端实测后果（400 / 静默忽略）读数到位；或 ② 与 `thincoder-cli/src/cli/setup-wizard.mjs:70` 在册项（`thinking:null` 落盘口径统一）并案处置时随拍闭。
 
-### 16.7 受影响文件清单
-
-| 文件 | 现状 | 预期增删 | 说明 |
-|---|---|---|---|
-| `thincoder-core/think-off.mjs` | 0 | ~40 | §16.2 单源两函数（叶档 · 零 import；≤300 免登记） |
-| `thincoder-core/model-specs.mjs` | **370**（2026-10-23 `wc -l`） | +~6 | §16.3 三行 `thinkAlwaysOn` + 表头字段注 + 行注句；**>300 已登记**（核行数上限登记表）+ 拆分计划（§13.6）——本次 = 字段面补充（拆点未触发——判定见下注）  |
-| `thincoder-core/advisor/run.mjs` | 200 | ±0（−1 标识符） | §16.6-⑷ |
-| `thincoder-cli/src/tui/cmd-think.mjs` | 151 | +~14 −3 | §16.2-2 + §16.4（拒绝 / 开关项门 / 头与回执条件化） |
-| `thincoder-cli/src/tui/cmd-advisor.mjs` | 278 | +~16 −6 | §16.2-1 + §16.4（状态行条件化 / Disabled 门）+ §16.6-⑵⑶ |
-| `thincoder-vscode/src/extension/reasoning-mode.mjs` | 34 | +~4 −2 | §16.2-3（#335 本体） |
-| `thincoder-vscode/src/extension/settings-panel-write.mjs` | 200 | +~2 −6 | §16.2-4（本地形体删） |
-| `thincoder-vscode/webview/settings-state.js` | 95 | +~5 −1 | §16.5（off 哨兵 ⓪ 支并入共享规则——§15.4-1） |
-| 设计档 | — | 本节 + §10.1 订正 + §15.4-1 / §15.4-2 / §15.4-4 / §15.8 档面（指针 / 收正）+ `doc:PROVIDER.md:§6.9` / `§6.12` / `§6.19` + `doc:docs/vsc/design/SETTINGS.md:§2.13` 指针 | — |
-
-**`model-specs.mjs` 消解窗口判定（§13.6 口径——本次改动 ∉「实质改动」）**：本节改动 = 字段面补充（三行机制位 + 表头字段注 + 行注句；零结构 / 零表块位移 / 零导出面变更）⇒ **∉ §13.6「实质改动」**——拆点（`MODEL_SPECS` 表块外提）未触发；改后 ~354（≤500 软线）。
 
 ### 16.8 验收标准回指
 

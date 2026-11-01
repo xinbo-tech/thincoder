@@ -1,7 +1,7 @@
 # 上下文压缩 · 标题 · 文本额度（CONTEXT-COMPACTION）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 > **机制面**（§6）：机制 / 契约的实质描述 · 关键决策（§7）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策）。
@@ -31,10 +31,6 @@
 ## 4. 对外契约影响
 
 **本子系统无 §2.12.2 处置表行**。
-
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期（S2 改）** · **产品测试（S1 / S2 改）**。
 
 ## 6. 机制面
 
@@ -316,7 +312,7 @@ messages = [ { role: "system", content: extras.systemPrompt },  // 与回合请�
 tools    = extras.tools（与回合请求同一声明面；**不随 tool_choice**——实测该参数致服务端丢弃 tools 区）
 ```
 
-- **状态**：消息序 v1 **已落**（`thincoder-core/compress-form.mjs` + `context.mjs` 接线）；`tools` 行 = **v2 已实施**（`context.mjs` 接线已落——行数读数 = §6.16.9 单源）——
+- **状态**：消息序 v1 **已落**（`thincoder-core/compress-form.mjs` + `context.mjs` 接线）；`tools` 行 = **v2 已实施**（`context.mjs` 接线已落）——
   **落该形**（带 tools、**不随 `tool_choice`**：该参数实测致服务端丢弃 tools 区 ⇒ 该形落定）；
   `reasoningEffort` 行 = **v3 已实施**（**同源随带**：与回合同一字段；不硬编码 · 无配置 ⇒ 缺省）——**真机生产口径首现命中 92.86% / 93.65%**（两次独立运行）；
   派生面两则（百炼 qwen 族 / autoThink 窗口）⇒ **认账**：压缩侧**不设思考标记**（`thinking:null` = 需求 N1 字面 · 本档 D9）——
@@ -328,7 +324,7 @@ tools    = extras.tools（与回合请求同一声明面；**不随 tool_choice*
 - **单一真值**：请求前缀切点与摘要段切点同源（同一个 `tailStart`），不新增第二处切割判据。
 - **落地形态（模块拆分）**：纯函数 `buildCompressMessages` 落核档 `thincoder-core/compress-form.mjs`（零 import 依赖：指令文本由实参传入，不与 `context.mjs` 成环）。
   `thincoder-core/context.mjs` 只留接线（import `:15` + `buildCompressMessages` 调用 `:198` + 空白摘要守卫 `:219`）。
-  行数口径 = `wc -l`；两档读数与 Δ = §6.16.9 单源。单测档随批存放、**收口随批删除**（零留存口径，不进产品树）。
+  单测档随批存放、**收口随批删除**（零留存口径，不进产品树）。
   先例 = `explore-distill.mjs`（自 `context.mjs` 拆分——当日 524 > 500）。
 
 **退化面**：
@@ -560,7 +556,7 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
   登记于 VSC 手写 `builtinTools:181`，且被核测试 `HOST_ONLY = ["ide","focus"]`（现行值）钉为「不得入核」；让名缘由 = 与核新工具 `context` **同名撞车**。
 
   生产后果 = 请求体工具名重复（provider 逐字 400 `Tool names must be unique.`）⇒ **宿主工具改名为 `ide`**——**档改名**：
-  `thincoder-vscode/src/tools/ide.mjs`（自 `context.mjs` 改名；行数读数 = §6.16.9 单源；行为面零改）。
+  `thincoder-vscode/src/tools/ide.mjs`（自 `context.mjs` 改名；行为面零改）。
 
   行为面零改：`readonly`、描述语义、`what` 参数、四段采集全不动；仅名字与引用面随改。
 - **子代理面裁定（裁令 D）——不给（depth-0 only）**：
@@ -586,73 +582,29 @@ Compaction so far: {none | last summary freed {freed} tokens | last fallback tru
 - **`cwd` 缺省态（登记 · 降级形）**：`_slot` 在场而 `cwd` 缺省 ⇒ 落**未绑定分支**（判据 = 上表未绑定行**析取**），`cwd` 字面取 `undefined`（回执形 `read_history path="cwd:undefined"`）——工具内**不抛**（fail-soft 守卫 = `thincoder-core/agent-tools/context.mjs:107`）。
   该态在两端生产链**不可达**（建链面恒带 `cwd`：核 `thincoder-core/agent/assemble.mjs:106`（`createAgent` 携 `cwd`）+ CLI 值源 `thincoder-cli/src/cli/make-agent.mjs:32`；VSC `thincoder-vscode/src/agent/setup.mjs:244` 每轮重指 `agent.cwd`），仅直调 / 退化夹具可达 ⇒ 不另设分支、不改形（登记入降级面）。
 
-**6.16.8 模块拆分与行数预算（行数读数 = §6.16.9 单源 · 500 软线）**
+**6.16.8 模块拆分与行数预算（500 软线）**
 
-- **新档 `thincoder-core/token-window.mjs`**（**已落** · 迁入 110 + 新增族 ≈78）：自 `context.mjs` **逐字迁出**计量 / 窗口 / 边界族，**迁出 = 110 行**（三区间逐段可核算）：
-  ① 计量面 `:17-36`（20 行——IMAGE_TOKEN_ESTIMATE + `estimateTokens`）；
+- **新档 `thincoder-core/token-window.mjs`**（**已落**）：自 `context.mjs` **逐字迁出**计量 / 窗口 / 边界三族，三族现以本档为单源：
 
-  ② 尾族 `:38-59`（22 行——KEEP_HEAD 头注 + `TAIL_BUDGET_FRACTION` / `SUMMARY_TOKEN_ESTIMATE` / `TAIL_FLOOR_MESSAGES` + `keepTailSize` + `tailBudgetTokens`）；
+  ① 计量面：`IMAGE_TOKEN_ESTIMATE` + `estimateTokens`；
 
-  ③ 切分与配对修复族 `:95-162`（68 行——`splitHistory` 头注 + `splitHistory` + `repairedTailStart` + `tightenTailByBudget`）——三区间和 = 20 + 22 + 68 = **110**（`wc -l` 语义）。
+  ② 尾族：`KEEP_HEAD` 头注 + `TAIL_BUDGET_FRACTION` / `SUMMARY_TOKEN_ESTIMATE` / `TAIL_FLOOR_MESSAGES` + `keepTailSize` + `tailBudgetTokens`；
 
-  **新增族 ≈78**：上下文用量单源函数（6.16.4）· 陈旧工具输出合格集（6.16.3——含门槛常量 `PRUNE_MIN_TOKENS`，与合格集同住本档）· 状态行百分比（与状态行同式）。**零 import 环 / 零回指**（只依赖 `provider/rate.mjs` 与 `config.mjs`——`context.mjs` 单向消费）。
-- **`context.mjs` 收缩后新增 ≈43 行**（分项：estimateTokens 再导出 1 · force / focus 接线 ≈6 · 焦点块构造 ≈8 · anchor 取值 ≈8 · `pruneStaleToolOutputs` 应用面（stub 文案 + 原位替换 + 回执）≈20）。
-  **尺寸账**：拆前 ≈328（回推：拆后实读 − 43 + 110）→ 迁出 110 → 新增 43 → 拆后实读（读数见 §6.16.9）。**若不分拆（推算，基线 = 拆后实读 261，2026-10-19）= 449**——未越 500 软线（余量 51）。
+  ③ 切分与配对修复族：`splitHistory` 头注 + `splitHistory` + `repairedTailStart` + `tightenTailByBudget`。
 
-  ⇒ 拆分依据 = **职责边界**（`token-window.mjs` = 计量 / 窗口 / 边界单族；`context.mjs` 只留编排与形态接线）+ 余量（不分拆 51 vs 拆后 239），**不以越线为据**。
+  **同批新增族**：上下文用量单源函数（6.16.4）· 陈旧工具输出合格集（6.16.3——含门槛常量 `PRUNE_MIN_TOKENS`，与合格集同住本档）· 状态行百分比（与状态行同式）。**零 import 环 / 零回指**（只依赖 `provider/rate.mjs` 与 `config.mjs`——`context.mjs` 单向消费）。
+- **`context.mjs` 收缩后新增的面**：`estimateTokens` 再导出 · `force` / `focus` 接线 · 焦点块构造 · anchor 取值 · `pruneStaleToolOutputs` 应用面（stub 文案 + 原位替换 + 回执）。
+
+  ⇒ 拆分依据 = **职责边界**（`token-window.mjs` = 计量 / 窗口 / 边界单族；`context.mjs` 只留编排与形态接线），**不以越线为据**——不分拆的形态同样在 500 软线内。
 
   estimateTokens 再导出保 **import 面**（`thincoder-cli/scripts/verify-compress.mjs:7`、端侧批内定向单测、TUI 均经本档取；先例 = explore-distill 再导出）。
 - **新档 `thincoder-core/agent-tools/context.mjs`**（**已落**）= 工具对象 + 三操作 + 轻推助手 + 注记文案；**新单元测试档随批存放、收口随批删除**（零留存口径——不进产品树）。
 
-**6.16.9 受影响文件表（行数读数单源）**
-
-行数口径 = 按换行计（`wc -l` 同口径）；现况 = 本机实读 2026-10-27 收官（§6.17.1 三条链已落）。**本表是本档唯一读数源**（D2：§6.14 / §6.16.8 只留指针——§6.15 曾因两处逐行重复出现读数分叉，本面取同一纪律）；Δ 口径 = 已实施行取实读、未实施行标 `预计`（收官一律以实读为准）；其余行 `0` / 结构不变 = 本批零改。
-
-| 档 | 现况 | Δ | 改动要点 |
-|---|---|---|---|
-| `thincoder-core/context.mjs` | 292 | +31（实读） | 压缩 / 预算 / tail / 截断 / 摘要编排（拆分已落，§6.16.8）∥ **本批：`compressIfNeeded` 阈值早退后加可达性门**（§6.17——先算 `split` / `post` 再决定压不压；零新依赖档——`:16` 既有 import 行增补 `SUMMARY_TOKEN_ESTIMATE`（`splitHistory` / `tailBudgetTokens` 原就在该行）） |
-| `thincoder-core/agent-tools/context.mjs` | 181 | 结构不变 | `context` 工具 + 三操作 + 轻推（已落） |
-| `thincoder-core/compress-form.mjs` | 24 | 结构不变 | 形态构造单源（压缩 ∥ 蒸馏两消费点） |
-| `thincoder-core/explore-distill.mjs` | 151 | 结构不变 | 蒸馏调用形态（序列化面已退役） |
-| `thincoder-core/agent/run-stages.mjs` | 355 | +21 | 守卫段抽 `enforceContextFit`（守卫 ∥ 链三共用，§6.17.1） |
-| `thincoder-core/agent/turn-loop.mjs` | 310 | +22 | 链三：`context_overflow` catch ⇒ 压缩一次 + 重试一次（§6.17.1） |
-| `thincoder-core/agent/setup.mjs` | 310 | +2 | 链三：`_overflowRetried` run 起点复位（与 `_lastPromptTokens` / `_usageAtLen` 同处 `:65-66`） |
-| `thincoder-core/agent.mjs` | 106 | 0 | `_tok` / `_tokRatio` 初值（`null` / 1）与累计字段初值（已落）——不落 `agent/setup.mjs`（每 run pre-flight，落此会把校准比逐消息归零） |
-| `thincoder-core/model-specs.mjs` | 441 | 0 | `assistantToolCallMessage` 单点构造（D-CC22，已落）∥ `doubao-seed-2-1` 三行订正（已落） |
-| `thincoder-core/config.mjs` | 462 | 0 | 两块已外提（`config-defaults.mjs` ∥ `config-normalize.mjs`）；`requestBudget` 仍在本档，`limit` 含 `absent` 地板 |
-| `thincoder-cli/src/tui/cmd-config.mjs` | 304 | 结构不变 | 四子菜单已迁 `cmd-config-menus.mjs`；四处读点留在本档脊柱 |
-| `thincoder-cli/src/tui/config-helpers.mjs` | 129 | 结构不变 | 四纯函数 + `compactThresholdHint`（§6.17） |
-| `thincoder-core/provider/core.mjs` | 494 | 0 | 装配面只读 `requestBudget().maxTokens` ∥ 净判 ∥ 结果带 `estimated` ∥ 400 分类（已落；本批零改，未越 500 软线） |
-| `thincoder-core/provider/anthropic.mjs` | 367 | 0 | 同上；净判落 `:212-214` 既有估算点（`X = { messages, tools }`） |
-| `thincoder-core/provider/google.mjs` | 298 | 0 | 同上（`maxOutputTokens`）；既有估算含 `tools` 项 |
-| `thincoder-core/provider/responses.mjs` | 317 | 0 | 净判落 `:231`；既有估算含 `tools` 项 |
-| `thincoder-core/provider/errors.mjs` | 175 | 0 | 越窗报文识别 + typed 分类（词表复用 `:122-123`）∥ 三实数出口（已落，本批零改） |
-| `thincoder-core/provider/rate.mjs` | 176 | +8 | 链一：`ASCII_CHARS_PER_TOKEN` · `ESTIMATOR_VERSION` · `_estimateSingle`（§6.17.1） |
-| `thincoder-core/session.mjs` | 280 | +5 | 链二写面：`fields.estimateSample`（§6.17.1） |
-| `thincoder-core/session-lifecycle.mjs` | 426 | +5 | 链二读面：`applySession` 校验并写回 `estimateSample`（`/new` 清空不动） |
-| `thincoder-core/token-window.mjs` | 247 | +38（本批 +0） | `contextUsage` 两支乘 `_tokRatio`（已落）∥ 链二：`tokenKey()` 提出 · `recordTokenSample` 认 `est` · 样本读 / 写两函数 ∥ 本批：`SUMMARY_TOKEN_ESTIMATE`（`:43`）加 `export` 关键字供门复用（该档全为逐声明 `export`，`:224` 同形 ⇒ 行数不变） |
-| `thincoder-core/provider/responses-request.mjs` | 240 | 0 | 装配面只读 `maxTokens`（`max_output_tokens`，已落；本批零改） |
-| `thincoder-vscode/src/tools/ide.mjs` | 144 | 0 | 宿主工具改名已落（D-CC26），行为面零改 |
-| `thincoder-vscode/src/extension/panel-session.mjs` | 328 | 0 | VSC 会话面槽直读（`activeLines:94`）；链二端面不在此档——写 / 读点见下三行（§6.17.1 链二端面） |
-| `thincoder-vscode/src/agent/run-helpers.mjs` | 92 | +5 | 链二端写面①：`agentState()` 增 `estimateSample`（修正轮补落） |
-| `thincoder-vscode/src/extension/panel-session-write.mjs` | 157 | +7 | 链二端写面②：`saveLines` 显式键 `estimateSample`（该函数逐键构造、无 `...extra` 泛 spread——只加 ① 不落槽） |
-| `thincoder-vscode/src/agent/agent-state.mjs` | 168 | +9 | 链二端读面：`applySlotSessionState` restore 支调 `restoreTokenSample`（`provider` 由装配面第三参传入） |
-| `thincoder-vscode/src/agent/setup.mjs` | 322 | 0 | 链二端装配面④：`applySlotSessionState` 第三参对象增 `provider`（`:193-197` 原位一参、行数不变；源码径 = `hydrateRun` 形参 `:90`） |
-| `test/integration/context-overflow-guard.test.mjs` | 423 | +145（实读） | 本门四例 11-6–11-9 落此档；**结构已变（非「结构不变」）**——新增了一整套夹具族（`giantTool` 巨型工具 schema · `historyWithGiantAndTailResult` · `lastToolResult` · `providerStub` 的 `{ toolCall }` 支），不是「复用既有夹具」 |
-| `test/integration/anthropic-tool-roundtrip.test.mjs` | 407 | +43（实读） | 故事 1 三行（1-1 / 1-2 / 1-3）：桩改按**请求内容**认摘要请求（`isSummaryRequest`，看末条消息是否含 `SUMMARIZE_PROMPT`），「首个对话请求派工具调用」由序号改为「首个非摘要请求」；三行各补一条「摘要请求 0」断言 |
-| 批内定向单测 `<batch>.test.mjs` | 416 | 收口删 | 8 例实测 416 行（2026-10-27，含 RB34 四面）；零留存（不进产品树） |
-
-- **本批验收跑法（定向 · 不套跑）**：`node --test test/integration/context-overflow-guard.test.mjs`（11-6–11-9 落此档）∥ `node --test test/integration/anthropic-tool-roundtrip.test.mjs`（故事 1 三行的桩分类与「摘要请求 0」断言）。全量套跑属父侧收口门，不写进本批。
-
-- **拆分立账（`context.mjs`）**：拆前 ≈328（回推：261 − 43 + 110）→ 迁出 110 → 新增 43 → 拆后实读 **261**。
-  **若不分拆（推算值，基线 = 拆后实读 261，2026-10-19）= 261 + 110 + 78 = 449**——未越 500 软线（余量 51）。⇒ 拆分依据 = 职责边界 + 余量（不分拆 51 vs 拆后 239）。
-- **`config.mjs` 越 500 软线（既有事实）——拆分已定：两块外提**：`thincoder-core/config-defaults.mjs`（`DEFAULTS` 默认值表本身）∥ `thincoder-core/config-normalize.mjs`（加载期归一 / 清洗纯函数族 + 两枚警告旗）；
+- **`config.mjs` 拆分（已落）——两块外提**：`thincoder-core/config-defaults.mjs`（`DEFAULTS` 默认值表本身）∥ `thincoder-core/config-normalize.mjs`（加载期归一 / 清洗纯函数族 + 两枚警告旗）；
   `config.mjs` 留公共面 + `loadConfig` 编排 + 请求预算算式族 + 百炼 thinking 解析 + MCP 重载，并以 re-export 维持全部导出名不变（34 档导入点零改）。
-  判据 = 实施后 `config.mjs` ≤ 500 软线（预测 **≈418**，余量 82 行）。两块同拆的理由：单拆归一族只剩 ≈486（余量 14 行），而 `DEFAULTS` 每加一键 +1 行、`loadConfig` 每加一归一分支 +3~5 行 ⇒ 下一批再越线。
+  判据 = 实施后 `config.mjs` ≤ 500 软线。两块同拆的理由：只拆归一 / 清洗族，`config.mjs` 剩下的面仍贴着该线，而 `DEFAULTS` 每加一键 +1 行、`loadConfig` 每加一归一分支 +3~5 行 ⇒ 下一批再越线。
 
-- **体量档（结构性结论，非读数副本）**：`thincoder-core/context.mjs` 拆分已落（§6.16.8）；`thincoder-core/token-window.mjs` 与 `thincoder-core/agent-tools/context.mjs` 均已落；上述各档与 `thincoder-core/agent/run-stages.mjs`（VSC 侧同构件已并入核，端侧引用同指本档）均落 ≤500 软线内；读数 = 本节上行，档位与拆分立场以本档内口径为单源。
-- **CLI 侧无独立实现面**：`context` 工具经核装配自动可见（§6.16.6 注册单源）；本批不增删 `tool-docs/` 档族（档数按目录实读——2026-10-28 = 54 档）。
-- **不触面**：`docs/core/requirements/**`（需求档 = 主 agent 笔）· `docs/TODO.md` / 台账（主 agent 笔）· 提示词档（`prompts/**`、`tool-docs/**` 内容权 = 主 agent）· 版本号 / 发布面。
+- **CLI 侧无独立实现面**：`context` 工具经核装配自动可见（§6.16.6 注册单源）。工具档面随注册在册——`context` 的说明住 `thincoder-core/tool-docs/context.md`（三操作逐条），`tool-docs/` 档族的增减随工具面走；档数按目录实读，零增删的判据见 §6.16.10 RG4。
 
 **6.16.10 用例表（判定句 ①–⑤ + 裁令 A/D 逐条落用例）**
 

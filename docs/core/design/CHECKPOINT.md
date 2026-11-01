@@ -1,7 +1,7 @@
 # 检查点与 git 面（CHECKPOINT）· 核心统一子系统档
 
 > 板块归属 = **核心统一**（phase 2——「一个核 + 两个薄壳」）；本档 = 该板块的**子系统设计档**。
-> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 受影响文件总表 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
+> 工作流档 = `docs/core/design/CORE-UNIFICATION.md`（事实基线 / 核形态与消费契约 / 方案选型 / S0 方法 / 分段执行 S0a–S3 / 关键决策 / 验收回指 / 裁定 A1–A8 / 契约兼容策略 / 测试用例）——**本档不复制**。
 > 需求层 = `docs/core/requirements/CORE-UNIFICATION.md`（F1–F13 / N1–N8）。
 > **列定义**（裁决行各列含义）→ `CORE-UNIFICATION.md` §2.5；**须裁条目的分组口径与四要素提交形式** → 该档 §2.5.1。
 > **机制面**：机制 / 契约的实质描述 · 关键决策（§7）——**本档 = 该板块的完整设计面**（裁决行 + 机制 + 决策）。
@@ -58,10 +58,6 @@
 ## 4. 对外契约影响
 
 **本子系统无 §2.12.2 处置表行**；快照格式跨端互通 = 已兼容（登记见 `docs/core/design/SESSION.md` §4 的上抛清单第 3 行同族）。
-
-## 5. 受影响文件（该子系统）
-
-指针（不复制）→ `CORE-UNIFICATION.md` §2.8 下列行：**产品运行期** · **产品测试**。
 
 ## 6. 机制面
 
@@ -136,18 +132,25 @@
 
 - **VSC 触发点（本端接线）**：git 破坏性 op 自动快照 = 核 `tools/git-ext.mjs` `snapshotBefore`（`:54`——reset --hard /
 checkout 文件 / restore / stash pop / branch|tag delete / clean / rebase，操作前 best-effort 快照 → 返回
+
 `[snapshot <id> created before <label>]\n` 注记，失败不阻塞 op，审批层才是真门）；bash git 破坏性命令 =
 `shell.mjs gitGuardSnapshot`（`:139` `GIT_DESTRUCTIVE_RE` 宽 matcher / `:148` 实现——快照经核 `git/checkpoint.mjs`；匹配 `git checkout -- .` /
+
 `restore` / `reset --hard` / `clean -f` 等，命令**从不拒绝**（模型会绕），snapshot-then-proceed 全量副本 →
 返回 notice 注记含恢复入口 `checkpointAction=rewind checkpointId=<id>`，best-effort 永不 throw）；commit 后清理
+
 （核 `git.mjs` commit case——清理经核 `thincoder-core/git/checkpoint.mjs`）+ F6 懒清理（核 `tools/git-checkpoint.mjs` `lazyClearIfCommitted` = `:24`——list / create 入口比对
 `git log -1 --format=%ct` ×1000 与最新快照 meta.time）。与 §6.2 / §6.5 / §6.6 统一语义同轨。
 - **恢复输出契约（VSC 侧面）**：checkpoint 子动作 = list / create / rewind / cat / versions
 （核 `tools/git-checkpoint.mjs` `executeCheckpointAction` = `:39`）。`list`：`(no checkpoints yet)` 或每快照
+
 `id  ISOtime  N tracked: …  N untracked: …`；文件名单经 XML 转义（untrusted 回流模型上下文）。`create`：
 `Checkpoint <id> created (N file(s): X tracked, Y untracked)`。`versions path=<file>`：每行
+
 `snapshotId ISOtime sizeB sha:<sha> (tracked|untracked)` + 恢复指引行；无副本 → `No snapshot copies of … found`。
+
 `rewind checkpointId path=…`：**单文件 `path` 必填**（全量回滚禁用——与 `git checkout -- .` 同危险）；成功 →
+
 `Restored "<path>" (tracked|untracked) from checkpoint <id>.\n(The pre-restore state was snapshotted first —
 you can restore again to go back.)`；oversized / 未含文件 → 具体 Error。`cat checkpointId path=…`：只读查看
 快照内文件内容（legacy 走临时恢复 + 还原工作树）。`restoreFile(cwd,path,id)` = rewind path 模式薄封装。
