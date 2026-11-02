@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-11-02 · 来源 = 来源 = 用户 2026-11-02 12:01 逐字「三个不同的席，今晚全部在同一个动作上出错：拿行号定位改文档。 这个问题要怎么解决。」→ 12:08「提示词和工具描述面有需要配合的地方吗？」→ 12:09「立」。
 > 台账 = #1992（TOOLS · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-11-02
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ## 讨论：三个席同一晚在同一动作上失手
@@ -656,6 +656,13 @@ VERDICT: changes-required
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**用户批准**（2026-11-02 15:40）：用户原话「**收口。**」——即对本批交付的批准与收口指令。
+
+**批准内容**：`edit` 行号锚护栏（判据与拒文单源）∥ 批量帧两通道共用一对纯函数 ∥ `insert_after` 在「脏 ∧ 陈旧快照」由放行改拒 ∥ 回显按原始下标 ∥ 描述面三处逐字。
+
+**知情项（已在 §1 与 §6 记明）**：本批设计在评审通过后仍有修正轮，未重开评审（父侧自查核过）；实施在会话整批推进下发起，未逐轮单独请批。本行是用户对交付的裁定。
+
 ## §5 实施记录（eng-coder）
 
 ### 实施记录（eng-coder · 第 1 轮）
@@ -873,3 +880,36 @@ AC19 钉的是**让它不可达的那道门**——谁放宽路由门，AC19 就
 **终端状态**：`clean` —— 审计 1 轮 + 代码评审 1 轮收敛，无未决 🔴；🟡1 / 🔵3 均不挡通过，处置见上表。
 
 ## §6 验证与收口（父代理）
+
+### 6.1 验证读数（父侧独立复跑）
+
+| 面 | 命令 | 读数 |
+|---|---|---|
+| 收口前终跑 | `node --test test/integration/edit-line-anchor.test.mjs` ∥ `batch-gates-reanchor` ∥ `batch-status-auto-set` ∥ `batch-edit-spec-section` ∥ `advisor-record-gate` | `tests 15 · pass 15 · fail 0` |
+| 语法 | `node --check` 覆盖 `thincoder-core/tools/write-path.mjs` ∥ `edit-diff.mjs` ∥ `edit-batch.mjs` ∥ `file.mjs` ∥ `patch.mjs` ∥ `thincoder-cli/src/acp/bridge.mjs` | 全过 |
+| 红 → 绿 | 实施席读数：`insert_after` 在「脏 ∧ 陈旧快照」改前放行、改后拒；批量回显改前 `[A,A,B]`、改后 `[A,B,A]` | 两处皆有改前红、改后绿读数（§5） |
+| 文档门 | `doc_check(mode:"gate")` | 本批各笔 append 回执皆 `DOC-CHECK GATE: PASS` |
+
+### 6.2 零留存
+
+本批单测档 `docs/batches/2026-11-02-edit-line-anchor-guard.test.mjs` **已删**（收口即删）。常驻面 = `test/integration/edit-line-anchor.test.mjs`（`test/RTM.md` 28-1 的用例证据，不随批删）。
+
+### 6.3 交付内容
+
+- `thincoder-core/tools/write-path.mjs`：`lineAnchorVerdict` / `lineAnchorRefusal`（判据与拒文单源，六行判据 + 四要素拒文）。
+- `thincoder-core/tools/edit-diff.mjs`：`planEditEntries` / `applyPlannedEntries`（批量帧单源，零 IO）＋ 单条 `edit` 行号形判据。
+- `thincoder-core/tools/edit-batch.mjs` ∥ `thincoder-cli/src/acp/bridge.mjs`：两通道改调同一对纯函数；回显按条目原始下标（跨文件交错亦然）。
+- `thincoder-core/tools/file.mjs`：`insert_after` 接单源判据；「脏 ∧ 陈旧快照」由放行改拒（唯一行为变更，fail-closed 方向）。
+- `thincoder-core/tools/patch.mjs`：落 dirty 处同 `clearLastWrite`。
+- `thincoder-core/tool-docs/edit.md` ∥ `thincoder-core/tool-docs/insert_after.md`：描述面逐字落位。
+- `test/integration/edit-line-anchor.test.mjs`：常驻用例。
+
+### 6.4 已知未决（不并入本批）
+
+- 台账 `#1998`：`batch` 直写批档 ∥ `bash` 写盘两条面不落快照 ⇒ 该档行号护栏在这两条路上失效（`docs/core/design/EDIT-HELPERS.md` §7.4 已写「不接（理由）」）。
+- 台账 `#1999`：`thincoder-cli/src/acp/bridge.mjs` 越 500 软线，拆单归属下一批。
+- 台账 `#1993`：机检读数不记位置的纪律条，待落 `docs/core/design/DOC-DISCIPLINE.md`。
+
+### 6.5 收口判定
+
+四段皆带内容；单测档已删；集成面零红。**准予收口。**

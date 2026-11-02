@@ -3,7 +3,7 @@
 > 编制：主 agent · 2026-11-02 · 来源 = 来源 = 2026-11-02 13:46 用户「你这做的什么玩意儿啊！连个基本的业务闭环都做不到？！」→ 13:48「那你这个修改开工了吗？！」（追问 #1994 是否真开工）。
 > 台账 = #1994（ENGINEERING-MODE · 归批）。前情 = 无（独立批）。
 ## §1 讨论（主 agent）
-**状态行**：🔄 进行中（…）
+**状态行**：已收口 2026-11-02
 <§1 模板占位：本批条目 / 关键判据 / 授权口径>
 
 ## 讨论：一行签字，磨掉三轮评审
@@ -734,6 +734,13 @@ VERDICT: changes-required
 VERDICT: pass
 
 ## §4 用户批准（主 agent）
+
+**用户批准**（2026-11-02 15:40）：用户原话「**收口。**」——即对本批交付的批准与收口指令。
+
+**批准内容**：`append §3` 写时闸（只拒两格）∥ `verdictGapOf` 判据单源 ∥ 两条裁定锚尾句号同判 ∥ 提示面两处。
+
+**知情项（已在 §1 与 §6 记明）**：本批实施在会话整批推进下发起，未逐轮单独请批；本行是用户对交付的裁定，不是事后追认的补记。
+
 ## §5 实施记录（eng-coder）
 **状态行**：实施完成（R1–R9 落 · 修正轮：拒文两词内联、与设计档围栏逐字节相同 · 单测 10/10 ∥ 集成 8/8 ∥ 1/1 ∥ 3/3 · doc_check PASS · R9 的纯文本引用那一格改撞文档机检门（337 字段落），已披露转父侧裁）
 
@@ -851,3 +858,36 @@ VERDICT: pass
 - `batch.mjs` 现 532 行（本笔注释 +1 行）；tier 结论不变——拆单归属下一批。
 
 ## §6 验证与收口（父代理）
+
+### 6.1 验证读数（父侧独立复跑，非转述）
+
+| 面 | 命令 | 读数 |
+|---|---|---|
+| 集成 | `node --test test/integration/batch-gates-reanchor.test.mjs` ∥ `batch-status-auto-set` ∥ `advisor-record-gate` | 全部通过（含 14-1 改写三段、14-8 打回回归支） |
+| 收口前终跑 | 上面三项 + `batch-edit-spec-section` + `edit-line-anchor` 同跑 | `tests 15 · pass 15 · fail 0` |
+| 四格真值表 | 对落盘 `verdictGapOf` 真跑 | `结论：通过。` ∥ `VERDICT: 通过。` ∥ `结论：不通过。` ∥ `VERDICT: 不通过。` 皆命中；混合形不命中 |
+| 拒文不自触发 | 拒文自读 ⇒ `无裁定行`；拒文 + 一行 `VERDICT: pass` ⇒ `null`（可写入） | 改前为 `两者同携` ∥ 仍 `两者同携`（死结已解） |
+| 生成区 | `node scripts/api-contract.mjs --check --root .` | `OK（4642 条 · 942 档）· 骨架零漂移` |
+| 文档门 | `doc_check(mode:"gate")` | 本批各笔 append 回执皆 `DOC-CHECK GATE: PASS` |
+
+### 6.2 零留存
+
+本批单测档 `docs/batches/2026-11-02-review-verdict-line.test.mjs` **已删**（收口即删，读数已入 §5 与上表）。
+
+### 6.3 交付内容
+
+- `thincoder-core/agent-tools/batch-skeleton.mjs`：新增 `verdictGapOf`（四格单源）；两条裁定锚中文分支尾句号可省可带。
+- `thincoder-core/agent-tools/batch.mjs`：`append §3` 写时闸（只拒「无裁定行」∥「两者同携」，判打回的一笔照写）。
+- `thincoder-core/agent-tools/batch-closeout.mjs` ∥ `design-token.mjs`：组合序改调 `verdictGapOf`。
+- `thincoder-core/tool-docs/batch.md` ∥ `advisor/messages.mjs`：提示面。
+- `test/integration/batch-gates-reanchor.test.mjs`：14-1 改写为三段；14-8 作回归支。
+
+### 6.4 已知未决（不并入本批）
+
+- 台账 `#1995`：`batch edit` 机检门判整段体（代码）vs 判 `newText`（设计档）—— 设计与代码说法不同，待代码收窄。
+- 台账 `#1996`：`batch.mjs` 516 行越 500 软线，拆点 = 抽 `batch-edit.mjs`，归属下一批。
+- 台账 `#1997`：会话内工具面未热更（盘上有 `edit`、进程内无）。
+
+### 6.5 收口判定
+
+四段皆带内容；单测档已删；集成面零红。**准予收口。**
