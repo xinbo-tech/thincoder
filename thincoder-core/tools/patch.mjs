@@ -6,7 +6,7 @@ import {
   detectFileEol,
   majorityEol
 } from "./shared.mjs";
-import { writeThroughPath, TMP_SUFFIX, markDirty } from "./write-path.mjs";
+import { writeThroughPath, TMP_SUFFIX, markDirty, clearLastWrite } from "./write-path.mjs";
 import { spawnGit } from "./git-run.mjs";
 import { mkdir, readFile, lstat, unlink } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -234,7 +234,13 @@ export const applyPatchTool = {
     const summary = planned.map((p) => `  ${p.isNew ? "created " : "modified"} ${p.path}`).join("\n")
     // Mark every touched file dirty — insert_after must not run on stale line numbers.
     // 整批记账（dirty）= apply_patch 的批级语义（两段式全成功后一次落账——与改前逐字同）。
-    for (const p of planned) markDirty(p.abs)
+    // 2026-11-02：落 dirty 同时清写入快照——apply_patch 不记快照，留着旧 `startLine` 就是
+    // 陈旧的锚：行号锚护栏第 2 行（dirty ∧ 快照在场）会拒，而第 4 行会拿旧值判「目标区在之前
+    // ⇒ 放行」——两种结果都不该由一笔没更新快照的写来决定（EDIT-HELPERS §7.1）。
+    for (const p of planned) {
+      markDirty(p.abs)
+      clearLastWrite(p.abs)
+    }
     const syntaxChecks = await Promise.all(planned.map(async (p) => {
       const r = await autoSyntaxCheck(p.abs)
       return r ? `${p.path}:${r.replace("Syntax: ", "")}` : ""

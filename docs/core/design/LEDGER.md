@@ -343,10 +343,10 @@ key = sha1(normalizeCwd(resolveLedgerRoot(cwd))).slice(0, 16)
 
 声明源 = `PROJECT-MANIFEST.json` `index.publicRepos` = **`[]`**（`:35` 实读 · 2026-10-27 12:35）⇒ **无仓外声明源可查**（照记）；参考系 = 已移出工作区（`D:\ref\`，树外、不入索引）。**结论 = 无仓外声明源相关**。
 
-**拆分触发 = 该档过 650 行**（判据单源 = `docs/core/design/BATCH-RECORD.md` §4.18 贴线判——该档自定的拆分阈值，与 `config.mjs` 同口径）；顾问线 / 硬线 = `AGENTS.md` 全档通用（500 / 800）。
+**拆分触发 = 该档过 650 行**（判据单源 = `docs/core/design/BATCH-RECORD.md` §4.18 贴线判——该档自定的拆分阈值，与 `config.mjs` 同口径）；软线 / 硬限 = 工作区根 `AGENTS.md` 全仓通用（500 / 800）。
 
 
-**两口径管辖面（防后来者按 650 反推「500 可越」）**：500 顾问线 / 800 硬线 = `AGENTS.md` 全仓通用档面（软 / 硬）；650 = 批档机制档就「收口体例档多为逐字契约文案」单点放宽的**拆分触发**，**只对 `batch-lifecycle.mjs` 这一档生效，不构成对 500 的先例**——其余档仍按 500 / 800 判。
+**两口径管辖面（防后来者按 650 反推「500 可越」）**：500 软线 / 800 硬限 = 工作区根 `AGENTS.md` 全仓通用档面；650 = 批档机制档就「收口体例档多为逐字契约文案」单点放宽的**拆分触发**，**只对 `batch-lifecycle.mjs` 这一档生效，不构成对 500 的先例**——其余档仍按 500 / 800 判。
 
 ### 3.6 指针判据重锚增量（§6.1 ∥ §6.2 ∥ §7.1）：先例 ∥ 勘察证据
 
@@ -1019,7 +1019,7 @@ create only — optional: one line saying why this batch is a NEW debt rather th
 `thincoder-core/tool-docs/batch.md` 第 1–3 行（create 括注 · 两段 · 段间一空行）：
 
 ```text
-Batch-record lifecycle tool (一段一作者 — six append-only sections, one author each). actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation;
+Batch-record lifecycle tool (一段一作者 — six sections, two write dispositions: §2 is the spec section and may be rewritten in place, §1 / §3 / §5 / §6 are append-only evidence). actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation;
 
 ledger:"#N" takes over an existing row, and omitting ledger opens a new row only when no unsettled row exists on the same board — otherwise create is refused with the candidate list and you pass newDebt:"<why this is a new debt>" or ledger:"#<id>")
 ```

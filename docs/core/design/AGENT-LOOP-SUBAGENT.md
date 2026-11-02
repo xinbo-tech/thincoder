@@ -374,10 +374,10 @@ Spawn task-channel gate (role='<role>'): <offending names, " / " separated>. An 
 | P3 | `thincoder-core/agent-tools/subagent.mjs:142` | `task: … OPTIONAL free-text supplement — the brief itself is the structured task-book parameters (four core … plus the role's fifth: designPoints … scope …); a task-only spawn is refused …` | `For action:'spawn': normal-mode roles (explore/plan/coder) — OPTIONAL free-text supplement; the brief itself is the four core parameters (goal / knownFacts / acceptance / reportFormat) + scope. Engineering roles (eng-coder / eng-designer) take NO task-book text parameters — their task book is batch record §2 (batchDoc), read by the child itself. For action:'escalate': the brief (goal, constraints, entry files, acceptance criteria).` | 描述与门同源 |
 | P4 | `thincoder-core/agent-tools/subagent.mjs:143` `context` | `Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only.` | `Optional background for normal-mode spawns (explore/plan/coder) only; action:'spawn' only.` | 同上 |
 | P5 | `thincoder-core/agent-tools/subagent.mjs:153-158` | 五条 `REQUIRED for every spawn role …`；`designPoints: {…}` 属性一条 | `goal` / `knownFacts` / `acceptance` / `reportFormat` 首句 → `REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book) …`；`scope` 首句 → `REQUIRED for role='explore'/'plan'/'coder' …`；**删除 `designPoints` 属性整行**；`batchDoc` 描述加一句 `This IS the task book for engineering roles — batch record §2, read by the child itself.` | 同上 |
-| P6 | `thincoder-core/prompts/persona-engineering.md:82` | `spawn eng-designer (\`subagent(role="eng-designer", batchDoc=<…>, files=[...], round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)\`; \`task\` is an optional supplement)` | `spawn eng-designer (\`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")\`)` | 示例即门形 |
-| P7 | `thincoder-core/prompts/persona-engineering.md:330` | ``subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`` | ``subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", files=[...])`` | 同上 |
-| P8 | `thincoder-core/prompts/persona-engineering.md:345` | 「Every dispatch carries a task book — four core = structured spawn parameters, every spawn role」+ `goal` / `round` / `designToken` / `knownFacts` / 第五项按角色 / `acceptance` / `reportFormat` 七条列表 | 整段替换为 §6.22.8-B（下方代码块）；`files` 是调度通道那两条警告（`:341-343`）逐字保留 | 任务书单通道 |
-| P9 | `thincoder-core/prompts/persona-engineering.md:438` | 两条并行 token 隔离示例（各带五参） | 两条同 P7 形（只差 designId / designToken 字面） | 示例即门形 |
+| P6 | `thincoder-core/prompts/persona-engineering.md` §Call chain 的 `spawn eng-designer` 形 | `spawn eng-designer (\`subagent(role="eng-designer", batchDoc=<…>, files=[...], round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)\`; \`task\` is an optional supplement)` | `spawn eng-designer (\`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")\`)` | 示例即门形 |
+| P7 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `In engineering mode the spawn looks like` 句 | ``subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`` | ``subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", files=[...])`` | 同上 |
+| P8 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `The task book is batch record §2` 句 | 「Every dispatch carries a task book — four core = structured spawn parameters, every spawn role」+ `goal` / `round` / `designToken` / `knownFacts` / 第五项按角色 / `acceptance` / `reportFormat` 七条列表 | 整段替换为 §6.22.8-B（下方代码块）；`files` 是调度通道那两条警告（§Implementation dispatch structure 的 `The \`files\` parameter is a SCHEDULING channel`）逐字保留 | 任务书单通道 |
+| P9 | `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的 `subagent(role="eng-coder", designId=<id-B>` 两行 | 两条并行 token 隔离示例（各带五参） | 两条同 P7 形（只差 designId / designToken 字面） | 示例即门形 |
 | P10 | `thincoder-core/prompts/discipline-normal.md:253-260` | `Every delegation carries a task book — four core = structured spawn parameters, every spawn role …` 与第五项按角色行、`Every spawn role: …` | `Every normal-mode delegation (explore / plan / coder) carries a task book — four core structured spawn parameters:` / 第五项行改为 `**\`scope\`** (scope & forbidden scope — what to read / what not to touch)` / 末尾改 `Every normal-mode spawn role: …`；另加一行 `**Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.` | 层次不串 |
 | P11 | `thincoder-core/permission.mjs:38` | `cap(composeTaskBookBrief(args, args.role) \|\| args.task \|\| "", 500)` | `cap(composeTaskBookBrief(args, args.role) \|\| (args.batchDoc ? \`task book: batch record §2 (\${args.batchDoc})\` : "") \|\| args.task \|\| "", 500)` | 人审面不空白 |
 | P12 | 需求面（主 agent 笔） | `docs/core/requirements/ENGINEERING-MODE-V2.md:430`「派单任务书 = 四项核心 + 第五项按角色」／`:433`「四项核心 + 第五项按角色 + round 要可见」／`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-DELEGATION.md:7`「四项核心 + 第五项按角色」／`:14-19` 五项列表／`:33` AC-M5-2 | 均改为「**任务书 = 批次档 §2**（工程角色零任务书文本参数，自由文本参数点名拒收）；非工程角色（explore / plan / coder）= 四项核心 + `scope`」；`:33` 判据改为「工程角色：`batchDoc` 可读 ∧ `round` 合法 ∧ 无任务书文本参数（命中即拒并点名）∥ 非工程角色：四项核心 + `scope` 缺任一即拒」 | 需求与设计同口径 |
@@ -409,7 +409,9 @@ An eng-coder spawn also carries designToken — the write credential (the exact 
 - **Where §2 and the design doc disagree, the design doc is the criterion source of record**: §2 cites `design §N.M`, never restates a count or criterion.
 ```
 
-**写形依据**：A ∥ B 两块的落盘处（`thincoder-core/tool-docs/subagent.md:23` · `thincoder-core/prompts/persona-engineering.md:324`）非表格非围栏——批档写入门按整档判行宽（>300 即拒），单行 1000 ∥ 335 必破 ⇒ 处置 = 重新组织语言重写（一条规则一行时按规则边界断，不按字符数挪断点）；该档存量 14 条长行同一处置。
+**写形依据**：A ∥ B 两块的落盘处（`thincoder-core/tool-docs/subagent.md:23` · `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure 的 `Why` 行 —— `a token written into a doc is a token in every clone`）非表格非围栏
+
+批档写入门按整档判行宽（>300 即拒），单行 1000 ∥ 335 必破 ⇒ 处置 = 重新组织语言重写（一条规则一行时按规则边界断，不按字符数挪断点）；该档存量 14 条长行同一处置。
 
 **§6.22.9 集成测试设计（本变更该得的场景与判据）**：
 
@@ -568,7 +570,7 @@ export function writeTombstone(parent, id, status, role) {
 | 7 | 记忆 / 文档召回 | 同档 `:103-128`（depth-0 门） | user transient | 逐轮变化 | 保持——判据 ②（本条即契约句的举例面） |
 | 8 | 当前时间 | 同档 `:146-150`（尾位） | user 提醒 | 逐 run 变化 | 保持（尾部即缓存契约既有设计） |
 | 9 | env-state / peer / manifest 情境行 | `thincoder-core/agent/setup-reminders.mjs:50-56` · `:115-138` · `:160-166` | user 提醒 | 逐回合变化 | 保持——判据 ② |
-| 10 | 活体守卫行（ENG 状态 / AUTO / verify 推回） | `thincoder-core/agent/completion.mjs:81` · `thincoder-core/agent/helpers.mjs:372` | user 提醒 | 逐回合变化 | 保持（`docs/core/design/ENGINEERING-MODE-V2.md:321` 已裁定「不落 system 槽」——其判据即本表判据 ②，不改该裁定） |
+| 10 | 活体守卫行（ENG 状态 / AUTO / verify 推回） | `thincoder-core/agent/completion.mjs:81` · `injectEngineeringReminder`（`thincoder-core/agent/helpers.mjs`） | user 提醒 | 逐回合变化 | 保持（`docs/core/design/ENGINEERING-MODE-V2.md:321` 已裁定「不落 system 槽」——其判据即本表判据 ②，不改该裁定） |
 | 11 | advisor 评审简报（对象声明 + Approval Signal/token + 文档清单） | `thincoder-core/advisor/messages.mjs:29-39` · `:49-58` · `thincoder-core/advisor/run.mjs:233` | 评审 user 首条 | **评审级固定（同类根因）** | **不动——已由另一机制覆盖**：F13 pinned 重挂（`thincoder-core/advisor/compaction.mjs:56-84` 压缩时作为一条 user 消息重挂 · 调用点 `thincoder-core/advisor/compaction.mjs:94`）⇒ 压缩不丢。登记为「同类已解」 |
 | 12 | consult / escalate / 读图降级子代理的任务文本 | `thincoder-core/agent-tools/consult.mjs:308` · `thincoder-core/agent-tools/subagent-actions.mjs:415` · `thincoder-vscode/src/extension/image-handler.mjs:84` | user 首条 | 任务内容（非机制性指令） | 保持——判据 ② 后半 |
 | 13 | `REPORT_CONTINUATION`（报告过短追问） | `thincoder-core/agent-tools/subagent-async.mjs:327-329` | user 追问 | 按需重发（机制不同：重发即在场） | 保持 |
@@ -634,7 +636,11 @@ This list is not an authorization boundary: touching a file outside it is allowe
 
 **公开源勘察**：`docs/core/design/PROMPT-SYSTEM.md:176`（派单固块的字段与拼接位，逐字含「机制单源 = `AGENT-LOOP-SUBAGENT.md` §6.26，本档不复制」）· `docs/core/design/AGENT-LOOP.md` §6.3（system 前缀缓存契约）· 本档「缓存契约兼容证明」。**结论** = 本改动落在这三处既有契约覆盖内，无需新契约。
 
-**既有件三问（新增名）**：`existing`（措辞面）= `thincoder-core/agent-tools/subagent-spawn.mjs:143`（`subagent files must be an array of file paths (the write domain this task declares)`）∥ `thincoder-core/prompts/persona-engineering.md:442`（`spawns carry files (write domain)`）——两处都面向**派单侧**，consumers = 父侧主会话。
+**既有件三问（新增名）**：`existing`（措辞面）= `thincoder-core/agent-tools/subagent-spawn.mjs:143`（`subagent files must be an array of file paths (the write domain this task declares)`）
+
+∥ `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `The \`files\` parameter is a SCHEDULING channel, not a briefing channel`（原引句 `spawns carry files (write domain)` 已不在盘）
+
+两处都面向**派单侧**，consumers = 父侧主会话。
 
 `none found`（子代理面）= 写域此前只被调度器消费（冲突检测 / 排队），从不进入 child 的提示词面 ⇒ 块内文案新造，唯一副本 = 本节。
 
@@ -851,7 +857,9 @@ subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="
 
 ## 6.58 批次档复用护栏：同一档的在飞 spawn 拒发
 
-**来源**：2026-10-28 事故——两个 spawn 共用一本批档、文件域互不重叠，结果语法坏档 + 一席复原。提示词面当天已补（`thincoder-core/prompts/persona-engineering.md:335`「一本批档只服务一个并发 spawn」），机制面不拦：`batchDoc` 门只判「参数在 + 路径可读」，`thincoder-core/agent-tools/subagent.mjs:151` 的描述仍是单数措辞、无禁令。本节的判据把提示词的软约束落成写不出来的硬拒。
+**来源**：2026-10-28 事故——两个 spawn 共用一本批档、文件域互不重叠，结果语法坏档 + 一席复原。提示词面当天已补（`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time`），机制面不拦：`batchDoc` 门只判「参数在 + 路径可读」，`thincoder-core/agent-tools/subagent.mjs:151` 的描述仍是单数措辞、无禁令。
+
+本节的判据把提示词的软约束落成写不出来的硬拒。
 
 **为什么拦（而非只靠提示词）**：提示词靠「派单的人读到并记住」，机制靠「写不出来」。本项目的同族先例已经存在——`files` 文件域并发冲突由调度器拦（§6.9 `describeBlockers`），而「一本批档两个写者」是同一类资源冲突，此前只是没把它当资源声明。一次发生的代价 = 坏档 + 一席重做；护栏的代价 = 一次池扫描 + 一行拒因。
 
@@ -861,7 +869,7 @@ subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="
 
 - 池与条目面：`thincoder-core/agent-tools/subagent-scheduler.mjs`（`depInfo` :115 · `fileKey` :70 · `effectiveFiles` :92 · `describeBlockers`）· `thincoder-core/agent-tools/subagent-run.mjs:92`（条目 `_batchDoc`）· `thincoder-core/agent-tools/async-settle.mjs`（`carrierField` :53-57 · 载体吸收 :120-125 · 留池 :231）。
 - spawn 门面：`thincoder-core/agent-tools/subagent-spawn.mjs`（`buildSpawnChild` :187 · batchDoc 门 :204-220 · coder 面 :212-220 · 任务书门 :227）· `thincoder-core/agent-tools/subagent.mjs`（:151 描述 · :321-322 sync 不入池）· `thincoder-core/tool-docs/subagent.md`。
-- 纪律与验收面：`thincoder-core/prompts/persona-engineering.md:335-337` · `test/RTM.md` · `docs/core/design/TOOLS.md` §6.4。
+- 纪律与验收面：`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time` 条（含顺序交接边界与 `Why` 两行）· `test/RTM.md` · `docs/core/design/TOOLS.md` §6.4。
 
 外部公开源档未查——本节判据全部取自本仓既有件（池访问器 · `fileKey` · 载体吸收），无外部同机制实现可引；同机制在本仓亦为首案。
 
@@ -902,7 +910,7 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 **两态的观察来源（如实登记）**：
 
 - **`status="queued"` 计入在飞 = 推导项**（同一种两写者：启动序推迟不消病）——无观察场景，事故当场未留池读数。
-- **前一轮在飞就派修正轮 ⇒ 拒 = 推导项**——无观察场景。有观察场景的两态只有主分支（2026-10-28 11:34：两席共用一本、文件域不重叠 ⇒ 语法坏档 + 一席复原）与放行分支（`thincoder-core/prompts/persona-engineering.md:336`「never overlaps」的单席顺序交接）。
+- **前一轮在飞就派修正轮 ⇒ 拒 = 推导项**——无观察场景。有观察场景的两态只有主分支（2026-10-28 11:34：两席共用一本、文件域不重叠 ⇒ 语法坏档 + 一席复原）与放行分支（`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `A sequential handoff … keeps the same record: it never overlaps, so nothing is shared.`的单席顺序交接）。
 
 ### 6.58.5 验收（回指 §2 条目；机检命令逐条）
 
@@ -932,7 +940,7 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 
 ### 6.58.7 边界（本节不做）
 
-1. 不改提示词——`thincoder-core/prompts/persona-engineering.md:335` 零改。
+1. 不改提示词——`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time` 零改。
 2. 不做文本匹配式拦截（`TOOLS.md` §6.4）。
 3. 不校验档**内容**（判据仍只看路径与池状态）。
 4. 不覆盖跨进程（KD-BG4）。

@@ -3,7 +3,9 @@
  * 路径解析单源 + #84 记账缝）。
  *
  * 单工具 `batch`，action = create（建档，§4.11）/ append（段写入——原 batch-segment.mjs 语义
- * 逐字迁移，§4.1 全表）/ status（段属主状态行流转，§4.12）/ close（收口冻结，§4.13）。
+ * 逐字迁移，§4.1 全表）/ edit（规范段就地改——锚定区间替换，§4.19）/ status（段属主状态行流转，
+ * §4.12）/ close（收口冻结，§4.13）。全文的写入面两种处置：§2 = 规范面（append 加内容 ∥ edit 改
+ * 现有内容），§1/§3/§5/§6 = 证据面（只追加）。
  * 权威规格 = `docs/core/design/BATCH-RECORD.md` §4（契约/挂载/用例 §4.8/骨架 §4.10/
  * 参数面 §4.11–§4.13）；骨架与判定字面单源 = `batch-skeleton.mjs`；lifecycle 面 =
  * `batch-lifecycle.mjs`。**依赖单向（KD-4）：skeleton ← lifecycle ← 主档**。
@@ -15,8 +17,11 @@
  * spawn/实例注入，语法上写不到别处——运行期门拒）。append 段白名单（**模式感知**——§4.16）：
  * depth-0 → 工程 §1/§4/§6 ∥ 普通 §1/§2/§4/§5/§6 · eng-designer → §2 · 评审 → §3 · eng-coder → §5 ·
  * coder（普通模式分支增表——SEGMENT_BY_ROLE_NORMAL）→ §5；status 写域 = 调用者自己段（模式感知
- * ——见 batch-lifecycle.mjs）。append 迁移面错误串**逐字保持 "batch_segment:" 前缀**（§4.1 全表锚断言）；
- * "batch:" 前缀 = 本批新增错误面（create/close/status/findInFlight/path 门/dispatch）。
+ * ——见 batch-lifecycle.mjs）。**edit 的段域更窄**：只有 §2（规范面）可就地改——子代理侧取同一张
+ * 段白名单后须等于 §2（评审 → §3、eng-coder → §5 两模式同判），depth-0 侧取同模式 append 白名单
+ * （工程 = §1/§4/§6 ⇒ 不含 §2 ⇒ 拒；普通 = 含 §2 ⇒ 放行，§4.16）。append 迁移面错误串**逐字保持
+ * "batch_segment:" 前缀**（§4.1 全表锚断言）；"batch:" 前缀 = 新增错误面（create/close/status/
+ * edit 锚判据/findInFlight/path 门/dispatch）。
  *
  * 导出面：`batchTool`（主名）· `resolveBatchDocPath` · `batchDocBases` · `batchDocForReview` ·
  * `configureBatchSegment` / `resetBatchSegment`（#84 记账缝——契约名不变，AC-11 零改）·
@@ -30,7 +35,7 @@ import { readFileSync, writeFileSync } from "node:fs"
 
 // 描述面 = `tool-docs/batch.md`（#15 描述外置统一——工厂形描述经 DESC 单一解析面，工厂调用期取值）
 import { DESC } from "../tools/shared.mjs"
-import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, findPlaceholderResidue, placeholderResidueError, ROUND_HEADING_RE, nextRoundNumber, statusResetPlan, updateSectionStatusLine } from "./batch-skeleton.mjs"
+import { SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, DEPTH0_SEGMENTS, readBatchStatusLine, sectionHeaderRe, STATUS_LINE_RE, findPlaceholderResidue, placeholderResidueError, ROUND_HEADING_RE, nextRoundNumber, statusResetPlan, statusPassPlan, updateSectionStatusLine, verdictGapOf } from "./batch-skeleton.mjs"
 import { batchDocBases, resolveBatchDocPath } from "./batch-paths.mjs"
 import { gateReceiptLine, gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
 import { assertSectionFiveGate } from "./batch-closeout.mjs"
@@ -128,9 +133,7 @@ function sanitizeText(text, dropStamp) {
  */
 function insertIntoSection(src, seg, text, blockLead = "") {
   const hdr = sectionHeaderRe(seg).exec(src)
-  if (!hdr) {
-    throw new Error(`batch_segment: the bound batch record has no "## §${seg}" section header — the six-section skeleton is written by the record's creator before any segment write. Fix: ask the parent/creator to add the "## §${seg} …" heading (with the template's sub-headings) first, then call batch_segment again. Nothing was written.`)
-  }
+  if (!hdr) throw new Error(missingSectionError(seg))
   const nextRe = /^## §\d/gm
   nextRe.lastIndex = hdr.index + hdr[0].length
   const next = nextRe.exec(src)
@@ -209,21 +212,15 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   }
   const src = readFileSync(abs, "utf8")
   const status = readBatchStatusLine(src)
-  if (status === "closed") {
-    throw new Error("batch_segment: 已收口档不回改 — the bound batch record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档). Nothing was written. Report the section as not written.")
-  }
-  if (status === "unknown") {
-    throw new Error("batch_segment: 状态行不可解析或缺失 — the bound batch record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Ask the record's creator to set the §1 status line, then call again. Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
-  }
+  if (status === "closed") throw new Error(FROZEN_RECORD_ERROR)
+  if (status === "unknown") throw new Error(UNRESOLVED_STATUS_ERROR)
   if (typeof args?.text !== "string") {
     throw new Error("batch_segment: text must be a string (the markdown to append).")
   }
   if (args.text.length > MAX_TEXT_CHARS) {
     throw new Error(`batch_segment: text is ${args.text.length} characters — the limit is ${MAX_TEXT_CHARS} per call. Split it into multiple calls: each call becomes its own section and the round number N continues (分段追加——每次调用各成节、N 顺延).`)
   }
-  if (/^## §\d/m.test(args.text)) {
-    throw new Error("batch_segment: the text contains a section header line matching `^## §N` — that would break section location and the append-only guarantee. Rewrite it (escape the heading, or drop the leading `## §N`), then call again (骨架保护). Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
-  }
+  if (/^## §\d/m.test(args.text)) throw new Error(SKELETON_GUARD_ERROR)
   const body = sanitizeText(args.text, n === 3).replace(/^\n+/, "").replace(/\s+$/, "")
   if (!body.trim()) {
     throw new Error("batch_segment: nothing to append — the text is empty after credential stripping (credential values never reach the record).")
@@ -235,6 +232,17 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   // §5 写入门（段序门 · 设计档 §2.6 `R-G2`）：实现发生在评审通过之后，序在这里判得出真假；
   // 无评审的批由 §1 声明 `> 不适用：§3 —— <理由>` 放行（普通模式无设计评审）。轻通道不写 §5 ⇒ 不受影响。
   if (n === 5) assertSectionFiveGate(src)
+  // §3 写入闸（设计档 `BATCH-LEDGER-REVIEW-UNIFY.md` §2.6.1 `R-G3`——裁定行在写的时刻就要在）：
+  // 能写 §3 的只有绑本档的评审实例，它结算后即离场 ⇒ 把错误退回**还有权补那一行的人在场的那一刻**。
+  // 判定输入 = 净化后正文 `body`（落档的就是它；每笔 §3 自成一块 ⇒ 「写前正文 ≡ 写后末块」只对 body 成立）；
+  // 判据单源 = 骨架档 `verdictGapOf`（与 §5 门判据 2 ∥ 签发面同一个函数）。
+  // 放行面 = **只拒两格**（`无裁定行` ∥ `两者同携`）：判打回的一笔（`VERDICT: changes-required` ∥ `结论：不通过`）
+  // 照写——§5 门判据 2 与打回重置都靠那一块自带打回裁定；拦它 = 把打回这条业务路堵死。
+  // 位次 = 既有拒因之后、文档机检门之前（拒 = 零字节落盘、轮次号不消耗——N 在 insertIntoSection 时才取）。
+  if (n === 3) {
+    const gap = verdictGapOf(body)
+    if (gap === "无裁定行" || gap === "两者同携") throw new Error(SECTION3_VERDICT_GAP_ERROR)
+  }
   // 文档机检门（§3.20「结构兜底」①——门位 = 既有拒因全部之后、insertIntoSection / 写盘之前）：
   // **全部 append 同挂**（§1–§6，含 depth-0 与评审写 §3——规则一条，不按身份分支）；
   // 强制集 = 本次写入文本 ∪ 写者触达账，批档已落段命中只入回执（不阻本次写）。
@@ -242,11 +250,16 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   // REFUSED ⇒ throw（零字节落盘）；PASS ⇒ 照写；ERROR / 门自身异常 ⇒ 写 + 回执明示。
   const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: n, body } })
   if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "append"))
-  // 打回即重置（BLRU §2.5——**工具被动写**）：三合取（本笔写 §3 ∧ 本笔命中打回裁定行 ∧ 写前 §3
-  // 状态行 = 评审通过）全中 ⇒ 同一笔写盘两处落笔：本轮块首留痕行（随 `blockLead` 进插入）+ 状态行重置。
+  // 裁定行 → 状态行（BLRU §2.5——**工具被动写**，两个方向共用同一处判定与同一条写入路径）：
+  // 打回即重置（三合取：本笔写 §3 ∧ 本笔命中打回裁定行 ∧ 写前 §3 状态行 = 评审通过）⇒ 本轮块首留痕行
+  // （随 `blockLead` 进插入）+ 状态行重置；通过即置位（本笔写 §3 ∧ 本笔命中 pass 裁定行且不命中打回行 ∧
+  // 写前 §3 状态行 ≠ 评审通过）⇒ 状态行置成评审通过，无留痕行（块本身即记录）。
+  // 两条靠各自的三合取天然互斥；`??` 的左先右后与签发面 `verdictGateFailure` 同序（先打回、后 pass）。
   // 状态行仍**只经 `updateSectionStatusLine` 这一个写入函数**改写（不新开第二条写路径）；仍是
-  // 一次 `writeFileSync`。留痕行不经文档机检门——门位在上面（判集 = 本次评审正文 `pending.body`）。
-  const plan = statusResetPlan(src, n, body, todayLocal())
+  // 一次 `writeFileSync`——块与字进的是同一个字符串（无「块已落、字未到」的窗口）。
+  // 留痕行不经文档机检门——门位在上面（判集 = 本次评审正文 `pending.body`）。
+  const date = todayLocal()
+  const plan = statusResetPlan(src, n, body, date) ?? statusPassPlan(src, n, body, date)
   const { written: inserted, roundN } = insertIntoSection(src, n, body, plan?.traceLine ?? "")
   const written = plan ? updateSectionStatusLine(inserted, 3, plan.statusValue) : inserted
   writeFileSync(abs, written)
@@ -255,8 +268,156 @@ function appendBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
   return `batch_segment: appended ${body.length} characters to §${n} of the batch record${roundN ? ` (### 轮次 ${roundN}（评审子代理）)` : ""}.${gateReceiptLine(gate)}`
 }
 
+// ─── 拒串单源（append / edit 共用——两种处置不改这些判据，只改它们判的面）─────────────
+
+/** 拒串：`§3` 写入闸（`R-G3` 逐字 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6.1）——一笔 `§3` 追加读成
+ *  「无裁定行」∥「两者同携」⇒ 拒写（零字节落盘、轮次号不消耗）。两个裁定词**内联在同一句里，不各占独立一行**：
+ *  各占一行时这段拒文自己就读成「两者同携」，把拒文原样引用并另写一行裁定的一笔仍被拒——想解释这道闸的人恰被
+ *  它挡在门外；缩进 ∥ 列表符同样不取（照抄的行不命中整行锚 ⇒ 补的那行永不生效）。混形反例与「不消耗轮次号」照留。 */
+const SECTION3_VERDICT_GAP_ERROR = "batch_segment: §3 append refused — this round block states no readable verdict (块内裁定 = 无裁定行 | 两者同携). A §3 block must carry exactly one verdict as a line of its own; put exactly one of `VERDICT: pass` ∥ `VERDICT: changes-required` on such a line in the text you append — copying this refusal verbatim copies the words, not a verdict line.\n(本地化整行形 `结论：通过` / `结论：不通过` 同认，中文形的尾句号可省可带（`结论：通过。` 同认）。不作独立整行的写法不认——例如 `**结论** = VERDICT: pass`。) Nothing was written — no bytes landed and no round number was consumed: append the same text again with the verdict line added."
+/** 拒串：已收口档（§4.9 门 ②——append / edit / status 共用一条，串逐字含「已收口档不回改」）。 */
+const FROZEN_RECORD_ERROR = "batch_segment: 已收口档不回改 — the bound batch record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档). Nothing was written. Report the section as not written."
+/** 拒串：§1 状态行不可解析或缺失（fail-closed 视为冻结——与冻结门同一条解析器）。 */
+const UNRESOLVED_STATUS_ERROR = "batch_segment: 状态行不可解析或缺失 — the bound batch record has no §1 `**状态行**：` line inside the section header zone whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). If the record does carry such a line further down — in a round block or in the section body — move it up under `## §1`: a status line outside the header zone is never read. Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close)."
+/** 拒串：段标题缺失（create 是骨架唯一权威入口，append / edit 都不补骨架）。 */
+const missingSectionError = (seg) => `batch_segment: the bound batch record has no "## §${seg}" section header — the six-section skeleton is written by the record's creator before any segment write. Fix: ask the parent/creator to add the "## §${seg} …" heading (with the template's sub-headings) first, then call batch_segment again. Nothing was written.`
+/** 拒串：骨架保护（写入文本 ∥ 替换文本含 `## §N` 段头形态 ⇒ 段定位失效——append / edit 共用）。
+ *  早先那句尾「and the append-only guarantee」已随两种处置退场：证据面仍成立，§2 规范面不再成立。 */
+const SKELETON_GUARD_ERROR = "batch_segment: the text contains a section header line matching `^## §N` — that would break section location. Rewrite it (escape the heading, or drop the leading `## §N`), then call again (骨架保护). Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close)."
+/** 拒串：edit 的锚 / 替换触及或引入 `**状态行**：` 行（§4.19 锚判据；逐字 = `TOOLS.md` §6.24 ⑤ E5）。 */
+const EDIT_STATUS_LINE_ERROR = "batch: edit would rewrite or introduce a **状态行** line — that line has exactly one writer: status, with a value from the section's word list. Nothing was written."
+/** 拒串：edit 空锚（E1——空锚的命中计数不会 ≥2，按「恰一次」会放行并插在段首）。 */
+const EDIT_BLANK_ANCHOR_ERROR = "batch: edit needs a non-empty oldText — a blank anchor cannot match exactly once. Nothing was written."
+/** 拒串：edit 的 newText 缺参 / 非串（`type: string` 的 fail-closed 面——缺参若当空串处理就是静默删区间）。 */
+const EDIT_NO_TEXT_ERROR = "batch: newText must be a string — pass an empty string to delete the anchored range. Nothing was written."
+
+// ─── edit 面（规范段就地改：`BATCH-RECORD.md` §4.19 的代码单源）─────────────────────
+
+/** 段体**字符区间**（`## §N` 标题行的行尾之后 → 下一 `## §N` 段头之前；段头缺失 ⇒ null）。
+ *  段定位判据与 `batch-skeleton.mjs` 同源（`sectionHeaderRe` + `/^## §\d/gm`）——本档只取**偏移**。
+ *  区间函数住这里而不进骨架档：骨架档距 500 软线 6 行，本批不带出助手函数（分批记录 §2.3 贴线判）。 */
+function sectionBodySpan(src, seg) {
+  const hdr = sectionHeaderRe(seg).exec(src)
+  if (!hdr) return null
+  const nextRe = /^## §\d/gm
+  nextRe.lastIndex = hdr.index + hdr[0].length
+  const next = nextRe.exec(src)
+  const end = next ? next.index : src.length
+  const nl = src.indexOf("\n", hdr.index) // 段头行余文（`## §N …` 的标题部分）不入段体
+  return { start: nl < 0 || nl + 1 > end ? end : nl + 1, end }
+}
+
+/** 段体内每条 `**状态行**：` 行的字符区间（相对段体起点）——「状态行只有一个写者」的判定面（E5）。 */
+function statusLineSpans(body) {
+  const out = []
+  let at = 0
+  for (const line of body.split("\n")) {
+    if (STATUS_LINE_RE.test(line)) out.push([at, at + line.length])
+    at += line.length + 1
+  }
+  return out
+}
+
 /**
- * 批次档生命周期工具工厂（主名 `batch`——单工具四 action）。
+ * edit 执行体（action=edit——§2 就地改的**受认可通道**，不是唯一通道；判据单源 = `docs/core/design/BATCH-RECORD.md` §4.19）：
+ * 锚定区间替换——`oldText` 在 **§2 段体**内恰一次命中（逐字节，含行尾）⇒ 换为 `newText`；`newText` 空串 = 删区间。
+ * 判定与写盘**全部复用既有面**（零新写盘路径）：段域取段白名单（§4.1 一处单源——只有 §2 是规范面）· path 门（D-BR21）·
+ * 冻结拒写（§4.9 门 ②，串与 append 逐字同）· 剥凭证（同一条 `sanitizeText`）· 骨架保护 · 文档机检门（`pending` = 改写后的
+ * §2 段体）· `onWrite` 记账 · 一次 `writeFileSync`。
+ * **不做整段替换**（§2 实测两成超 `MAX_TEXT_CHARS`——重发全文 = 静默丢内容）∥ **不做模糊匹配**（规范面一次近似改写 = 一次
+ * 没人看见的错改；匹配 = 逐字节，`\r\n` 档上的 LF 锚零命中 ⇒ 拒，安全方向）。
+ * 拒面（全 fail-closed，零字节落盘）：空锚 E1 · 零命中 E2 · ≥2 命中（列命中行号）E3 · 锚越段界 E4 · 锚或替换触及 / 引入
+ * `**状态行**：` 行 E5 · 骨架保护 ∥ 冻结 ∥ 段域 ∥ newText 缺参（E6 族）。
+ */
+function editBatchRecord({ args, ctx, review, batchDoc, onWritten }) {
+  const agent = ctx?.agent ?? {}
+  const cwd = agent.cwd
+  const depth0 = ctx?.depth === 0
+  const engineering = !!agent?.config?.agent?.engineering
+  const n = segmentNumber(args?.segment)
+  // 段域（§4.19「段域」行）：**只有 §2（规范面）可就地改**——§1 / §3 / §5 / §6 是证据面，两模式同判。
+  // 子代理侧先取段白名单（§4.1：身份 → 段，一处单源）再判它是不是 §2；depth-0 侧取同模式 append 白名单
+  // （工程 = §1/§4/§6 ⇒ 不含 §2 ⇒ 拒；普通 = 含 §2 ⇒ 放行——普通面主 agent 占设计席，§4.16）。
+  // 评审实例的绑定身份即「设计评审」（段 = §3）⇒ 拒。
+  const own = allowedSegment(agent, review, engineering)
+  const mayEditSpec = depth0
+    ? DEPTH0_SEGMENTS.append[engineering ? "engineering" : "normal"].includes(2)
+    : own === 2
+  if (!mayEditSpec) {
+    throw new Error(depth0
+      ? "batch: edit is not yours to run — only §2 (the spec section) is rewritable in place, and in engineering mode depth-0 writes §1/§4/§6 through append (一段一作者: §2 = eng-designer；普通模式的主 agent 占设计席，可 edit §2). Nothing was written."
+      : "batch_segment: edit is not yours to run — only §2 (the spec section) is rewritable in place; §1 / §3 / §5 / §6 are append-only evidence (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5). Nothing was written.")
+  }
+  if (n === null) {
+    throw new Error(depth0
+      ? `batch: unknown segment ${JSON.stringify(args?.segment ?? null)} — a depth-0 edit rewrites §2 of the record (pass "§2"). Nothing was written.`
+      : `batch_segment: unknown segment ${JSON.stringify(args?.segment ?? null)} — pass the section number you write (e.g. "§2").`)
+  }
+  if (n !== 2) {
+    throw new Error(depth0
+      ? `batch: §${n} is not yours to write — an in-place rewrite is allowed on §2 only (the spec section; §1 / §3 / §5 / §6 are append-only evidence — append them). Nothing was written.`
+      : `batch_segment: §${n} is not yours to write — this caller writes §2 only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5).`)
+  }
+  // 目标定位（D-BR21）——与 append / status 同序：段域 → path 门 → 取值。
+  const givenPath = typeof args?.path === "string" && args.path.trim() ? args.path : null
+  let abs
+  if (givenPath) {
+    if (!depth0) {
+      throw new Error("batch: path is a depth-0-only parameter (D-BR21) — your target record arrives via the spawn binding / the review instance key. Nothing was written.")
+    }
+    abs = resolveBatchDocPath(cwd, givenPath)
+  } else if (depth0) {
+    abs = findInFlightBatch(cwd, batchDocBases(cwd)) // 歧义锚 ⇒ 基底 = 候选并集（#828——唯一在飞批照取 / ≥2 照列）
+  } else {
+    if (!batchDoc) {
+      throw new Error("batch_segment: no batch record is bound to this caller — there is no path parameter by design (the target arrives via the spawn binding / the review instance key). Report the section as not written.")
+    }
+    abs = resolveBatchDocPath(cwd, batchDoc)
+  }
+  const src = readFileSync(abs, "utf8")
+  const status = readBatchStatusLine(src)
+  if (status === "closed") throw new Error(FROZEN_RECORD_ERROR)
+  if (status === "unknown") throw new Error(UNRESOLVED_STATUS_ERROR)
+  const oldText = args?.oldText
+  if (typeof oldText !== "string" || !oldText.trim()) throw new Error(EDIT_BLANK_ANCHOR_ERROR)
+  if (typeof args?.newText !== "string") throw new Error(EDIT_NO_TEXT_ERROR)
+  if (/^## §\d/m.test(args.newText)) throw new Error(SKELETON_GUARD_ERROR)
+  const span = sectionBodySpan(src, 2)
+  if (!span) throw new Error(missingSectionError(2))
+  const body = src.slice(span.start, span.end)
+  const hits = []
+  for (let at = body.indexOf(oldText); at >= 0; at = body.indexOf(oldText, at + 1)) hits.push(at)
+  if (!hits.length) {
+    // 零命中 vs 越段界：全档别处有 ⇒ 锚越出 §2 段体（E4）；全档无 ⇒ 真零命中（E2）。两者都 fail-closed：
+    // 「删那行作废判据」若零命中放行，会报成功而一字未删——比不做更坏。
+    throw new Error(src.includes(oldText)
+      ? "batch: edit anchor crosses the section boundary — it starts outside the section body or reaches the next §N header, and rewriting across it would break section location. Nothing was written."
+      : "batch: edit anchor not found — oldText must match the §2 body exactly once, byte for byte (line endings included). Nothing was written. Re-read the section and pass its current text verbatim.")
+  }
+  if (hits.length > 1) {
+    const lines = hits.map((at) => src.slice(0, span.start + at).split("\n").length).join(", ")
+    throw new Error(`batch: edit anchor is not unique — it matches ${hits.length} places inside §2 (lines ${lines}). Extend the anchor until it matches once. Nothing was written.`)
+  }
+  const hit = hits[0]
+  // 状态行只有一个写者（status）：锚**触及**该行 ∥ 替换**引入**一条 ⇒ 拒（否则一次 edit 就能伪造 status 的生命周期流转）。
+  const spans = statusLineSpans(body)
+  if (spans.some(([s, e]) => hit < e && hit + oldText.length > s)) throw new Error(EDIT_STATUS_LINE_ERROR)
+  if (args.newText.split(/\r?\n/).some((line) => STATUS_LINE_RE.test(line))) throw new Error(EDIT_STATUS_LINE_ERROR)
+  // 替换文本落盘取目标档的 EOL 形（`sanitizeText` 逐行处理后以 LF 相连；同 append 的 `insertIntoSection` 口径）。
+  const eol = src.includes("\r\n") ? "\r\n" : "\n"
+  const replacement = sanitizeText(args.newText, false).replaceAll("\n", eol)
+  const newBody = body.slice(0, hit) + replacement + body.slice(hit + oldText.length)
+  // 文档机检门（§4.9 门 ④——`pending` = **改写后的 §2 段体**）：REFUSED ⇒ 拒（零字节落盘）∥ ERROR ⇒ 写 + 回执明示。
+  const gate = runBatchGate({ abs, cwd, agent, scope: "writer", pending: { section: 2, body: newBody } })
+  if (gate?.state === "refused") throw new Error(gateRefusalMessage(gate, "edit"))
+  writeFileSync(abs, src.slice(0, span.start) + newBody + src.slice(span.end))
+  // #84：记账面按端注入（与 append 同一条缝——缺省 no-op = CLI 语义零行为变）。
+  onWritten?.(agent, abs)
+  return `batch: edited §2 of the batch record — replaced ${oldText.length} characters with ${replacement.length}.${gateReceiptLine(gate)}`
+}
+
+/**
+ * 批次档生命周期工具工厂（主名 `batch`——单工具五 action）。
  * @param {string|null} batchDoc — 绑定的目标档（spawn：`child._batchDoc`；评审：实例键；
  *   depth-0 主 agent 挂载时 = null——目标走 D-BR21 可选 path / 在飞扫描）
  * @param {{review?: boolean}} [opts] — review=true 表示"设计评审实例"形态（写 §3 + 工具盖戳）
@@ -270,8 +431,8 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
       properties: {
         action: {
           type: "string",
-          enum: ["create", "append", "status", "close"],
-          description: "Which lifecycle step to run: create (new record) / append (your section) / status (your section's status line) / close (freeze the record).",
+          enum: ["create", "append", "edit", "status", "close"],
+          description: "Which lifecycle step to run: create (new record) / append (your section) / edit — replace one anchored range inside your own section (§2 only: the spec section, which may be rewritten in place; §1 / §3 / §5 / §6 are append-only evidence) / status (your section's status line) / close (freeze the record).",
         },
         path: {
           type: "string",
@@ -279,11 +440,19 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
         },
         segment: {
           type: "string",
-          description: "append/status only — the batch-record section you are writing (e.g. \"§4\"). Declares the section number only; your identity decides what is actually writable (main agent: append §1/§4/§6 · status §1 (engineering) / append §1/§2/§4/§5/§6 · status §1/§2/§5 (normal); eng-designer §2; eng-coder §5; normal-mode coder with a batchDoc binding §5; design review §3).",
+          description: "append/edit/status only — the batch-record section you are writing (e.g. \"§4\"). Declares the section number only; your identity decides what is actually writable (main agent: append §1/§4/§6 · status §1 (engineering) / append §1/§2/§4/§5/§6 · status §1/§2/§5 (normal); eng-designer §2; eng-coder §5; normal-mode coder with a batchDoc binding §5; design review §3). edit is narrower than append: §2 is the only section rewritable in place (the spec section), so the main agent may edit it only in normal mode.",
         },
         text: {
           type: "string",
           description: "append only — the markdown to append (verbatim — findings table + VERDICT + counts for a design review §3). Limit 20000 characters per call; longer content is refused — split it into multiple calls (each call becomes its own section, N continues).",
+        },
+        oldText: {
+          type: "string",
+          description: "edit only — oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, and any anchor or replacement that touches or introduces a `**状态行**：` line (the status line has one writer: `status`).",
+        },
+        newText: {
+          type: "string",
+          description: "edit only — the replacement text for the anchored range; an empty string deletes the range. Credentials are stripped mechanically (same as append); a `## §N` heading line is refused (skeleton protection).",
         },
         value: {
           type: "string",
@@ -348,12 +517,14 @@ export function batchTool(batchDoc = null, { review = false } = {}) {
           return createBatchRecord({ args, ctx, review, cwd, bases, onWritten })
         case "append":
           return appendBatchRecord({ args, ctx, review, batchDoc, onWritten })
+        case "edit":
+          return editBatchRecord({ args, ctx, review, batchDoc, onWritten })
         case "status":
           return statusBatchRecord({ args, ctx, review, pickTarget, onWritten })
         case "close":
           return closeBatchRecord({ args, ctx, review, pickTarget, onWritten })
         default:
-          throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / append / status / close.`)
+          throw new Error(`batch: unknown action ${JSON.stringify(args?.action ?? null)} — pass one of create / append / edit / status / close.`)
       }
     },
   }

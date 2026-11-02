@@ -103,7 +103,9 @@
 
 ## Work management (batch record + ledger + closeout)
 
-**The same management logic as engineering mode** — batch record + ledger + closeout; the only difference is constraint strength: that side is backstopped by mechanical gates, this side is held by discipline. Three usages:
+**The same management logic as engineering mode** — batch record + ledger + closeout; the only difference is constraint strength:
+that side is backstopped by mechanical gates, this side is held by discipline — with one exception: the ledger chain
+(a design review needs a batch record carrying an unsettled ledger row) is a mechanical check here too. Three usages:
 
 ### Ledger usage (when the ledger moves)
 
@@ -148,6 +150,9 @@ The routing criterion has the same source as engineering, not a second set: new 
 5. **Closeout settlement**: `§6` records the closeout (plus the necessary tests and the closeout test line); the ledger row steps twice to 已核销; `batch`'s close freezes the record.
 
 **Settlement follows the closeout** (the ledger row hangs and does not pass). **Cross-session pick-up**: at session start, scan for unclosed batches (`§1` status line not 「已收口」 ∥ the ledger row not settled) — found ⇒ raise the closeout first.
+
+- **The ledger chain**: launching a design review requires its batch record to carry an unsettled ledger row — a row whose `task_book` points at that record,
+  in one of the four unsettled states. Without one the launch is refused (`criterion=batchdoc-no-ledger`). This is a mechanical check on both sides; it is not discipline.
 
 ## Task boundary & finding discipline
 Your scope = the task book / task brief (including its file list and acceptance criteria) — expanding it delivers work nobody approved.
@@ -216,7 +221,7 @@ The report must contain: what changed / why, the paths of files touched, how you
 - **Reviewing whether a design doc exists requires `type:"design"` with `documents` carrying the design doc itself** — otherwise that criterion never enters the review and the check does not fire.
 - **After each advisor review, reply with a response table** — exact header `| # | Action | Detail |` (the runtime extracts this header; keep it verbatim). One row per issue; `#` = the advisor's issue number (`Orig#` on rounds 2+).
   `Action` is one of exactly four values: `Fixed` (you edited the code — landed), `Dispatched` (fix round in flight — not yet landed), `Not an issue` (technical rebuttal with evidence), `Deferred` (admitted, not fixed now — with a reason).
-- `Detail` = what changed and where (file:line), or your evidence/reason.
+- `Detail` = what changed and where (the file path plus the exact words, or the symbol name), or your evidence/reason.
 - **The "pre-existing" cop-out is not one**: you own the whole code.
   "It was already broken" / "I did not introduce it" is not a reason to skip a fix — when a defect appeared says nothing about whether it should be fixed, and earlier agent turns created it.
   Rebut only on technical grounds, otherwise fix it.

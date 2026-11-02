@@ -15,9 +15,10 @@ import { randomUUID } from "node:crypto"
 import { readFileSync } from "node:fs"
 import { tokenExpiryMs } from "../token-ttl.mjs"
 // 段面读判据单源（骨架档）：轮次块计数 ∥ 段级状态行 ∥ §3 完成词——§3 落地门与写入面读同一形态。
-// 裁定行锚（`_V_PRE` / `_V_SUF` / `VERDICT_CHANGES_LINE`）同住骨架档：签发面（裁定闸）与写入面
-// （`append §3` 的打回重置 `statusResetPlan`）读同一条正则——锚只此一份，两档不各写一遍。
-import { countRoundBlocks, readSectionStatusWord, STATUS_WORDS, _V_PRE, _V_SUF, VERDICT_CHANGES_LINE } from "./batch-skeleton.mjs"
+// 裁定行锚（`_V_PRE` / `_V_SUF` / `VERDICT_CHANGES_LINE`）同住骨架档锚块，组合序也只在那一档（`verdictGapOf`）：
+// 本档的裁定闸判据、写入面（`append §3` 的打回重置 `statusResetPlan`）与 `§5` 写入门读同一个函数——
+// 锚与序都只此一份，三处不各写一遍。
+import { countRoundBlocks, readSectionStatusWord, STATUS_WORDS, VERDICT_PASS_LINE, verdictGapOf } from "./batch-skeleton.mjs"
 // 批归属派生（DESIGN-TOKEN-SETTLEMENT §10）——两源定序 `batchAbsPathOfRun`：`run.batchDoc` 优先、
 // `docSetKey` 的批档兜底（判据与清点面同源）。
 // 本档 ⇄ `design-slots.mjs` 为**静态环**（对方取 `effectiveTokenTtlMs`）：两侧绑定只在函数体内
@@ -110,14 +111,21 @@ const TRUNCATED_ECHO_MARK = "注：回显被截断（uuid 之后缺失或不符�
 // 裁定行接受本地化等价形（GitHub #32 / #14）：评审席用中文回执很常见，
 // 只认英文会让 pass 落成 no-pass-line、凭证永不签发；判据仍只认整行逐字面，
 // 不做「句中含『通过』」这类模糊匹配——那样会把「未通过」也放过。
-// 锚（_V_PRE / _V_SUF）与打回正则住骨架档（写入面同读）；pass 正则住本档、**导出**给 `§5` 写入门
-// 共读（判定单源：同一份回执文本不在第二处另写字面）。
-export const VERDICT_PASS_LINE = new RegExp(
-  _V_PRE + "(?:VERDICT:[ \\t]*(?:pass|通过|通过。)|结论[:：][ \\t]*(?:通过|pass))" + _V_SUF, "mi")
+// 四条锚与两条裁定正则全住骨架档锚块（`batch-skeleton.mjs`），裁定读数单源 = 同档 `verdictGapOf`：
+// 本档、`§5` 写入门与 `append §3` 的通过置位读同一个函数（判定单源，零复制）。
+// pass 锚经本档**原样再导出**——`batch-closeout.mjs` 的 import 面零改。
+export { VERDICT_PASS_LINE }
+/** 裁定闸的拒因（§5.2 #940）：对外只两个词，`changes-required` ∥ `no-pass-line`——本批改的是判据来源，
+ *  不是这两个词。四格映射（`verdictGapOf` 值域 → 拒因）：
+ *  - `null`（说了 pass）⇒ `null`（签发）；
+ *  - `「VERDICT: changes-required」` ∥ `「两者同携」` ⇒ `changes-required`——同携今天就走这一格
+ *    （改前打回锚先命中即判打回），组合序挪进函数后这张表照旧；
+ *  - `「无裁定行」` ⇒ `no-pass-line`。 */
 export function verdictGateFailure(rawResult) {
   if (typeof rawResult !== "string") return "no-pass-line"
-  if (VERDICT_CHANGES_LINE.test(rawResult)) return "changes-required"
-  return VERDICT_PASS_LINE.test(rawResult) ? null : "no-pass-line"
+  const gap = verdictGapOf(rawResult)
+  if (gap === null) return null
+  return gap === "无裁定行" ? "no-pass-line" : "changes-required"
 }
 
 /** §5.2 rejection mark (verbatim — machine-greppable; reason = no-pass-line | changes-required). */
@@ -133,7 +141,7 @@ const RECORD_BATCH_UNREADABLE = "batch-unreadable"
  * 槽零写、实例不翻 open——标记即回执，不进 `settlementCriterion`（§7 不新增判据值）。
  * **恒定位 = 上方两行逐字不动**；`evidence`（可执行证据 = 当前状态行 ∥ 轮次块数 ∥ 写面通道）
  * 另起一行落在其后——指名当前值，但不把证据塞进那个机器可 grep 的括号里。 */
-const REVIEW_RECORD_MARK = (reason, evidence) => `评审记录不合格——token 未签发 (review record incomplete — no design token was issued; reason: ${reason})\n补写该批档 §3（发现 + VERDICT + 状态行 = 评审通过）后重跑设计评审；未补写不得按已核处理。${evidence ? `\n证据：${evidence}` : ""}`
+const REVIEW_RECORD_MARK = (reason, evidence) => `评审记录不合格——token 未签发 (review record incomplete — no design token was issued; reason: ${reason})\n补写该批档 §3（发现 + VERDICT —— 状态行由工具随块落）后重跑设计评审；未补写不得按已核处理。${evidence ? `\n证据：${evidence}` : ""}`
 
 /**
  * Shared design-review settlement (sync wrapper + async settle): the token echo
@@ -152,11 +160,11 @@ const REVIEW_RECORD_MARK = (reason, evidence) => `评审记录不合格——tok
  *   （单谓词 `advisorIncompleteMarker`——结算方透传）。非空 ⇒ **一律不签发**（无论评审文本
  *   是否回显 token）：剥除全部 token 回显 + 追加未签发提示（原因 + 恢复指引），不写槽、
  *   不关实例（可重评）。
- * @remarks §3 落地门（ADVISOR-GUARDS.md §1.1——同族：未完成即不签发）：绑了批档（`run.batchDoc`
- *   非空）且已过回显闸 ⇒ 两次判：① 轮次块数 > 点火基线 `run.section3BlocksAtStart`（**无条件**——
- *   changes-required 轮同判；嵌在裁定闸之前）② 段级状态行 = `评审通过`（只在签发路径上判）。
- *   不满足 ⇒ `{passed:false}` + 恒定标记，槽零写、实例不翻 open（补写后同实例可重评）。
- *   未绑批档 ⇒ 本门不适用（零回归——条件写在前置上，不是实现时跳过）。
+ * @remarks §3 落地门（ADVISOR-GUARDS.md §1.1——同族：未完成即不签发）：**前置 = 绑了批档**（`run.batchDoc`
+ *   非空）——设计评审必携 `batchDoc`（准入门，判据 = 同档 §2 第 6 条）⇒ 到结算面仍为空只是接线故障，
+ *   在 `boundBatch` 判定处断言并 throw（程序不变量，早于写槽；不设对外拒因值，不返回判决）；已过回显闸 ⇒ 两次判：① 轮次块数 > 点火基线
+ *   `run.section3BlocksAtStart`（**无条件**——changes-required 轮同判；嵌在裁定闸之前）② 段级状态行 = `评审通过`
+ *   （只在签发路径上判）。不满足 ⇒ `{passed:false}` + 恒定标记，槽零写、实例不翻 open（补写后同实例可重评）。
  * @returns {{passed: boolean, output: string}}
  */
 export function settleDesignReview(agent, run, designToken, rawResult, opts = {}) {
@@ -183,37 +191,44 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
   }
   // §3 落地门判据 1（**无条件**——pass 与 changes-required 都判）—— 嵌在回显闸之后、裁定闸之前。
   // 设计单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1；**一次读档、两次判**（判据 2 复用同一 src）。
-  // 前置 = 绑了批档（`run.batchDoc` 非空）——未绑 ⇒ 本门不适用（零回归，不是放宽）；
   // 未回显 ⇒ 已走上面的 M1，记录面零判（连凭据都没有，报「记录不合格」会把真因盖掉）。
+  //
+  // 前置 = 绑了批档，**程序不变量、不是拒发分支**：设计评审必携 `batchDoc`（准入门，判据 = 同档 §2 第 6 条）
+  // ⇒ 到结算面仍为空只能是「绑定没传到实例」的接线故障 ⇒ 断言并 throw（串点名设计评审实例 + designId），
+  // 零槽写、不返回判决、不设对外拒因值。给没发生过的情形配文案就是没有场景的分支；接线 bug 该炸得响，
+  // 不该伪装成一条给用户看的拒因（本批 🔴1 裁定）。
+  // 位置 = 写槽（`agent._engDesignTokens.set(...)`）之前：落在其后 = 没拦，token 已在槽里、授权照发。
+  // 调用点不得补 catch 后继续——控制流会落回 `set(...)` ⇒ token 照签、零报错、只留一条日志（同档 §1.1）。
   const boundBatch = typeof run?.batchDoc === "string" && run.batchDoc.trim() ? run.batchDoc : null
+  if (!boundBatch) {
+    throw new Error(`design review settled with no batch-record binding (designId: ${run?.designId ?? "(none)"}) — a design review is launched with \`batchDoc\` required, so settling without it is a wiring fault, not an input to report.`)
+  }
   let batchSrc = null
-  if (boundBatch) {
-    let reason = null
-    let detail = ""
-    try {
-      batchSrc = readFileSync(boundBatch, "utf8")
-    } catch (e) {
-      reason = RECORD_BATCH_UNREADABLE
-      detail = `批档读不到: ${e?.code ?? e?.message ?? "unknown"}`
+  let reason = null
+  let detail = ""
+  try {
+    batchSrc = readFileSync(boundBatch, "utf8")
+  } catch (e) {
+    reason = RECORD_BATCH_UNREADABLE
+    detail = `批档读不到: ${e?.code ?? e?.message ?? "unknown"}`
+  }
+  if (reason === null && !Number.isInteger(run.section3BlocksAtStart)) {
+    // 点火基线 = 评审实例绑定批档时读该档记下的块数（`advisor.mjs`）；null / 缺失 = 点火时读不到。
+    // 判据方向 =「绑了批档却验不了记录」不得当「没有记录要验」。
+    reason = RECORD_BATCH_UNREADABLE
+    detail = "点火基线缺失（批档在点火时不可读）"
+  }
+  if (reason === null) {
+    const blocks = countRoundBlocks(batchSrc, 3)
+    if (blocks <= run.section3BlocksAtStart) {
+      reason = RECORD_NO_BLOCK
+      detail = `§3 轮次块 ${blocks} 块、点火基线 ${run.section3BlocksAtStart} 块——本轮未写进 §3`
     }
-    if (reason === null && !Number.isInteger(run.section3BlocksAtStart)) {
-      // 点火基线 = 评审实例绑定批档时读该档记下的块数（`advisor.mjs`）；null / 缺失 = 点火时读不到。
-      // 判据方向 =「绑了批档却验不了记录」不得当「没有记录要验」。
-      reason = RECORD_BATCH_UNREADABLE
-      detail = "点火基线缺失（批档在点火时不可读）"
-    }
-    if (reason === null) {
-      const blocks = countRoundBlocks(batchSrc, 3)
-      if (blocks <= run.section3BlocksAtStart) {
-        reason = RECORD_NO_BLOCK
-        detail = `§3 轮次块 ${blocks} 块、点火基线 ${run.section3BlocksAtStart} 块——本轮未写进 §3`
-      }
-    }
-    if (reason !== null) {
-      // 槽零写、`run.open` 不翻 ⇒ 补写 §3 后同一实例可重评（与裁定闸同形）。
-      const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-      return { passed: false, output: [stripped, REVIEW_RECORD_MARK(reason, detail)].filter(Boolean).join("\n\n") }
-    }
+  }
+  if (reason !== null) {
+    // 槽零写、`run.open` 不翻 ⇒ 补写 §3 后同一实例可重评（与裁定闸同形）。
+    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
+    return { passed: false, output: [stripped, REVIEW_RECORD_MARK(reason, detail)].filter(Boolean).join("\n\n") }
   }
   // §5.2 裁定闸（#940）：签发 = 回显 ∧ 裁定行——缺 `VERDICT: pass` 行或含 `VERDICT: changes-required` 行
   // ⇒ 拒签（与 M1 径同形：剥净回显 + 恒定标记；槽零写 ∥ 实例保持——修后重评）。
@@ -222,17 +237,16 @@ export function settleDesignReview(agent, run, designToken, rawResult, opts = {}
     const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
     return { passed: false, output: [stripped, VERDICT_GATE_MARK(gateFailure)].filter(Boolean).join("\n\n") }
   }
-  // §3 落地门判据 2（**只在签发路径上判**——裁定闸判 pass 之后、写槽之前）：§3 段级状态行 = `评审通过`。
-  // 段级 = 唯一状态行写面（`batch-skeleton.mjs` `updateSectionStatusLine`——评审经 `batch` 的 `status`
-  // 动作写入）的同一处，也是下游 `§5` 写入门读的那一处；轮次块只由工具戳标题、块内无状态行落点 ⇒
+  // 判据 2（**只在签发路径上判**）——裁定行已判 pass、批档已读到（读不到已在上述判据 1 退场）。
+  // 段级 = 唯一状态行写面（`batch-skeleton.mjs` `updateSectionStatusLine`）的同一处——写它的是工具：
+  // `append §3` 那一笔随裁定行置位 ∥ 重置（`statusPassPlan` ∥ `statusResetPlan`），`status` 是同面上的
+  // 可选手写口——也是下游 `§5` 写入门读的那一处；轮次块只由工具戳标题、块内无状态行落点 ⇒
   // 读块内状态行是读一行没人写的字。旧字面 `评审完成` 由 `readSectionStatusWord` 读侧等义。
-  if (batchSrc) {
-    const word = readSectionStatusWord(batchSrc, 3)
-    if (word !== STATUS_WORDS[3].done) {
-      const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
-      const detail = `§3 状态行 = ${word ?? "（缺）"}；须 = ${STATUS_WORDS[3].done}（段级状态行由 \`batch\` 的 \`status\` 动作写入）`
-      return { passed: false, output: [stripped, REVIEW_RECORD_MARK(RECORD_STATUS_NOT_PASSED, detail)].filter(Boolean).join("\n\n") }
-    }
+  const word = readSectionStatusWord(batchSrc, 3)
+  if (word !== STATUS_WORDS[3].done) {
+    const stripped = stripDesignTokenEcho(rawResult, designToken).trim()
+    const detail = `§3 状态行 = ${word ?? "（缺）"}；须 = ${STATUS_WORDS[3].done}（块落盘时由工具置位）`
+    return { passed: false, output: [stripped, REVIEW_RECORD_MARK(RECORD_STATUS_NOT_PASSED, detail)].filter(Boolean).join("\n\n") }
   }
   // Echoed the token → review passed. Issue it to the parent for eng-coder.
   agent._engDesignTokens ??= new Map()

@@ -98,7 +98,7 @@ repo 代码 / 文档 / git 操作无跨实例协调——同时改同文件互�
 
   **端侧探测消费面** = `thincoder-vscode/src/extension/peer-instances.mjs` · `thincoder-vscode/src/extension/session-io.mjs`（零自有探测；名册机检 = 端 `zero-sync-exec` 单测）；
 
-  分档 = N3 门禁（核行数上限门）；
+  分档 = 核 / 端两半，判据 = `docs/core/design/CORE-UNIFICATION.md` N3（核内零产品 import）；
   域内零 `execSync` / `execFileSync` / `spawnSync` 直引（形态先例 = 单测零直引扫描——核 / 端两半同形；域完整性对账先例同形）；`thincoder-core/process-probe.mjs` = 探针族单点落点（豁免——不在零域）。
 
   ② **束 exec 上界**（注入缝计数）：每束 ≤1 批量判活 + ≤1 批量 cmdline、零逐 pid——经 `_setProcessProbeTestImpl({ aliveFn, cmdlineFn })` 计数断言（越出即红）。

@@ -24,7 +24,10 @@ import {
 } from "./advisor-async.mjs"
 // F30/F31（2026-09-18 顾问面治理批）：类型门判定 / 拒发串 / 对象标识行——单源 `advisor/notice.mjs`
 // （文案逐字 = ADVISOR-GUARDS.md §2.4 / §2.5）；零计数载体（计数护栏随撤 cap 整体退场）。
-import { typeGateCriterion, buildTypeGateRefusal, scopeSummary, withIdentityLine } from "../advisor/notice.mjs"
+import { typeGateCriterion, buildTypeGateRefusal, identityLine, scopeSummary, withIdentityLine } from "../advisor/notice.mjs"
+// 账链门判据（设计单源 = `docs/core/design/ADVISOR-GUARDS.md` §2 第 7 条）：批档之外还须有未决台账行指着它。
+// 判据档零静态仓内依赖（台账链在档内动态 import——W8 契约②），故本档可静态引用。
+import { resolveBatchLedgerLink } from "./batch-ledger-link.mjs"
 // #15 描述外置：描述文本单点 = tool-docs/advisor.md（DESC 单解析面，缺档抛错语义不变）
 import { DESC } from "../tools/shared.mjs"
 
@@ -46,6 +49,59 @@ function section3BlocksBaseline(batchDocAbs) {
   } catch {
     return null
   }
+}
+
+/** `batchDoc` 缺失形态（缺失 ∥ `null` ∥ 空串 ∥ 纯空白——非字符串不在此判，留给 `resolveBatchDocPath` 的既有文案）。 */
+function missingBatchDoc(raw) {
+  return raw === undefined || raw === null || (typeof raw === "string" && raw.trim() === "")
+}
+
+/**
+ * 设计评审准入门拒文（**逐字**——单源 `docs/core/design/ADVISOR-GUARDS.md` §2 第 6 条）：首行 = 稳定前缀
+ * `Advisor: launch refused` + 标识行（与类型门同族形态）；其后 Why + 两个期望形 + 可执行的下一步 + 收尾句。
+ * 与类型门的唯一形态偏差 = 多一句「没有批档 ⇒ 先建档」：本门判的是「参数在不在」，用户知道怎么传不等于
+ * 知道没档时怎么办。
+ */
+function buildBatchDocRefusal(identity) {
+  return [
+    `Advisor: launch refused — a design review must carry \`batchDoc\`: the batch record this review belongs to. ${identity}`,
+    "Why: the token a design review issues is closed by its batch — closing that record consumes it. A review with no batch mints a token nothing can close: it rides the 7-day TTL and nothing else. Refusing the review at launch is how that token never exists.",
+    "Expected form 1 — project-root-relative: docs/batches/<batch>-<topic>.md (resolved against the session project root).",
+    "Expected form 2 — absolute: D:\\repo\\docs\\batches\\<batch>-<topic>.md (used as-is).",
+    'No batch record in flight: create one first — batch({action:"create", …}) — one command; the record is the premise of the review, not paperwork.',
+    "Nothing was sent: no review instance, no round consumed, no design token minted, no LLM call.",
+  ].join("\n")
+}
+
+/**
+ * 账链门拒文（**逐字**——单源 `docs/core/design/ADVISOR-GUARDS.md` §2 第 7 条）：首行 = 稳定前缀
+ * `Advisor: launch refused` + 标识行（与准入门同族形态）；其后 Why + `Record:` 读数 + 三条修法 + 收尾句。
+ *
+ * 偏差（相对准入门）= 判据从「参数在不在」进到「账在不在」，因此多一行 `Record:` 读数值：让下一步可判——
+ * 是行丢了（`db: open` ∧ `unsettled: 0`），还是库根本不在盘（`db: not on disk`，Fix 1 无行可改）。
+ */
+function buildBatchNoLedgerRefusal({ batchDocAbs, chain, scope }) {
+  const dbText = chain.db === "open"
+    ? `open at ${chain.dbFile}`
+    : chain.db === "not-on-disk"
+      ? `not on disk at ${chain.dbFile}`
+      : chain.db === "unreadable"
+        ? `unreadable at ${chain.dbFile}`
+        : "—" // 无项目根：没有库位可点名（`ledger base: —` 同因）
+  return [
+    `Advisor: launch refused — a design review needs its batch record to carry an unsettled ledger row. ${identityLine({
+      type: "design",
+      scope,
+      round: "—", // 判定先于实例解析——本次发起无轮次（§2 第 5 条字段行）
+      criterion: "batchdoc-no-ledger",
+    })}`,
+    `Why: the record says the work is in flight, the ledger says whose work it is — and no unsettled row points at this record (reason=${chain.reason}).`,
+    `Record: ${batchDocAbs} — ledger base: ${chain.root ?? "—"} · db: ${dbText} · rows whose task_book resolves here: ${chain.rows} (unsettled: ${chain.unsettled}).`,
+    'Fix 1 (the row was archived, still recoverable): ledger({action:"update", id:<N>, status:"在途"}) — 待核销 → 在途 是六态唯一的回退边; then ledger({action:"update", id:<N>, task_book:"<仓根相对指针>"}). Row is 已核销 / 已废弃 ⇒ that edge is gone, use Fix 2.',
+    'Fix 2 (this record is the right home, no row can come back): start a new record — batch({action:"create", …}) opens its ledger row in the same call — and launch the review under it.',
+    "Fix 3 (this record is finished): close it, and launch the review under the record that owns the work.",
+    "Nothing was sent: no review instance, no round consumed, no design token minted, no LLM call.",
+  ].join("\n")
 }
 
 export const advisorTool = {
@@ -82,7 +138,7 @@ export const advisorTool = {
       },
       batchDoc: {
         type: "string",
-        description: "Design review only: the in-flight batch record path — validated whenever passed (unreadable ⇒ refused, not ignored); the reviewer then also gets the `batch` write channel to record its findings + verdict. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). Omit when no batch record is in flight (no write channel — zero regression).",
+        description: "Design review only, REQUIRED: the batch record this review belongs to — the reviewer then also gets the `batch` write channel to record its findings + verdict. A design review without it is refused at launch (a token with no batch has no closer); a path that does not resolve to a readable file is refused. Relative paths resolve against the session cwd first, then candidate project roots (project-root-relative e.g. <repo>/docs/batches/…, or absolute). Code reviews do not pass it.",
       },
     },
     required: ["type"],
@@ -112,6 +168,43 @@ export const advisorTool = {
       })
     }
     const reviewType = args.type
+    // 准入门：`type="design"` 且 `batchDoc` 缺失 / 空 ⇒ 拒发（判据与拒文 = `docs/core/design/ADVISOR-GUARDS.md`
+    // §2 第 6 条）；「携了须可读」那半幅随账链门（下段）一并判——判据与文案仍单源 `resolveBatchDocPath`。
+    // 绑定落 `resolved.run`（评审实例键）。
+    // 理由：设计评审签出的 token 由关档收口，而关档只认批归属——批外签发的授权没有第二个关闭者
+    // （spawn 只校验不消费、关档消费对无归属槽不适用，只剩 7 天 TTL）⇒ 堵法是让这种授权根本发不出去。
+    // 位置 = 类型门之后、文档范围解析之前：类型诊断与「参数在不在」都先于范围诊断（真因不被次要报错掩盖），
+    // 且二者都先于实例解析 / 签发 / LLM（零实例 / 零 token / 零槽 / 零 LLM）。
+    if (reviewType === "design" && missingBatchDoc(args.batchDoc)) {
+      if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+      return buildBatchDocRefusal(identityLine({
+        type: reviewType,
+        scope: scopeSummary(args.documents?.length ? args.documents : args.paths),
+        round: "—", // 判定先于实例解析——本次发起无轮次（§2 第 5 条字段行）
+        criterion: "batchdoc-missing",
+      }))
+    }
+    // 账链门（`docs/core/design/ADVISOR-GUARDS.md` §2 第 7 条）：`type="design"` ∧ `batchDoc` 已解析为绝对路径且
+    // 可读 ⇒ 点火拍查一次账——本档还有没有 ≥1 行未决台账行（`PENDING_STATUSES` 四态）的 `task_book` 指着它；
+    // 查不出「有」⇒ 拒发（`criterion=batchdoc-no-ledger`，reason 三值），登记 `_advisorRefusals`。
+    // 理由：第 6 条只要求「参数在 + 路径可读」，账侧从头到尾不问——行被撤回 ∥ 被结 ∥ 被改挂之后，
+    // 评审照发、token 照签，收口时重锚不到任何行。
+    // 批档绝对路径在本门就要用 ⇒ `resolveBatchDocPath` 从绑定行提前到此处调一次（绑定行复用同值，不二次解析）；
+    // 携了不可读 ⇒ 走其既有 throw（顺序表第 3 行：可读是账链的前提，前提坏先报前提）。
+    // 代码评审不走本门（绑定行对 `type="code"` 仍走原解析——行为零变）。
+    let designBatchDocAbs = null
+    if (reviewType === "design") {
+      designBatchDocAbs = resolveBatchDocPath(agent.cwd, args.batchDoc)
+      const chain = await resolveBatchLedgerLink({ batchDocAbs: designBatchDocAbs, anchor: agent.cwd })
+      if (!chain.ok) {
+        if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
+        return buildBatchNoLedgerRefusal({
+          batchDocAbs: designBatchDocAbs,
+          chain,
+          scope: scopeSummary(args.documents?.length ? args.documents : args.paths),
+        })
+      }
+    }
     const documents = args.documents || null
     // Scope fallback: the runtime mutation record (zero git) covers guard-triggered
     // reviews where the model did not pass explicit paths.
@@ -171,12 +264,13 @@ export const advisorTool = {
     // scopes agent._advisorRound/_lastAdvisorOutput so the message builder and
     // the run.mjs cap read THIS instance's round/prior (multi-review isolation).
     const resolved = resolveAdvisorLaunch(agent, reviewType, { documents })
-    // BATCH-RECORD.md §4.2 评审侧批次档门禁 + 实例键绑定（评审实例的唯一路径来源）：
-    // 口径 = **「若传则须可读」**（空/不可读 → throw；不强制必传——无批次档的在途设计评审
-    // 零回归，N5）；绑定落在 resolved.run（评审实例键，与 reviewType/round/designId 同族）——
-    // 并发设计评审各绑各档，不用单值会话态（BATCH-RECORD.md §4.7 #6）。
+    // BATCH-RECORD.md §4.2 评审侧批次档绑定（评审实例的唯一路径来源）：准入面与账链门已保证设计评审的
+    // `batchDoc`（判据 = `docs/core/design/ADVISOR-GUARDS.md` §2 第 6 ∥ 7 条），本段只剩绑定落 `resolved.run`
+    // （评审实例键，与 reviewType/round/designId 同族）——并发设计评审各绑各档，不用单值会话态
+    // （BATCH-RECORD.md §4.7 #6）。
     if (args.batchDoc !== undefined && args.batchDoc !== null) {
-      resolved.run.batchDoc = resolveBatchDocPath(agent.cwd, args.batchDoc)
+      // 设计评审的绝对路径由账链门那一段算好（`designBatchDocAbs`——不二次解析）；代码评审仍走原解析。
+      resolved.run.batchDoc = designBatchDocAbs ?? resolveBatchDocPath(agent.cwd, args.batchDoc)
     }
     // §3 点火基线（ADVISOR-GUARDS.md §1.1 判据 1）：结算面判「§3 已被本轮写过」需要「本轮之前有几块」
     // 这个点——只在点火拍可得（结算时再读只能得到「现在有几块」）。两轨同源（`run` 由池条目透传）。

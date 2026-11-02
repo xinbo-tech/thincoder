@@ -1545,7 +1545,7 @@ p2      = docs/batches/probe-fixture-p2.md（目标面 = 其 §2 段；diff 粒�
 | `turnsUsed` | **主体 run** 最大观测回合帧（`⟦ev⟧turn` 最大值）；总调用数看 `metrics.calls` |
 | `continuation` | `null`（未触发）或 `{turnsUsed, asked}`——追问扩写轮（主体报告 < `MIN_REPORT_CHARS` 触发）的帧数与 ask 单列（扩写轮 = 新 run、帧从其自身重数——相位切换判据 = 帧非增；`_turnSeq` 链起点复位语义，`thincoder-core/agent/run-start.mjs:70`） |
 | `terminal` | `asked` / `completed` / `cap` / `timeout` / `error` / `skipped`（成本闸截断——§10.3-6 / §10.8） |
-| `firstWriteTurn` / `mutatorCalls` | 首个写工具调用回合 / 写工具调用序列 `{turn, tool, path}`（面 = `FILE_MUTATORS`，`thincoder-core/agent/helpers.mjs:86`；`path` 形态 = 沙箱内相对——§10.7 路径口径） |
+| `firstWriteTurn` / `mutatorCalls` | 首个写工具调用回合 / 写工具调用序列 `{turn, tool, path}`（面 = `FILE_MUTATORS`，`thincoder-core/agent/helpers.mjs`；`path` 形态 = 沙箱内相对——§10.7 路径口径） |
 | `landedFiles` | 沙箱 diff 实测集 `{path, bytes, target}`（新增或改动；`target` = ∈ 该族 `targets` 集——§10.4；`path` 沙箱内相对形态） |
 | `reportHead` / `reportLen` | 终报（或拒绝降级 partial）头 ≤2000 字符 + 全量长度 |
 | `reportFace` | 判官面（仅无 ask 的 run——§10.6） |
@@ -1611,7 +1611,7 @@ node bench/probe.mjs --models <列表> [--fixtures p1,p2,p3] [--n 次] [--max-tu
 退出码：0 = 跑完（行为类是数据不是错误）/ 1 = 基建错误（参数 / 未知档 / provider 缺配置 / 夹具不合 schema / `judge.json` 不可读或不合 schema / 同名拒写）/ 130 = SIGINT（不落档）。
 stdout：逐 run 一行（`[i/总数] <模型> <夹具> → <行为类> | 首次上抛 t / 回合 n`）+ 结尾摘要表。
 
-**成本上界**：单 run ≤ Σ（每 call 的 prompt + completion tokens）× 该档单价——call 数 ≤ **2 × `--max-turns`**（主体 run ≤ `--max-turns`；追问扩写轮（报告 < `MIN_REPORT_CHARS` 时启用——`thincoder-core/agent/helpers.mjs:27`）为第二个 run、上限同）、单 call 输出 ≤ `maxTokens`（4096）；全局 ≤ `--max-cost`（设时）。
+**成本上界**：单 run ≤ Σ（每 call 的 prompt + completion tokens）× 该档单价——call 数 ≤ **2 × `--max-turns`**（主体 run ≤ `--max-turns`；追问扩写轮（报告 < `MIN_REPORT_CHARS` 时启用——`thincoder-core/agent/helpers.mjs`）为第二个 run、上限同）、单 call 输出 ≤ `maxTokens`（4096）；全局 ≤ `--max-cost`（设时）。
 
 ### 10.9 与真实 spawn 面的已知偏差（如实登记 · 入报告局限）
 

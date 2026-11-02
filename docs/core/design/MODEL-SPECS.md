@@ -254,9 +254,9 @@
 
 **行数上限**：本表产品码读数 = 253 / 84 / 152 / 149（行序同上）。行数口径统一 = `wc -l`，各节读数按各自取数日期登记——本档不设跨节「最新读数面」指针（那会把旧读数当现行值读）。
 
-**本文件自身**增删零越线；**两档单元测试档现越 300 软线**（395 行 · 304 行）——增量均来自 `[onboard]` / `B-1…B-6` 段；硬限 500 未越。
+**本文件自身**增删零越线；**两档单元测试档在 500 软线内**（395 行 · 304 行）——增量均来自 `[onboard]` / `B-1…B-6` 段，无拆分义务。
 
-越线两档的**拆分计划** = 「不拆档——单档内聚」+ 消解窗口（登记面 = 本节）；另一档单元测试档（221 行）仍 < 300。
+越线两档的**拆分计划** = 「不拆档——单档内聚」+ 消解窗口（登记面 = 本节）；另一档单元测试档（221 行）在 500 软线内，无拆分义务。
 
 `thincoder-core/auto-think.mjs` / `thincoder-core/agent/spawn-child.mjs` / `thincoder-core/config.mjs` /
 `thincoder-core/tools/index.mjs` /
@@ -517,11 +517,11 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
   B-1..B-6（chat 载荷面 `reasoning_effort` · D-14 off 补发与五 guard 零变面、后台路径副作用认账）、
   P-1..P-4（预置逐字段等值 · 漂移白名单护栏 · `maxTokens` 随改指模型同变）。
 - 行数上限：`model-specs.mjs` **253** ·
-  `config-presets.mjs` **50** ⇒ 均低于 300 行软线；**两单元测试档越线** = 415 行 · 307 行 ⇒ 处置 = 预裁「**不拆档——单档内聚**」，
+  `config-presets.mjs` **50** ⇒ 均低于 500 行软线；**两单元测试档亦在 500 软线内** = 415 行 · 307 行 ⇒ 处置 = 预裁「**不拆档——单档内聚**」，
   消解窗口 = 越 800 硬限前或该档下次实质改动时。
   `thincoder-core/provider/core.mjs`（D-14 已落）实 **494**（`wc -l` 口径 = 核内机检口径；2026-10-28 取读）。
-- **核规格单测档越 300 软线（已裁已落）**：越线成立。机检 = 核行数上限门（300 软线 / 500 硬限）：
-  `walk(ROOT)`（`ROOT` = `thincoder-core/`）递归全树、**无 test 目录排除**，注册键 = 核内相对路径 ⇒ 测试文件同受「>300 未登记即红」约束。
+- **核规格单测档行数（已裁已落）**：在 500 软线内。判据 = 软线 500 / 硬限 800：
+  `walk(ROOT)`（`ROOT` = `thincoder-core/`）递归全树、**无 test 目录排除**，注册键 = 核内相对路径 ⇒ 测试文件同受文件档判据（>500 主动审视 · >800 必须拆）约束。
   处置 = 「**不拆档——单档内聚**」；消解窗口 = 越 800 硬限前或该档下次实质改动时。
 - **计数同变面（D3 · 「预设 20」在盘 **12** 处）**：测试 **7 处**（CLI / VSC 的 config-merge 单测档各 3 处
   + `thincoder-vscode/test/files.mjs:21`）· 设计面 **2 处**（`docs/core/design/PROVIDER.md:168` §6.11 +
@@ -662,7 +662,7 @@ UI 显示 OFF、服务端照想 = 与 PROVIDER.md §6.12 初始缺陷同类。�
 
 | 文件 | 现行数 | 预期 | 拆分计划 |
 |---|---|---|---|
-| `thincoder-core/model-specs.mjs` | **261** | ~259（<500 软限） | 无需 |
+| `thincoder-core/model-specs.mjs` | **261** | ~259（500 软线内） | 无需 |
 | `docs/core/design/MODEL-SPECS.md` | —（本档自指） | ~940 | 本节 |
 
 ### 10.6 验收标准回指（逐条指回需求）
@@ -768,7 +768,7 @@ VSC 端差字段不在核表：核规格行无 `reasoningEffortDefault`（端侧
 
 | 文件 | 现行数 | 预期 | 变更 |
 |---|---|---|---|
-| `thincoder-core/model-specs.mjs` | 261 | ~273 | +5 表行 + 行注块（§11.2 落位）；500 软限内 |
+| `thincoder-core/model-specs.mjs` | 261 | ~273 | +5 表行 + 行注块（§11.2 落位）；500 软线内 |
 | `thincoder-vscode/src/specs.mjs` | 84 | ~89 | `EFFORT_DEFAULT_PREFIXES` +5 条目 |
 | `docs/core/design/MODEL-SPECS.md` | —（本档自指） | ~1070 | §11（本节，设计轮自笔） |
 
@@ -926,8 +926,7 @@ v2.5 两行（改值面；其余字段零改）：
   ["mimo-v2.6-pro-ultraspeed", { context: 1_000_000, maxOutput: 131_072, thinking: true,  multimodal: true, cacheMode: "auto", thinkApi: "type", reasoningEcho: "required", tempRange: [0, 1.5] }],
 ```
 
-**行数预算（软线）**：`thincoder-core/model-specs.mjs` ~293——该档**未登记** `SOFT_LINE_REGISTRY`（核行数上限登记表）
-⇒ 越 500 即红。
+**行数预算（软线）**：`thincoder-core/model-specs.mjs` ~293——在 500 软线内，无拆分义务。
 
 ### 12.4 消费面契约（本节动谁、谁零改）
 
@@ -953,13 +952,13 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 
 | 文件 | 现行数 | 预期增删 | 改动 / 拆分计划 |
 |---|---|---|---|
-| `thincoder-core/model-specs.mjs` | 278（`wc -l` 277） | +15（文档串换写净增 0）⇒ ~293 | §12.2 / §12.3（三新行 + 行注块 + v2.5 对齐）+ `assistantToolCallMessage` 文档串原地换写；≤500 软线内、免登记 |
+| `thincoder-core/model-specs.mjs` | 278（`wc -l` 277） | +15（文档串换写净增 0）⇒ ~293 | §12.2 / §12.3（三新行 + 行注块 + v2.5 对齐）+ `assistantToolCallMessage` 文档串原地换写；≤500 软线内、无拆分义务 |
 | `thincoder-core/config-presets.mjs` | 50（`wc -l` 49） | ±0（2 行改值） | `mimo` / `mimoplan` 的 `model` → `mimo-v2.6-pro`；**mimoplan 端点未实测**（无 tp- 凭证）= 同平台推断（**unverified**） |
 | `thincoder-vscode/README.md` | 205（`wc -l` 204） | ±0（2 行改值） | `:84-85` provider 表模型列 → `mimo-v2.6-pro` |
 | `docs/core/design/MODEL-SPECS.md` | —（本档自指） | 设计轮笔 | §12（本节） |
 
-**行数上限段**：`thincoder-core/model-specs.mjs` ~293 ⇒ 低于 500 软线；新单元测试档 ~95（免登记）；
-核规格单测档 ~475 ⇒ 越 300 系既有态（登记已落核行数上限登记表；
+**行数上限段**：`thincoder-core/model-specs.mjs` ~293 ⇒ 低于 500 软线；新单元测试档 ~95（无拆分义务）；
+核规格单测档 ~475 ⇒ 在 500 软线内（既有态，无拆分义务；
 消解窗口 = 越 800 硬限前或该档下次实质改动）。
 
 ### 12.6 验收标准回指（逐条指回需求）
@@ -1120,9 +1119,9 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 |---|---|---|---|
 | `thincoder-core/model-specs.mjs` | 292 | +~45（10 行 + 行注块 + 4 处行注升级）⇒ ~337 | 见 §13.2 / §13.3；行序取「同族相邻」（查表按前缀长度排序，行序不影响命中——防遮蔽由 G-1 / T-11 覆盖） |
 
-**行数处置（登记 + 拆分计划）**：行数上限 = 软线 **300** / 硬限 **500**（规则：>500 硬红 · >300 未登记即红）——`model-specs.mjs` ~337 ⇒ **登记**（上行同批落）；
+**行数处置**：判据 = 软线 **500** / 硬限 **800**（数值单源 = 工作区根 `AGENTS.md`；函数体 ≥300 的那条量的是单体函数，不量文件）——`model-specs.mjs` ~337 ⇒ **在 500 软线内，无拆分义务**（上行同批落）；
 
-**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 `thincoder-core/model-specs-table.mjs`（拟新增——主档 re-export 保 import 面零改）；连带面 = 单元测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 800 硬限前或该档下次实质改动时**（登记面 = 核行数上限登记表体例）。
+**拆分计划** = 拆点 `MODEL_SPECS` 表块（行 + 行注）外提；落点 `thincoder-core/model-specs-table.mjs`（拟新增——主档 re-export 保 import 面零改）；连带面 = 单元测试档文本扫描 helpers（`SPEC_SOURCE` 族）随拆分批改读两档；**消解窗口 = 越 800 硬限前或该档下次实质改动时**（触发 = 该档越 500 软线时）。
 
 ### 13.7 验收标准回指（条目 #267 · 需求裁定）
 
@@ -1152,7 +1151,7 @@ VSC 产品码全零改（`EFFORT_DEFAULT_PREFIXES`（`thincoder-vscode/src/specs
 
 - 不做未探字段的推测填充（「未探不声明」——用户「查表补齐」的证据面到此为止）。
 - 不声明 `multimodal: false`（T-7 语义单一——无视觉 = 不声明）。
-- 不落主规格单测档（477——500 硬限余量 23 行）：G-1..G-7 新增锚一律落新载体档；`model-specs.mjs` 越 300 的处置 = 登记 + 拆分计划（§13.6「行数处置」段），**本节不拆**。
+- 不落主规格单测档（477——500 软线余量 23 行）：G-1..G-7 新增锚一律落新载体档；`model-specs.mjs` 在 500 软线内 ⇒ 无拆分义务（§13.6「行数处置」段），**本节不拆**。
 - 不改核侧行为（守卫 / 裁剪 / 豁免零改）；不改 `bench/models.json` 的 `skipDims` 与中档覆写值。
 - 不做实弹探针（需密钥 = 父侧 / 用户执行面）；探针结论落地时另批改行。
 
@@ -1226,7 +1225,7 @@ CLI `/think` 面板与 VSC 思考下拉的可见面：新建行未声明枚举�
 | `thincoder-vscode/webview/settings-widgets.js` | **109** | +~2 ⇒ ~111 | `buildEffortSelect`（`:44-53` = **换模型重建径**）同源化；空枚举返 null 语义不变（`view === null`） |
 | `thincoder-vscode/webview/settings-models.js` | **214** | +~4 ⇒ ~218 | `collectConsultRows`（`:26-30`）落盘前 `effortPayloadValue` 归一（「—」/`none`/空 → null ⇒ 删键）+import；`:18` 读取面保持原始值 |
 | `thincoder-vscode/webview/settings-state.js` | **53** | +~18 −6 ⇒ ~65 | 新 `effortSelectView`（levels = 「—」+ 枚举；selected = 已存值 > 注册默认∈枚举 > 「—」；枚举空 ⇒ null）与 `effortPayloadValue`（「—」/`none`/空 → null ⇒ 删键）；`defaultEffortFor`（`:44-49`）并入删除（零调用者） |
-| `thincoder-cli/src/tui/cmd-config.mjs` | **463** | +~8 ⇒ ~471 | 抽 `effortMenuLevels` 导出；**>300 无登记机制在场**（`SOFT_LINE_REGISTRY` 扫描域 = `thincoder-core/`）⇒ 核面 = 500 硬限，**余量 29 行**  |
+| `thincoder-cli/src/tui/cmd-config.mjs` | **463** | +~8 ⇒ ~471 | 抽 `effortMenuLevels` 导出；**行数面 = 500 软线**（判据同全仓）⇒ **余量 29 行**  |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | **255** | +~8 ⇒ ~263 | 归一 + 删档 + 回执（:116-117） |
 | `thincoder-cli/src/tui/cmd-think.mjs` | **151** | **±0** | 码面零改 |
 | DOC 侧（就地改写） | — | ~0 | — |
@@ -1411,7 +1410,7 @@ legacy `effort` 保存即删（§15.4-2 侧写面）；快照面（`thincoder-vs
 | `thincoder-core/config-presets.mjs` | **49** | ±0（六处值改） | §15.3 六对（:30 `grok` / :31 `mistral` / :38 `openrouter` / :33 `hunyuan` / :37 `siliconflow` / :39 `groq`） |
 | `thincoder-core/advisor/run.mjs` | **190** | +~8 −4 | #329：两分支 off 保形 + 显式 off 清档（`:39` / `:52` 两处 + 注释） |
 | `thincoder-cli/src/tui/cmd-advisor.mjs` | **270** | +~3 −1 | #329 生产者面：`applyThinkOff`（`:59-64`）补 effort 族支（`spec.thinkApi === "effort"` ⇒ `null`——与 `cmd-think.mjs:124-134` isEffortOnly 支同式）+ 注释 |
-| `thincoder-core/provider/core.mjs` | **494**（2026-10-28 取读） | ±0（注释面） | :206 行注改述（保守抑制语义，§15.2）；谓词本体零改。**>300 拆分复核：已登记在位**（核行数上限登记表）；距 500 硬限余量 6 行（±0 不动结构）  |
+| `thincoder-core/provider/core.mjs` | **494**（2026-10-28 取读） | ±0（注释面） | :206 行注改述（保守抑制语义，§15.2）；谓词本体零改。**行数面**：在 500 软线内；距 500 软线余量 6 行（±0 不动结构）  |
 | `thincoder-vscode/webview/settings-state.js` | **65** | +~18 −2 | 新增 `effortSelection`（规则单源）+ `advisorEffortCurrent`（读面兜底——§15.4-4）+ `advisorEffortPayloadValue`（「—」/空 ⇒ `null`；`none` 原样）；`effortSelectView` 改由 `effortSelection` 取 selected（成员判定显式化） |
 | `thincoder-vscode/webview/model-picker.js` | **148** | +~8 −4 | `:85` / `:123` 两处归一改走 `effortSelection`；中性档渲染「—」+ 无 active（**两渲染点 `:86-88` / `:124-125` 同判据**——§15.4 三面映射） |
 | `thincoder-vscode/webview/settings-agent.js` | **175** | +~6 −2 | advisor 初渲染 `effortSelectView(adv.model, advisorEffortCurrent(adv))`；载荷键改 `reasoningEffort`（`advisorEffortPayloadValue`；select 未渲染 ⇒ 不发字段——P2-4 的 advisor-effort 半） |
@@ -1850,7 +1849,7 @@ function lookupSpec(model) {
 
 | 文件 | 现状 | 预期增删 | 说明 |
 |---|---|---|---|
-| `thincoder-core/model-specs.mjs` | **370**（2026-10-23 `wc -l`） | **+~7**（行注 5 行 + 两表行） | §18.2 行文草案；零结构 / 零导出面 / 零存量行改。>300 处置 = 登记 + 拆分计划（落点 = 本档 §13.6「行数处置」段——拆点 / 落点 / 消解窗口住彼）；本次 ∉「实质改动」——拆点未触发；改后 ~377（≤500 硬限） |
+| `thincoder-core/model-specs.mjs` | **370**（2026-10-23 `wc -l`） | **+~7**（行注 5 行 + 两表行） | §18.2 行文草案；零结构 / 零导出面 / 零存量行改。行数面 = 500 软线（本档 §13.6「行数处置」段）；本次 ∉「实质改动」；改后 ~377（≤500 软线内） |
 | `docs/core/design/MODEL-SPECS.md` | —（本档自指） | +本节 | 本节 |
 
 ### 18.6 验收标准回指

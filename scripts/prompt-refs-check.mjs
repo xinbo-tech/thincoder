@@ -18,7 +18,7 @@
 import { readFileSync, readdirSync } from "node:fs"
 import { dirname, join, relative, extname } from "node:path"
 import { fileURLToPath } from "node:url"
-import { CANON_OPERANDS, stripCanonOperands } from "../thincoder-core/doc-check/anchors.mjs"
+import { CANON_OPERANDS, docNameExemption, stripCanonOperands } from "../thincoder-core/doc-check/anchors.mjs"
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, "..")
@@ -38,6 +38,7 @@ const J1_WHITELIST = new Set(CANON_OPERANDS)
 const J2_RE = /§\s*(?:\d{2,}(?![\d\\.])|\d+\.\d)/g
 const J3_RE = /[a-z][a-z0-9-]*\.md/g
 // J3 豁免 = CANON 操作数族（与 J1 白名单同构）：逐行先整串删除再扫。
+// 另加**档名豁免**一层（占位形 ∥ 类名）——判定不写在本档，走引擎谓词 `docNameExemption`（见本档 `lineHits`）。
 // 表与剥除函数的**定义单源** = `thincoder-core/doc-check/anchors.mjs`（`CANON_OPERANDS` / `stripCanonOperands`）——
 // 本档只 import、不复制（同一张表两处消费：本档 J3 豁免 ∥ 锚判的提示词面裁剪）。反方向不成立：
 // 引擎对 `scripts/**` 的 import 点 = 0（`docs/core/design/DOC-DISCIPLINE.md` A-DD29 ⑤），且本档是零参主程序，
@@ -86,20 +87,27 @@ export function stripCodeLine(line) {
   return out
 }
 
-/** 单行命中 token（face = "prompt" 全文扫 | "code" 先剥注释）；J3 仅 prompt 面 */
+/** 单行命中 token（face = "prompt" 全文扫 | "code" 先剥注释）；J3 仅 prompt 面。
+ *  J1 ∥ J3 的**档名豁免**走引擎谓词 `docNameExemption`（与锚判同一判定、同一处定义）：
+ *  占位形（`x.md` / `file.md`）与类名（`todo.md`）不算违规——本档不持第二张名单，
+ *  新增一类豁免只能改谓词体一处（`docs/core/design/DOC-DISCIPLINE.md` §3.24 条目 X）。 */
 export function lineHits(line, face) {
   let text = face === "code" ? stripCodeLine(line) : line
   if (face !== "code") text = stripCanonOperands(text)
+  const exemptName = (tok) => docNameExemption(tok) !== null
   const out = []
-  for (const [re, wl] of [[J1_RE, J1_WHITELIST], [J2_RE, null]]) {
-    re.lastIndex = 0
-    let m
-    while ((m = re.exec(text)) !== null) if (!wl || !wl.has(m[0])) out.push(m[0])
+  J1_RE.lastIndex = 0
+  let m
+  while ((m = J1_RE.exec(text)) !== null) {
+    if (J1_WHITELIST.has(m[0])) continue // 操作数族（面相关——本批不动，§3.24「不改语义面」）
+    if (exemptName(m[0])) continue
+    out.push(m[0])
   }
+  J2_RE.lastIndex = 0
+  while ((m = J2_RE.exec(text)) !== null) out.push(m[0])
   if (face !== "code") {
     J3_RE.lastIndex = 0
-    let m
-    while ((m = J3_RE.exec(text)) !== null) out.push(m[0])
+    while ((m = J3_RE.exec(text)) !== null) if (!exemptName(m[0])) out.push(m[0])
   }
   return out
 }

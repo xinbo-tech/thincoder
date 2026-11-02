@@ -629,7 +629,8 @@ resolveEngineeringManifest(cwd, { writer = "subagent", init = true })
 **物理实况**：工程模式提示词三档为**文件级常驻**（`thincoder-core/prompt-overlays.mjs:42` 恒拼接 `thincoder-core/prompts/persona-engineering.md` / `thincoder-core/prompts/common.md` / `thincoder-core/prompts/discipline-engineering.md`），**无节级条件装配机制** ⇒「只在该场景进上下文」在**文件级不可达**。本设计以「**短节（新增 ≤8 行）+ 场景触发领句**」达成「不常驻噪音」的**意图**；
 
   **节级条件装配 = 新机制，出本批边界**（另批另裁）。
-**同批收正（`:56` 措辞）**：② 节尾续管理面的同一笔，一并收正 `thincoder-core/prompts/persona-engineering.md:112`（EN `:56`）的失义措辞「多个 = 歧义——停：列候选，不猜，也绝不建档」。
+**同批收正（`Several = a workspace, a normal state` 句措辞）**：② 节尾续管理面的同一笔，一并收正 `thincoder-core/prompts/persona-engineering.md` §Project state file 的 `Several = a workspace, a normal state` 句的失义措辞「多个 = 歧义——停：列候选，不猜，也绝不建档」。
+
 收正后口径与 `docs/core/design/MANIFEST.md:310` / `:769` 同源：工作区 = **常态**（不抛「歧义」/ `ambiguous`）；处置 = 列候选 + 报明事实 + 点名项目根（不猜、不 brick）。
 
 **键目录（①载荷骨架）= 描述内容契约**（本表 = 语义契约：键名 + 三腿 + 值形逐条；落地文本 = 英文同义句——`thincoder-core/tool-docs/manifest.md` 现状全英文）。**实施后保留**为描述漂移的唯一对照载体（对照核法 = AC-K2 键名覆盖）；语义单源仍在本档 §2.2，本表不构成第二权威。全 **12** 可写节点；节点集判据单源 = `MANIFEST_SCHEMA`（键集由 `DEFAULT_MANIFEST` 派生）：
@@ -794,7 +795,7 @@ const { planTool, subagentTool, taskTool, skillTool, goalTool, verifyTool, recen
 
 | # | 验收条 | 核法 |
 |---|---|---|
-| AC-R1 | **schema 窄化 + 只读位**：子代理五段各含恰一 `manifest`，`action` 枚举 = `["read"]`、无 `key` / `value`；`depth:0` 两模式仍为全量变体（三枚举）；只读变体 `readonly === true`——消费面四门逐门点名：`thincoder-core/agent/dispatch.mjs:61`（planMode 门 `!tool.readonly`）/ `:177`（审批门 `tool.readonly || …` ⇒ 免审批）/ `thincoder-core/agent/record-results.mjs:98`（变更记账 `!tool.readonly && …`）/ `thincoder-core/agent/helpers.mjs:375`（只读角色过滤 `tools.filter((t) => t.readonly)`） | `assembleFamilyTools` 五格 + depth-0 两格夹具断言 + `manifestReadTool.readonly === true` 断言 |
+| AC-R1 | **schema 窄化 + 只读位**：子代理五段各含恰一 `manifest`，`action` 枚举 = `["read"]`、无 `key` / `value`；`depth:0` 两模式仍为全量变体（三枚举）；只读变体 `readonly === true`——消费面四门逐门点名：`thincoder-core/agent/dispatch.mjs:61`（planMode 门 `!tool.readonly`）/ `:177`（审批门 `tool.readonly || …` ⇒ 免审批）/ `thincoder-core/agent/record-results.mjs:98`（变更记账 `!tool.readonly && …`）/ `thincoder-core/agent/helpers.mjs` 的 `readonlyToolNames`（只读角色过滤 `tools.filter((t) => t.readonly)`） | `assembleFamilyTools` 五格 + depth-0 两格夹具断言 + `manifestReadTool.readonly === true` 断言 |
 | AC-R2 | **写面机械不可达**：只读变体实调 `{action:"init"}` / `{action:"write"}` ⇒ 抛 `manifest read: refused — …`，盘 sha256 逐字节不变 | 直调 + sha256 前后对比 |
 | AC-R3 | **读面等价（三态逐字 + 两态 hint 分叉）**：`read` 的 `ok` / `invalid` / `workspace` 三态输出与全量变体逐字一致（同一 `readAction`）；`missing` / `no-project` 两态**仅 hint 行不同**——只读面该行零 `action=init` 字样（逐字见本块「`readAction` 的改动」两条），余行仍逐字一致 | 同一夹具双调 diff：三态全等断言 + 两态按行 diff（差异行集 = `{hint}`）+ hint 行断言 |
 | AC-R4 | **描述单源**：`manifestReadTool.description` 与描述档逐字节相等；主 agent 描述档首句零 `subagents can neither see nor write`，且明「子代理有只读变体」 | 源码面读判（DESC 解析）+ 字符串断言 |

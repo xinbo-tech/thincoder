@@ -269,7 +269,7 @@ Follow this declaration — do not infer the review target from the documents.
 **端差登记（三处：a / b 语义同源、可观察输出等价；c = 覆盖差异——登记 + 收敛方向）**：
 
 - **D-AD8a 注入通道**：核 = `pushReal`（`thincoder-core/context.mjs:184-194`，写机器线 + 人读线）。模型可见输出等价；核侧多写人读线（与 `async-settle.mjs:231` 先例同口径）。
-- **D-AD8b 转义范围**：核 = 仅转义插值（沿 `async-settle.mjs:244/259` 先例；`escapeXml` 源 = `thincoder-core/agent/helpers.mjs:121`）。文本骨架无 XML 特殊字符 ⇒ 输出等价。
+- **D-AD8b 转义范围**：核 = 仅转义插值（沿 `async-settle.mjs:244/259` 先例；`escapeXml` 源 = `thincoder-core/agent/helpers.mjs`）。文本骨架无 XML 特殊字符 ⇒ 输出等价。
 - **D-AD8c status 回显面（评审轮 1 #5）**：对侧丢弃 id 经 `subagent status` 回显 `discarded`（`thincoder-vscode/src/agent/tool-table.mjs:94-96` 墓碑回读）
   CLI 侧除 `depInfo`（`thincoder-core/agent-tools/subagent-scheduler.mjs:123`）外零墓碑读取调用点（grep 实核）⇒ 丢弃 id 在 CLI 状态面报 unknown。
   **取舍**：不触碰 `subagent-actions.mjs`（488 行——§6.20.8-3）——丢弃事实由整批提醒承载（模型可见面不缺）；**收敛方向 = 后续批**（status 墓碑回显）。
@@ -392,7 +392,7 @@ I1 → 集成用例（扩）。
 
 **投递形态（D-TW2）**：到期 ⇒ `history.push({ role: "user", content: "[System reminder: ⏰ timer — <message>]" })`——逐字 = 既有注入单源（`injectTimerReminders`）；机器线独有（`[System reminder:` 前缀不入 fullHistory / 页面投影——两端同判）。
 
-**消费入口（D-TW4）**：开一轮 **auto-turn 第三变体 `timerTurn`**——`runAgent` opts 增 `timerTurn`（与 `upstreamTurn` 同族，**仅作域文本选择**；域文本 = `TIMER_TURN_DOMAIN`（已落常量 · `thincoder-core/agent/helpers.mjs:459`））。
+**消费入口（D-TW4）**：开一轮 **auto-turn 第三变体 `timerTurn`**——`runAgent` opts 增 `timerTurn`（与 `upstreamTurn` 同族，**仅作域文本选择**；域文本 = `TIMER_TURN_DOMAIN`（已落常量 · `thincoder-core/agent/helpers.mjs`））。
 
 - **开轮两处**：空闲闩 fire ⇒ `runAgentTurn(ctx, "", { autoTurn: true, timerTurn: true })`（顶层链，`skipSession` 缺省——链尾全语义：队列续发 / 挂起入口 / attention 置位照常，**除外限定**：在途 timer ∧ 唤醒会武装 ⇒ 不计 awaiting——单源 = `docs/cli/design/TUI.md` §7.1 表 awaiting 行 / §7.2 置位谓词）；
   挂起窗内 ⇒ 同 digest 轮形态 `{ autoTurn: true, timerTurn: true, skipSession: true }`。

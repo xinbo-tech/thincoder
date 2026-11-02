@@ -182,9 +182,9 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 > 机制（记录形 ∥ 写缝 ∥ 读缝 ∥ 重建义务 ∥ 容差）单源 = `docs/core/design/SESSION.md` §6.26；需求 = `docs/cli/requirements/TUI.md` **F18**（node = core §4.4 F-S7）。本档 = **CLI 侧承接细则**：写点 ∥ 恢复重建 ∥ 翻页 ∥ 容差。
 
 - **写点（三处——进程内同点追加，核 `pushRecord(agent, record)` 单点）**：
-  - 痕起跑 ∥ 收尾 = `thincoder-cli/src/tui/suspension-drive.mjs` `digestTurn`：起跑（`:101` 两行同点）⇒ `{ kind:"digest", status:"start", n:pend0, tier:upstream?"ask":"digest", ...(ask ?? {}) }`；
-    收尾（`:116`）⇒ `{ kind:"digest", status:"end", ok:outcome==="ok", ms }`（`ms` 与行文案 `seconds` **同值单算式**——`(ms/1000).toFixed(1)`）。
-  - cap = `thincoder-cli/src/tui/agent-turn.mjs:233-235`（`cap-stop` 分支——`:235` 行同点）⇒ `{ kind:"digest", status:"cap", mode:"stop", turns:error.turn }`（CLI 现无 auto 档产者——读取面按契约前向兼容）。
+  - 痕起跑 ∥ 收尾 = `thincoder-cli/src/tui/suspension-drive.mjs` `digestTurn`：起跑（两行同点）⇒ `{ kind:"digest", status:"start", n:pend0, tier:upstream?"ask":"digest", ...(ask ?? {}) }`；
+    收尾⇒ `{ kind:"digest", status:"end", ok:outcome==="ok", ms }`（`ms` 与行文案 `seconds` **同值单算式**——`(ms/1000).toFixed(1)`）。
+  - cap = `thincoder-cli/src/tui/agent-turn.mjs`（`cap-stop` 分支——行同点）⇒ `{ kind:"digest", status:"cap", mode:"stop", turns:error.turn }`（CLI 现无 auto 档产者——读取面按契约前向兼容）。
   - 归档快照 = `thincoder-cli/src/tui/subagent-freeze.mjs` `freezeSubTaskLines`（冻结载体行插入同点）⇒ `{ kind:"subagent", meta, rows }`。
 
     `meta` 记冻结时点块头事实：`key`（写面归一 = 规范形 `sub:<role>#<id>`）∥ `role` ∥ `model` ∥ `startedAt`（= `sub.started`）∥ `doneAt` ∥ `turn` ∥ `maxTurns` ∥ `status` ∥ `pool?` ∥ `queued?`。
@@ -203,7 +203,23 @@ syncLineBudget(state, { pushLineLike, onTrim })      // state.lines 总量对账
 
     **停面词判据**：合成件 `stopped` = 记录 `status` 停止面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
     **错误面词判据**：合成件 `errored` = 记录 `status` 错误面词集（词面判据单源 = `docs/core/design/SESSION.md` §6.26——本档不复述）。
-  - 负控 = 记录缺 ⇒ 恢复面逐字等价；未绑（模式 F）⇒ 既有径零改（无 sidecar 存储侧——记录入人读线、落盘随既有保存链）。
+- 负控 = 记录缺 ⇒ 恢复面逐字等价；未绑（模式 F）⇒ 既有径零改（无 sidecar 存储侧——记录入人读线、落盘随既有保存链）。
+- **行首子标（跨端恢复）**：记录条目的 `sub` 在本端以**行首文本前缀**呈现——TUI 是纯文本行（渲染两端逐字消费 `b.text`，无 span 面），子标在行首、以 `<sub> · ` 起头。
+  - **合成点 = 读面** `synthSubTask`（`thincoder-cli/src/tui/lifecycle-records.mjs`）：条目带 `sub` ⇒ 行文 = 子标 + 分隔符 + 正文（即 `<sub> · <text>`）；不带 ⇒ 原样。渲染面零改——折叠尾 3 行（`thincoder-cli/src/tui/render-segments.mjs` `foldTailLines`）与展开体（同档 `renderBlockTimeline`）同点出形。
+  - **空正文行 = 两端同判丢弃**：条目 `text` 为空 ⇒ 不产行，与 `sub` 在场与否无关（与 VSC 派生面 `rowsOf` 同一谓词）——该态在活流不可达（核 `thincoder-render-core/flow/block.mjs` `appendAdvisorChunk` 空串早返），同一份记录两端行数同判。
+  - **写面不设该跳过**：CLI 写面 `rowsOf`（`thincoder-cli/src/tui/lifecycle-records.mjs`——`typeof b.text !== "string"` 之外不再过滤）不跳过空正文行——该态活流不可达，读面两端同判已足；加写面分支 = 给不可达输入修桥。写面写出一条两端都不显示的行不产生端差（两端都不显示），只留一条没人走的路径。
+  - **三端同一件事**：同一 `sub` 字面（记录字段，不派生）· 同一位置（行首）· 同一分隔符（` · `，U+00B7 前后各一空格——即 VSC ∥ 桌面 `span.advisor-sub` 的同一串）⇒ 同一份记录在 VSC ∥ 桌面（DOM span）与 CLI（文本前缀）读出同一行全文 `explore#1 · read — src/x.mjs`；差别只在承载，不在内容。
+  - **写面不变**：CLI 活流 `sub.blocks` 行不带 `sub`（逐行身份由块载体承载——顶层的在冻结头 `<key>`，嵌套子代各占自己载体）⇒ CLI 自产快照恒为无 `sub` 形。
+  - **存量容读**：条目无 `sub` ⇒ 零前缀、`text` 原样（存量 VSC 快照字面烙在 `text` 内）⇒ 恢复后逐字不变；零迁移 ∥ 零版本标记。
+
+  **用例（本档编号域 `T-S`；机判 = 本批单元用例件，与批档同名同址、收口删）**：
+
+  | # | 场景 | 输入 | 期望 |
+  |---|---|---|---|
+  | T-S1 | 正常：新形记录 ⇒ 前缀在场 | `rows:[{kind:"tool", text:"read — src/x.mjs", sub:"explore#1"}]` | 合成件 `blocks[0].text` = `explore#1 · read — src/x.mjs`（**修前红**：前缀缺席） |
+  | T-S2 | 边界：父自己的行（负控） | 同条去 `sub` | `blocks[0].text` 与记录 `text` 逐字等、零前缀 |
+  | T-S3 | 边界：存量记录容读 | `rows:[{kind:"tool", text:"explore#1 · read — src/x.mjs"}]` | `blocks[0].text` 逐字不变（子标恰一份，不双份） |
+  
 - **翻页**：数据源零改（`store.page`——记录已在存储、随页自然可见）；「N more earlier messages」与「N messages」口径含记录（与桌面 KD-55 ⑤ 同口径容忍）。
 - **容差（CLI 侧状态）**：① 跨页分裂 = **消**（上「`n` 解析」）；② 归档快照晚一拍 = **消**（产生面 = 进程内冻结点，先于回合落盘 ∥ 读径 = 存储直读——追加即达）；③ 复活径双记录（墓碑复活 ⇒ 同键两代冻结 ⇒ 重建面双块 ∥ 活流单块）——**在册**（低频异常修复径 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）。
-- **验收回指**：F18 判定句（重启 ∥ `/session` 重建含痕行族 + 冻结载体 ∥ 负控）；机检用例 ∥ 真机项 = 收口轮（含痕行族重建 ∥ 冻结载体 ∥ 负控）。
+- **验收回指**：F18 判定句（重启 ∥ `/session` 重建含痕行族 + 冻结载体 ∥ 负控）；机检用例 ∥ 真机项 = 收口轮（含痕行族重建 ∥ 冻结载体 ∥ 负控）；跨端行首子标 = 上「行首子标」条用例表 T-S1–T-S3（机检 = 本批单元用例件）。

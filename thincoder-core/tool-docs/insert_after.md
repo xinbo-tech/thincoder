@@ -11,5 +11,5 @@ Notes:
 - Use this instead of edit when you're adding a new line — a checklist item, a doc heading, a line of prose, a function, an import, or a block — no need to fabricate surrounding context for exact matching.
 - The inserted content becomes its own line; it's equivalent to `lines.splice(targetLine, 0, content)`.
 - Returns a diff of the change.
-- **Read-before-insert guard**: if the file was modified by any write tool (write/edit/insert_after/hashline_edit/apply_patch/delete) since your last `read`, this tool REFUSES with an error — line numbers may be stale. Read the file again, then retry. This prevents after_line from silently landing at a drifted position.
+- **Read-before-insert guard**: `after_line` is judged against the last write to that file — a line at or above that write's write point is allowed; inside or below it, or when the file was written after it without updating that anchor, the call is refused with the path, the drift and two ways on (re-read, or address the region without line numbers).
 - use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed

@@ -29,6 +29,8 @@ import { noteActivityBirth, clearActivityNew } from "./activity-new.js"
 import { refreshBlock } from "./activity-view.js"
 import { subBlocksReduce, subBlocksFreezeAll, ensureSubBlock } from "../node_modules/@thincoder/render-core/subblocks/state.mjs"
 import { renderSubBlock, initBlockFollow, maybeScrollBlock } from "../node_modules/@thincoder/render-core/subblocks/block.mjs"
+// 行派生叶件（`rowsOf` ∥ `rowLines` ∥ `boundRows`）——快照行的唯一派生点，本档不另写一份（D2）
+import { boundRows, rowsOf } from "./record-rows.js"
 
 // streaming.js import 面不变（noteChunk 定义在核叶——hub re-export）
 export { noteChunk } from "./activity-view.js"
@@ -127,47 +129,8 @@ function archiveBlock(block, atBoundary = false) {
 // ─── #726 留档记录出站（协议 §3.2 行 22 `recordAppend`）───────────────
 // 归档派生点同点构建快照 ⇒ webview → host（宿主处理体取活行载体经核 `pushRecord` 追加）。形 ∥ 判据单源 =
 // `docs/core/design/SESSION.md` §6.26（记录两族形 / rows 有界保尾）；VSC 承接细则 = `WEBVIEW.md` §5.7。
-
-/** rows 保尾上界（核契约§6.26「有界保尾」——显示行 ≤ 500；省略标记行不占额度）。 */
-const RECORD_ROWS_MAX_LINES = 500
-
-/** 行显示行数（核 `countBlockLines` 同式：按 `\n` 切分、文末换行不计）。 */
-function rowLines(row) {
-  const lines = String(row?.text ?? "").split("\n")
-  return lines[lines.length - 1] === "" ? lines.length - 1 : lines.length
-}
-
-/** 内容行集（`.advisor-content` 行文本派生——`{kind,text}` 形核契约）：工具行 kind="tool"（重放回工具行）；
- *  其余取 `dataset.kind`（text ∥ think——缺省回落 "text"）。 */
-function rowsOf(block) {
-  const content = block.querySelector(".advisor-content")
-  const out = []
-  for (const el of content ? [...content.children] : []) {
-    const text = String(el.textContent ?? "")
-    if (text === "") continue // 活流零空行（`appendAdvisorChunk` 空串早返）——防御面
-    const kind = el.classList.contains("advisor-tool-line") ? "tool"
-      : (typeof el.dataset?.kind === "string" && el.dataset.kind) ? el.dataset.kind : "text"
-    out.push({ kind, text })
-  }
-  return out
-}
-
-/** rows 保尾（弃最旧 ⇒ 前置省略标记行；标记自身不占额度；单行超界 ⇒ 行 = 最小单元，保末行）。 */
-function boundRows(rows) {
-  let total = 0
-  let start = rows.length
-  for (let i = rows.length - 1; i >= 0; i -= 1) {
-    const n = rowLines(rows[i])
-    if (total + n > RECORD_ROWS_MAX_LINES) break
-    total += n
-    start = i
-  }
-  if (start === rows.length && rows.length > 0) start = rows.length - 1 // 单行超界：保末行
-  if (start === 0) return rows // 未超界（零写）
-  let dropped = 0
-  for (let i = 0; i < start; i += 1) dropped += rowLines(rows[i])
-  return [{ kind: "meta", text: `… [rows truncated: ${dropped} lines omitted]` }, ...rows.slice(start)]
-}
+// 行派生（`rowsOf` ∥ `boundRows`——行形 `{kind, text, sub?}`）住叶件 `record-rows.js`：
+// 本档只留快照 `meta` 面与出站（触 `_subMeta` ∥ `ctx`），派生零副本。
 
 /** 归档时点快照（`meta` = 块头事实——核契约已知字段子集：key ∥ role ∥ model? ∥ startedAt? ∥ doneAt? ∥
  *  turn? ∥ maxTurns? ∥ status? ∥ pool? ∥ queued? ∥ note? ∥ error?；`rows` = 块内容行集，保尾同上界）。 */

@@ -407,7 +407,7 @@ turnStart 回扫判定（跨页一致）。发送清洗（`sendHistoryPage`）�
 user 前）→ time 注入（恒为该轮最后一条，位置契约由测试独立锁定）**。
 
 git 富注入（GIT-ASYNC L21——双端异步化）：`collectGitContext` / `pushGitContext` → async + 失败冷却 30s（端 `thincoder-vscode/src/agent/setup-reminders.mjs:115` `pushGitContext` ·
-核 `thincoder-core/agent/helpers.mjs:221` `collectGitContext`——采集 / 冷却随核单源）——确认序契约不变（git 仍在重放后、time 恒为最后一条）；all-or-nothing 保持。
+核 `thincoder-core/agent/helpers.mjs` `collectGitContext`——采集 / 冷却随核单源）——确认序契约不变（git 仍在重放后、time 恒为最后一条）；all-or-nothing 保持。
 
 ### 6.16 会话认领释放与拒绝零副作用
 
@@ -1038,7 +1038,11 @@ VSC = 同批（触发支 `thincoder-vscode/src/extension/panel-messages.mjs` 选
   - ① `digest`（三型——与 `ev:digest` 帧三形一一映射，零新语义）：`{ kind: "digest", status: "start" | "cap" | "end", n?, tier?, from?, msg?, mode?, turns?, ok?, ms?, ts }`——`start`：`n` = 起跑待消化数（可 0）· `tier` ∈ `ask` ∥ `digest`；
   `tier === "ask"` 携 `from`（提问者 `role#id`）∥ `msg`（问题摘要）；`cap`：`mode` ∈ `stop` ∥ `auto` · `turns`；`end`：`ok` · `ms`。
   - ② `subagent`（归档快照——一块一条）：`{ kind: "subagent", meta, rows, ts }`——`meta` = 归档时点**块头事实**（对象；消费面按已知字段读：`key` ∥ `role` ∥ `model?` ∥ `startedAt?` ∥ `doneAt?` ∥ `turn?` ∥ `maxTurns?` ∥ `status?` ∥ `pool?` ∥ `queued?` ∥ `note?` ∥ `error?`；未知字段原样携带）；
-    `rows` = 内容行集 `Array<{ kind: string, text: string }>`（未知 `kind` 消费面按文本行——**跨端退化在册**：`kind` 为开放词表、各端自有行模型取值（VSC = `.advisor-content` 行派生），读他端写的快照时未命中本端行模型 ⇒ 按文本行呈现（零丢失；在册行为，不钉最小词表））；**有界保尾** = 显示行 ≤ **500**（超界弃最旧 ⇒ 前置省略标记行 `… [rows truncated: N lines omitted]`——N = 实弃显示行数、标记自身不占额度；单行超界保末行）。
+    `rows` = 内容行集 `Array<{ kind: string, text: string, sub?: string }>`（`sub` = 该行所属子代的行首子标，如 `explore#1`；呈现形 = 行首一个 dim `span` + ` · ` 分隔，而 `text` **不含**该字面——两处都写会双份。缺省 ⇒ 无 span、`text` 原样，呈现与未引入该字段前逐字一致）。
+
+    **跨端退化在册**（未知 `kind` 消费面按文本行）：`kind` 为开放词表、各端自有行模型取值（VSC = `.advisor-content` 行派生），读他端写的快照时未命中本端行模型 ⇒ 按文本行呈现（零丢失；在册行为，不钉最小词表）。
+
+    **有界保尾** = 显示行 ≤ **500**（超界弃最旧 ⇒ 前置省略标记行 `… [rows truncated: N lines omitted]`——N = 实弃显示行数、标记自身不占额度；单行超界保末行）。
     - **字段增补**：`pool?: boolean` = spawn 模式事实（`true` = async 池 spawn ∥ `false` = sync 已启动确证；
       缺省 ∥ `null` = 未知（未启动等）——重建头模式词段在场性判据 = `pool != null`）；`queued?: boolean` = 冻结时**未启动**（排队中；缺省 = 非排队）。
       命名映射：CLI 本地 `async` ⇄ 记录 `pool`（同真值；`async` 不设独立字段——双载体会破单源）。

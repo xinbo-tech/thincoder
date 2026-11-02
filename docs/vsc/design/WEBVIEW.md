@@ -38,7 +38,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 
 ## 3. 文件结构（现行）
 
-`index.html`（shell——CSP 注入 + CSS/JS URI 占位）→ 前端模块（`thincoder-vscode/webview/`，**49 档模块**（`.js` / `.mjs`；CSS 5 档 + `index.html` shell 另列））：
+`index.html`（shell——CSP 注入 + CSS/JS URI 占位）→ 前端模块（`thincoder-vscode/webview/`，**52 档模块**（`.js` / `.mjs`；CSS 5 档 + `index.html` shell 另列））：
 
 | 模块 | 职责 |
 |---|---|
@@ -50,6 +50,7 @@ grid-template-rows: auto minmax(0, 1fr) auto auto auto;
 | `md.js` | markdown 渲染（核单源 = `thincoder-render-core/md.mjs`——`md()` `:67` · 内联引擎 `inline()` `:34`；契约见 `WEBVIEW-INPUT.md`） |
 | `state.js` | 单一 UI 状态 `S`（`:71`）+ DOM 引用 `ctx`（`:19`）+ `vscode` 桥 |
 | `activity.js` | 活动块编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `subblocks/state.mjs` + `subblocks/channel.mjs`；本档 = DOM 效果执行 + 出生位 / 归档入流——`:65` / `:104`）+ 块级跟滚**调用点**（原语 = 核 `thincoder-render-core/subblocks/block.mjs`——§5.5） |
+| `record-rows.js` | 归档快照**行派生叶件**（`rowsOf` ∥ `rowLines` ∥ `boundRows` ∥ `RECORD_ROWS_MAX_LINES`——行形 `{kind, text, sub?}`；零依赖、零浏览器全局，只吃元素对象）——原 `activity.js` 同一份实现迁出，消费面 = `subagentSnapshotOf`；行形 ∥ 容读 ∥ 空行判据单源 = §5.7 |
 | `activity-view.js` | 呈现叶（R2 迁核：实现单源 = 核 `subblocks/activity-view.mjs`——`refreshBlock` `:132` · `updateStopButton` `:166`（件内）· `noteChunk` `:200` · `tailLines` `:117`；本端档 = 2 行 `export *` shim）——leaf：i18n only |
 | `panels.js` | goal/task 行面板（构树 + 显隐判据单源 = 核 `thincoder-render-core/cards/panel.mjs`——R2 换接）+ 挂起态 + 桥路由（`handleSubagentMessage` 纯转发 `applySubagentStatus`）；`_panelTimer`（1s）同点刷 live 块头（`panels.js:55-58`） |
 | `send.js` / `loading.js` | 输入门（核 `thincoder-render-core/composer/panel.mjs`——busy 拒发 `:301-324`；本端 `send.js:10-12` 转口）/ 忙态与按钮可见性（核 `thincoder-render-core/composer/panel.mjs:434-435`；本端 `loading.js` 转口） |
@@ -380,7 +381,7 @@ extension 端对应：`chat-panel.mjs`（面板生命周期/消息路由）· `p
   核 `flow/block.mjs` **167** 行（`appendLineText` 行首子标）· 核 `subblocks/state.mjs` **334** 行（`:177` 条件化 + 注文随改）· 端档 `webview/activity-view.js`（2 行 shim）零改 ·
   `docs/render-core/design/RENDER-CORE.md`（机制单源 = 其 §2 **KD-RC-15**）· 本档规则块 + 用例行 + 登记面行；
 
-用例 = **T-A33 ∥ T-A38 ∥ T-A41–T-A45**（用例号 N1–N5 ∥ S1–S3；载体 = VSC 测试树，清单单源 `test/files.mjs`——单元用例件收口即删，本档不落具体档名）。
+用例 = **T-A33 ∥ T-A38 ∥ T-A41–T-A45**（用例号 N1–N5 ∥ S1–S3；单元用例件 = 批次本地件（名随批档、住批档目录，收口前删净；清单状态见 §5.7 用例首段）——本档不落具体档名）。
 - **queued**：`[⏳ key · queued|waiting]` + 排队信息——**与 CLI 逐档一致**（标尺 = `thincoder-cli/src/tui/subagent-panel.mjs:73` 状态词 / `:100-102` 状态区）。
   slot（`kind: "slot"`）→ `排队中 · 位置 N（槽满等位）`；wait / depc（`kind` ≠ slot）→ **host detail 原文**（`waiting for: …` / `dependency cancelled: …`——零改写）。
 
@@ -647,23 +648,62 @@ CLI 存活判据读池实体（`livePoolHas`），端侧**无池** ⇒ 存活凭
 > **本端不绑记录存储**（记录走槽 JSON 投影——`docs/core/design/SESSION.md` §6.14 兼容红线逐字保持：sidecar 对本端可见面零暴露；全量绑定 = 窗口驱逐伤本端全量人读线 + 保存面重构，超批不取）。
 
 - **写面（两产生面）**：
-  - digest 三型 = **宿主同点追加**（与发帧**同点双动作 = 与 `postMessage` 同行**——核 `pushRecord`）：`start`/`end` = `thincoder-vscode/src/extension/suspension.mjs:197/:225`（锚 = 与 `postMessage` 同行）；`cap` = `postDigestCap`（`panel-callbacks.mjs:88` 发射行——定义 `:87`；全调用面同收）。
+  - digest 三型 = **宿主同点追加**（与发帧**同点双动作 = 与 `postMessage` 同行**——核 `pushRecord`）：`start`/`end` = `thincoder-vscode/src/extension/suspension.mjs` 的 `pushRecord` 调用点（起跑 ∥ 收尾各一处，锚 = 与 `postMessage` 同行）；`cap` = `panel-callbacks.mjs` `postDigestCap`（全调用面同收）。
   - subagent 快照 = **webview 归档派生点出站**（`webview/activity.js` `archiveBlock` 同点——幂等守卫内，每块恰一次）：
     构建 `{kind:"subagent", meta, rows}`（`meta` = 块头事实（已知字段子集——核契约字段；`pool` boolean 在场即写 ∥ `queued === true` 时写；`key` = 块键已规范形 `sub:<role>#<id>`，零改）；
 
-`rows` = 块内容行集（`.advisor-content` 行文本派生，`{kind,text}` 形——保尾上界同核契约））
+`rows` = 块内容行集（`.advisor-content` 行派生，`{kind, text, sub?}` 形——保尾上界同核契约））
     ⇒ `vscode.postMessage({type:"recordAppend", record})`（协议登记 = `WEBVIEW-PROTOCOL.md` §3.2 行 22；§13 行已落）；
 
     宿主 `panel-messages.mjs` 分派 ⇒ 处理体取**当前会话活行载体人读线数组**（`(panel._liveLines ?? panel._susp?.lines).fullHistory`——`saveLines` 所写 `history` 槽字段之源）经核 `pushRecord` 追加（入参映射钉定 = core §6.26 产生面条；fail-soft——载体缺位 ⇒ 零动作 + 日志）。
-- **读面**：`panel-session.mjs:152/:179` 两处 `historyWindow(…, { records: true })`（opt-in——页尺核常量）⇒ `historyPage.messages` 随携记录（`sendHistoryPage` 清洗面零改——记录过清洗原样）。
+- **行形：子标随行（结构不落正文字面）**——`rows` 条目 = `{ kind, text, sub? }`。`sub` = 该行的嵌套身份（行首子标字面，如 `explore#1` ∥ `advisor#1/explore#2`）；`text` = **行正文**，子标字面不在其中。
+
+  **勘察源**：查过 `docs/`（本仓文档权威面）、仓根 `test/RTM.md` 与本端用例清单 `thincoder-vscode/test/files.mjs`；工作树内无独立文档仓，故公开源档面无外部对象可查——本条依据只有端内三处实读（桌面 ∥ 核 ∥ 本端，见下「对齐依据」）。
+
+  **派生点** = `webview/record-rows.js` `rowsOf`（叶件、零依赖——原 `activity.js` 的 `rowsOf` 同一份实现迁出，禁第二份派生）：读行元素的 `dataset.sub`（写点 = 核 `thincoder-render-core/flow/block.mjs` `appendAdvisorChunk` 的工具行支 ∥ 文本/思考行支）与正文文本节点，**行首 `span.advisor-sub` 不入 `text`**——带字面回放会得 `explore#1 · explore#1 · read — …` 双份。
+
+  **空正文行 = 两端同判丢弃**：跳过判据 = `text` 为空，与 `sub` 在场与否无关——`text` 只装行正文，行文全空的行在任何一端都不产行。该态在活流不可达（核 `thincoder-render-core/flow/block.mjs` `appendAdvisorChunk` 的 `if (!str) return` ⇒ 行元素必有非空正文）⇒ 两端同一谓词即足；派生面（`rowsOf`）与回放面（核件早返）两处同判，CLI 读面同谓词（承接 = `docs/cli/design/TUI-SESSION-VIEW.md` §6）。
+
+  **对齐依据（桌面现行形，逐字实读）**：`thincoder-desktop/renderer/subagent-reduce.mjs` 的 `SUBCHUNK_KEYS = ["kind", "text", "sub", "tool", "face", "cmd"]` ⇒ `subchunkOf` 白名单投影成行对象 ⇒ 快照 `rows` 原样带 `sub`。
+  桌面无 DOM（行即载荷投影），本端行由 DOM 派生 ⇒ 补同一字段名，零新名。
+
+  **回放 = 同一核件**：核 `thincoder-render-core/subblocks/block.mjs` `renderSubagentChunk` ⇒ `appendAdvisorChunk(block, kind, m?.text, m?.sub, m)`；
+  桌面经协议根 `/rc/` 直映射同件、本端经 `webview/record-restore.js` 的 `renderSubagentChunk` 逐条回放 ⇒ 同一行形两端同行，端侧零新增回放逻辑。
+
+  **容读（存量快照）**：条目无 `sub` ⇒ 按无子标行呈现（`span.advisor-sub` 零个、`text` 原样）。存量 VSC 快照的子标已烙在 `text` 内 ⇒ 呈现逐字不变——零迁移 ∥ 零回填 ∥ 零版本标记。
+
+**反向（CLI 读面）——同一份记录，同一件事**：CLI 读面 `synthSubTask`（`thincoder-cli/src/tui/lifecycle-records.mjs`）把条目合成行——`sub` 在场 ⇒ 行首文本前缀 `<sub> · `（与本节 span **同一串**：同字面、同位置、同分隔符）；`sub` 缺席 ⇒ `text` 原样。⇒ 同一份归档快照在 VSC ∥ 桌面（DOM span）与 CLI（纯文本行）读出同一行全文；差别只在承载，不在内容。CLI 承接细则 = `docs/cli/design/TUI-SESSION-VIEW.md` §6。
+
+**跨端不设容差**：恢复面的子标承载三端同串同位置，故本变更不在跨端恢复面登记任何容差——判据是「三个端读同一条记录，看到同一件事」。
+
+**两端跳过谓词必须逐字同形**（`text === ""`，不读 `sub`）：派生面 = `thincoder-vscode/webview/record-rows.js` 的 `rowsOf`，读面 = `synthSubTask`（`thincoder-cli/src/tui/lifecycle-records.mjs`）；改任一处必须同轮改另一处，交付评审逐字比对。
+
+  **不取其三字段**：`tool` ∥ `face` ∥ `cmd` 不入本端行形。`cmd` 只进状态词、不入行元素（`flow/block.mjs` 的 `appendAdvisorChunk` 工具行支只写 `dataset.face` / `dataset.tool`），本端派生面取不到；
+  且回放分行已由 DOM 行粒度固化（每元素 = 一条 `rows`，live 合并发生在写行时）⇒ 三字段不参与本端回放形态。跨端读他端快照时三字段原样携带、本端不消费。
+- **读面**：`panel-session.mjs` 两处 `historyWindow(…, { records: true })`（opt-in——页尺核常量）⇒ `historyPage.messages` 随携记录（`sendHistoryPage` 清洗面零改——记录过清洗原样）。
 - **重建**（`webview/history.js` 页级 pass + 重建件（`webview/record-restore.js`）；元素携 `data-idx`（位次锚——分页游标 ∥ 防双渲染））：
-  - `digest` 记录 ⇒ 痕元素：`start` ⇒ `.digest-turn` 标签（tier 两档逐字——ask 携 `from`/`msg`）+ `n>0` ⇒ `.digest-status`（`dataset.n`）；`cap` ⇒ `.digest-cap`（**按记录 `mode` 分档**：`auto` dim ∥ `stop` warn——本端现无 auto 产者（`panel-callbacks.mjs:87` 定义 · 单调用点 `panel-turn-loop.mjs:252`）；读取面按契约前向兼容）；
+  - `digest` 记录 ⇒ 痕元素：`start` ⇒ `.digest-turn` 标签（tier 两档逐字——ask 携 `from`/`msg`）+ `n>0` ⇒ `.digest-status`（`dataset.n`）；`cap` ⇒ `.digest-cap`（**按记录 `mode` 分档**：`auto` dim ∥ `stop` warn——本端现无 auto 产者（`postDigestCap` 定义 · 单调用点 `panel-turn-loop.mjs`）；读取面按契约前向兼容）；
     `end` ⇒ **追加终态元素**（`.digest-status` + `digest-done` ∕ `digest-failed`——构形件化后**与 live 同调**（`webview/chat-status.js`——单一实现零副本）；零就地换文）。
     **复列 = 全量**（记录序 ≡ 恢复序——**轮锚 = 起跑记录**：起跑 ∥ `n > 0` 计数 ∥ cap 元素随轮出；终态元素需 `n`（同页起跑）；**未结轮照现**——可证面 = 轮间 ∥ 末页；起跑未载的 `cap` ∥ `end` 记录零产——容差①）。
   - `subagent` 记录 ⇒ 归档块元素 = **活形同构**（核 `subblocks` 原语直消费 + `rows` 回放 + 冻结节 + tail-3）+ 落点镜式（**记录位次原位（零配对）**——重建径；与 live `archiveBlock` 到达序**两径并存为设计**——对位桌面「归档块 = 普通块——记录位次原位出」）。
   - 负控 = 记录缺 ⇒ 恢复面逐字等价；未归档块（live / 在飞）**不重建**（I-7 收窄——池内块非记录对象）。
 - **容差（本端状态）**：① 跨页分裂 = **不可证面零产**（起跑未载的 `cap` ∥ `end` 记录不入 ∥ 非末页尾残起跑不入——与桌面同构；页 200 条低频 ∥ 数据零损；重开条件 = 实测走查命中 ⇒ 另批）；② 归档快照落盘晚一拍（出站异步 ⇒ 记录随**下一次** `saveLines` 落槽；「重载可见性 = 至最后一次落盘」）。
-- **验收回指**：F-W1 判定句 + I-7 收窄负控 + 单元测试档用例；真机 = 面板重开 ∥ reload（父侧走查）。
+- **验收回指**：F-W1 判定句 + I-7 收窄负控 + 本节用例表 T-A46–T-A49；真机 = 面板重开 ∥ reload（父侧走查）；集成面 = `test/RTM.md` VSC 端故事 1（行 1-1 ∥ 1-2）——父侧收口跑。
+
+**用例（行形——机判驱动 = 核件建块 + 核件回放；DOM 底座 = happy-dom 真 DOM，按下述相对路径导入）**：
+
+**DOM 底座与导入形（按路径可达性定，不是环境态）**：本批单元用例件住批档目录（`docs/batches/`），Node 的裸说明符解析自该目录只走 `docs/batches/node_modules` → `docs/node_modules` → 仓根 `node_modules`，**到不了 `thincoder-vscode/node_modules`** ⇒ 一律以相对路径导入（happy-dom ∥ `@thincoder/render-core` 两处）。
+
+happy-dom 已装在该目录（`thincoder-vscode/package.json` devDep，实测在盘 = 20.11.2）——与 VSC 测试树同一个 DOM 底座，本档不再有第二套桩 DOM。
+
+**导入顺序**：`document` 就位后再 `await import()` 被测件（核 `subblocks/block.mjs` ∥ `webview/record-rows.js`）；被测叶件零浏览器全局依赖（`record-rows.js` 只吃元素对象），import 面到此为止。具体入口（`Window` ∥ 注册器）以首次真跑为准——「修前红」那一次实跑即凭。
+
+| # | 场景 | 输入 / 触发 | 期望（可断言） |
+|---|---|---|---|
+| T-A46 | 正常：嵌套行快照带 `sub` | 真块（核 `renderSubBlock` + `renderSubagentChunk`）喂 `sub:"explore#1"` 两行：工具行 `text:"read — src/x.mjs"`、文本行 `text:"looking into it"` → 取快照 | `rows` 两条各含 `sub:"explore#1"`；`text` 分别为 `read — src/x.mjs` ∥ `looking into it`，均不含 `explore#1 · `（**修前红**：`sub` 缺席、字面在 `text`） |
+| T-A47 | 正常：同一行形两端同一行 | 把 T-A46 的 `rows` 原地喂新块（`renderSubagentChunk`——桌面取同件） | 两行各渲 `span.advisor-sub` 恰 1 个、子标文本 = `explore#1 · `；工具行全文 = `explore#1 · read — src/x.mjs`、文本行全文 = `explore#1 · looking into it`——各与 live 行逐字等 |
+| T-A48 | 边界：父自己的行（负控） | 同载荷去 `sub` | 快照条目无 `sub` 键；回放零 `span.advisor-sub`、`text` 逐字 |
+| T-A49 | 边界：存量快照容读 | 手写条目 `{kind:"tool", text:"explore#1 · read — src/x.mjs"}` 回放 | 零 `span.advisor-sub`、行全文逐字不变（子标留正文——呈现与修前同） |
 
 ### 5.8 阅读位保护与视图偏好
 
@@ -744,6 +784,7 @@ tail 行数消费缝 = 核 `configureActivityView({ tailLines })`——**缺省�
 | D-W43 | **think 不改写已有状态词**，**唯一例外 = 状态词还空 ∧ 有子标**（`meta.stateWord == null` ∧ `m.sub` 非空 ⇒ `<sub>/<think 词>`）；text 零改写；`toolOutput` 零改写（唯一例外 = 顾问名支，D-W45）；顶层 think 恒零写入 ⇒ 缺省支 = 裸 think 词、零前缀（F-W23 ②） |
 | D-W44 | **行首子标** = 嵌套身份的主承载（`sub` 在场 ⇒ 行首 `span.advisor-sub` 渲 `<sub> · `；无 `sub` ⇒ 纯文本）；块头只写父的身份（父子两实体不同行——用户 2026-09-07 裁定）；`toolOutput` 同工具同 `sub` 续写只渲一份子标（N1–N5） |
 | D-W45 | **`started` 清状态词 = `queued → running` 那一次**（核 `subblocks/state.mjs:177` `if (block.queued) block.stateWord = null`）；心跳重发的 `started` 不再清——清空的语义只在「排队标注要撤掉」时成立，否则标题每 ~2 s 闪回裸词（用户 2026-10-21 18:01；S1） |
+| D-W46 | **归档快照行形带 `sub`**（`rows` 条目 = `{kind, text, sub?}`）：子标是结构，`text` 只装行正文——对齐桌面既有形（`SUBCHUNK_KEYS` 含 `sub`）；派生点 = 本端 `rowsOf` 读 `dataset.sub` + 剥 `span.advisor-sub`；回放走同一核件 ⇒ 两端同行。**不取**「子标不进快照、改由块头携带」：块头是父的身份（D-W44），而一个块内多行分属不同子代（`advisor#1` ∥ `advisor#1/explore#2`）⇒ 块头无处安放逐行身份。**`text` 空的行两端同判丢弃**（与 `sub` 在场无关）——该态活流不可达，两端同一谓词 ⇒ 行数同判 |
 
 ## 8. UI / 交互决策落档
 
@@ -773,6 +814,7 @@ tail 行数消费缝 = 核 `configureActivityView({ tailLines })`——**缺省�
 | U-W22 | 嵌套子代理的每条活动行行首有 dim 子标 `<sub> · `；块头仍只写父；合并续写只渲一份子标 | 已定（§5.6 · D-W44 · N1–N5） |
 | U-W23 | 顾问评审跑着时状态词显示 `advisor`（嵌套 = `<sub>/advisor`）——只写名字，评审正文仍只进块体 | 已定（§5.2 · D-W43 · S2） |
 | U-W24 | 心跳重发 `started` 不闪回裸词；状态词只在 `queued → running` 清一次 | 已定（§5.2 · D-W45 · S1） |
+| U-W25 | 归档块重开 ∥ reload 后，嵌套子代理行的行首子标仍是 dim 子标（`explore#1 · `），不退化成正文；父自己的行无子标；存量快照呈现逐字不变 | 已定（§5.7 · D-W46） |
 
 ## 10. 验收与需求回指
 
@@ -794,7 +836,7 @@ tail 行数消费缝 = 核 `configureActivityView({ tailLines })`——**缺省�
 | 14 | 状态行 context 段单口径（M2） | 段位对位表 = `WEBVIEW-PROTOCOL.md` §6.1——本档不重述，D2 |
 | 15 | 块头注记与 ⏹ 门控扩支 · digest 两档（X6 · X10 · X11 · M4） | F-A4 · F-W7 |
 | 16 | 内容行合并粒度（CLI `pushBlock` 对齐 · 协议字段 `face` · RAW 拼接 + `pre-wrap` · 工具结果行面删净） | F-W1 · N-W5 |
-| 17 | 消化面记录恢复（痕元素 ∥ 归档块——记录承接 ∥ `recordAppend` 出站 ∥ 页级重建 ∥ 容差二态） | F-W1 · I-7 · core §4.4 F-S7 |
+| 17 | 消化面记录恢复（痕元素 ∥ 归档块——记录承接 ∥ `recordAppend` 出站 ∥ 页级重建 ∥ 容差二态 ∥ **行形带 `sub`**（子标为结构、回放同核件、存量容读）） | F-W1 · I-7 · core §4.4 F-S7 |
 | 18 | 首启板两路（两卡 ∥ 零预选 ∥ 同屏换取 ∥ 回退保真 ∥ 「以后再说」第三态 ∥ 提交链复用零新协议） | F-W20 |
 | 19 | 团队常显与直达（状态栏 item 三态 ∥ 命令 `thincoder.team` 登/退流 ∥ 校验触发点制 ∥ 卡降管理面） | F-W21 |
 | 20 | 子代理块面四处读者可见行为：① 嵌套身份挂行首（块头 = 父 · 行首 = 子 · 续写一份子标）② think 不改写已有状态词（唯一例外 = 状态词空 ∧ 有子标 ⇒ `<sub>/<think 词>`）③ 顾问评审只写名字（`<sub>/advisor`，正文只进块体）④ `started` 只在 `queued → running` 清状态词（心跳不闪回）；横切 = 两刷新路径同值 · 桌面 + VSC 同源 · CLI 零改 | F-W23 |

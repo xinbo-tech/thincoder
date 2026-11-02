@@ -7,8 +7,8 @@
  *  - 收口四道判据 + 重锚回执三行 → `batch-closeout.mjs`（§2.6 / §2.11）；
  *  - 重开写盘 + 台账回收 → `batch-reopen.mjs`（§2.13）。
  *
- * 判定字面全部单源自 batch-skeleton.mjs（SEGMENT_BY_ROLE / STATUS_WORDS / STATUS_LINE_RE /
- * readBatchStatusLine / sectionHeaderRe / updateSectionStatusLine / batchSkeleton / TEMPLATE_PLACEHOLDERS /
+ * 判定字面全部单源自 batch-skeleton.mjs（SEGMENT_BY_ROLE / STATUS_WORDS /
+ * readBatchStatusLine / sectionHasStatusLine / updateSectionStatusLine / batchSkeleton / TEMPLATE_PLACEHOLDERS /
  * findPlaceholderResidue / placeholderResidueError）；路径解析单源（`resolveBatchDocPath` / `batchDocBases` /
  * `resolveBatchCreatePath`——住 `batch-paths.mjs`）与 #84 记账缝住 batch.mjs 主档——本档不回 import 主档（防环）。
  *
@@ -36,8 +36,8 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "
 import { dirname, relative, resolve } from "node:path"
 
 import {
-  DEPTH0_SEGMENTS, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, STATUS_LINE_RE, STATUS_WORDS, TEMPLATE_PLACEHOLDERS,
-  findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, sectionHasStatusLine, sectionHeaderRe,
+  DEPTH0_SEGMENTS, SEGMENT_BY_ROLE, SEGMENT_BY_ROLE_NORMAL, STATUS_WORDS, TEMPLATE_PLACEHOLDERS,
+  findPlaceholderResidue, placeholderResidueError, readBatchStatusLine, sectionHasStatusLine,
   updateSectionStatusLine,
 } from "./batch-skeleton.mjs"
 import { assertCloseoutGates, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
@@ -113,14 +113,16 @@ export function findInFlightBatch(cwd, bases) {
 }
 
 /** 冻结门（§4.9——append/status 同门；close 视为写同样过门）：closed/unknown 的错误串与
- *  append 面同字面（「已收口档不回改」/「状态行不可解析或缺失」）。 */
+ *  append 面同字面（「已收口档不回改」/「状态行不可解析或缺失」）。
+ *  unknown 串多两句：段级状态行的取值区已收窄到 §1 **段头区**，行落在区外（段体 / 轮次块）就读不成值
+ *  ——拒文点名这条终态与唯一出路（把行移进段头区），否则被卡住的人在界面上无路可走（设计档 §5 R26）。 */
 function assertGateOpen(src) {
   const gate = readBatchStatusLine(src)
   if (gate === "closed") {
     throw new Error("batch: 已收口档不回改 — the record's §1 status line contains 「已收口」, so the record is frozen: its body is never written to again (整档冻结；改 = 新批新档). Nothing was written.")
   }
   if (gate === "unknown") {
-    throw new Error("batch: 状态行不可解析或缺失 — the record has no §1 `**状态行**：` line whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
+    throw new Error("batch: 状态行不可解析或缺失 — the record has no §1 `**状态行**：` line inside the section header zone whose value contains 已收口 or 进行中 (fail-closed: the write is refused as if frozen). If the record does carry such a line further down — in a round block or in the section body — move it up under `## §1`: a status line outside the header zone is never read. Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close).")
   }
 }
 

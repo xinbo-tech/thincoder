@@ -386,7 +386,7 @@ while (…) { sweepSettledToPending(agent)
 **② 语义面**（回合类型与域文本）
 
 - 唤醒轮 = **auto 轮类**（父侧无用户在场）：manual 档照既有 D-S6 纪律（不 spawn / 不改文件 / 不提问）；AUTO 档无域提醒（既有）。
-  **与既有 digest 域文本的冲突（必须处置）**：`AUTO_TURN_DIGEST_DOMAIN`（`thincoder-core/agent/helpers.mjs:436-437`；VSC 侧注入点 = 端侧组合 `thincoder-vscode/src/agent/turn-domains.mjs`）写「**No one is waiting for this reply**, so organize only」——**对 ask 轮恰相反**（子代理正在等答复）
+  **与既有 digest 域文本的冲突（必须处置）**：`AUTO_TURN_DIGEST_DOMAIN`（`thincoder-core/agent/helpers.mjs`；VSC 侧注入点 = 端侧组合 `thincoder-vscode/src/agent/turn-domains.mjs`）写「**No one is waiting for this reply**, so organize only」——**对 ask 轮恰相反**（子代理正在等答复）
   ⇒ 唤醒轮**不得**沿用 digest 域文本，须有自己的域文本（逐字建议 = §6.27.12.8；
 
 **内容依据 = 机制文档，落笔 = eng-coder**，本档只出文本——同 §6.27.8 先例）。选择点 = `thincoder-core/agent/run-start.mjs:97-101`（manual 档域提醒注入点）邻位：`upstreamTurn` 优先、否则 `autoTurn`。
@@ -632,7 +632,7 @@ spawning subagents, asking questions — those need a real user message. End the
 | U10 | VSC 零回归：`cd thincoder-vscode && npm test` 全绿（单元 + 集成两清单；启动自检含无漏登记反查） | 不变量 ⑤ |
 | U11 | 端壳静态闭包不破：`node --test` 端侧单元测试档（W8 契约②判据；单元测试树重建时回迁）全绿（`node:sqlite` 不入静态链） | 不变量 ① / ⑤ |
 | U12 | 端侧结构机检（ASCII 令牌，单行 `node -e`；四查 + 一否定）：`node -e "const fs=require('fs');const f=(p,s)=>{if(!fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' missing: '+s)};const g=(p,s)=>{if(fs.readFileSync(p,'utf8').includes(s))throw new Error(p+' must not contain: '+s)};f('thincoder-vscode/src/agent.mjs','drainChildUpstream(agent)');f('thincoder-vscode/src/extension/suspension.mjs','upstreamWaiting(');f('thincoder-vscode/src/agent/turn-domains.mjs','composeTurnDomain');f('thincoder-vscode/src/agent.mjs','composeTurnDomain(');g('thincoder-vscode/src/agent/turn-domains.mjs','[System reminder: auto-turn')"`（在 `thincoder` 根跑；末项 = 核单源守护——新档零核基座文本字面） | 条目 7 / 9 |
-| U13 | 行宽门（N-P3 硬限）：`find /c /v "" thincoder-vscode\src\agent.mjs` ≤ 800（预测 ~487）；报告行数口径 = `wc -l`（≡ `find /c /v ""` 实测） | 拆分计划已落地（行 21） |
+| U13 | 行数门（N-P3 硬限）：`find /c /v "" thincoder-vscode\src\agent.mjs` ≤ 800（预测 ~487）；报告行数口径 = `wc -l`（≡ `find /c /v ""` 实测） | 拆分计划已落地（行 21） |
 
 #### 6.27.12.11 边界（不做）
 
@@ -881,7 +881,7 @@ export function upstreamAskLabelVars(carrier) {
     写侧单源 = `thincoder-core/agent-tools/advisor-settle.mjs:45`（`noteMutations`）；
 
 唯一调用点 = `thincoder-core/agent/dispatch-gates.mjs:145-151`（`noteExecutedMutation`），呼点 = `thincoder-core/agent/dispatch-run.mjs:82` ∥ `:137`（门 = 结果非 `Error:` 前缀）。
-    工具集 = `FILE_MUTATORS` 六件（`thincoder-core/agent/helpers.mjs:86`）。
+    工具集 = `FILE_MUTATORS` 六件（`thincoder-core/agent/helpers.mjs`）。
 
 
 ▸ **判据物选择**：`_touchedFiles` 是**去重路径集**（同一文件重复编辑每轮都计「零落笔」⇒ 误杀在产出的子代理）⇒ 采集点改读写序。

@@ -22,7 +22,8 @@ to locate relevant symbols. Ground the plan in real paths, not guesses.
 1. What you already know from the provided information
 2. Which open questions would benefit from an explore subagent's investigation (the parent can dispatch one)
 3. Your plan—preliminary if questions remain, final if context is sufficient
-- Ground the plan in reality: cite real file paths and line numbers, name actual functions and modules — an invented architecture sends the implementer to build something that does not exist.
+- Ground the plan in reality: cite real file paths and the exact words you read there, name actual functions and modules — an invented architecture sends the implementer to build something that does not exist.
+- **Never a line number**: one line inserted above **shifts every position below it** — every citing file must be recomputed, and the implementer follows it onto the wrong thing without knowing.
 - Make steps concrete and verifiable: each step specific enough to check, ordered so dependencies come first.
 - Identify edge cases and failure modes in the plan. What boundary conditions does the implementation need to handle?
 Each step that encounters a risk must specify its fallback — not "handle error", but the concrete recovery path.

@@ -88,6 +88,10 @@ Judge the **change face** before acting — different faces, different authoriza
    - **Public-source survey (design precondition)**: before starting design, survey the **public source docs inside the working directory tree** (independent doc repos above all).
      What was checked / whether anything was relevant ⇒ a **survey-evidence line** in the design doc; a "none relevant" outcome is recorded too.
      Why: nothing pushes the design seat toward the docs and no generic discipline fires on its own, so the obligation has to be written down — with the line on disk, design stops being blind.
+   - **Data-fact check (design precondition)**: list the claims the design makes about the data facts — how many rows, whether a field is filled, which values an enum takes today.
+     One of them that cannot be settled true or false from code and docs alone ⇒ read the data first (one query, or a few real rows), and put what you saw on the record.
+     Every claim settled by code and docs ⇒ write "no claim needs data" — the answer is a line, never silence.
+     Why: a judgment made before the data was read is the expensive kind of wrong — read the rows and the whole target judgment changes, with the design already written.
    - Design = a check on requirements — wherever the design resists being written, the requirements were not clear (ask back); inventing an implementation hides the requirement gap inside code.
    - **Requirement-gap stop chain**: exploration finds requirements that fail to hold up / conflict with implementation / have unclear ownership → **stop and bounce back to the main agent** — picking one interpretation yourself and writing on lands semantics nobody ruled on.
    - **Routing**: a requirement-doc change → the main agent; a design-doc change → eng-designer (revisions included); a batch-record change → the main agent, which also verifies the design draft and fires reviews.
@@ -323,8 +327,9 @@ Each doc category has one landing route, and the doc system is maintained by dis
 6. **D6 read-back check** — after any write, **read back and verify** before reporting done (silent write failures and edit-swallowed-headers have both been proven real).
 7. **D7 settlement sync** — every batch settlement runs a fixed **settlement sync checklist**:
    - the role table / status line / counts / pointers / todo check-offs;
-   - **§2 ↔ design-doc reconciliation** — every criterion or count §2 cites still matches the owning design-doc section.
-     A mismatch is closed by an appended §2 correction, or recorded in §6; judging closeout by a stale §2 is what turns a correct implementation red.
+    - **§2 ↔ design-doc reconciliation** — every criterion or count §2 cites still matches the owning design-doc section — a mismatch is corrected in place with `batch({action:"edit", segment:"§2", oldText, newText})`,
+      or recorded in §6; judging closeout by a stale §2 is what turns a correct implementation red; **§2 ↔ §5 reconciliation** — a criterion §2 has changed still matches what §5 records as implemented;
+      matched = a clarification that stands; mismatched = a difference recorded in §6, never closed by editing §2 again.
    - **prior-batch leftover cross-check** — entry done, its anchor batch unclosed ⇒ the **fallback settlement path**.
    - **fix-round landing precondition** — a correction round after implementation must have landed and been verified before close.
    - **shelved-list re-check** — every registered ∥ shelved item: realized ∥ move it to a new batch.

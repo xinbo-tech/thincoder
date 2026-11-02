@@ -2,7 +2,7 @@
  * ssh-session.mjs — SSH 会话面单点（池 ∥ 生命周期 ∥ 动作 ∥ 凭据窗 ∥ 非密预填）。
  * 设计 = `docs/core/design/TOOLS.md` §6.22（D-TO17/D-TO18 · 台账 #1436）；需求 = `docs/core/requirements/TOOLS.md` §4.8。
  * 工具面 = `tools/ssh.mjs`（薄接线）；传输面 = `agent-tools/ssh-transport.mjs`（askpass 链 / 沉降 / 遮蔽 / 帽
- * ——拆档由 = 机制档触 500 顾问线，§6.22 落点表「实施轮先审拆分」）。
+ * ——拆档由 = 机制档触 500 软线，§6.22 落点表「实施轮先审拆分」）。
  *
  * - 池：`_sshSessions`（照 `bash-async.mjs` 池先例——载体经 `carrierField` 吸收）；帽 `SSH_SESSION_MAX = 4`
  *   条存活会话；超限**显式拒**（零静默关旧）。
@@ -484,5 +484,5 @@ export { SSH_SETTLE_MS, SSH_TIMEOUT_MS, SSH_RETURN_CAP }
 export { _setSshBinaryForTest, _setSshConfigDirForTest } from "./ssh-transport.mjs"
 
 // 保存凭据管理面（§6.22 ⑫）：`credentials` / `forget` 实体 = `ssh-vault.mjs`（核单点——本档只转口；
-// 拆档由 = 机制档触 500 顾问线，§6.22 落点表候选拆分）。
+// 拆档由 = 机制档触 500 软线，§6.22 落点表候选拆分）。
 export { credentialsSsh, forgetSsh } from "./ssh-vault.mjs"

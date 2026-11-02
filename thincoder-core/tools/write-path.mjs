@@ -34,9 +34,9 @@ export function markDirty(abs) { dirtyPaths.add(abs) }
 export function clearDirty(abs) { dirtyPaths.delete(abs) }
 export function isDirty(abs) { return dirtyPaths.has(abs) }
 
-// 写入工具记录受影响行范围——insert_after 精确判定：after_line 在未受影响区
-// （< lastWrite.startLine）→ 行号未漂移 → 允许；受影响区内 → 拒绝（护栏保留）；
-// write 全文重写 → 全文件受影响，任何 after_line 拒绝。
+// 写入工具记录受影响行范围（受影响区 = 从 startLine 起、净漂移 shift 行）——行号锚护栏
+// 的数据源：目标区整体在受影响区之前 → 行号未漂移 → 允许；区内或其下 → 拒；
+// write 全文重写 → 全文件受影响，任何行号都拒。判据本体 = 下方 `lineAnchorVerdict`。
 const lastWrites = new Map() // abs → { type: 'write'|'edit'|'insert', startLine, shift }
 export function recordWrite(abs, write) {
   lastWrites.set(abs, write)
@@ -73,6 +73,67 @@ export function resetWritePath() { injected = null }
 /** 脏缓冲拒写文案（**端中立**——与宿主侧现措辞同句；S2 接线后用户可见文案由本条统一）。 */
 export const dirtyRefusalMessage = (abs) =>
   `File has unsaved changes in the editor: ${abs}. Save or discard before allowing automated edits.`
+
+// ────────────────────────────────────────
+// 行号锚护栏（edit 行号形 ∥ insert_after 共用的唯一判据）
+// ────────────────────────────────────────
+/**
+ * 判据（六行按序判）：放行 ⇒ `null`；拒绝 ⇒ 命中行的实况
+ * `{ row, type?, startLine?, shift? }`（row = §7.1 的行号 1–6）。
+ *
+ * @param {string} abs 目标绝对路径（记账键）
+ * @param {number|null} startLine 目标区首行；`null` = 调用方没有行号目标（正则定位形）
+ * @param {number|null} endLine 目标区末行（单行形与 startLine 同值）
+ */
+export function lineAnchorVerdict(abs, startLine, endLine) {
+  const lw = lastWrites.get(abs)
+  const dirty = dirtyPaths.has(abs)
+  if (!lw) return dirty ? { row: 6 } : null // 行 1 放行 / 行 6 拒
+  if (dirty) return { row: 2, type: lw.type, startLine: lw.startLine, shift: lw.shift }
+  // 行 3–5 判的是「模型给的行号」，没有行号目标就无从判——只判到记账态这一层
+  if (startLine == null) return null
+  if (lw.type === "write") return { row: 3, type: "write" }
+  // 「整体在之前」的边界按记账类型分：替换要读也写目标行（`<`），插入只落在两行之间（`<=`）
+  const last = endLine ?? startLine
+  const untouched = lw.type === "insert" ? last <= lw.startLine : last < lw.startLine
+  if (untouched) return null // 行 4 放行
+  return { row: 5, type: lw.type, startLine: lw.startLine, shift: lw.shift }
+}
+
+/** 第 1 / 3 / 5 行的首句之后共用的三要素（两条下一步 + 第二条路的成立条件）。 */
+const LINE_ANCHOR_NEXT_STEPS =
+  `Editing by the old numbers would land on the wrong lines and still report success.\n` +
+  `Two ways on:\n` +
+  `  1. read this file again and retry with the new line numbers;\n` +
+  `  2. address the region without line numbers — pass its current content as old_string, or use hashline_edit,\n` +
+  `     which needs old_hashes from a read with hashes=true and is only valid while that block's content is unchanged.`
+
+/**
+ * 拒文（单点构造——edit 行号形与 insert_after 同句；四要素固定：路径与漂移事实 / 重 read /
+ * 改走位置无关寻址 / 那条路的成立条件）。事实取自 `lineAnchorVerdict`，不另算一份。
+ *
+ * 第 2 行（脏 ∧ 陈旧快照）与第 6 行（无快照但脏）报不出「上次写入点 + 漂移量」——首句改成
+ * 说清这两个数不可得，其余三要素不变（照填一个不可信的数字等于把它重新递给模型）。
+ */
+export function lineAnchorRefusal(abs, startLine, endLine) {
+  const hit = lineAnchorVerdict(abs, startLine, endLine)
+  if (!hit) {
+    throw new Error("lineAnchorRefusal: the call passes the line-anchor criterion — no refusal to build")
+  }
+  const range = startLine == null ? null : endLine == null || startLine === endLine ? `L${startLine}` : `L${startLine}-L${endLine}`
+  const head = hit.row === 2
+    ? `${abs} — these line numbers are stale, and the drift cannot be measured: a write in this session changed\n` +
+      `this file after the recorded write point, so neither that line nor an offset from it can be trusted.`
+    : hit.row === 6
+      ? `${abs} — this file was modified since your last read; line numbers may be stale, and there is no recorded\n` +
+        `write point to check them against.`
+      : hit.row === 3
+        ? `${abs} — these line numbers are stale: this file was rewritten in full by a write since your last read,\n` +
+          `so no line number from that read can still be trusted.`
+        : `${abs} — these line numbers are stale: the last write to this file was at L${hit.startLine}\n` +
+          `(line numbers are now offset by ${hit.shift >= 0 ? "+" : ""}${hit.shift}), and the target range ${range} falls inside or below it.`
+  return `${head}\n${LINE_ANCHOR_NEXT_STEPS}`
+}
 
 /**
  * 门禁单点（src 面与 dest 面共用——每面各问一次 `openDoc`）：

@@ -59,7 +59,8 @@ webview/chat.js
 webview/state.js     UI 状态单一持有（S + DOM ctx + vscode——全模块共享同一运行时对象——WEBVIEW.md）
 webview/streaming.js  token/reasoning 流式渲染（rAF 节流——帧驱动单源 = 核 `@thincoder/render-core/flow/stream.mjs`；端注 `ctx` / `S` 指针与回合尾装配）+ 回合收尾 + 活动块路由（块出生即活动区 `#subagent-activity` 区尾——activity.js——subagentChunk 空安全守卫）
 webview/panels.js    侧面板：task progress / goal + 挂起态 + 桥路由（行面板已撤——簿记 map 已删——handleSubagentMessage 纯转发——活动块生命周期在 activity.js）
-webview/activity.js   编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `@thincoder/render-core/subblocks/state.mjs` + `subblocks/channel.mjs`）：DOM 效果执行（按序逐条——`key → DOM` 即时解析）+ 出生位 / 说明行 / 归档入流 / 区复位 / 块级跟滚 / 头词定时刷新——导出消费面 panels/chat/streaming（noteChunk 经此 re-export）——`../docs/vsc/design/WEBVIEW.md` §5.1
+webview/activity.js   编排层（R2 换接：迁移判据 / 键文法 / 补桩表单源 = 核 `@thincoder/render-core/subblocks/state.mjs` + `subblocks/channel.mjs`）：DOM 效果执行（按序逐条——`key → DOM` 即时解析）+ 出生位 / 说明行 / 归档入流 / 区复位 / 块级跟滚 / 头词定时刷新——导出消费面 panels/chat/streaming（noteChunk 经此 re-export；快照 `rows` 的行派生已迁 `webview/record-rows.js`）——`../docs/vsc/design/WEBVIEW.md` §5.1
+webview/record-rows.js   归档快照行派生叶件（rowsOf / rowLines / boundRows——行形 {kind, text, sub?}；零依赖、零浏览器全局，只吃元素对象）——消费面 = activity.js subagentSnapshotOf；行形单源 = `../docs/vsc/design/WEBVIEW.md` §5.7
 webview/activity-view.js   2 行再导出 shim → 核 `@thincoder/render-core/subblocks/activity-view.mjs`（块头 / 状态词 / 折叠 tail / ⏹ 与取消控件——refreshBlock / noteChunk 实现单源 = 核件）——`../docs/vsc/design/WEBVIEW.md` §5.2
 webview/activity-new.js    未钉底期新块出生未读计数钮（建/更/删 + 点击回底 + resetActivity 同清——`../docs/vsc/design/WEBVIEW.md` §5.5 D-W27）
 webview/activity-diag.js   诊断痕迹面（七 kind + 环载体 SUB_TRACE_MAX=50 + `panelDiag` 批内合并上行——`../docs/vsc/design/WEBVIEW.md` §5.3 D-W22；2026-09-19 批自 activity.js/state.js 迁出）

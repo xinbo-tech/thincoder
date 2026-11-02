@@ -1,6 +1,6 @@
 Run an independent review of your work. `type` is REQUIRED — one of exactly two values, no default and no silent fallback.
 
-- `type="design"` — design review: reviews design / requirement documents BEFORE implementation. Pass `documents=[...]` (the explicit list), plus `batchDoc` when a batch record is in flight.
+- `type="design"` — design review: reviews design / requirement documents BEFORE implementation. Pass `documents=[...]` and `batchDoc` — the batch record this review belongs to. **`batchDoc` is required**: a design review without it is refused before launch, because the token it would mint has no batch to close it.
 - `type="code"` — code review: reviews the code you changed AFTER implementation. Pass `paths=[...]` to scope files/directories; `documents=[...]` adds acceptance-criteria context.
 
 `documents` — one rule: a relative path resolves against the session project root (e.g. `docs/<area>/<name>.md`); an absolute path is used as-is.

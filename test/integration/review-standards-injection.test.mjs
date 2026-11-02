@@ -6,7 +6,12 @@
  * 用户看到的是评审上下文里那一段——断言面 = 发给模型的评审消息（`## Project Standards` 段），不是内部函数返回值。
  * 组件间交互 = 项目数据档 `docRoot.standards` → `readManifest` → `injectProjectStandards` → 评审消息组装面。
  * 模型侧 = `node:http` 本机假 OpenAI SSE 端点（回一段固定文本）+ 请求体留档；零外网、零付费端点。
- * 夹具 = 系统临时域（项目根 + 数据档 + 设计档 + 六段批档；零落真实用户目录）。
+ * 夹具 = 系统临时域（项目根 + 数据档 + 设计档 + 六段批档 + 临时台账库目录；零落真实用户目录）。
+ *
+ * **拒因优先级事实（2026-11-02 账链门落地）**：类型门 → 准入门（设计评审必携 `batchDoc`）→ 账链门（批档须挂
+ * 未决台账行）→ 文档范围 → 点火。本档三例都携 `batchDoc` ⇒ 过前两门后落在账链门，而原来的夹具没有台账
+ * ⇒ 会被 `batchdoc-no-ledger` 拒、一次模型请求也发不出。处置 = 夹具种一行 `在途` 账并让台账库落临时目录；
+ * **三例断言逐字不变**。
  *
  * 复跑：`node --test test/integration/review-standards-injection.test.mjs`
  */
@@ -15,11 +20,13 @@ import assert from "node:assert/strict"
 import { createServer } from "node:http"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
-import { dirname, join, resolve } from "node:path"
+import { dirname, join, relative, resolve } from "node:path"
 
 import { advisorTool } from "../../thincoder-core/agent-tools/advisor.mjs"
 import { injectProjectStandards, NO_STANDARDS_NOTICE } from "../../thincoder-core/advisor/project-context.mjs"
 import { providerSpec } from "../../thincoder-core/model-specs.mjs"
+// 台账模块静态链入 `node:sqlite`（W8 契约）——消费侧一律动态取（先例 `test/integration/batch-close-token-consume.test.mjs`）。
+const { _resetLedgerDirForTest, _setLedgerDirForTest, ledgerAdd, ledgerUpdate } = await import("../../thincoder-core/ledger.mjs")
 
 const DESIGN_REL = "docs/core/design/DESIGN-FIXTURE.md"
 const BATCH_REL = "docs/batches/fixture.md"
@@ -82,7 +89,22 @@ function fakeProvider(text = "No findings — clean pass.") {
 }
 
 const roots = []
-after(() => { for (const p of roots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 }) })
+// 台账缝：账链门要读台账——夹具的账种在临时目录，不碰真实用户目录。
+const ledgerDir = mkdtempSync(join(tmpdir(), "rsi-ledger-"))
+_setLedgerDirForTest(ledgerDir)
+after(() => {
+  _resetLedgerDirForTest()
+  for (const p of roots) rmSync(p, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+  rmSync(ledgerDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 50 })
+})
+
+/** 种一行指着夹具批档的未决台账行（**只走写面，不直写 SQL**——`在途` 必挂 `task_book` 的 CHECK 是被测前提的一半）：
+ *  `ledgerAdd` 落 `待讨论`（它自己开库）→ `ledgerUpdate` 迁 `在途` + 写仓根相对指针。 */
+function seedPendingRow(root) {
+  const rel = relative(root, join(root, BATCH_REL)).replace(/\\/g, "/")
+  const id = ledgerAdd({ cwd: root, row: { kind: "tech_todo", title: "夹具批 · 标准档声明口" }, boundary: root })
+  ledgerUpdate({ cwd: root, id, patch: { status: "在途", task_book: rel }, boundary: root })
+}
 
 /** 夹具项目根：数据档 + 设计档 + 批档 + 一份在盘的标准档（声明与否由各格自己写数据档决定）。 */
 function fixture(tag) {
@@ -116,6 +138,7 @@ function writeManifest(root, standards) {
 let seq = 0
 /** 一次设计评审（工程模式 + `batchDoc` 绑定）：返回评审消息全文（模型收到的请求体）与工具回执。 */
 async function designReview(t, root) {
+  seedPendingRow(root) // 账链门前提：本档挂着一行未决账（数据档写完才种——根解析要项目声明档）
   const endpoint = await fakeProvider()
   t.after(() => endpoint.close())
   const entry = { name: "fake", baseURL: `http://127.0.0.1:${endpoint.port}`, apiKey: "test-key" }

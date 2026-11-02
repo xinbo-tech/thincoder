@@ -1,4 +1,4 @@
-Search file contents with a regex. Returns matching lines as path:line: content.
+Search file contents with a regex. Returns matching lines, each preceded by its file path and line number.
 
 **Route to grep instead of bash:** `findstr /c:"pat" file` / `grep -rn pat .` → grep. Searching file contents is a read — never shell out for it.
 

@@ -194,14 +194,14 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 **与 §2.3 的关系（半句划界）**：§2.3「无账之笔 = 不成立」是**纪律面判据**（该不该这么干）；本件处理的是该判据**已被违反之后**的一次回执提醒（兜底面）——不改判据，也不把违规常态化为允许。
 
-**问题坐标**：规则挂在「决定走轻通道」那一刻（`thincoder-core/prompts/persona-engineering.md:233` 启动即挂账 ∥ 账在笔先），实际动作是「看到 bug 就改」——两个时刻之间不经过入口。本件把提示点挪到「手放到笔上」的那一刻：笔落下的同一份回执里出现一行通道确认。
+**问题坐标**：规则挂在「决定走轻通道」那一刻（`thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Start-up booking`（启动即挂账 ∥ 账在笔先）），实际动作是「看到 bug 就改」——两个时刻之间不经过入口。本件把提示点挪到「手放到笔上」的那一刻：笔落下的同一份回执里出现一行通道确认。
 
 **触发面（四合取 + 一闩，全中才提示）**：
 
 | # | 合取项 | 判据 | 依据 |
 |---|---|---|---|
 | ① | 身份 = 主 agent | `agent._role == null`（`thincoder-core/agent.mjs:52-59` 建 agent 时 `_role: role`；主会话装配 `thincoder-core/agent/assemble.mjs:106` 不传 role，各子代理 spawn 面传角色） | 子代理写有各自 `_batchDoc` 绑定，不属本提醒对象（任务书边界） |
-| ② | 工具 = 笔集 | `PEN_TOOLS` = `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs:86`）**减** `delete`——现存五支 `{write, edit, insert_after, apply_patch, hashline_edit}` | 既有集合单源复用（减式派生——不另起第二份硬编码清单）；`delete` 不入集——删产品源文件需 `force`，是显式动作，本批无场景（K20） |
+| ② | 工具 = 笔集 | `PEN_TOOLS` = `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs`）**减** `delete`——现存五支 `{write, edit, insert_after, apply_patch, hashline_edit}` | 既有集合单源复用（减式派生——不另起第二份硬编码清单）；`delete` 不入集——删产品源文件需 `force`，是显式动作，本批无场景（K20） |
 | ③ | 执行成功 | 工具结果 `ok === true` | 被拒的笔没有落盘，提醒无对象 |
 | ④ | 目标 = 产品源文件 | 逐目标 `resolve(cwd, p)` → `declarationForTarget(abs)` → `isCodePath(abs, conv)`（分类器单源 `thincoder-core/conventions.mjs:162`；与父侧门 `thincoder-core/agent/dispatch.mjs:111-118` 同式） | 文档 ∥ 批档 ∥ `.thincoder/tmp/` ∥ aux（test/scripts）不触发——这些面本就不需轮账 |
 | 闩 | 每会话一次 | `agent._unbookedPenNotified` 置位后不再判（不按轮、不按文件） | 用户裁定 B（2026-10-24）：每会话首次笔提示一次 |
@@ -209,7 +209,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 **新名三问（逐名一行——existing ∥ none found ∥ existing but unusable）**：
 
-- `PEN_TOOLS`：`existing: thincoder-core/agent/helpers.mjs:86` · `name: "FILE_MUTATORS"`（6 支 = 本集 + `delete`）· `consumers: thincoder-core/agent/record-results.mjs:87` ∥ `:162`。取 **existing but unusable（整集）**：`delete` 对本提醒是不该触发的成员（须 `force`、显式动作，本批无场景）⇒ 集形 = `FILE_MUTATORS` 减 `delete`，减式派生而非第二份清单。
+- `PEN_TOOLS`：`existing: thincoder-core/agent/helpers.mjs` · `name: "FILE_MUTATORS"`（6 支 = 本集 + `delete`）· `consumers: thincoder-core/agent/record-results.mjs:87` ∥ `:162`。取 **existing but unusable（整集）**：`delete` 对本提醒是不该触发的成员（须 `force`、显式动作，本批无场景）⇒ 集形 = `FILE_MUTATORS` 减 `delete`，减式派生而非第二份清单。
 - `_unbookedPenNotified`：**none found**——查过实例面既有闩（`_mutatedThisRun` ∥ `_calledAdvisorThisRun` ∥ `_verifiedThisRun`，`thincoder-core/agent/record-results.mjs:94-97`；`_zeroWriteAlerted`，`thincoder-core/agent-tools/zero-write-watch.mjs:48`）。
   全部是「本轮 / 单次运行」语义，无「每会话一次提示」闩 ⇒ 新名字沿用同前缀形，住在 agent 实例（`thincoder-core/agent.mjs:59`）。
 - `unbookedPenText()`：**none found**——最近形 = `zeroWriteAlertText` ∥ `advisorAlertText`（`thincoder-core/agent-tools/zero-write-watch.mjs:24` ∥ `:29`，纯函数 + 标量入参）；名字对齐该形，无现成「无账之笔」文案件可引。标签 `[pen check]` 同形对齐 `[zero-write watchdog]`（同档 `:25`）。
@@ -229,11 +229,11 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 第 4 参 `tool` = 工具对象（`thincoder-core/agent/record-results.mjs:55` 已按名取好），是触发面的**必需项**：
 
-目标提取走单源谓词 `toolTouchPaths(tool, args)`（`thincoder-core/agent/helpers.mjs:104`），其钩子面 `touchedPaths(args)`（`thincoder-core/agent/helpers.mjs:106`）才是 `apply_patch` 真 diff 解析（`thincoder-core/tools/patch.mjs:183`）与批量 `edit` 多目标（`thincoder-core/tools/file.mjs:252`）的目标来源。
+目标提取走单源谓词 `toolTouchPaths(tool, args)`（`thincoder-core/agent/helpers.mjs`），其钩子面 `touchedPaths(args)`（同档）才是 `apply_patch` 真 diff 解析（`thincoder-core/tools/patch.mjs:183`）与批量 `edit` 多目标（`thincoder-core/tools/file.mjs:252`）的目标来源。
 
-无钩子工具按单参 `path` 兜底（`thincoder-core/agent/helpers.mjs:109`）；缺 `tool` ⇒ 判定直接返空串（`thincoder-core/agent/unbooked-pen.mjs:42`），`apply_patch` ∥ 批量 `edit` 永不触发。
+无钩子工具按单参 `path` 兜底（`thincoder-core/agent/helpers.mjs` 的 `toolTouchPaths` 其余工具单参兜底支）；缺 `tool` ⇒ 判定直接返空串（`thincoder-core/agent/unbooked-pen.mjs:42`），`apply_patch` ∥ 批量 `edit` 永不触发。
 
-该叶 import 四条（`thincoder-core/agent/unbooked-pen.mjs:11-14`）：`resolve`（`node:path`）∥ `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs:86`）+ `toolTouchPaths`（`thincoder-core/agent/helpers.mjs:104`）。
+该叶 import 四条（`thincoder-core/agent/unbooked-pen.mjs:11-14`）：`resolve`（`node:path`）∥ `FILE_MUTATORS`（`thincoder-core/agent/helpers.mjs`）+ `toolTouchPaths`（同档）。
 
 另两条：`declarationForTarget`（`thincoder-core/declaration.mjs:367`）∥ `isCodePath`（`thincoder-core/conventions.mjs:162`，分类两步同表 ④ 行）。
 **只被 `record-results.mjs` import**（叶不向回引——无环）。
@@ -297,7 +297,7 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 | # | 回指 | 判法 / 读数 |
 |---|---|---|
-| A1 | 需求 §4 ②、§2.2 判定句 | 实施后两档逐档 `grep -c "disclose-then-go"` = 0、`grep -c "hit one of the three ⇒ walk"` = 0；`persona-engineering.md` 含 `both routes on the same line` 恰 1、`choice question` = 4（落笔块内三处 + `:228` 指代句一处）、`No pick ⇒ nothing moves` 恰 1、`a recommendation is not a default` 恰 1；四处旧指代串各 = 0（persona：`the disclosure's "this pen = light channel"` ∥ `per-pen entries in §1 (disclosure`；discipline：`(the disclosure carries "revertable"` ∥ `(per-pen entries: disclosure`）；`discipline-engineering.md` 的 `disclos` 全档 = 0；`persona-engineering.md` 的 `disclos` 余 2 行 3 处（`:44` 交付缩减面 ∥ `:347` 文件域声明面——轻通道块内 = 0）；**面界断言**：`grep -c "the design docs ∥ the requirement docs"` 同档 = 1（落笔后例外句三面齐；= 0 ⇒ 需求档面漏，即本轮补的那一面） |
+| A1 | 需求 §4 ②、§2.2 判定句 | 实施后两档逐档 `grep -c "disclose-then-go"` = 0、`grep -c "hit one of the three ⇒ walk"` = 0；`persona-engineering.md` 含 `both routes on the same line` 恰 1、`choice question` = 4（落笔块内三处 + 同档指代句一处）、`No pick ⇒ nothing moves` 恰 1、`a recommendation is not a default` 恰 1；四处旧指代串各 = 0（persona：`the disclosure's "this pen = light channel"` ∥ `per-pen entries in §1 (disclosure`；discipline：`(the disclosure carries "revertable"` ∥ `(per-pen entries: disclosure`）；`discipline-engineering.md` 的 `disclos` 全档 = 0；`persona-engineering.md` 的 `disclos` 余 2 行 3 处（交付缩减面 ∥ 文件域声明面——轻通道块内 = 0）；**面界断言**：`grep -c "the design docs ∥ the requirement docs"` 同档 = 1（落笔后例外句三面齐；= 0 ⇒ 需求档面漏，即本轮补的那一面） |
 | A2 | 需求 §2.1 边界句 | `grep -c "the user can overrule" thincoder-core/prompts/discipline-engineering.md` = 0；同档 `straight through` = 0、`⇒ walk` = 0（同捕 `:97` 首句与 `:102` 路由语）、`walks this channel` = 0、含 `nothing moves before the pick` 恰 1、含 `put it up as a choice` 恰 1、含 `a defect ⇒ goes up as item 2` 恰 1 |
 | A3 | 需求 §1 模块目标 | `grep -n -e "交底即行" -e "用户可改判" docs/core/design/LIGHT-CHANNEL.md` 的命中行集 = 仅本行（两串 = 本行的扫描字面）；其余任何一行命中 ⇒ 红。另一维：§2.1 行使面 ∥ §2.2 皆述「未选定即不动」（实读核对） |
 
@@ -314,7 +314,9 @@ The same marker is also the settlement gate credential: settling the row (close 
 
 **先例行**：同机制同落点 = 本档 §3 落点表（`thincoder-core/prompts/persona-engineering.md` 「派发与收尾纪律」节内——同一清单行，本批只换句法：交底句 → 选择题句）；逐字锚交实施席落笔之形 = 本档 §2.8「提示词面」条。**对齐**。**偏离 = 无**。
 
-**勘察行**：查过 `docs/core/requirements/LIGHT-CHANNEL.md`（§1 / §2.1 边界句 / §2.2 / §4 ②——本席本轮实读）∥ `thincoder-core/prompts/persona-engineering.md:211-228` ∥ `thincoder-core/prompts/discipline-engineering.md:97-118` ∥ `docs/core/design/PROMPT-SYSTEM.md:361`；`index.publicRepos: []`（无公开源仓）⇒ 无相关公开文档。
+**勘察行**：查过 `docs/core/requirements/LIGHT-CHANNEL.md`（§1 / §2.1 边界句 / §2.2 / §4 ②——本席本轮实读）∥ `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline（本轮实读全节）∥ `thincoder-core/prompts/discipline-engineering.md:97-118` ∥ `docs/core/design/PROMPT-SYSTEM.md:361`；
+
+`index.publicRepos: []`（无公开源仓）⇒ 无相关公开文档。
 
 **UI / 交互决策**：无界面面——本批只改模型可见提示词文本与设计档。
 

@@ -9,8 +9,8 @@
  *    链完整性门（§2/§3/§4/§6 各有内容 ∥ §1 声明不适用——既有四条零改）→ **`§3` 状态词臂**（= `评审通过`，
  *    或 `§1` 声明 §3 不适用）→ 本批批内单测档门（`TESTING.md` §3.5）→ 文档机检门（`DOC-DISCIPLINE.md` §3.20）。
  * ② `assertSectionFiveGate` —— §5 写入门（段序门）：两条合取——① `§3` 状态行 = `评审通过`；② `§3` 最近一轮
- *    轮次块自己携 pass 裁定行（块 = `lastRoundBlock`；裁定锚 = 签发面 `VERDICT_PASS_LINE` ∥ 骨架档
- *    `VERDICT_CHANGES_LINE`）；或 `§1` 声明 §3 不适用（无评审的批）。
+ *    轮次块自己携 pass 裁定行（块 = `lastRoundBlock`；裁定读数 = 骨架档 `verdictGapOf`，`append §3` 写入闸与
+ *    签发面读同一个函数）；或 `§1` 声明 §3 不适用（无评审的批）。
  * ③ `reanchorReceiptLine` —— 收口重锚回执三行（§2.11 逐字）。
  *
  * 为什么 §3 内容臂留着（不换成只判状态词）：内容臂守的是「段里真跑过」，状态词臂守的是「跑的结论是
@@ -22,11 +22,10 @@ import { readFileSync } from "node:fs"
 
 import {
   countRoundBlocks, inapplicableDeclarationError, lastRoundBlock, malformedInapplicableLine, readSectionStatusWord,
-  sectionContentState, sectionInapplicable, STATUS_WORDS, VERDICT_CHANGES_LINE,
+  sectionContentState, sectionInapplicable, STATUS_WORDS, verdictGapOf,
 } from "./batch-skeleton.mjs"
-// 裁定锚 pass 侧 = 签发面单源（`VERDICT_PASS_LINE` 由 `const` 改导出、零复制）：`§5` 门判据 2 与签发面判
-// 的是同一份回执文本——两处各写一遍字面必然一处变一处不变（设计档 §2.6「判据单源（接口面）」）。
-import { VERDICT_PASS_LINE } from "./design-token.mjs"
+// 裁定读数 = 骨架档 `verdictGapOf` 一个函数（设计档 §2.6.1「判据单源」）：`§5` 门判据 2 与签发面判的是同一份
+// 回执文本，组合序各写一遍必然一处变一处不变。本档不再 import 两条裁定锚——锚与序都在那个函数里。
 import { assertUnitTestFilesCleared } from "./batch-unit-test-gate.mjs"
 import { gateRefusalMessage, runBatchGate } from "./batch-gate.mjs"
 
@@ -100,19 +99,14 @@ export function readCloseoutSource(abs) { return readFileSync(abs, "utf8") }
 
 /**
  * 判据 2 的块内裁定读数（设计档 §2.6「pass 谓词」）：`null` = pass；否则 = 拒文括注里的那一格。
- * 显式合取「**含** pass 裁定行 ∧ **不含**打回裁定行」，且**先打回后 pass**——与签发面
- * `verdictGateFailure`（`design-token.mjs`）同序：两个面判的是同一份回执文本，顺序不同就会两处结论相反。
- * 两种否决格分开报（`VERDICT: changes-required` ∥ `两者同携`）——读者据此知道是「这一轮判了打回」还是
- * 「这一轮既说通过又说打回」，处置同一条（补一行裁定 / 按裁定行重跑评审）。
+ * 组合序不在本档——一律取骨架档 `verdictGapOf`（判据单源，设计档 §2.6.1）：写面、`§5` 门与签发面三处同读
+ * 一个函数，锚与顺序都只有那一份。本函数只留名字：拒文（`R-G2b`）与设计档用的就是这个符号，读者按它对账。
+ * 块 = `null`（段内无块）⇒ `verdictGapOf(null)` = 「无裁定行」，与改前同值。
  * @param {string|null} block — `lastRoundBlock(src, 3)` 的返回形
  * @returns {string|null} 拒文括注值 ∥ `null`（块自己说了 pass）
  */
 function lastRoundVerdictGap(block) {
-  if (block === null) return "无裁定行"
-  const changes = VERDICT_CHANGES_LINE.test(block)
-  const pass = VERDICT_PASS_LINE.test(block)
-  if (changes) return pass ? "两者同携" : "VERDICT: changes-required"
-  return pass ? null : "无裁定行"
+  return verdictGapOf(block)
 }
 
 /** 判据 2 拒文（设计档 §2.6 `R-G2b` 逐字；`blocks` = 段内轮次块数——无块时取 0）。

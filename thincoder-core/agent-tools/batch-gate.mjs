@@ -15,8 +15,9 @@
  *
  * **批档自身恒在判域（两 scope 同）**：批档生于此轮、冻结于此轮（`close` 之后整档冻结）⇒ 其全文字面
  * 即本轮的笔面，档内没有「别轮写的存量」可排；存量 = 别批的档，已由单集规则排除。于是：
- *   · ① 面已落段命中**只入回执、不阻本次写**——append-only 下别人的段落字面改不动，拒一个改不动的人
- *     只会让这一段永远写不进（无账之笔）；收口面 fail-closed 当场拦，那里收口人改得动。
+ *   · ① 面已落段命中**只入回执、不阻本次写**——证据面（append-only）下别人的段落字面改不动，拒一个改不动的人
+ *     只会让这一段永远写不进（无账之笔）；§2 规范面可就地改（§4.19），但同一时刻只有段白名单那一个作者，
+ *     「拒一个改不动的人」在 §2 上仍成立；收口面 fail-closed 当场拦，那里收口人改得动。
  *   · ② 面命中即 K，且命中落在批档内时逐条带 `§N（作者：<角色>）`（答「谁该改」；作者取自档头
  *     「一段一作者」映射，取不到 ⇒ 只出 `§N`，不猜）。
  *
@@ -301,7 +302,7 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     if (!aligned) notes.push("命中行不可对齐（引擎报面 ✗ 行数与命中数不等）——显示行按自造形，判定按命中对象")
     if (close && !diff.ok) notes.push("基 sha 未定——本批笔域集只认触达账")
     if (!close && k >= 1) {
-      notes.push("本次写入文本尚未落盘——一个字没写（append-only 零破：前文逐字不变、段号不前进、轮次 N 不推进）")
+      notes.push("本次写入文本尚未落盘——一个字没写（档字节逐字不变：append 面另有段号不前进、轮次 N 不推进；edit 面另有目标区间以外逐字不变）")
     }
     if (!close && k === 0 && pendingBody) {
       const segLabel = Number.isInteger(pending?.section) ? `§${pending.section}` : "本段"
@@ -346,14 +347,17 @@ export function gateReceiptLine(gate) {
 
 /**
  * 拒绝串（throw 载荷；两机械点同源措辞）：`batch:` 前缀 + verdict 首行 + 逐条 `✗` 行 + 处置句；
- * ① 追加同路既有句「失败 ⇒ 勿 close」（字面同 append 既有拒因，不新造措辞）。
+ * ① 写盘面两路（`append` 段尾 ∥ `edit §2` 区间）同路既有句「失败 ⇒ 勿 close」（字面同 append 既有拒因，不新造措辞）。
  */
 export function gateRefusalMessage(gate, action = "append") {
-  const lead = action === "append"
-    ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次段写入未落盘，档字节不变。"
-    : `batch: 文档机检门拒收口（doc-check gate · 结构兜底 ②）—— ${action === "close" ? "close" : "status → 已收口"} 被拒绝，§1 状态行字节不变。`
+  const writeFace = action === "append" || action === "edit" // 写盘面两路：段尾追加 ∥ §2 段体区间改写
+  const lead = action === "edit"
+    ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次 §2 就地改未落盘，档字节不变。"
+    : writeFace
+      ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次段写入未落盘，档字节不变。"
+      : `batch: 文档机检门拒收口（doc-check gate · 结构兜底 ②）—— ${action === "close" ? "close" : "status → 已收口"} 被拒绝，§1 状态行字节不变。`
   const detail = gate.state === "error" ? String(gate.report ?? "").split("\n").slice(1) : gate.hitLines
-  const tail = action === "append"
+  const tail = writeFace
     ? "处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）。Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close)."
     : "处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）。Nothing was written."
   return [lead, gate.first, ...(detail ?? []), ...(gate.noteLines ?? []), tail].join("\n")

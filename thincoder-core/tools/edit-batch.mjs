@@ -3,23 +3,24 @@
  * （2026-08-31 工具顺手度 §9 ②；2026-09-01 缺陷修复"同文件多条串行累积"；
  * 2026-09-04 EDIT.md §6——条目级判定+应用迁至 edit-diff.mjs——批量调共用。）
  *
- * 语义：同一 path 的多条编辑按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的
- * 累积内容做匹配与替换；跨 path 条目互不影响（并行原子语义）；任一条失败 →
- * 全不写（原子性保留）。每条目独立按判定序（EDIT.md §4——分支 0 单行替换 / 零重叠→替换即删 /
+ * 语义：同一 path 的多条编辑**分两类应用**（帧判据单源 = EDIT-HELPERS §7.3 R1–R4）——
+ * 行号条目先全部应用（按 startLine 降序，范围重叠则整批拒），内容条目随后按调用序
+ * 串行累积；跨 path 条目互不影响（并行原子语义）；任一条失败 → 全不写（原子性保留）。
+ * 每条目独立按判定序（EDIT.md §4——分支 0 单行替换 / 零重叠→替换即删 /
  * LCS / 空 new 显式报错；EDIT.md §5（约束——删行形态）：省略 new_string = 删行。顶层 path
  * （args.path）为无自带 path 条目的默认（2026-09-05 用户裁定——条目自带 path 优先——见
- * EDIT.md §5 修订注）。
+ * EDIT.md §5 修订注）。排顺序与累积走 edit-diff 的两个零 IO 纯函数——本档只留 IO（读 / 写 / 回执）。
  */
 import { readFile } from "node:fs/promises"
 import { resolveInCwd, normalizeEOL, joinWithEol, gitDiffOne, autoSyntaxCheck } from "./shared.mjs"
 // edit-batch ↔ edit-diff 循环引用：两侧导入的都是函数声明（提升初始化），
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 // 写盘经单一写路径点（§2.13.5）——本档不再直调 fs；回执组装共用 edit-diff 的 composeEditReceipt。
-import { writeThroughPath } from "./write-path.mjs"
+import { writeThroughPath, lineAnchorVerdict, lineAnchorRefusal } from "./write-path.mjs"
 // EDIT.md §6：批量条目判定+应用共用 edit-diff（EDIT.md §4 分支 0 单行替换 + 行级 LCS——零重叠→替换即删）；
 // EDIT.md §5：edits 互斥错误文本随前置校验分支迁出至 edit-diff.mjs。
 // 回执组装共用 edit-diff 的 composeEditReceipt（单点——缺省回执 = base + 写入点上下文）。
-import { assertEditArgsExclusive, assertEditsContainer, assertEditEntries, validateEditEntry, computeEditEntry, splitLines, EMPTY_NEW_STRING_LINE, EDIT_ENTRY_NO_PATH, EDIT_ABORT_PREFIX, editEntryLabel, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
+import { assertEditArgsExclusive, assertEditsContainer, assertEditEntries, validateEditEntry, hasLineParams, planEditEntries, applyPlannedEntries, splitLines, EMPTY_NEW_STRING_LINE, EDIT_ENTRY_NO_PATH, editEntryLabel, deleteTarget, composeEditReceipt } from "./edit-diff.mjs"
 
 /**
  * Apply the `edits` array form: multi-file atomic replacement. Throws on any
@@ -31,12 +32,13 @@ export async function applyEditBatch(args, ctx) {
   assertEditArgsExclusive(args)
   assertEditEntries(args.edits) // #325 条目预扫（非对象条目 ⇒ 含下标成形错误；不读盘）
   // 原子：先全量检查（所有文件的替换都可执行）——任一失败全不写。
-  // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑
-  // 按序**串行累积应用**——第 n 条基于前 n-1 条已应用后的累积内容做匹配与替换
-  // （原实现每条都基于盘上原始内容计算、写盘循环后置，同文件后者覆盖前者 →
-  // 除最后一条外全部静默丢失）；跨 path 条目互不影响（并行原子语义不变）。
+  // 2026-09-01 缺陷修复（TOOLS.md §9 ②"同文件多条规则"）：同一 path 的多条编辑基于同一份
+  // 累积内容应用，写盘前不得让后者覆盖前者（原实现每条都基于盘上原始内容计算、写盘循环
+  // 后置 → 除最后一条外全部静默丢失）；跨 path 条目互不影响（并行原子语义不变）。
+  // 累积顺序自 2026-11-02 起 = 帧（行号条目降序先应用、内容条目随后）——见下方判定点。
   const groups = new Map() // abs → 每文件一条流水线
-  for (const e of args.edits) {
+  for (let i = 0; i < args.edits.length; i++) {
+    const e = args.edits[i]
     // 2026-09-05 用户裁定：顶层 path + edits 并存合法化——`e.path || args.path`（条目优先；
     // 缺省入口仅在此兜底）；两者皆无 → 原错误文本（措辞补顶层选项）。
     const p = e.path || args.path
@@ -47,39 +49,42 @@ export async function applyEditBatch(args, ctx) {
     let g = groups.get(abs)
     if (!g) {
       const raw = await readFile(abs, "utf8")
-      g = { abs, path: p, raw, content: normalizeEOL(raw), edits: [] }
+      g = { abs, path: p, raw, content: normalizeEOL(raw), edits: [], origIdx: [] }
       groups.set(abs, g)
     }
     g.edits.push(e)
+    g.origIdx.push(i) // 条目在 args.edits 里的原始下标——回显按它回位（EDIT-HELPERS §7.3）
   }
-  const prepared = [] // 每条目一条回显；同文件内按 args 序，跨文件按首次出现分组序（应用/回显语义均正确）
+  // 判定点（§7.3 写死）：组循环**之前**用批前快照判一次——命中即抛、零写（下方第二个循环才写盘）。
+  // 组内不再逐条判：组内漂移由 R2（降序应用）自己算得出来，逐条再判会用同一份快照判出与 R2 相反的结果。
   for (const g of groups.values()) {
-    g.netShift = 0 // 组内行数差累积（合并快照的 shift = 全组净漂移）
     for (const e of g.edits) {
-      // 条目级判定+应用（edit-diff——EDIT.md §4 分支 0 单行替换 + 判定序 1/2/3 + 空 new 显式报错 +
-      // >1000 行报错（diff 形态——D1 行号条目走 applyLineEdit，不经 LCS，无此上限））
-      const out = computeEditEntry(g.content, e, {
-        path: g.path,
-        absPath: g.abs,
-        abortPrefix: EDIT_ABORT_PREFIX,
-      })
-      prepared.push({
-        g,
-        editStartLine: out.editStartLine, // 基于累积内容计算——已天然计入前面条目的行偏移，不再累加
-        lineShift: out.lineShift,
-        occurrences: out.occurrences,
-        note: out.note ?? null, // P15.11——空白差异自动落点标记（成功消息追加）
-        deleted: out.deleted ?? false, // 删行形态（EDIT.md §5）——结果文本用 Deleted 前缀
-      })
-      g.content = out.updated // 串行累积：下一条基于本条应用后的内容
-      g.netShift += out.lineShift
+      if (!hasLineParams(e)) continue
+      const startLine = e.line ?? e.startLine
+      const endLine = e.line ?? e.endLine
+      if (lineAnchorVerdict(g.abs, startLine, endLine)) throw new Error(lineAnchorRefusal(g.abs, startLine, endLine))
     }
   }
-  // 全部检查通过——每文件一次写盘（同文件多条：写入串行累积后的最终内容）；
+  // 回显按调用序（EDIT-HELPERS §7.3）：按条目在 `edits` 数组里的**原始下标**回填——跨文件
+  // 交错的批同样如此；按文件分组去排会排成 A、A、B，而模型是按位置对号的，顺序一变它会把
+  // 结果贴到错的那一笔上。
+  const prepared = new Array(args.edits.length)
+  for (const g of groups.values()) {
+    // 帧单源（§7.3 R1–R4）= edit-diff 的两个零 IO 纯函数：排顺序 + 按计划序累积
+    const plan = planEditEntries(g.edits, g.path)
+    if (plan.rejection) throw new Error(plan.rejection)
+    const applied = applyPlannedEntries(g.content, g.edits, plan.order, { path: g.path })
+    g.content = applied.content
+    // 合并快照的 shift = 全组净漂移（公式不变；重排后的取值由 AC11 钉住）
+    g.netShift = applied.results.reduce((n, r) => n + r.lineShift, 0)
+    // results 按组内调用序；g.origIdx[k] = 该结果在 args.edits 里的原始下标
+    applied.results.forEach((r, k) => { prepared[g.origIdx[k]] = { g, ...r } })
+  }
+  // 全部检查通过——每文件一次写盘（同文件多条：写入按帧排好后累积出的最终内容）；
   // recordWrite 每组一条合并快照：startLine = 组内**所有**编辑受影响行的最小值
   // （#2，2026-09-01 交付评审尾巴——原实现取首条 = 调用序第一条，逆序条目时
   // 护栏下界过高、受影响区内的 insert_after 被放行），shift = 全组行数差累积
-  // ——受影响区护栏覆盖组内所有编辑
+  // ——受影响区护栏覆盖组内所有编辑（公式不变；重排后的取值由 AC11 钉住）
   for (const g of groups.values()) {
     const startLine = Math.min(...prepared.filter((p) => p.g === g).map((p) => p.editStartLine))
     // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。
@@ -116,6 +121,8 @@ export async function applyEditBatch(args, ctx) {
 // ---------------------------------------------------------------------------
 // 2026-09-08 edit 语义升级（EDIT.md §2/§3——D1 按行号改 / D2 模糊匹配，落点定死本模块；
 // 条目判定接线在 edit-diff.mjs computeEditEntry——单形态/批量/ACP 桥三通道自动继承；
+// 2026-11-02：排顺序（帧 R1–R4）与累积也上提到 edit-diff（planEditEntries /
+// applyPlannedEntries）——两通道共用同一份排法。
 // 阶段 2 删行形态见 EDIT.md §5（约束）。以下均为纯函数（无 IO）——edit-diff.mjs 调用期导入
 // （ESM 循环引用安全：两侧仅函数声明，提升初始化——同 file.mjs ↔ edit-diff.mjs 先例）。
 

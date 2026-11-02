@@ -31,7 +31,7 @@
   （`proxyFetch` 入口旁路 `thincoder-core/proxy.mjs:38`；NO_PROXY 语义）。本地网关 / 开发服务（如 `127.0.0.1:8787` 渠道）被塞进企业代理 ⇒ 连接失败 / 403 假红。
 - **三档形态**：`thincoder-core/proxy-target.mjs`（`resolveProxyConfig` ∥ `resolveWebProxy` ∥ `isLoopbackTarget`：目标 ∥ 配置解析面）·
   `thincoder-core/proxy-transport.mjs`（`streamHttpResponse` ∥ `tunnelHttps` ∥ `tcpConnectProxy` + `FETCH_TIMEOUT`：传输面）· `proxy.mjs`（留 `injectProxy` + `proxyFetch` 编排 + 兼容再出口 facade——**消费面 import 零改**）。
-  三档 = `proxy-target.mjs` ∥ `proxy-transport.mjs` ∥ `proxy.mjs`（≤500 咨询线）。
+  三档 = `proxy-target.mjs` ∥ `proxy-transport.mjs` ∥ `proxy.mjs`（≤500 软线）。
 - 错误形态：坏代理串**友好报错**（`Invalid proxy URI: "…" — expected http://host:port`，`thincoder-core/proxy-transport.mjs:228` / `:276`）。
 - 超时语义：CONNECT/TLS 阶段用 `FETCH_TIMEOUT`（15s）；**响应头**用 `opts._headerTimeoutMs`（默认 60s——消费面 = **代理分支**；直连面（无 `proxyUri`）无本仓头阶段超时〔纳入 = 设计轮面——在册；同族收窄 = `PROVIDER.md:114`（§6.3）〕）；**body 阶段一个窗**：`opts._bodyIdleMs`（默认 120s，首字节之前与之后同一个窗；该面分首 chunk 窗不在本期——另批，边界与事实面见 `docs/core/design/TIMEOUT-DIGEST.md` §7 ∥ §8）。
 - **响应体分块解码**：响应携 `Transfer-Encoding: chunked` 时，传输层按块长帧**剥帧解码**后入 body

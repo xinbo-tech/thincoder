@@ -2,7 +2,7 @@
 
 > 板块 = **编辑工具**；本档 = **edit 语义的权威源**（逐工具权威档之一 · 主编辑工具）。
 > 地图与契约要点 = `docs/core/design/TOOLS.md` §6.6 · §8.2——本档不复制其内容（D2）。
-> 共享底层（EOL 写回 / 失败候选 / U+FFFD）= `docs/core/design/EDIT-HELPERS.md`（**不在此重复**）。
+> 共享底层（EOL 写回 / 失败候选 / U+FFFD）= `docs/core/design/EDIT-HELPERS.md`（**不在此重复**）；行号形的**锚护栏判据**同住该档 §7（本档只指不述）。
 > 双端：CLI `thincoder-core/tools/edit-diff.mjs` + `thincoder-core/tools/edit-batch.mjs` + `thincoder-core/tools/file.mjs`（`editTool` 壳 / schema）——CLI ∥ VSC ∥ 桌面同指核三档。
 > 模型可见描述 = `thincoder-core/tool-docs/edit.md`（提示词面 / 产品代码——与语义须同改，见 §2 末）。
 > 需求侧 = `docs/core/requirements/TOOLS.md`（工具系统板块；CLI 树无逐工具需求档）。
@@ -17,7 +17,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 
 - `path`（必须）——目标文件。
 - **形态二选一**：
-  - **行号形态（D1）**：`line: N`（单行，1-based）／ `startLine: N, endLine: M`（行范围，1-based 闭区间）——替换该行 / 范围为 `new_string`，**不需 `old_string`**；
+  - **行号形态（D1）**：`line: N`（单行，1-based）／ `startLine: N, endLine: M`（行范围，1-based 闭区间）——替换该行 / 范围为 `new_string`，**不需 `old_string`**；行号须过**行号锚护栏**（判据 = `docs/core/design/EDIT-HELPERS.md` §7——上一笔写之后目标区落在受影响区内即拒，拒文带漂移量与两条下一步）；
   - **内容形态**：`old_string`（必须）——变化区当前内容；`new_string`——该区期望结果。
 - `new_string`——内容形态必须；行号形态**可省略（= 删行 / 删范围）**；**显式空串 `""` 两形态皆拒**（§5 矩阵）。
 - `replace_all`——字面替换每处（内容形态 only；行号形态不适用）。
@@ -42,7 +42,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 3. **一般 LCS diff**：公共行保留（LCS 序）、old 独有删、new 独有插。
 4. **平凡**：new 与 old 行级全等 → 原样替换（no-op 成功）。
 
-**行号形态**（不经判定序）：定位行 / 范围 → 直接替换为 `new_string`（行数 = 范围行数 → new 行数）；**省略 `new_string` = 删行**（行数 → 0），返回 `Deleted line N of <path>` ／ `Deleted lines N-M of <path>` + diff。越界 / 互斥见 §5。
+**行号形态**（不经判定序；**先过行号锚护栏**——判据见 `docs/core/design/EDIT-HELPERS.md` §7，通过后）：定位行 / 范围 → 替换为 `new_string`（行数 = 范围行数 → new 行数）；**省略 `new_string` = 删行**（行数 → 0），返回 `Deleted line N of <path>` ／ `Deleted lines N-M of <path>` + diff。越界 / 互斥见 §5。
 
 ## 5. 约束
 
@@ -54,7 +54,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - **互斥**：行号形态与 `old_string`；`line` 与 `startLine`/`endLine`；`edits` 与顶层形态——均显式报错。
 - **行号校验**：`line`/`startLine`/`endLine` 正整数；`startLine ≤ endLine`；`endLine ≤ 文件行数`（越界报错）；删行形态同校验。
 - **`replace_all`**：每处 old→new **字面替换**（不做插入 / 分支 0）；多匹配无 `replace_all` → occurrences 错误。
-- **`edits` 数组**：同文件多条**串行累积**、跨 path 并行、**全判后原子写**（任一失败全不写）；条目内同样二选一（`old_string` 或行号）；顶层 `path` = 无自带 path 条目的默认，条目自带 path 优先。
+- **`edits` 数组**：同文件多条**全判后原子写**（任一失败全不写）；条目内同样二选一（`old_string` 或行号）；顶层 `path` = 无自带 path 条目的默认，条目自带 path 优先。应用顺序分两类（判据见 `docs/core/design/EDIT-HELPERS.md` §7.3）：**行号条目先应用、按 `startLine` 降序**——行号锚在模型 `read` 到的那份快照上，不被同批自己顶偏；范围重叠 ⇒ 整批拒。**内容条目随后按数组序串行累积**——位置无关寻址，无帧问题。跨 path 并行；回显恒为调用序。
 - **入参容器守卫**：`edits` 真值非数组（字符串 / 对象 / 数字等）或空数组 ⇒ 成形错误「edits must be a non-empty array of {path, old_string | line/startLine+endLine, new_string}」——空数组与真值非数组 = 同一错误面；假值 `edits`（`""` / `0` / `false` / `null`）视同缺席 ⇒ 单形态面（不触本守卫）。
 - **条目守卫**：条目非对象（`null` / 字符串 / 数字 / 数组）⇒ 条目级成形错误「edits[i] must be an object of {path, old_string | line/startLine+endLine, new_string}」（i = 数组下标）。
 - **守卫与文案单源**：两守卫（`assertEditsContainer` / `assertEditEntries`）+ 五文案（`EDITS_CONTAINER_ERROR` / `editsEntryError(i)` / `EDIT_ENTRY_NO_PATH` / `EDIT_ABORT_PREFIX` / `editEntryLabel(p)`）单源 = `thincoder-core/tools/edit-diff.mjs`。
@@ -64,7 +64,7 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 - **非数组容器归宿**：`edits` **真值**非数组 ⇒ 两通道同判——桥 `edit` 路由与核 `execute` 同为真值判 ⇒ 走容器守卫同一错误面（携合法单形态参数的窄形态同样落此面——**不存在「桥径单形态应用」分支**）；`edits` 假值（缺席）⇒ 单形态面（见 §8 D-8）。
 - **行数上限**：old/new 各 ≤1000（超限报 edit region too large）。
 - **not-found 引导**：错误含 `searched:` + grep 建议 + `similar lines (top 3, score)` 段（LCS 连续子串 / 阈值 0.5 / top3，单行亦覆盖；零候选省略——算法权威见 `docs/core/design/EDIT-HELPERS.md` §2 `findCandidates`）。
-- **数据新鲜度**：`old_string` / 行号只来自最新 `read`——改前 re-read。
+- **数据新鲜度**：`old_string` / 行号只来自最新 `read`——改前 re-read；行号形态的漂移不靠自觉，由行号锚护栏机械判（`docs/core/design/EDIT-HELPERS.md` §7），拒文给「重 read」与「改走位置无关寻址」两条下一步。
 - **批量回执汇总行**：`edits` 批量回执**末行恒为一行汇总**——逐字 `edit batch: N/N entries — <路径清单>`（**N = 条目数 ∥ 清单 = 去重路径**；路径 = 条目**原样形**、去重保序首现序、分隔符 = `, `；全判后原子写 ⇒ 成功恒 N/N）。位置 = **末行**——大回执（>64K）落盘后双端 preview 保尾（`docs/core/design/TOOL-OUTPUT-LIMITS.md` §2）⇒ 汇总结论恒可见；恒定追加（不设「仅大回执」分支——判据单点、不引阈值耦合）。
   （射程 = 核面 `editBatch` 汇总组装；**ACP 桥批量回执不适用本条**——桥面自持逐条行，`thincoder-cli/src/acp/bridge.mjs` editBatch 逐条 join 收尾、无汇总行组装。）
 
@@ -72,21 +72,25 @@ edit = **按精确区域替换 / 删除文件内容**——主编辑工具。定
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / schema | `thincoder-core/tools/file.mjs:224`（`editTool`） | 导出在位 |
-| diff 内核 / 判定序 | `thincoder-core/tools/edit-diff.mjs:88`（`applyPatchLines`）· `:280`（`computeEditEntry`） | 导出在位 |
-| 校验 / 互斥 / 删行 | `thincoder-core/tools/edit-diff.mjs:141`（`assertEditArgsExclusive`）· `:170`（`validateEditEntry`）· `:67`（`deleteTarget`）· `:61`（`hasLineParams`）· `:75`（`splitLines`） | 导出在位 |
-| 入参守卫 | 单源 `thincoder-core/tools/edit-diff.mjs`（`assertEditsContainer` / `assertEditEntries` + 五文案——两通道共用）· 调用点 `thincoder-core/tools/edit-batch.mjs` / `thincoder-cli/src/acp/bridge.mjs` · `thincoder-core/tools/file.mjs:257`（`touchedPaths`——零抛、尽力提取） | 已落 |
-| D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs:128`（`normalizeEditLine`）· `:149`（`findFuzzyWindow`）· `:183`（`applyLineEdit`）· `:140`（`FUZZY_MATCH_NOTE`） | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
+| 工具对象 / schema | `thincoder-core/tools/file.mjs` 的 `editTool`（含 `parameters`） | 导出在位 |
+| diff 内核 / 判定序 | `thincoder-core/tools/edit-diff.mjs` 的 `applyPatchLines` · `computeEditEntry` | 导出在位 |
+| 校验 / 互斥 / 删行 | `thincoder-core/tools/edit-diff.mjs` 的 `assertEditArgsExclusive` · `validateEditEntry` · `deleteTarget` · `hasLineParams` · `splitLines` | 导出在位 |
+| 入参守卫 | 单源 `thincoder-core/tools/edit-diff.mjs`（`assertEditsContainer` / `assertEditEntries` + 五文案——两通道共用）· 调用点 `thincoder-core/tools/edit-batch.mjs` / `thincoder-cli/src/acp/bridge.mjs` · `thincoder-core/tools/file.mjs` 的 `editTool.touchedPaths`（零抛、尽力提取） | 已落 |
+| D1/D2 纯函数 | `thincoder-core/tools/edit-batch.mjs` 的 `normalizeEditLine` · `findFuzzyWindow` · `applyLineEdit` · `FUZZY_MATCH_NOTE` | 导出在位（edit-diff 调用期导入——ESM 循环安全） |
 | 三通道共用 | 本地单形态 / `edits` 批量 / ACP 桥 | 同内核 |
-| 批量回执汇总行 | `thincoder-core/tools/edit-batch.mjs:112-113`（`summary` 组装 `:112` ∥ `return [...results, summary].join("\n")` `:113`） | 已落；**ACP 桥批量回执不适用**（桥面自持逐条行——`bridge.mjs` editBatch 逐条 join 收尾） |
-| 注册面 | `thincoder-core/tools/index.mjs:4` · `:21` | file 组 |
+| 批量回执汇总行 | `thincoder-core/tools/edit-batch.mjs` 的 `applyEditBatch` 收尾（`summary` 组装 ∥ `return [...results, summary].join("\n")`） | 已落；**ACP 桥批量回执不适用**（桥面自持逐条行——`bridge.mjs` editBatch 逐条 join 收尾） |
+| 注册面 | `thincoder-core/tools/index.mjs` 的静态注册表（`file.mjs` 组） | file 组 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/edit.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | 核 `thincoder-core/tools/{file.mjs, edit-diff.mjs, edit-batch.mjs}` | 同机制 |
+| VSC 对位实现 | `thincoder-vscode/src/tools/index.mjs` 的 import 行直接取核 `editTool`（`@thincoder/core/tools/file.mjs`）——端侧零实现副本 | 同机制（同一份判据与记账表） |
 
-**VSC 端差异**：① 描述机制——VSC 无 `DESC()` md 描述（`file-edit.mjs` editTool 对象内嵌 description——与 CLI `thincoder-core/tool-docs/edit.md` 语义一致）；
-② 编辑器路径——doc 已打开 → WorkspaceEdit range 替换（定位偏移与 `doc.positionAt` 同坐标系——`lfOffsetToRaw` 把 LF 域偏移映射回 CRLF 原文，见 `docs/core/design/EDIT-HELPERS.md` §6）。
+**行号锚护栏的通道覆盖**：判据与拒文单源（`docs/core/design/EDIT-HELPERS.md` §7）；通道闭集（五条逐条判「已接 ∥ 不接 ∥ 不适用」）同住 §7.4——本档不复制那张表。
+
+桥面读 IDE 缓冲、写回走 `fs/write_text_file`，不经 `writeThroughPath` ⇒ 判据在 `editSingle` / `editBatch` 里同调，记账由桥在写回成功后自落，键 = `resolveInCwd` 后的绝对路径；桥的**三入口**（`write` / `editSingle` / `editBatch`）各自记一笔。桥的批量帧同 R1–R4。
+
+**VSC 端差异**：仅编辑器路径——doc 已打开 → WorkspaceEdit range 替换（定位偏移与 `doc.positionAt` 同坐标系——`lfOffsetToRaw` 把 LF 域偏移映射回 CRLF 原文，见 `docs/core/design/EDIT-HELPERS.md` §6）。工具实现与描述面均单源引自核（VSC 自持实现面已于 W14 退场）——行号锚护栏因此在两端同判，无端面分叉。
 
 **同类扫描**：「真值判断后点链」缺陷类——`thincoder-core/tools/**` 全扫仅 `file.mjs` 的 `touchedPaths` 一处（已卫）；其余工具触摸面（`read` / `insert_after` / `hashline_edit` 单参形态；`apply_patch` 有 try/catch 包裹）无一命中。**桥面**（`thincoder-cli/src/acp/bridge.mjs`）：`[null]` / 非对象条目同守卫同文案、跨档文案零副本（同批收——§5 / §8 D-7）。
+
 **消费面续扫**：钩子消费点十处（核 6 · VSC 4——逐点坐标见 `docs/core/design/TOOLS.md` §6.17 表）已归单源谓词 `toolTouchPaths`；本档 `touchedPaths` 本体零改。
 
 ## 8. 并入的关键决策记录

@@ -174,7 +174,7 @@
 - 各实现面（CLI / VSC / 核内提示词面）**语义同源、原文自持**：端特有段**原地保留**、不加面间同步依赖、差异如实上报（多实现面纪律；CORE-UNIFICATION 契约面）——**例外：端差默认 = 消**（机制面差异 ⇒ 归核单源 / 两端口径统一）；**用户可见端差 = 缺陷（唯一例外 = 宿主能力面，须实证）**；
   本纪律只述实现形态，✗ 不构成差异保留依据；差异登记面 = 记录已裁的宿主能力例外项。
 - **端特有段（现体）**：提示词面**现余 0**——三示例段（池规则 / Multi-Task / 实现纪律）内容现体均在核内（`thincoder-cli/src/prompt-injections.mjs:9-11` ∥ VSC 端同形——提示词面注入锚全消），逐段落点：
-  `thincoder-core/prompts/persona-engineering.md`「Parallel dispatch & multi-task」（`:186` 起——多任务派发 + `agent.poolLimits` 池规则同节 `:190`）·
+  `thincoder-core/prompts/persona-engineering.md`「Parallel dispatch & multi-task」（该节 = 多任务派发 + `agent.poolLimits` 池规则）·
   `thincoder-core/prompts/persona-eng-coder.md` 实现纪律（`:23` 不得静默降级 / `:29` 收尾自审）。
 - **遗留注入锚（工具面 2 锚）**：`bash-terminal-face` · `question-ui-face`（锚位 = `thincoder-core/tool-docs/bash.md:15` ∥ `thincoder-core/tool-docs/question.md:11`；
   取值表 = `thincoder-cli/src/prompt-injections.mjs` ∥ `thincoder-vscode/src/prompt-injections.mjs` ∥ `thincoder-desktop/src/main/prompt-injections.mjs`——三端面枚举齐：CLI ∥ VSC ∥ 桌面）。
@@ -244,19 +244,168 @@
 **机检**：引用锁 T9 · T-CL1 照常适用；**不新增断言**（内容在场判据 = 散文锚，禁新增）——在场以一次性逐字比对核。
 **边界**：模型门控 / 配置项 / loop 探测机制零加（用户裁定不可扩）；主会话（无父侧通道）的同类边界不涉（其冲突处置住「指令优先级」节——现状零动）。
 
-### 6.8 台账治理纪律（做还是记 + 池面 triage）
+### 6.8 处置分派（一条判据 · 三个去处 · 写域先判 · 拍板门先于写域）+ 池面 triage
 
-**来源**：用户提问「你那条台账治理纪律是不是更应该进提示词啊？」——父侧实核 = 属**行为纪律**（处置时的「做还是记」判断），活面 = 提示词层（先例 = *Dispatch truthfully* / *No zero-text endings* 同层人格档）；记忆面退为备份。
+**来源**：用户 2026-11-02 03:58 逐字「**统一一下，明确当场修。**」；台账 `#1986`。
 
-**机制（三层判断）**：① **能当场做的当场做**（评审 / 扫尾产出的一次性小形态项 = 措辞 / 坐标 / 索引 / 清理 ⇒ 当场修掉、不进池）；② **进池的才是真债**（需独立轮次 / 有条件 / 需设计）；③ **处置前先对池面陈年条目 triage**（已落地 ⇒ 追认核销——核销两源见 `docs/core/design/LEDGER.md` §3；前提消失 / 重复 ⇒ 废弃）。
+**判据（一条 · 中文 = 规范面 · 唯一副本 = 本节）**
 
-**分层归属**：落 **`thincoder-core/prompts/persona-engineering.md`**（主 agent 唯一消费——处置 / 入池写权面；子代理非受众）「派发与收尾纪律」节内 **`欠账入清单` 邻位**（*Debts go on the list* = 同族前句——新句限定「什么才算欠账」；两界原则：零文档引用 ✓）。
+```text
+- **处置分派（一条判据 · 三个去处 · 写域先判）**：一条核实过的问题先过拍板门——处置要用户拍板（语义往哪边走 / 两条判据谁让谁）⇒ 当场问，不当场开工、也不进池（池收「活儿」，不收「问题」）；它挡住本轮时，写域外也照问。
+  是活儿 ⇒ 看写域：写域内 ∧ 小样（措辞 / 坐标 / 索引 / 清理）⇒ 当场修；写域内 ∧ 大件（要单独一轮 / 有前置条件 / 要设计）⇒ 当轮进池，落一行台账并写明接手的批次，不留散文；写域外 ⇒ 不修、不记、不报——等碰它的那一批按「触达即全清」收正。
+  **写域 = 这一笔的落笔面**：实施席取任务书 `files` 声明的文件；主 agent 取本席笔域档（批档 / 台账 / 需求档 / 设计档 / 提示词）。写域边界优先于「当场修」与「债必须可见」——边界是契约，那两条是习惯。
+```
 
-**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（*Debts go on the list* 行后增一行）——**既有节内增列**（零 `##` 块计数连带 ⇒ T-CL1 无涉）；逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
+**参考译（英文 · 实施席按中文终稿逐字译）**
 
-**机检**：引用锁 T9（新句与连带项零文档引用）· T-CL1（块计数守恒）· 维护者注反证照常适用；**不新增断言**（内容在场 = 一次性逐行比对核——设计围栏块 ↔ 落地档，含连带两项；承 §6.1「批次收尾核对」）。
+```text
+- **Disposition routing (one criterion, three destinations, write domain first)**: a verified problem asks one thing up front — must the user rule on it? Yes ⇒ ask now: never start the work, never book it (the pool takes work, not questions); blocks this round ⇒ ask even outside the write domain.
+  It is work ⇒ judge the write domain: inside ∧ small form (wording / coordinates / indexes / cleanup) ⇒ fix it on the spot; inside ∧ large (its own round / a precondition / needs design) ⇒ book it this round as a ledger row naming the batch that takes it, never in prose;
+  outside ⇒ not fixed, not booked, not reported — the batch that touches it corrects it then, clearing the whole file rather than leaving it to the next batch.
+  **Write domain = what this stroke may write**: an implementer takes the files its task book's `files` declares; the main agent takes its own pen-domain documents (batch records / the ledger / requirement docs / design docs / prompts).
+  The write-domain boundary outranks both "fix it on the spot" and "debts must be visible" — the boundary is a contract, those two are habits.
+```
 
-**边界**：零机械门（承「为臆想的失败逐点加限制 = 反模式」之裁）· 不改台账机制本体（写命令 / 状态机零动）· 不落公共层 / 纪律层（子代理非受众——台账写权仅主 agent）· 不重述攒批工作流（只补「做还是记」判断）· **「父侧不代笔」交界**：「当场修掉」只作用于父侧的落笔面（批次档 §1/§4/§6 · 台账 · 需求档），其余文档面（设计档面 ∥ 提示词面）派全链（`docs/core/design/DOC-DISCIPLINE.md` §1 D1 行）。
+**写域两类席各取各的（与既有 `files` 条的关系）**
+
+- 既有条逐字（`thincoder-core/prompts/persona-engineering.md`）：`The files declaration lists only the implementer's write domain (source, test, design-doc files) — project process files (requirement pool / changelog / task-list family) stay out of it.`
+- 关系 = **同坐标、不同字段**：两条指同一件事——写域 = 你被授权落笔的面；但取值来源不同。那条说「`files` 只列实施席的写域、项目流程档不进 `files`」；本条说判断处置时谁能写哪儿，而主 agent 的写域**恰恰是 `files` 条排除掉的那些流程档**。取「`files` 字段」当唯一来源，主 agent 的写域就是空集——它写批档时看见一个错字也只能「不修不记不报」。
+- 也**不取「归本席路由的一切」**：把可派单的一切都算进来 ⇒ 他仓 / 他席的措辞级小修全落进「进池」，池子重新开始长——本批要治的病原地复活。
+- 本条与 `thincoder-core/prompts/discipline-engineering.md` 的 `scope = the task book / task brief (including its file list and acceptance criteria)` 同一坐标（本轮这一笔的范围，就是它的写域）。
+- **落例（主 agent）**：写本批 §1 时在本批档里看见一个错字 ⇒ 写域内 ∧ 小样 ⇒ 当场修，不建新批次、不上账。
+- **反例（主 agent · 写域外）**：在一本已收口的旧批档里看见一个错字 ⇒ 那本不是这一笔的落笔面 ⇒ 不修、不记、不报；下一批把它列进写域时按「触达即全清」一并收正。
+
+**「触达即全清」是什么（就地定义 · 无规范面出处可指）**：某一批的任务书一旦把某档列进写域，该档里同类的过期措辞 / 坐标 / 索引就在那一笔里一并收正，不留给下一批。⇒ 写域外的问题不是「丢了」，是排到碰它的那一批——这一支的回收路径就挂在这句话上。
+
+**「债必须可见」两半去哪了**：上账那一半 = 第二个去处（落一行台账）；`never leave it in prose` 那一半并入第二个去处的措辞（「落一行台账……不留散文」）。并列条整条撤掉——它的动作就是第二去处，留着它等于要求写域外的问题也上账，那正是本批要治的病（K3）。
+
+**何时重开（父侧「不上需求档」裁定的落点）**：第一次出现「按它办会出错」的实例——写域外的问题被判「不报」、事后证明它本该处置——这条判据升进需求档并重判；在那之前它只住本节。
+
+**这一条改了用户能看到什么**：写域外的发现从此不再以台账行出现（此前至少留下一行）。这是本批要的效果（池子不再被它们推高）；代价是这类发现不留痕，回收只靠碰它的那一批。判它错的那天，复盘入口就是这一句。
+
+**落点（唯一副本 = `thincoder-core/prompts/`——定位 = 节名 + 条文本，行号只作本轮参考读数）**
+
+| # | 档 | 逐字定位 | 动作 |
+|---|---|---|---|
+| 1 | `thincoder-core/prompts/persona-engineering.md` | `### Debts, ledger upkeep, and the closeout sweep` 节内三条：`Debts must be visible` · `Fix in place first` · `Only real debts enter the pool` | 三条整行删除；在 `Debts must be visible` 的原位置落那条规则（中文终稿 3 行；英文终稿 5 行——其中四个续行，见上方围栏块）。紧随其后的 `**Why**` 续行原位保留——它是第二去处「不留散文」的理由 |
+| 2 | `thincoder-core/prompts/persona-eng-designer.md` | `Consistency surface` 条（本轮读数 = 该档第 47 行） | 加写域限定，逐字终稿见下 |
+| 3 | `thincoder-core/prompts/persona-eng-designer.md` | `Revision-style-expression check` 条（以条文本定位） | 加同一条写域限定（同一面第二处无条件「当场修」），逐字终稿见下 |
+| 4 | `thincoder-core/prompts/persona-engineering.md` | `## Ledger (requirement pool / tech todos) — batching & lifecycle` 节内生命周期条，起首 `4. **New debt found**` | 收窄为「新债 = 大件」，并加一句回指处置分派（不复制判据），逐字终稿见下 |
+
+**落点 2 逐字终稿（中文 = 规范面）**
+
+```text
+   - **Consistency surface**（重复登记 / 死指针 / 计数与枚举不符 / 形态不一致）在**你的写域内**（本轮任务书声明的文件）**可以当场修**（仍逐条上报）。
+```
+
+**落点 2 参考译（英文 · 实施席按中文终稿逐字译）**
+
+```text
+   - **Consistency surface** (duplicate registrations / dead pointers / count/enumeration mismatches / form inconsistencies) → **inside your write domain** (the files this round's task book declares) you **may fix on the spot** (still reported one by one).
+```
+
+**落点 3 逐字终稿（中文 = 规范面）**
+
+```text
+- **反样式表达检查**：形态类项在你的写域内（本轮任务书声明的文件）⇒ 当场修，仍逐条上报。
+```
+
+**落点 3 参考译（英文 · 实施席按中文终稿逐字译）**
+
+```text
+- **Revision-style-expression check**: a consistency-surface item **inside your write domain** (the files this round's task book declares) ⇒ fix on the spot, still report each one.
+```
+
+**落点 4 逐字终稿（中文 = 规范面）**
+
+```text
+4. **新债 = 要自己一轮 / 有前置条件 / 要设计的活儿**（写域内的评审发现 / 停止上报产物 / 档漂移）⇒ 当日记账，并写明接手的批次。
+   这就是处置分派的第二个去处——同一坐标，不重述判据；写域内的小样当场已修，走不到这一条。
+```
+
+**落点 4 参考译（英文 · 实施席按中文终稿逐字译）**
+
+```text
+4. **A new debt is work needing its own round, a precondition, or design** (in-scope review findings / stop-and-report output / doc drift) ⇒ book it the same day, naming the batch that takes it.
+   That is the disposition routing's second destination — same coordinate, criterion not restated here; a small-form item inside the write domain was already fixed on the spot and never reaches this line.
+```
+
+**验收（A1–A8）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 三条旧规则清零 | `thincoder-core/prompts/persona-engineering.md` 扫 `Debts must be visible` ∥ `Fix in place first` ∥ `Only real debts enter the pool` ⇒ 各 **0**（改前各 1，本轮读数见勘察证据行） |
+| A2 | 新规则在位且节对 | 同一档扫 `Disposition routing (one criterion, three destinations, write domain first)` ⇒ **1**，落在 `### Debts, ledger upkeep, and the closeout sweep` 节内（节切 = 该 `###` 至下一个 `^#`） |
+| A3 | 写域限定在位且条对 | `thincoder-core/prompts/persona-eng-designer.md` 扫 `inside your write domain` ⇒ **2**（`Consistency surface` ∥ `Revision-style-expression check` 各 1，量法与 A7 同），其中落在 `Consistency surface` 条内 1 |
+| A4 | 纪律档零改 | `thincoder-core/prompts/discipline-engineering.md` 扫 `and not fixed either` ⇒ **0**（本批不落该半句，理由见 K4）；该档 `Out-of-scope items are not recorded` 条逐字与改前相等 |
+| A5 | 行宽与结构 | 两档新增各行 ≤300，两档 `>300` = 0 保持；两档 `##` / `###` 计数零变（关系式，改前读数由实施席报 §5） |
+| A6 | 文档纪律（交付门） | `doc_check(mode:"gate", target:"D:/teamcode/thincoder")` 首行 `PASS` |
+| A7 | 写域限定在位且条对（落点 3） | `thincoder-core/prompts/persona-eng-designer.md` 扫 `inside your write domain` ⇒ **2**（`Consistency surface` ∥ `Revision-style-expression check` 各 1）；旧形 `**Revision-style-expression check**: a consistency-surface item ·` ⇒ **0**；落点 3 该行 ≤300 |
+| A8 | 新债条收窄且回指（落点 4） | `thincoder-core/prompts/persona-engineering.md` 扫 `4. **A new debt is work needing its own round, a precondition, or design**` ⇒ **1**，落在 `## Ledger (requirement pool / tech todos) — batching & lifecycle` 节内；旧条首句 `**New debt found**` ⇒ **0**；该条内 `the disposition routing's second destination` ⇒ **1**（回指句），`small form (wording` ⇒ **0**（不复制判据）；该条两行各 ≤300 |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 主 agent 写域内 ∧ 小样 | 写本批 §1 时看见本批档里一个错字 | 当场修，不上账、不建新批次 |
+| C2 | 正常 · 写域内 ∧ 大件 | 本轮任务书里的档暴露出要单独设计的缺口 | 当轮落一行台账并写明接手批次，不留散文 |
+| C3 | 边界 · 写域外 | 已收口旧批档里看见一个错字（`#1979` 那一笔的形） | 不修、不记、不报；等碰它的那一批收正 |
+| C4 | 边界 · 要用户拍板 | 「两个函数是否统一语义」这类问句（`#1978` / `#1980` 的形） | 当场问；不进池、不上账 |
+| C5 | 边界 · 拍板 ∧ 挡路 ∧ 写域外 | 写域外一条发现挡住本轮，且处置要用户定 | 照问——挡路是「写域外不报」的既有例外 |
+| C6 | 错误 · 写域外上账 | 把 `#1979` 记成一行台账 | 违规：正是本批要治的病（池子被它推高） |
+| C7 | 错误 · 要拍板却自己修 | 两条判据谁让谁没问，自己挑一边落了笔 | 违规：落了没人批的语义 |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 三条换一条，不加第四条 | 用户裁定是「统一」不是「加一条」 |
+| K2 | 写域取「这一笔的落笔面」，取两类席各取各的，不取 `files` 字段 | 取 `files` 字段 ⇒ 主 agent 写域为空集；取「归本席路由的一切」⇒ 他席小修全落进进池，病原地复活 |
+| K3 | `Debts must be visible` 不留成并列条 | 它的动作就是第二个去处；两半的去向已写明（上账 → 第二去处，`never leave it in prose` → 第二去处的措辞） |
+| K4 | **`thincoder-core/prompts/discipline-engineering.md` 零改** | 该条四项禁令里 `not acted on` 已覆盖「动手」，`#1979` 实录「没修」正是合于它 ⇒ 「也不当场修」是同一禁令的第二份写法，不是补溃口；写域限定落在「Fix in place first」一侧即闭合（D2 单源）。父侧 §1 边界里的那半句因此不落，由本节记明 |
+| K5 | 设计席面加写域限定、不搬三去处 | 该面有两处无条件「当场修」——`Consistency surface` 与 `Revision-style-expression check`——两处各加同一条限定才闭合（实施轮复核抓到的第二处）；搬三去处 = 同一规则两处活描述，故只加限定 |
+| K6 | 池面 triage 原位保留 | 「池里旧条目怎么清」与「新问题往哪去」是两根轴 |
+| K7 | 拍板门写成先于三个去处的一格 | 它是停止处置：处置权不在本席时，写域判据没有可判的对象；不写先后，两个问题（写域内∧小样∧要拍板、写域外∧要拍板）无答案 |
+
+**先例 ∥ 偏离**
+
+**先例（形制）** = 本档 §6.68（一句判据 + 逐字定位 + 中文终稿 + 参考译围栏块 + 验收表 + 用例表 + 决策表 + 三段）。
+
+**先例（判据同坐标）** = `thincoder-core/prompts/discipline-engineering.md` 的 `Out-of-scope items are not recorded` 条 · name: "Out-of-scope items are not recorded" · consumers: 全部子代理 + 主 agent ⇒ 本条的写域 = 该条的 `scope`，逐字沿用，不另造名。
+
+**对齐** = 唯一副本住设计面、实施席逐字照译、行宽与结构面零连带。
+
+**偏离** = ① 拍板门写成先于三去处的一格（旧 §6.8 只把它挂在「附属判断」上，与三支无先后）——理由见 K7；② 写域不取 `files` 字段（见 K2）；③ 本批把「债必须可见」整条撤掉而不留着并列——理由见 K3。
+
+**既有件三问（新增名）**
+
+`existing` = `thincoder-core/prompts/persona-engineering.md` 的 `Fix in place first` 条 ∥ `Only real debts enter the pool` 条 · name: "Fix in place first" ∥ "Only real debts enter the pool" · consumers: 主 agent 笔域 ⇒ 两个去处就是这两条，本批只给它们加写域与拍板两道前置，不新造动作。
+
+`existing`（写域名）= 同档 `The files declaration lists only the implementer's write domain` 条 · name: "write domain" · consumers: 派单面 + 本条 ⇒ 名字逐字沿用，不造第二个名。
+
+`none found` = 「处置分派 / disposition routing」以外的同义新名（`disposition triage` / `finding bucket` 一类）：本节不再造第三个名——本轮实读 `thincoder-core/prompts/persona-engineering.md` 内 `write domain` 命中 = 2 处，均属 `files` 条（读数见下）。
+
+**勘察证据行（本席实读 · 2026-11-02）**
+
+- `thincoder-core/prompts/persona-engineering.md` 改前逐字（本批落笔前）：`:187` = `### Debts, ledger upkeep, and the closeout sweep`；`:190` = `- **Debts must be visible**: surface every debt on the todo list, never leave it in prose.`；`:191`（缩进两格的续行，逐字）= `**Why**: a debt living only in report prose, a code comment, or an inline note is seen by nobody again and is redeemed only when the user chases it.`；`:194` = `- **Fix in place first**: one-off small-form items (wording / coordinates / indexes / cleanup) from reviews or sweeps get fixed on the spot — a booked small fix waits for a round that may never come.`；`:195` = `- **Only real debts enter the pool**: needs its own round / conditional / needs design.`
+- 同一档 `files` 条逐字：`:461` = `- **The files declaration lists only the implementer's write domain** (source, test, design-doc files) — project process files (requirement pool / changelog / task-list family) stay out of it.`；`:456` = `- **Declare spawn scheduling metadata in the task book**: spawns carry `files` (write domain) and `dependsOn` (prior async ids) …` ⇒ `write domain` 全档命中 2 处，无第三处。
+- `thincoder-core/prompts/discipline-engineering.md` 逐字：`:143` = `- **Out-of-scope items are not recorded**: anything seen outside that scope (other modules, other batches / layers / docs outside this repo, inconsistencies noticed in passing) ⇒ not written into the report, not booked to the ledger, not reported upward, not acted on.` ⇒ 四项禁令含 `not acted on`（K4 的读数）。
+- `thincoder-core/prompts/persona-eng-designer.md` 逐字：`:47` = `- **Consistency surface** (duplicate registrations / dead pointers / count/enumeration mismatches / form inconsistencies) → you **may fix on the spot** (still reported one by one).` ⇒ 无写域限定。
+- 公共源勘察：项目 manifest 的 `index.publicRepos` 实读 = `[]`（同档 §6.68 勘察行本轮同批实读）⇒ 无跨仓公共源可查——已查，无相关。
+- 参考译五行行宽 ≤300（本席本轮 `node` 实算 · 2026-11-02）；落点 2 参考译行宽同判。
+
+**集成测试设计**：`none` —— 改动面 = 两档提示词文本（一档三行换一条、一档一条加限定）+ 本档一节，零代码档。两条入口均不成立：① 不改任何既有用例断言的业务可观察结果（这段文本是主 agent / 设计席读的处置纪律，不是任何工具行为的输入）；② 未新增业务上真需要的场景，也不是生产真出过的问题——处置分派在业务入口复现不出可机判结果。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**RTM 读数**（本席本轮 `node` 实算 · 2026-11-02）：`test/RTM.md` 353 行 / `^## ` 5 段 / `^### ` 28 个业务故事节 / `^|` 表行 156。近面无涉——故事 7「收口只判本批改过的档」（本批不新增门、不改段判据）· 故事 17「评审没写进批档就不算过」（不动评审席行为）。
+
+**UI / 交互决策**：无界面面——本节只改设计档与模型可见提示词文本。
+
+**边界（本节不做）**：不动提示词本体（产品代码面，实施轮 eng-coder 落）· 不动 `thincoder-core/prompts/discipline-engineering.md`（K4）· 不动 `thincoder-core/prompts/persona-engineering.md` 的 `files` 条（K2 只在本节说明关系）· 不加第三个桶、不建体系、不新增机检门、不设豁免 · 不动需求档（主 agent 笔域）· 不改池面 triage 三条 · 本节自身不留行号坐标（行号仅作本轮参考读数）。
+
+**上抛项**
+
+1. 〔待裁 · 父侧〕K4 = `thincoder-core/prompts/discipline-engineering.md` 零改，与批档 §1 边界「第 144 行补一句射程回指」不同：评审 🟡5 给的两条路，本席取 ①（撤掉那半句）。父侧若要 ②（保留但换理由），本席按新理由改写该落点并同步本节。
+2. 〔待裁 · 需求面〕「何时重开」已按父侧裁定落本节一行，未上需求档；需求层是否另有承载由父侧定。
 
 ### 6.9 派单尺寸与任务书形态纪律（尺寸闸 + 验收面照写 + 表形态 + 禁令携后果）
 
@@ -267,7 +416,7 @@
 
 **尺寸闸为什么留**：拆的理由是「一单要小到能一次说清、`files` 的冲突检测才有意义」，不是「面要单一」——验收面由这一批要验什么定；按面拆把同一件事拆成几轮，每轮重写任务书、重跑门、坐标漂移一次，而验收面一个也没多出来。
 
-**英文逐字围栏块（唯一权威目标形 · 实施席照此落笔）**：`thincoder-core/prompts/persona-engineering.md` 的 `Dispatch size discipline (pre-flight · one dispatch, one change face)` 与 `Three gates, every one of them` 两行（行号 as-of 设计轮 = `:361`-`:362`）整体替换为下面四行——各 ≤300 字符，一条规则一行，不串分号。
+**英文逐字围栏块（唯一权威目标形 · 实施席照此落笔）**：`thincoder-core/prompts/persona-engineering.md` 的 `Dispatch size discipline (pre-flight · one dispatch, one change face)` 与 `Three gates, every one of them` 两行（以引文定位）整体替换为下面四行——各 ≤300 字符，一条规则一行，不串分号。
 
 ```text
 - **Dispatch size discipline (pre-flight)**: a dispatch's `files` list is ≤15 files — small enough to state in one line and for the conflict detector to mean something. Size is about saying it clearly, not about cutting the work into faces.
@@ -312,7 +461,7 @@
 · 需求档 `docs/core/requirements/PROMPT-SYSTEM.md`（「禁令」∥「派单」∥「后果」三词全档共 1 命中 = `:174` 勘察义务条，无「禁令后果」条）
 · 本档 §6.8（`:224`–`:235` 既有节内增列形）∥ §6.32（`:950` 勘察行 ∥ `:952`–`:957` 先例行既有形）∥ §6.33（`:1195` ∥ `:1197` 同形）
 
-· `thincoder-core/prompts/persona-engineering.md`（节名 `:153` ∥ 既有 why 条 `:170` 现状逐字）。
+· `thincoder-core/prompts/persona-engineering.md`（节名 ∥ 既有 why 条 现状逐字）。
 除上述无其他相关公共源——已查无。
 
 **先例 ∥ 偏离**：先例 = §6.8（`:224`–`:235`）∥ §6.19（标题 `:448`）的「既有节内增列 · 零 `##` 块计数连带」形——本笔对齐（同节增 1 句，块计数与标题节点零变）；偏离 = 只增 1 句、不带机检锁，理由 = 后果写没写、够不够属写作判断，落成校验字段只会得到形式化填空（偏离须给理由之形 = §6.32（`:952`–`:957`））。
@@ -471,7 +620,8 @@
 **形态（与 §6.1 落点口径的关系）**：既有节内增列 ×4（① ② ④ ⑤）+ **新增节 ×1（③）**——③ 在 §6.1「行为纪律面的落点形态」默认口径（`:166`）之外；先例 = §6.16（新增节登记在案）；依据 = 用户 17:58 采纳清单；不构成越界；计数连带照 D3 随动（下行）。
 
 **落点（唯一副本 = `thincoder-core/prompts/` · 十处）**：
-① `thincoder-core/prompts/common.md:9-12`；② `thincoder-core/prompts/common.md:23`；③ `thincoder-core/prompts/discipline-engineering.md` §Engineering judgment；④ `thincoder-core/prompts/persona-engineering.md:338`；
+
+① `thincoder-core/prompts/common.md:9-12`；② `thincoder-core/prompts/common.md:23`；③ `thincoder-core/prompts/discipline-engineering.md` §Engineering judgment；④ `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Task books are re-derived, not transcribed`；
 
   ⑤ `thincoder-core/prompts/discipline-engineering.md` §Doc discipline「One word per thing」。逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
 
@@ -515,14 +665,18 @@
 
 **形态（与 §6.1 落点口径的关系）**：**「批设计」条原位扩展**（既有条：现文逐字保留 + 前插扫描步）⇒ 零 `##` 块计数连带；攒批条 5 条 / 生命周期条 5 条计数均不变；生命周期表受需求档 FR30 验收「事件 → 动作」**五行**判据锁定（`docs/core/requirements/ENGINEERING-MODE-V2.md:696`）——扫描不入事件表（表形态 = 事件 → 动作；扫描无触发事件）。
 
-**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（*Batch design* 条 = `:164` 原位扩展）；逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
+**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（*Batch design* 条原位扩展）；逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
 
 **计数连带（D3）**：**无**（`##` 块计数随正；条数零变）。需求侧随动 = 父侧裁量（U 项）。
 
 **机检**：`scripts/prompt-refs-check.mjs` 复跑 = 0 命中（新增文本零文档引用——`§1` 为协议自名合法正例）；
 EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字符不折行（同档既存 >300 行 31 条 · 最长 981 ⇒ 折单行 = 反不一致——披露不行使；先例在册）；`##` 块计数可机判（单份不变）；**不新增断言**（内容在场 = 一次性比对——落地档 ↔ 设计围栏块，承 §6.1「批次收尾核对」）。
 
-**边界**：零机械门 · 台账工具 / 代码零触 · 其余纪律零触（「达阈值提醒」「批设计」现文其余部分逐字保留；「派发与收尾纪律」治理块零触）· 不发明新机制（只落「扫描」显式步）· 不重述攒批工作流 · 术语承 §1 定形（`迁移窗口` = 新语；`评审面` / `实施面` = 现盘词汇——先例本档 `:66` ∥ `:136`；EN `thincoder-core/prompts/persona-engineering.md:383` ∥ `:147`；`§1` = 协议自名）· 需求档零笔（U 项 = 父侧）。
+**边界**：零机械门 · 台账工具 / 代码零触 · 其余纪律零触（「达阈值提醒」「批设计」现文其余部分逐字保留；「派发与收尾纪律」治理块零触）。
+
+不发明新机制（只落「扫描」显式步）· 不重述攒批工作流 · 需求档零笔（U 项 = 父侧）。
+
+术语承 §1 定形（`迁移窗口` = 新语；`评审面` / `实施面` = 现盘词汇——先例本档 §Confirmation & approval gate ∥ §Batch-record lifecycle；EN `thincoder-core/prompts/persona-engineering.md` §Ledger 的 `Fast lane`；`§1` = 协议自名）。
 
 ### 6.20 台账治理纪律增补（收口入账 ∥ 开局自查 ∥ 入库查重 ∥ 单行单结 ∥ 结算行）
 
@@ -540,7 +694,8 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 **形态（与 §6.1 落点口径的关系）**：既有节内增列（原位扩展 ×1 ∥ 条尾追加 ×2 ∥ 新 bullet ×3）⇒ **零 `##` 块计数连带**；生命周期条受需求档 FR30 验收「事件 → 动作」**五行**判据锁定（`docs/core/requirements/ENGINEERING-MODE-V2.md:696`）——不增行、只扩条文；需求档「攒批工作流（五条）」计数零变。
 
-**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（`:81` ∥ `:84` ∥ 新 bullet ∥ `:170` ∥ `:174` 后新 bullet ×2）
+**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（`### Debts, ledger upkeep, and the closeout sweep` 节内、`Disposition routing (one criterion, three destinations, write domain first)` 条及其 `**Why**` 续行之后的新 bullet ∥ 派发节相关条后新 bullet ×2；以引文定位）
+
  ∥ `thincoder-core/prompts/persona-eng-designer.md`（`:38` ∥ `:51`）；逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
 
 **计数连带（D3）**：① `thincoder-core/prompts/persona-engineering.md` 行数 ∥ `##` 块读数 → §6.23（当前读数唯一处）；增量 = +3/面（新 bullet 三条）；② `thincoder-core/prompts/persona-eng-designer.md` 换写 **±0 行**；③ 需求侧 = U 项（父侧笔）。
@@ -612,7 +767,7 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 **形态（与 §6.1 落点口径的关系）**：既有节内增列（「派发与收尾纪律」节新 bullet ×1 ∥ 「台账」节新 bullet ×2）⇒ **零 `##` 块计数连带**；生命周期表受需求档 FR30「事件 → 动作」五行判据锁定——三条均不入事件表（锚点复核 trigger = 清账轮；族行 / evidence 文字太长，难于阅读 = 行面形态）。
 
-**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（「Fix in place first」`:84` 后新 bullet ∥ `:181` 后新 bullet ×2）；逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
+**落点（唯一副本 = `thincoder-core/prompts/`）**：`thincoder-core/prompts/persona-engineering.md`（`Disposition routing (one criterion, three destinations, write domain first)` 条及其 `**Why**` 续行之后新 bullet ∥ 派发节另条后新 bullet ×2；以引文定位）；逐字文本 = 设计围栏块（一次性材料不混入本档——D2）。
 
 **计数连带（D3）**：① `thincoder-core/prompts/persona-engineering.md` 行数 EN **236**；`##` 块 **17**；② 需求侧 = U 项（父侧笔）。
 
@@ -733,7 +888,7 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 | # | 注入块 | 判点落位 | 开关（落定后） | 改动面 |
 |---|---|---|---|---|
-| ① | 项目指令文件块 | `:281`（`loadProjectInstructions` 调用——helper 本体 `agent/helpers.mjs:399` 零改） | **`agent.injectProjectRules`** | **判读取自 `injectDocs` ⇒ 改为新键**（`:57-60` 新增消费点变量 `const injectProjectRules = agent.config?.agent?.injectProjectRules !== false` + `:281` 换判变量） |
+| ① | 项目指令文件块 | `loadProjectInstructions` 调用（helper 本体 `agent/helpers.mjs` 零改） | **`agent.injectProjectRules`** | **判读取自 `injectDocs` ⇒ 改为新键**（新增消费点变量 `const injectProjectRules = agent.config?.agent?.injectProjectRules !== false` + 换判变量） |
 | ② | 相关文档块 | `:118`（`if (injectDocs)` 门——块体 `:118-155`） | `agent.injectDocs` | **零改**（语义收窄 = ① 撤出后自然只剩 ②；门句逐字不动） |
 | ③ | 相关记忆块 | `:157`（`if (injectMemories)` 门——块体 `:157-169`） | `agent.injectMemories` | 零改 |
 
@@ -743,7 +898,7 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 **判点同址判定（设计问题 2 的答复）**：① 判点**仍落 `setup.mjs` 调用侧**（不新开第二处）——新键只替换该处判读的变量名，条件形（三元 + `loadProjectInstructions` 调用面）逐字不变。**坐标随动**：已在 `:57-60` 新增消费点变量 3 行 ⇒ 判点 = **`:281`**（语义零变，条件形逐字同）。
 
-理由 = `loadProjectInstructions` 是公开导出面（`config.mjs` 派生表 + `API-CONTRACT.md` 在册）⇒ 判点留调用侧 = 最小爆炸半径（承 D-PS35 判由）；换址（如移入 helper）须动公开导出面语义，否决。
+理由 = `loadProjectInstructions` 是公开导出面（`config.mjs` 派生表 + `docs/core/design/API-CONTRACT.md` 在册）⇒ 判点留调用侧 = 最小爆炸半径（承 D-PS35 判由）；换址（如移入 helper）须动公开导出面语义，否决。
 
 **默认零行为变（设计问题 4 · 可机判证明）**：
 
@@ -891,13 +1046,13 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 **最近先例**：`#1684` 对齐 §6.6 清零轮（判据同源，只处置剩余命中）与 §6.19 `:445` 的机检形（复跑 `prompt-refs-check.mjs`、零新增断言）；`#1683` 对齐 `docs/batches/2026-10-19-prompt-mech-single-face.md` 的同句族收正（常量注 / 模型可见串口径收正）。
 
-**对齐** = 目标形逐处给「现文 ⇒ 目标形」、判据句零改、机判复用既有脚本。**偏离** = 把注释面（`helpers.mjs` JSDoc）纳入本笔笔域——§6.6 `:186` 明写「注释面不在本面（另批治理）」；偏离理由 = 台账 `#1683` 的触发条件正是「常量注口径与设计档相抵」，且改动仅注内措辞、零行为变（§6.31.1）。
+**对齐** = 目标形逐处给「现文 ⇒ 目标形」、判据句零改、机判复用既有脚本。**偏离** = 把注释面（`helpers.mjs` JSDoc）纳入本笔笔域——§6.6 明写「注释面不在本面（另批治理）」；偏离理由 = 台账 `#1683` 的触发条件正是「常量注口径与设计档相抵」，且改动仅注内措辞、零行为变（§6.31.1）。
 
 #### 6.31.1 `#1683` 常量注口径收正（注释面 · 零行为变）
 
 **归属理由（为何登记在本档而非拥有档）**：本笔 = 模型可见面 / 提示词面残留清零，属 §6.6 域，故笔落本档；`TOOLS.md` §6.15.3 与 `AGENT-LOOP-UPSTREAM.md` / `AGENT-LOOP-ASYNC-POOL.md` 在本笔只作**内容依据**（注该怎么写由它们定），不重记同一笔——同一机制两处各记一份即成两说（D2）。
 
-**现状（实读）**：`thincoder-core/agent/helpers.mjs:454`（`AUTO_TURN_DIGEST_DOMAIN_ENG`）· `:461`（`UPSTREAM_TURN_DOMAIN`）· `:470`（`TIMER_TURN_DOMAIN`）三处 JSDoc 末句 = `Content authority = parent side.`；同文件另有一处同形 `:478`（`DIGEST_ACCOUNT_DOMAIN`，小写 `content authority = parent side.`）。
+**现状（实读）**：`thincoder-core/agent/helpers.mjs`（`AUTO_TURN_DIGEST_DOMAIN_ENG` · `UPSTREAM_TURN_DOMAIN` · `TIMER_TURN_DOMAIN`）三处 JSDoc 末句 = `Content authority = parent side.`；同文件另有一处同形（`DIGEST_ACCOUNT_DOMAIN`，小写 `content authority = parent side.`）。
 
 **定性 = 注释措辞，不是行为**：几条常量的字符串本体 = 注入模型的提醒文本；选串点只引用常量名，「authority」句不参与运行期判断 ⇒ 改注、不改串、不改选串点。旧口径与 §6.1 现行裁定（提示词 = 产品代码面 · 内容依据 = 机制文档 · 落笔 = eng-coder）相抵，属 doc-code 分歧。
 
@@ -905,10 +1060,10 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 
 | 坐标 | 现文要点 | 目标形 |
 |---|---|---|
-| `helpers.mjs:454` | 末句 `Content authority = parent side.` | `Content basis = the mechanism doc; landing = eng-coder.` |
-| `helpers.mjs:461` | 同上一句 | 同上 |
-| `helpers.mjs:469`–`:470` | `Verbatim from the parent-side final text (single line — no newlines).` + `Content authority = parent side.` | `Verbatim from the mechanism doc (single line — no newlines).` + `Content basis = the mechanism doc; landing = eng-coder.` |
-| `helpers.mjs:477`–`:478` | 与 `:469`–`:470` 同形（小写） | 同 `:469`–`:470` |
+| `AUTO_TURN_DIGEST_DOMAIN_ENG` | 末句 `Content authority = parent side.` | `Content basis = the mechanism doc; landing = eng-coder.` |
+| `UPSTREAM_TURN_DOMAIN` | 同上一句 | 同上 |
+| `TIMER_TURN_DOMAIN` | `Verbatim from the parent-side final text (single line — no newlines).` + `Content authority = parent side.` | `Verbatim from the mechanism doc (single line — no newlines).` + `Content basis = the mechanism doc; landing = eng-coder.` |
+| `DIGEST_ACCOUNT_DOMAIN` | 与 `TIMER_TURN_DOMAIN` 同形（小写） | 同 `TIMER_TURN_DOMAIN` |
 
 **依据坐标**：§6.1 · `TOOLS.md` §6.15.3（`:708` 要求该注 = 内容依据 = 机制文档 + 出处指针）· `AGENT-LOOP-UPSTREAM.md` §6.27.12.8（内容依据 = 机制文档，落笔 = eng-coder）· `AGENT-LOOP-ASYNC-POOL.md` §6.30.3（逐字文本 = 机制文档定稿，落笔 = eng-coder）。
 
@@ -936,8 +1091,8 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 |---|---|---|
 | `#1684` | `node scripts/prompt-refs-check.mjs` | 提示词面 69 档 · 代码面 459 档 · `命中 0` + `OK(prompt-refs)`（改前 = 5，本席实跑） |
 | `#1684` | doc-check 交付门（范围 = 本轮所写档） | 0 条命中（全仓报告态 261 条悬空 = 既有基线，非本批域） |
-| `#1683` | `grep -in "content authority" thincoder-core/agent/helpers.mjs` | 0 行（大小写不敏感——`:478` 现文小写，区分大小写形即使未改也读 0 = 假绿） |
-| `#1683` | `grep -n "parent-side final text" thincoder-core/agent/helpers.mjs` | 0 行（覆盖 `:469` / `:477` 的 `Verbatim from the parent-side final text`） |
+| `#1683` | `grep -in "content authority" thincoder-core/agent/helpers.mjs` | 0 行（大小写不敏感——`DIGEST_ACCOUNT_DOMAIN` 现文小写，区分大小写形即使未改也读 0 = 假绿） |
+| `#1683` | `grep -n "parent-side final text" thincoder-core/agent/helpers.mjs` | 0 行（覆盖 `TIMER_TURN_DOMAIN` / `DIGEST_ACCOUNT_DOMAIN` 的 `Verbatim from the parent-side final text`） |
 | `#1683` | `node --check thincoder-core/agent/helpers.mjs` | 退出码 0 |
 
 
@@ -1056,16 +1211,16 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 | `thincoder-core/prompts/persona-eng-coder.md:38` | do not execute — bounce it back — never fabricate a task book | G15 · 子句 | ② | 坐标 `thincoder-core/prompts/common.md:238`（The task book itself：unreadable ⇒ refused） |
 | `thincoder-core/prompts/persona-eng-designer.md:30` | an invalidated expression never stays on the normative face | G12 · 子句 | ① | residue makes readers re-open dead items as live work orders (this actually happened) |
 | `thincoder-core/prompts/persona-eng-designer.md:49` | never self-grant an exemption … never booked to the ledger | G13 · 子句 | ① | an unclear fix ⇒ escalate to the main agent; the main agent is unsure ⇒ relay to the user (F7's recipient is the user) |
-| `thincoder-core/prompts/persona-engineering.md:108` | walk DOWN, never up | G8① · 子句 | ① | walking up lands the manifest in an unrelated enclosing project |
-| `thincoder-core/prompts/persona-engineering.md:120` | **Never brick the session** | G8② · 子句 | ① | a session can start in any directory, and killing it over a missing project throws away the whole context |
-| `thincoder-core/prompts/persona-engineering.md:125` | Never hand-edit the JSON | G8③ · 子句 | ① | hand-editing splits the state from the tool's assumptions, and the next read interprets it by another set of rules |
-| `thincoder-core/prompts/persona-engineering.md:168` | never commit on behalf of the user's / others' docs | G9 · 子句 | ① | a commit on someone else's behalf takes work they were still writing |
-| `thincoder-core/prompts/persona-engineering.md:286` | a zero-reason refusal is never accepted（同行另 1 处：a dropped defect is one the user never learns about） | G2 · 子句（两句同换） | ① | with no reason there is nothing to evaluate |
-| `thincoder-core/prompts/persona-engineering.md:295` | a zero-reason refusal is never accepted | G2 · 子句 | ① | with no reason there is nothing to evaluate, and accepting it records a defect as fixed |
-| `thincoder-core/prompts/persona-engineering.md:315` | **Never let a design token expire** | G10 · 子句 | ① | letting one expire voids that authorization and the review must be walked again |
-| `thincoder-core/prompts/persona-engineering.md:323` | Credentials never land in docs | G7② · 子句 | ① | a token or designId value written into a doc … goes into git with the doc and gets retrieved, and it cannot be taken back |
-| `thincoder-core/prompts/persona-engineering.md:404` | never into `trigger` | G11 · 子句 | ① | a value written as prose cannot be filtered on |
-| `thincoder-core/prompts/persona-engineering.md:430` | never into `trigger` | G11 · 子句 | ① | a value written as prose cannot be filtered on |
+| `thincoder-core/prompts/persona-engineering.md` §Project state file | walk DOWN, never up | G8① · 子句 | ① | walking up lands the manifest in an unrelated enclosing project |
+| `thincoder-core/prompts/persona-engineering.md` §Project state file | **Never brick the session** | G8② · 子句 | ① | a session can start in any directory, and killing it over a missing project throws away the whole context |
+| `thincoder-core/prompts/persona-engineering.md` §Project state file | Never hand-edit the JSON | G8③ · 子句 | ① | hand-editing splits the state from the tool's assumptions, and the next read interprets it by another set of rules |
+| `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline | never commit on behalf of the user's / others' docs | G9 · 子句 | ① | a commit on someone else's behalf takes work they were still writing |
+| `thincoder-core/prompts/persona-engineering.md` §Review convergence | a zero-reason refusal is never accepted（同行另 1 处：a dropped defect is one the user never learns about） | G2 · 子句（两句同换） | ① | with no reason there is nothing to evaluate |
+| `thincoder-core/prompts/persona-engineering.md` §Review convergence | a zero-reason refusal is never accepted | G2 · 子句 | ① | with no reason there is nothing to evaluate, and accepting it records a defect as fixed |
+| `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure | **Never let a design token expire** | G10 · 子句 | ① | letting one expire voids that authorization and the review must be walked again |
+| `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure | Credentials never land in docs | G7② · 子句 | ① | a token or designId value written into a doc … goes into git with the doc and gets retrieved, and it cannot be taken back |
+| `thincoder-core/prompts/persona-engineering.md` §Ledger | never into `trigger` | G11 · 子句 | ① | a value written as prose cannot be filtered on |
+| `thincoder-core/prompts/persona-engineering.md` §Ledger | never into `trigger` | G11 · 子句 | ① | a value written as prose cannot be filtered on |
 | `thincoder-core/prompts/common.md:179` | **Destructive-command red lines**（标题） | H3 · 整行 | ① | 见「标题对照表」依据类别列（工具层对五类红线零拦截） |
 | `thincoder-core/prompts/discipline-engineering.md:3` | ## 🔴 Top hard constraints（标题） | H1 · 整行 | ① | 同上（用户裁决 + 机制约束） |
 | `thincoder-core/prompts/discipline-engineering.md:29` | ## Basic flow (four hard steps — no skipping)（标题） | H2 · 整行 | ① | 同上（四步顺序 = 流程机制本身） |
@@ -1080,7 +1235,7 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 - **G2**（12 处 · 评审轮次表的状态与裁决句）：
   `Every item appears in the table with its state: the parent settles by the table, so an item missing from it reads as done. A non-fix with no reason stays Unfixed — with nothing stated there is nothing to evaluate.`
 
-  （**两句范本**：缺项句与无因句，各站取与原句语义对等的那一句，不整段照贴。`thincoder-core/prompts/persona-engineering.md:287` 同句第 2 处 `a dropped defect is one the user never learns about` → `a dropped defect is one the user stays blind to`。）
+  （**两句范本**：缺项句与无因句，各站取与原句语义对等的那一句，不整段照贴。`thincoder-core/prompts/persona-engineering.md` §Review convergence 的同句第 2 处 `a dropped defect is one the user never learns about` → `a dropped defect is one the user stays blind to`。）
 - **G3**（3 处 · 逐处各一句）：
   ① `thincoder-core/prompts/common.md:19` → `Other docs use the term; the definition lives here — a restatement drifts from its source.`
   ② `thincoder-core/prompts/common.md:216` → `Cite instead of copying: a copy drifts from its source.`
@@ -1096,9 +1251,9 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
 - **G7**（2 处）：
   ① `thincoder-core/prompts/common.md:268` → `Size protections by the loss this system can actually take, from its real data flows. A copied checklist guards a surface nobody runs.`
 
-  ② `thincoder-core/prompts/persona-engineering.md:323` → `Credential values stay out of docs: a token written into a doc is a token in every clone, backup and reviewer's copy.`
+  ② `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure 的 `Credential values stay out of docs` 句 → `Credential values stay out of docs: a token written into a doc is a token in every clone, backup and reviewer's copy.`
 - **G8**（3 处）：
-  ① `thincoder-core/prompts/persona-engineering.md:108` → `Project root = the nearest directory walking DOWN from the anchor (direct children only). Walking up lands the manifest in an unrelated enclosing project.`
+  ① `thincoder-core/prompts/persona-engineering.md` §Project state file 的 `Project-root judgment walks DOWN` 句 → `Project root = the nearest directory walking DOWN from the anchor (direct children only). Walking up lands the manifest in an unrelated enclosing project.`
 
   ② `:65` → **子句替换**：只把加粗规则句 `**Never brick the session**` 换成 `**Bricking the session is not an option any project state overrides**`，其后的原因句逐字保留（**通则不收窄成 manifest 个案**）。该行改后逐字：
 ```
@@ -1107,9 +1262,9 @@ EN 档**不在行宽机检域**（`scanDirs = ["docs"]`）——新行 406 字�
   and without killing the session. Key decisions live in requirement-doc constraints, not in the manifest — the doc layer owns them.
 ```
   ③ `:67` → `Point-edit config through the settings tool. A hand-edited file splits the state from the tool's assumptions, and the next read applies another set of rules.`
-- **G9**（1 处 · `thincoder-core/prompts/persona-engineering.md:168`）：`Commit path-limited and only your own work: a commit on someone's behalf takes what they were still writing.`
-- **G10**（1 处 · `thincoder-core/prompts/persona-engineering.md:315`）：`A design token is short-lived runtime state: dispatch promptly after issuance. An expired token has to be re-issued, and work done against the old one is re-done.`
-- **G11**（2 处 · `thincoder-core/prompts/persona-engineering.md:404` ∥ `:214`）：`The batch name / condition sentence goes into evidence. trigger holds one bare enum value; prose there cannot be filtered on.`
+- **G9**（1 处 · `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `commit only your own work`）：`Commit path-limited and only your own work: a commit on someone's behalf takes what they were still writing.`
+- **G10**（1 处 · `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure 的 `Never let a design token expire`）：`A design token is short-lived runtime state: dispatch promptly after issuance. An expired token has to be re-issued, and work done against the old one is re-done.`
+- **G11**（2 处 · `thincoder-core/prompts/persona-engineering.md` §Ledger 的 `never into trigger` 两处）：`The batch name / condition sentence goes into evidence. trigger holds one bare enum value; prose there cannot be filtered on.`
 - **G12**（1 处 · `thincoder-core/prompts/persona-eng-designer.md:30`）：`Delete an invalidated expression from the normative face. Residue makes the next reader re-open a dead item as live work — this happened.`
 - **G13**（1 处 · `thincoder-core/prompts/persona-eng-designer.md:49`）：`An exemption you grant yourself keeps a wrong rule alive because you wrote it. An unclear fix goes to the main agent; the main agent's uncertainty goes to the user. A gate hit is fixed in the round — booking it moves the work 
   where nobody looks.`
@@ -1198,7 +1353,7 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
   按「指令式禁令口径」不计入处置；计数式无该过滤，故读数里仍计 4 处 / 4 行。**这 4 处不再改**：改掉只能靠躲词（写成 "was not made" 一类），句子更难读，而口径已把它排除在外。
 
 
-**上抛项（已裁）**：① C 区两条产品口径（`thincoder-core/prompts/persona-engineering.md:99` 内部台账不播报 ∥ `:203` 越界发现不回传）——裁前不改写；② 提示词面单档绝对帽 = **不设**（2026-10-21 用户裁：提示词无预算，体量只作读数）。
+**上抛项（已裁）**：① C 区两条产品口径（`thincoder-core/prompts/persona-engineering.md` §Project state file 的「内部台账不播报」句 ∥ §Dispatch & close discipline 的「越界发现不回传」句）——裁前不改写；② 提示词面单档绝对帽 = **不设**（2026-10-21 用户裁：提示词无预算，体量只作读数）。
 
 ### 6.33 提示词 why 落地（单测用毕即删的成本公式）
 
@@ -1268,7 +1423,9 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 
 **来源**：用户 2026-10-19 本会话逐字——「批准」= 当场派工；只有批准时另外说「先别动 / 只批设计」才停；「应该是批准或其他等价表示」；「解锁就是开工，没有第三步」。需求权威 = `ENGINEERING-MODE-V2.md` §13.10（FR32，四条）；台账 `#1710`。
 
-**要修的那一处（实读）**：`thincoder-core/prompts/persona-engineering.md:8` 以「wait for the user's explicit go」收尾，`:13` 说 authorized-to-fire ≠ approved，`:149` 只说 unlock eng-coder——这些句子叠读时，「批准」与 `go` / `the user's word` / `the nod` / `unlock` 之间没有一句等价声明（逐条机制见下「成因分析」，共 8 处读法来源）。
+**要修的那一处（实读）**：`thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的 `wait for the user's explicit go` 句，同节的 `authorized to fire` 非 approved 句，§Delivery-chain closure 的 `unlock eng-coder` 句
+
+这些句子叠读时，「批准」与 `go` / `the user's word` / `the nod` / `unlock` 之间没有一句等价声明（逐条机制见下「成因分析」，共 8 处读法来源）。
 
 上一实例因此把批准读成「设计文档过关」、另等一句「开始」，白耗一轮。`:142-144` 的 digest 条本身成立（管评审机器信号）、本批零改；它在成因里只贡献词面重复一项（G5）。
 
@@ -1299,11 +1456,11 @@ node -e "const fs=require('fs'),d='thincoder-core/prompts';for(const f of fs.rea
 **取法（最近先例 ∥ 偏离）**：先例 = 本档 §6.32（规则须携 why、不用禁令腔、就地改）∥ §6.29（同一事实跨层多点 = 关键锚点重复，每点独立可读）。
 **对齐** = 新增文本携 why、落点全在既有段落 / 既有句内、零新增 `##` 节。**偏离** = `thincoder-core/prompts/discipline-engineering.md`「基本流程」不加行（理由见「纪律层判断」）。
 
-**勘察证据行**：已查 `thincoder-core/prompts/persona-engineering.md`（`:5–13` / `:24–30` / `:52–55` / `:141–151` 实读）· `thincoder-core/prompts/discipline-engineering.md`「Basic flow」（`:29–47`）· 本档 §6.6 / §6.29 / §6.30 / §6.32 / §8.1 · `ENGINEERING-MODE-V2.md` §13.10。除上述无其他相关公共源文档——已查无。
+**勘察证据行**：已查 `thincoder-core/prompts/persona-engineering.md`（实读：发起权边界 ∥ 在飞提问 ∥ 推进与叫停 ∥ 派发收尾四段）· `thincoder-core/prompts/discipline-engineering.md`「Basic flow」（实读）· 本档 §6.6 / §6.29 / §6.30 / §6.32 / §8.1 · `ENGINEERING-MODE-V2.md` §13.10。除上述无其他相关公共源文档——已查无。
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**：
 
-A. `thincoder-core/prompts/persona-engineering.md:8` 段末追加（同段内换行、不插空行、不另起段落；`:8` 现文零改）：
+A. `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的 `wait for the user's explicit go` 句段末追加（同段内换行、不插空行、不另起段落；该句现文零改）：
 
 ```
 **Once the review has passed, that go is the approval itself**: the user's approval of the design — or any expression of the same intent, since the test is intent rather than wording ("approved", "ok, go with it", "yes, do it") — starts implementation, and the eng-coder spawn fires in that same 
@@ -1311,7 +1468,7 @@ A. `thincoder-core/prompts/persona-engineering.md:8` 段末追加（同段内换
   round. Unlock and start are one step: a two-step rule read as three spends a round-trip waiting for a word the approval already spoke. The one stop shape: the approval itself saying to hold ("hold off / design only / not yet") — that is the user's stop, and implementation waits.
 ```
 
-B. `thincoder-core/prompts/persona-engineering.md:319` 尾句替换（该行其余各句零改）：
+B. `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure 的 `Only an explicit sign-off after review unlocks eng-coder` 句尾句替换（该行其余各句零改）：
 
 现文：`Only an explicit sign-off after review unlocks eng-coder.`
 
@@ -1319,7 +1476,7 @@ B. `thincoder-core/prompts/persona-engineering.md:319` 尾句替换（该行其�
 Only an explicit sign-off after review unlocks eng-coder — and the unlock is the start: the implementation spawn fires in the same round (equivalent expressions and the one stop shape: see the Firing-rights boundary above).
 ```
 
-C. `thincoder-core/prompts/persona-engineering.md:97` 后新增一行（Advance & stop 引用块末；`>` 开头、同段内换行、不插空行；`:52-55` 现文零改）：
+C. `thincoder-core/prompts/persona-engineering.md` §Advance & stop 引用块（`Without a batch-wide go-ahead, once the review has passed, the approval is that word`）后新增一行（`>` 开头、同段内换行、不插空行；该块现文零改）：
 
 ```
 **Once the review has passed, the approval is that word**: the sign-off is the nod the next step holds for, and the spawn fires in the same round — one step, not two.
@@ -1362,7 +1519,7 @@ C. `thincoder-core/prompts/persona-engineering.md:97` 后新增一行（Advance 
 | A4 | 体量读数（无帽） | `node -e "console.log(require('fs').readFileSync('thincoder-core/prompts/persona-engineering.md','utf8').length)"` ⇒ 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③） |
 | A5 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ `命中 0` |
 | A6 | §13.10 ②③ + 行为面（观察项，非机检） | 对照表六句无矛盾（见上）；下一批：仅说「批准」⇒ 同轮 spawn；说「只批设计」⇒ 停 |
-| A7 | 修正项 3 的判据：`:52-55` 锚逐字在场 | `node` 子串比对：逐字块 C 1 次命中；`review firing / implementation starts wait for the user's word` · `all hold for the nod` 各 1 次命中（锚是加行，原四行零改） |
+| A7 | 修正项 3 的判据：§Advance & stop 块 C 的逐字块在场（引文为准） | `node` 子串比对：逐字块 C 1 次命中；`review firing / implementation starts wait for the user's word` · `all hold for the nod` 各 1 次命中（锚是加行，原四行零改） |
 
 **边界（本批不做）**：需求档零笔 · 批准门机制本体（token / 门禁 / 凭证生命周期）零触 · 新增机械门 / 工具 / 状态 = 零 · 普通模式零改 · `:6` / `:13` / `:142-144` / `:150` 零改 · `:52-55` 仅加逐字块 C 一处（其余句零改） · `thincoder-core/prompts/discipline-engineering.md` 零改 · 其余提示词档零触 · 不新增单测断言。
 
@@ -1384,7 +1541,7 @@ C. `thincoder-core/prompts/persona-engineering.md:97` 后新增一行（Advance 
 
 **来源**：用户 2026-10-19 22:10 逐字「开批修！」；需求权威 = `ENGINEERING-MODE-V2.md` §13.11（FR33，三条 + 验收）；台账 `#1712`。工具说明 / schema / 门报错落点 = 本档同批 `TOOLS.md` §6.25。
 
-**要修的那一处（实读 2026-10-19 本席）**：`thincoder-core/prompts/persona-engineering.md` 任务书节（`:158` `batchDoc` ∥ `:161-171` 参数清单）——清单列 `goal` / `round` / `knownFacts` / `designPoints` / `acceptance` / `reportFormat`，`batchDoc` 在 `:158`。
+**要修的那一处（实读 2026-10-19 本席）**：`thincoder-core/prompts/persona-engineering.md` 任务书节（`batchDoc` 与参数清单两处）——清单列 `goal` / `round` / `knownFacts` / `designPoints` / `acceptance` / `reportFormat`，`batchDoc` 在清单外的另一处。
 
 `designToken` 不在清单内，其余出现处 = 示例行 `:157` · 恢复路径 `:149` · 修正轮复用 `:147` · 并行令牌隔离 `:223` · 交付物 `:236`（均为条件句 / 旁述，不是必填清单项）。
 同节 `batchDoc`（`:158`）写的是 `omitted = refused`，`round`（`:163`）带 "fix rounds are point-fixes only" 的后果说明；令牌没有代价句——读者看不出缺它会拒掉整次 spawn。
@@ -1400,7 +1557,9 @@ C. `thincoder-core/prompts/persona-engineering.md:97` 后新增一行（Advance 
 **对齐** = 逐字块落 `:161-171` 节内、新增一行、不新增 `##` 节、既有行零改。
 **偏离** = 块内直接点名 `design-slots`（工具动作名）——取值路径是操作指令，不是指向另一份文档的引用，不触「提示词面禁带文档引用」。
 
-**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md:140-199` · `thincoder-core/tool-docs/subagent.md` 全档 · `agent-tools/subagent.mjs:136-167` · `agent-tools/subagent-spawn.mjs:108-132 / 240-258` · `agent-tools/design-slots.mjs:111` · `token-ttl.mjs:55-83` · 本档 §6.34 ∥ §6.32 · 
+**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md` §Batch-record lifecycle 至 §Dispatch & close discipline 之间（量法 = 逐段实读；as-of 2026-10-22）
+
+`thincoder-core/tool-docs/subagent.md` 全档 · `agent-tools/subagent.mjs:136-167` · `agent-tools/subagent-spawn.mjs:108-132 / 240-258` · `agent-tools/design-slots.mjs:111` · `token-ttl.mjs:55-83` · 本档 §6.34 ∥ §6.32 · 
 
   `ENGINEERING-MODE-V2.md` §13.11。
 令牌面在册权威档（`docs/README.md:78`）：`ENG-TOKEN-BINDING.md` §4 / §6.1（生命周期 ∥ 在位核对）——**结论 = 零改**，本节只动提示词清单，机制本体不在本节。
@@ -1408,7 +1567,7 @@ C. `thincoder-core/prompts/persona-engineering.md:97` 后新增一行（Advance 
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**：
 
-A. `thincoder-core/prompts/persona-engineering.md:265`（`round` 行）之后新增一行（同列表、同缩进两空格；`:161-171` 其余行零改）：
+A. `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Round field`（`dispatches must carry "round"`）之后新增一行（同列表、同缩进两空格；参数清单其余行零改）：
 
 ```
   **`designToken`** (eng-coder only — the write credential): the exact value `advisor(type='design')` issued when the review passed; copy it **verbatim** from the `subagent` `action:'design-slots'` row — the text after `designToken=` on the designId's line. **omitted = refused** — the gate refuses 
@@ -1448,8 +1607,8 @@ A. `thincoder-core/prompts/persona-engineering.md:265`（`round` 行）之后新
 
 | 既有句 | 它给出了什么 | 缺的那一半 |
 |---|---|---|
-| `thincoder-core/prompts/persona-engineering.md:55`（唯一豁免：record a decision the user just made — done in the same turn） | 许可 + 同轮（在豁免语境里） | 义务：决定**必须**当轮写盘；且不指定落点 |
-| `thincoder-core/prompts/persona-engineering.md:188`（欠账入清单） | 「未派发 / 未完成的工作项」入台账 | 一条**已谈定、未写盘的决定**不是工作项形状，读不出该入清单 |
+| `thincoder-core/prompts/persona-engineering.md` §Confirmation & approval gate 的 `The only exemption (doc/code consistency)` 句（唯一豁免：record a decision the user just made — done in the same turn） | 许可 + 同轮（在豁免语境里） | 义务：决定**必须**当轮写盘；且不指定落点 |
+| `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Debts go on the list`（欠账入清单） | 「未派发 / 未完成的工作项」入台账 | 一条**已谈定、未写盘的决定**不是工作项形状，读不出该入清单 |
 | `thincoder-core/prompts/discipline-engineering.md:30`（需求步 land it in the requirements doc, confirm, then move on） | 最终落点 = 需求档 | 时机：按字面读，落盘发生在讨论结束之后 ⇒「我先记下」成立 |
 
 另：`thincoder-core/prompts/common.md:141-145`（上下文自掌舵）只讲何时压 / 怎么压，不讲压完怎么找回决定；压缩标记自带 `Check memory search for any missing decisions`（`thincoder-core/context.mjs:34-37`），那是 memory 方向的指向，不是「回读批次档 §1」的动作。
@@ -1475,7 +1634,7 @@ A. `thincoder-core/prompts/persona-engineering.md:265`（`round` 行）之后新
 
 **偏离** = ① 三条规则按各自行为面分落三处（人格档权威二条 / 人格档债务条锚一条 / 纪律档时机锚一条），不是 §6.34 的三锚同节——三条的读者与读时不同（K1 ∥ K3 ∥ K4）；② `thincoder-core/prompts/discipline-engineering.md` 加一行——§6.34 判为不加，本条判为加，理由见 K4。
 
-**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md`（`:16–31` / `:83–119` / `:143–155` / `:189–223`）· `thincoder-core/prompts/discipline-engineering.md`（`:29–64`）· `thincoder-core/prompts/common.md`（`:134–145`）·
+**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md`（实读：身份与边界 ∥ 能力边界至推进叫停 ∥ 派发收尾 ∥ 债务与台账四段）· `thincoder-core/prompts/discipline-engineering.md`（Basic flow 节）· `thincoder-core/prompts/common.md`（Evidence discipline 节）·
 
 `thincoder-core/context.mjs:33–37` · `thincoder-core/agent/run-stages.mjs:83–151` · 本档 §6.30 ∥ §6.32 ∥ §6.34 ∥ §6.35 · `ENGINEERING-MODE-V2.md` §13.12 ∥ §13.10。
 **记录面拥有档（本笔触及的两条约定）**：① 批次档格式 = `docs/core/design/BATCH-RECORD.md` §4.10（骨架）∥ §5（行为纪律）——已查、相关：§1 行约定登记入 §4.10；
@@ -1484,7 +1643,7 @@ A. `thincoder-core/prompts/persona-engineering.md:265`（`round` 行）之后新
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**：
 
-A. `thincoder-core/prompts/persona-engineering.md:55` 后新增两行（同 bullet 列表、行间不插空行；`:29` 现文零改）：
+A. `thincoder-core/prompts/persona-engineering.md` §Confirmation & approval gate 的 `The only exemption (doc/code consistency)` 句后新增两行（同 bullet 列表、行间不插空行；该条现文零改）：
 
 ```
 - **A decision lands in the round it is made**: every requirement decision the discussion settles (shape / parameter / boundary / exclusion) goes onto disk in that same round — the requirements doc when it can take it, otherwise one line in batch record §1, in the fixed form `- **已定决定**：<decision> · 
@@ -1495,7 +1654,7 @@ A. `thincoder-core/prompts/persona-engineering.md:55` 后新增两行（同 bull
   goes back onto disk at once. Nothing before the compaction: passive compaction fires between requests, so the pre-compaction sign would be one no model can see — the summary's arrival is the first moment the trigger exists.
 ```
 
-B. `thincoder-core/prompts/persona-engineering.md:188` 条尾追加一句（同一 bullet 内续写，行数 ±0）：
+B. `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Debts go on the list` 条尾追加一句（同一 bullet 内续写，行数 ±0）：
 
 ```
  A decision the discussion settled but the requirements doc has not taken yet is a debt of the same shape: its row lands in the round it settled (visible, not prose) and closes in the round the decision reaches the requirements doc — or, when the decision is overturned before it gets there, in the 
@@ -1520,12 +1679,12 @@ C. `thincoder-core/prompts/discipline-engineering.md` 步骤 1 内、收束段�
 
 | 既有句 | 它管什么 | 本条管什么 | 为何不矛盾 |
 |---|---|---|---|
-| `persona:29` 记录决定可免确认（done in the same turn） | 许可：这类写入不必另要确认 | 义务：这类写入必须当轮发生 | 同一动作的两面：`:29` 免除确认门，本条要求写入发生；不新增确认门 |
-| `persona:96` 欠账入清单 | 工作项（未派发 / 未完成） | 决定（已谈定 / 未写盘） | 并列进同一清单：两者都是「只在对话里、再也没人看见」的东西 |
-| `persona:189–216` 台账生命周期 | 五个事件 → 动作；核销时点 | 未落盘决定的挂行 / 核销时点 | 复用同一生命周期语义（挂行 = 新债登记；核销 = 决定进需求档）；**不增第 6 行**（FR30 五行锁定） |
+| `thincoder-core/prompts/persona-engineering.md` §Confirmation & approval gate 的 `The only exemption (doc/code consistency)` 条（done in the same turn） | 许可：这类写入不必另要确认 | 义务：这类写入必须当轮发生 | 同一动作的两面：该豁免条免除确认门，本条要求写入发生；不新增确认门 |
+| `thincoder-core/prompts/persona-engineering.md` §Debts, ledger upkeep, and the closeout sweep 的 `Debts go on the list` 条 | 工作项（未派发 / 未完成） | 决定（已谈定 / 未写盘） | 并列进同一清单：两者都是「只在对话里、再也没人看见」的东西 |
+| `thincoder-core/prompts/persona-engineering.md` §Debts, ledger upkeep, and the closeout sweep（`Debts go on the list` 起、`Closing ledger sweep` 止） | 五个事件 → 动作；核销时点 | 未落盘决定的挂行 / 核销时点 | 复用同一生命周期语义（挂行 = 新债登记；核销 = 决定进需求档）；**不增第 6 行**（FR30 五行锁定） |
 | `common:141–145` 上下文自掌舵 | 何时自压 / 自压携 focus / 自动压缩 = 兜底 | 压完之后如何找回决定 | 一条管触发器，一条管事后核对；不互相覆盖 |
-| `persona:94` 收尾三态 · 禁承诺 | 轮末陈述：说了动作而本轮未发 = not done | 同一判据落在「我先记下」上 | 措辞同形（true only when that same round carries the write）；`记下` 无写盘 = 承诺态 |
-| `persona:18` 需求讨论与登记归你 | 归属：谁写需求档 / 批次档 | 时机：何时写 | 归属不变，本条只定时机 |
+| `thincoder-core/prompts/persona-engineering.md` §Confirmation & approval gate 的 `"I'll note it down"` 条（`true only when that same round carries the write`） | 轮末陈述：说了动作而本轮未发 = not done | 同一判据落在「我先记下」上 | 措辞同形（true only when that same round carries the write）；`记下` 无写盘 = 承诺态 |
+| `thincoder-core/prompts/persona-engineering.md` §Identity 的 `Yours — requirements & registration` 条 | 归属：谁写需求档 / 批次档 | 时机：何时写 | 归属不变，本条只定时机 |
 | `discipline:30` 需求步（discuss → land → confirm → move on） | 最终落点与顺序 | 落盘时机提前到决定当轮 | `land it in the requirements doc` 照旧成立；本条补的是「不用等讨论结束」 |
 
 **行为契约 · 用例表（正常 / 边界 / 错误）**：
@@ -1550,7 +1709,7 @@ C. `thincoder-core/prompts/discipline-engineering.md` 步骤 1 内、收束段�
 | A1 | §13.12 ①：同轮落笔句在场（触发 = 决定当轮；落点 = 需求档 ∥ §1）；块 C 落在步骤 1 的条区间内 | `node` 子串比对（按档分判）：`thincoder-core/prompts/persona-engineering.md` 内 `A decision lands in the round it is made` 1 次 · `otherwise one line in batch record §1, in the fixed form` 1 次 · `- **已定决定**：` 1 次；`thincoder-core/prompts/discipline-engineering.md` 内 `A decision lands in the round it is made` 1 次 · `the main agent writes it down in that round` 1 次，且该行以三空格缩进 `   - ` 起头。**位置判据（块 C）**：同一档内行索引比较——块 C 行 > `are the marker that requirements were accepted.` 所在行，且 < 行首为 `2. **Design**` 的行（块 C 必须落在步骤 1 条区间内；错位即红） |
 | A2 | §13.12 ②：重锚句在场（触发 = 标记 / 回执；动作 = 回读 §1 + 台账） | 子串 `[Context was automatically compacted` · `read back the current batch record §1` · `and the ledger` 各 1 次命中 |
 | A3 | §13.12 ③：台账行句 + 核销条件 | 子串 `is a debt of the same shape` · `closes in the round the decision reaches the requirements doc` 各 1 次命中 |
-| A4 | §13.12 ④：携 why、无禁令腔 | ① 禁令词扫描（机械）：新增区段（块 A / B / C）扫 `never|do not|don't|must not|may not|forbidden` ⇒ 0 命中（本席已预扫 = 0）；② 逐块 why 在场的一次性核对（实施轮核对、读数入批次档 §5）：块 A 第 1 条 = `a decision held only in the conversation is one compaction away from gone, and the documents written afterwards then record its opposite — a requirement written backwards is worse than one missing, because implementation is built on it`；块 A 第 2 条 = `Nothing before the compaction: passive compaction fires between requests, so the pre-compaction sign would be one no model can see — the summary's arrival is the first moment the trigger exists`；块 B = 宿主 bullet 自带 why（`thincoder-core/prompts/persona-engineering.md:188` 欠账条整句——本句同族复用，不另写 why）；块 C = `waiting for the discussion to close leaves the decision in the conversation alone, where the next compaction erases it`。判据 = 三块各指出上述子句其一（块 A 两条各一；缺一即红） |
+| A4 | §13.12 ④：携 why、无禁令腔 | ① 禁令词扫描（机械）：新增区段（块 A / B / C）扫 `never|do not|don't|must not|may not|forbidden` ⇒ 0 命中（本席已预扫 = 0）；② 逐块 why 在场的一次性核对（实施轮核对、读数入批次档 §5）：块 A 第 1 条 = `a decision held only in the conversation is one compaction away from gone, and the documents written afterwards then record its opposite — a requirement written backwards is worse than one missing, because implementation is built on it`；块 A 第 2 条 = `Nothing before the compaction: passive compaction fires between requests, so the pre-compaction sign would be one no model can see — the summary's arrival is the first moment the trigger exists`；块 B = 宿主 bullet 自带 why（`thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Debts go on the list` 条整句——本句同族复用，不另写 why）；块 C = `waiting for the discussion to close leaves the decision in the conversation alone, where the next compaction erases it`。判据 = 三块各指出上述子句其一（块 A 两条各一；缺一即红） |
 | A5 | §13.12 ⑤：提示词面零文档引用 · 体量读数（无帽） | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0；字符数 ⇒ persona 预计 61,449、discipline 预计 37,074 |
 | A6 | §13.12 ⑥：与既有条款逐句对照无矛盾；对照结论记入批次档 | 对照表七行结论 = 零矛盾（本档对照表 = 依据）；**对照结论在收口时落批次档 §6（主 agent 笔）**；下一批行为观察：谈定后当轮有写盘；压缩后首动作 = 回读 §1 + 台账 |
 | A7 | 三条触发模型侧可观察；触发字面与运行时标记常量同形 | 同轮落笔 = 决定做出当轮；重锚 = 标记 / 回执（`context.mjs:34-37`）；台账行 = 决定谈定当轮。**一次性常量比对**（实施轮与复核轮各一次，读数入批次档 §5）：从 `thincoder-core/context.mjs` 取 `COMPACTION_PREFIX` 串首，取提示词所引字面 `[Context was automatically compacted…]` 去掉 `…]` 的前缀，断言 `常量.startsWith(提示词前缀) === true`——方向固定：提示词前缀必须是运行时常量的前缀（反向不判） |
@@ -1561,8 +1720,8 @@ C. `thincoder-core/prompts/discipline-engineering.md` 步骤 1 内、收束段�
 
 | # | 决策 | 理由 |
 |---|---|---|
-| K1 | 规则 1 + 规则 2 落 `persona:29` 后（确认门节内），权威句一处 | `:29` 正是「记录决定」的许可句，且已带 `done in the same turn`——义务只差这一步；规则 2 是同一保证的恢复半（决定要活过压缩），紧邻成对读 |
-| K2 | 规则 3 落 `persona:96` 债务条尾（追加句，不加 bullet） | 它是债务条的同族：只在对话里的决定与只在报告 prose 里的欠账是同一种「没人再看见」；同条内追加 ⇒ 零行数连带、零重复 |
+| K1 | 规则 1 + 规则 2 落 `thincoder-core/prompts/persona-engineering.md` §Confirmation & approval gate 的 `The only exemption (doc/code consistency)` 条后，权威句一处 | 该豁免条正是「记录决定」的许可句，且已带 `done in the same turn`——义务只差这一步；规则 2 是同一保证的恢复半（决定要活过压缩），紧邻成对读 |
+| K2 | 规则 3 落 `thincoder-core/prompts/persona-engineering.md` §Debts, ledger upkeep, and the closeout sweep 的 `Debts go on the list` 条尾（追加句，不加 bullet） | 它是债务条的同族：只在对话里的决定与只在报告 prose 里的欠账是同一种「没人再看见」；同条内追加 ⇒ 零行数连带、零重复 |
 | K3 | 「已定决定」= §1 行约定（行首标记），不是子块 | §1 append-only：子块被后续追加冲散後清单不再连续；标记行每条自足、可全文扫读，且六段结构零改。行形逐字并入块 A（本笔）⇒ 写盘与回读扫标记同形，「固定标记」兑现到落地文本 |
 | K4 | `thincoder-core/prompts/discipline-engineering.md` 需求步 +1 行 | 该步现文只给最终落点（`land it in the requirements doc`），按字面读落盘在讨论结束后——这正是「我先记下」的文本来源；该步是决定发生的步骤。纪律档读者 = 主 agent + eng-coder + eng-designer（`thincoder-core/prompt-overlays.mjs:44-45`）——后两者不能写需求档 / 批次档 §1（D1），故块 C 必须写明动作主体是主 agent，否则它是对无法执行它的读者下的假指令（与 K5 同一判据）。§6.34 判不加是因为那里纪律层无发起面，本条不同 |
 | K5 | `thincoder-core/prompts/common.md` 不落 | 需求限定工程模式（普通模式另裁）；动作落点（§1 笔 + 台账写权）是主 agent 独属面，common 的读者含不能执行它的子代理；且自掌舵节管的是压缩时机，不是决定耐久 |
@@ -1582,8 +1741,8 @@ C. `thincoder-core/prompts/discipline-engineering.md` 步骤 1 内、收束段�
 
 | 缺口 | 现文坐标 | 缺的那一半 |
 |---|---|---|
-| 任务书两源并列，无优先级 | `thincoder-core/prompts/persona-engineering.md:350`（`batch record §2 / design doc`） | §2 与设计不一致时无判据 |
-| 单一判据源只约束派单 | `thincoder-core/prompts/persona-engineering.md:350`（`the dispatch carries ONE criterion source`） | §2 里重述的计数 / 判据不在射程内——§2 自己造了第二判据 |
+| 任务书两源并列，无优先级 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Where §2 and the design doc disagree` 句（`batch record §2 / design doc`） | §2 与设计不一致时无判据 |
+| 单一判据源只约束派单 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `the dispatch carries ONE criterion source` 句 | §2 里重述的计数 / 判据不在射程内——§2 自己造了第二判据 |
 | 收口清单无跨档对账 | `thincoder-core/prompts/discipline-engineering.md:188-189`（D7 清单有 `counts`，无 §2 ↔ 设计） | 收口不核 §2 判据是否仍与当前设计一致 |
 | 三链同源只在设计轮返工前跑一次 | `thincoder-core/prompts/persona-eng-designer.md:82-84` | 后续批次改共享设计时不重跑 |
 
@@ -1598,8 +1757,8 @@ C. `thincoder-core/prompts/discipline-engineering.md` 步骤 1 内、收束段�
 **机制（三条规则 · 单源 = 本节；提示词面只持最短动作锚）**：
 
 1. **§2 只引不抄**：批次档 §2（任务书）里的判据 / 计数按 `design §N.M` / `requirements §N.M` 引用，不重述数字；必须出现字面值（验收等值断言）时，它只作为该节所陈述的值出现，引用紧贴其旁。§2 不造第二判据。
-2. **设计变更传播**：触发 = 设计变更落地（修正轮落地 / 评审通过后的设计定稿）。动作 = 父侧扫在途批次档 §2 中引用到被改节的行，**同轮**追加 §2 更正（append-only，旧行不动）或当日挂债（台账行点名批次与节）。责任面按 D1：扫描与派单 = 父侧；§2 的笔 = eng-designer（父侧不代笔，更正走 designer 修正轮）。
-3. **收口对账**：D7 收口清单加一项「§2 判据 / 计数 ↔ 当前设计档：一致，或差异已记 §6」。
+2. **设计变更传播**：触发 = 设计变更落地（修正轮落地 / 评审通过后的设计定稿）。动作 = 父侧扫在途批次档 §2 中引用到被改节的行，**同轮**就地改那几行（`batch({action:"edit", segment:"§2", oldText, newText})`——锚定区间替换；被换掉的旧行**删掉**，不留「以本段为准」指针）或当日挂债（台账行点名批次与节）。责任面按 D1：扫描与派单 = 父侧；§2 的笔 = eng-designer（父侧不代笔，更正走 designer 修正轮）。**为什么不 append 一行更正**：§2 是**规范面**（实施席照着做的东西）——新旧两行都在，就是两种读法，照着任一行做都可能错（现场 = `docs/batches/2026-11-02-review-requires-batch.md` 收口前 §2 验收表留着一行已作废判据）；旧值住 git，不住文档。判据单源 = `docs/core/design/BATCH-RECORD.md` §4.19。
+3. **收口对账**：D7 收口清单加一项「§2 判据 / 计数 ↔ 当前设计档：一致，或差异已记 §6」+ 同项半句「**§2 ↔ §5（实施记录）**：§2 改过的判据与 §5 记下的实现是否还对得上——对得上 = 澄清，照此收口；对不上 = 差异记 §6，不许再改 §2 收场」。
 
 **扫描形态（可执行 · 仓根运行）**：
 
@@ -1627,14 +1786,14 @@ node -e "const fs=require('fs');const sec='2.4',title='镜像';for(const f of fs
 
 偏离 = ① 规则 1 的权威短句落 **eng-designer**（§2 的笔），父侧只落「两源优先级 + 判据源射程」两句——§6.36 两条都落主 agent 是因为两条的动作者都是主 agent；本条写 §2 的动作者是 designer（D1），规则落在不能执行它的读者身上 = 假指令（同 §6.36 K4 判据）。② `:162` 的括注改写为带优先级的句子，不是纯追加——该括注（`batch record §2 / design doc`）本身就是缺口：两源并列、无优先级，纯追加会在原地留下一对无判据的并列源（缺口表第一行）。
 
-**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md:145–190`（任务书参数节 + Fix rounds doc-first）· `thincoder-core/prompts/discipline-engineering.md:179–196`（D1–D9 与可读性）·
+**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md` §Batch-record lifecycle 至 §Implementation dispatch structure 之间（任务书参数节 + Fix rounds doc-first；量法 = 逐段实读；as-of 2026-10-22）· `thincoder-core/prompts/discipline-engineering.md:179–196`（D1–D9 与可读性）·
 
 `thincoder-core/prompts/persona-eng-designer.md:24–84`（修单接单 / 两份交付物 / 三链同源）· 本档 §6.34 ∥ §6.35 ∥ §6.36 ∥ D-PS37 · 需求档 §13.13 ∥ §13.12 · `scripts/prompt-refs-check.mjs`（J1/J2/J3 判据）。
 实例三本批次档在仓外（`D:\repos`），只作 rationale，不作指针。工作目录内无独立公共源文档仓——已查无（`PROJECT-MANIFEST.json` `index.publicRepos = []` 实读 `:61`）。
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**：
 
-A. `thincoder-core/prompts/persona-engineering.md:350` 整行替换（其余句照旧，只把括注改成带优先级的句子）：
+A. `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Where §2 and the design doc disagree` 句整行替换（其余句照旧，只把括注改成带优先级的句子）：
 
 ```
 - **Task books are re-derived, not transcribed**: fill every acceptance line and known fact from THIS batch's own documents — and where batch record §2 and the design doc disagree, **the design doc is the criterion source of record**: §2 is a dispatch surface that cites it, not a second copy of a 
@@ -1643,7 +1802,7 @@ A. `thincoder-core/prompts/persona-engineering.md:350` 整行替换（其余句�
   across in the same way.
 ```
 
-B. `thincoder-core/prompts/persona-engineering.md:350` 行尾追加（同一 bullet 内续写；行数 ±0）：
+B. `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Where §2 and the design doc disagree` 句行尾追加（同一 bullet 内续写；行数 ±0）：
 
 ```
  The same reach extends to the task book itself: a criterion or count written into batch record §2 as its own text is that second criterion — §2 cites the owning design-doc section, in the form `design §N.M` / `requirements §N.M`, and where a literal value has to appear (an acceptance equality 
@@ -1651,19 +1810,40 @@ B. `thincoder-core/prompts/persona-engineering.md:350` 行尾追加（同一 bul
   assertion) it appears only as that section's value with the citation beside it.
 ```
 
-C. `thincoder-core/prompts/persona-engineering.md:341` 之后新增一行（同 bullet 列表，行间不插空行；现文零改）：
+C. `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `A landed design change propagates to the task books that cite it` 条**四行整体替换**：
+
+盘上该条 = **四行**（`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 内），逐字如下：
 
 ```
-- **A landed design change propagates to the task books that cite it**: the moment a design-doc change lands — a fix round's revision, or the design finalized after review — scan the in-flight batch records for §2 citations of the changed section (its `design §N.M` token and its title), and in that 
-  same round append a §2 correction through a designer fix round (appended lines; the old ones stay as the record of what was thought then) or book the day's debt on the ledger, naming the batch and the section. The scan and the dispatch are yours; the §2 pen is the designer's — a correction you 
-
-  append yourself puts a second author on their segment, and a correction left unbooked is one nobody comes back to make.
+- **A landed design change propagates to the task books that cite it**: the moment a design-doc change lands — a fix round's revision, or the design finalized after review — scan the in-flight batch records
+  for §2 citations of the changed section (its `design §N.M` token and its title), and in that same round correct those lines in place through a designer fix round
+  (`batch({action:"edit", segment:"§2", oldText, newText})` — an anchored range replacement; the superseded lines are deleted, and no "this section prevails" pointer is left behind) or book the day's debt on the ledger, naming the batch and the section.
+  The scan and the dispatch are yours; the §2 pen is the designer's — a correction you write yourself puts a second author on their segment, and a correction left unbooked is one nobody comes back to make.
 ```
 
-D. `thincoder-core/prompts/discipline-engineering.md:188` 内、整段替换现文 `counts / pointers`（块 D 首尾即两端锚；行数 ±0）：
+D. `thincoder-core/prompts/discipline-engineering.md` 的 D7 清单**一条 bullet 整段替换**：
+
+盘上该 bullet = **三行**（`thincoder-core/prompts/discipline-engineering.md` 的 D7 清单内，行首四空格缩进），逐字如下；`counts / pointers` 留在清单上一行不动，清单不增项：
 
 ```
-counts / **§2 ↔ design-doc reconciliation** (every criterion or count §2 cites still matches the owning design-doc section — a mismatch is closed by an appended §2 correction, or recorded in §6; judging closeout by a stale §2 is what turns a correct implementation red) / pointers
+    - **§2 ↔ design-doc reconciliation** — every criterion or count §2 cites still matches the owning design-doc section — a mismatch is corrected in place with `batch({action:"edit", segment:"§2", oldText, newText})`,
+      or recorded in §6; judging closeout by a stale §2 is what turns a correct implementation red; **§2 ↔ §5 reconciliation** — a criterion §2 has changed still matches what §5 records as implemented;
+      matched = a clarification that stands; mismatched = a difference recorded in §6, never closed by editing §2 again.
+```
+
+F. `thincoder-core/prompts/persona-eng-designer.md` §Two deliverables **两处整行替换**（各按下面一个块落笔；两处之间的行零改）。行宽（本席 `node` 逐行实算 · 2026-11-02）：F-1 = **249** · F-2 = **189** ∥ **280**——均 ≤300（提示词面 `lineMax: 300`）。
+
+F-1 — `1. **The batch task**` 那行整行替换为：
+
+```
+1. **The batch task**: this batch's covered requirement entries / entries explicitly NOT in this batch / affected files / acceptance criteria → **batch record §2** (an append, or an in-place edit — §1 belongs to the main agent and stays as written).
+```
+
+F-2 — `Write means = the `batch` tool, `batch({action:"append", segment, text})` …` 那行整行替换为下面两行：
+
+```
+    Write means = the `batch` tool — `batch({action:"append", segment, text})` to add at the segment's end, and `batch({action:"edit", segment, oldText, newText})` to correct lines in place
+    (**no path parameter** — the target doc is bound at your spawn, the segment number is determined by your identity: eng-designer → §2; the superseded lines are deleted, no "this section prevails" pointer left); write fails (refused/failed) → the report states "§2 not written".
 ```
 
 E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三空格缩进，仍属 item 1；落在 `Six-segment boundary` 行之前）：
@@ -1678,27 +1858,27 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 
 | 既有句 | 它管什么 | 本条管什么 | 为何不矛盾 |
 |---|---|---|---|
-| `thincoder-core/prompts/persona-engineering.md:350` 任务书两源（§2 / 设计档） | 任务书从哪两处取料 | 两源冲突时谁赢（设计档），§2 的形态（引用） | 原来的并列只是没写优先级；本条补优先级，取料范围不变 |
-| `thincoder-core/prompts/persona-engineering.md:350` 单一判据源（the dispatch） | 派单不造第二判据 | 同一原则扩到任务书本身（§2） | 同一判据（one criterion, one source）的射程扩大，不换判据；派单面照旧 |
-| `thincoder-core/prompts/persona-engineering.md:364` 任务书 = 表 | 任务书的形态是行动表 | 表格单元里放引用而非复述的值 | 表形态零改；只改单元的写法（引用优先） |
-| `thincoder-core/prompts/persona-engineering.md:304` Fix rounds doc-first | 修正轮先改设计档，再派工 | 设计变更落地后扫 §2 | 同一轮的先后：先落设计，再传播；不抢时点 |
+| `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Where §2 and the design doc disagree` 句（任务书两源：§2 / 设计档） | 任务书从哪两处取料 | 两源冲突时谁赢（设计档），§2 的形态（引用） | 原来的并列只是没写优先级；本条补优先级，取料范围不变 |
+| `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `the dispatch carries ONE criterion source` 句（单一判据源：the dispatch） | 派单不造第二判据 | 同一原则扩到任务书本身（§2） | 同一判据（one criterion, one source）的射程扩大，不换判据；派单面照旧 |
+| `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure（任务书形态 = 表；所指具句已不在盘） | 任务书的形态是行动表 | 表格单元里放引用而非复述的值 | 表形态零改；只改单元的写法（引用优先） |
+| `thincoder-core/prompts/persona-engineering.md` §Delivery-chain closure 的 `Fix rounds doc-first` | 修正轮先改设计档，再派工 | 设计变更落地后扫 §2 | 同一轮的先后：先落设计，再传播；不抢时点 |
 | `thincoder-core/prompts/discipline-engineering.md:184` D3 计数纪律 | 同一档内计数与清单同步变 | 跨档：§2 引用值随设计档变 | 两件事：D3 管写者自己的档，本条管引用方不持有活值 |
 | `thincoder-core/prompts/discipline-engineering.md:188-189` D7 清单 | 收口固定动作集 | 清单内加一项对账 | 追加项，清单结构零改、无声明计数被牵动 |
 | `thincoder-core/prompts/persona-eng-designer.md:82-84` 三链同源 | 条目（需求条目）三链同源，设计轮返工前跑 | 判据 / 计数的跨批陈旧，设计变更落地时跑 | 对象不同（条目 vs 判据值）、时点不同；更正走 designer 修正轮时 82-84 在轮末照跑 |
-| §2 append-only（`batch` 工具段白名单） | §2 只可追加、只 designer 可写 | 更正 = 追加行，不改旧行 | 完全同向：更正形态就是 append；父侧代笔会被工具拒（机械兜底） |
+| §2 两种处置（`batch` 段白名单 + `edit`） | §2 是规范面，**可就地改**；只有 designer（工程）∥ 主 agent（普通）写得了 | 更正 = 就地改那几行（旧行删掉） | 完全同向：更正形态就是 `edit`；父侧代笔会被工具拒（机械兜底——段域一处单源，**工具通道内**；文件工具直写那条旁路无机械面 = 段级文件写门候选扩展，本批不立） |
 
 **行为契约 · 用例表（正常 / 边界 / 错误）**：
 
 | 编号 | 场景 | 输入 / 动作 | 期望 |
 |---|---|---|---|
 | U1 | 正常 · 写 §2 | designer 写一条验收等值断言 | 写「表集 = `design §2.4` 所陈述的六张」+ 引用；不裸写「六张」 |
-| U2 | 正常 · 设计变更落地 | 修正轮改了设计的 §2.4 | 父侧当轮跑扫描 → 在途批 §2 命中 → 派 designer 修正轮 append 更正行 |
+| U2 | 正常 · 设计变更落地 | 修正轮改了设计的 §2.4 | 父侧当轮跑扫描 → 在途批 §2 命中 → 派 designer 修正轮就地改那几行（`batch({action:"edit"})`；旧行删掉） |
 | U3 | 边界 · 扫描零命中 | 设计变更落地，无在途 §2 引用该节 | 无处置；扫描读数记入当轮报告 |
-| U4 | 边界 · 旧形态引用 | §2 只写标题、无 `§N.M` | 标题串分支命中；更正行同时补新形态引用 |
+| U4 | 边界 · 旧形态引用 | §2 只写标题、无 `§N.M` | 标题串分支命中；就地改时同笔补新形态引用 |
 | U5 | 边界 · 已冻结批次 | 已收口批次 §2 引用被改节 | 不在射程（新老划断）；扫描过滤掉 |
-| U6 | 错误防御 · 父侧代笔 | 父侧直接给 §2 append 更正 | `batch` 工具拒（段白名单 eng-designer → §2）——机械兜底，不靠自觉 |
+| U6 | 错误防御 · 父侧代笔 | 父侧直接给 §2 就地改（替他写那几行） | `batch` 工具拒（段白名单 eng-designer → §2）——机械兜底，不靠自觉（**工具通道内**；文件工具直写那条旁路无机械面，登记 = 段级文件写门候选扩展） |
 | U7 | 错误防御 · 漏传播 | 设计变更落地但未扫、未挂债 | 收口对账兜底：D7 项判红，差异当轮修正或记 §6 |
-| U8 | 错误防御 · 裸数字无引用 | §2 写了计数、无来源节 | 对账按「无法归属 ⇒ 视为不一致」处置：补引用或 append 更正 |
+| U8 | 错误防御 · 裸数字无引用 | §2 写了计数、无来源节 | 对账按「无法归属 ⇒ 视为不一致」处置：补引用或就地改 |
 
 测试覆盖：零单元测试档（纯文本改动、无分支）；机判 = 既有 `scripts/prompt-refs-check.mjs` + `doc_check` 交付门 + 上表子串判据，不新增常驻断言。
 
@@ -1707,8 +1887,8 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 | # | 验收 | 判法 / 读数 |
 |---|---|---|
 | A1 | §13.13 ①：只引不抄句在场（两档分判） | `thincoder-core/prompts/persona-eng-designer.md` 内 `§2 cites rather than transcribes` · `design §N.M` · `citation beside it` 各 1 次；`thincoder-core/prompts/persona-engineering.md` 内 `the design doc is the criterion source of record` · `§2 is a dispatch surface that cites it` · `The same reach extends to the task book itself` · `requirements §N.M`（块 B 引用形态两档并列）各 1 次 |
-| A2 | §13.13 ②：传播句在场（触发 / 动作 / 责任面） | `A landed design change propagates to the task books that cite it` · `scan the in-flight batch records` · `append a §2 correction` · `book the day's debt` 各 1 次 |
-| A3 | §13.13 ③：D7 清单含对账项 | `thincoder-core/prompts/discipline-engineering.md` 内 `counts / **§2 ↔ design-doc reconciliation**` 1 次，且与 `7. **D7 settlement sync**` 同一行（行号 = D7 行号）；该行内 `counts /` 与 `pointers` 各出现 1 次（两端锚重复即红） |
+| A2 | §13.13 ②：传播句在场（触发 / 动作 / 责任面） | `A landed design change propagates to the task books that cite it` · `scan the in-flight batch records` · `batch({action:"edit", segment:"§2", oldText, newText})` · `book the day's debt` 各 1 次；硬判 = 三档落地行与逐字块 C ∥ 块 D ∥ 块 F **逐行整行相等**（`node` 逐行 `===`）；反向扫 ⇒ **0**：`appended lines` ∥ `appended §2 correction` ∥ `append yourself` ∥ `the old ones stay` |
+| A3 | §13.13 ③：D7 清单含对账项 | `thincoder-core/prompts/discipline-engineering.md` 的 D7 段（`7. **D7 settlement sync**` 行至下一个顶格 bullet 项）扫 `**§2 ↔ design-doc reconciliation**` 1 次 · `**§2 ↔ §5 reconciliation**` 1 次；`- the role table / status line / counts / pointers / todo check-offs;` 行**零改**（该行内 `counts /` 与 `pointers` 各 1 次；两项并入该行 = 重复 ⇒ 红） |
 | A4 | §13.13 ④：携 why、无禁令腔 | 新增区段扫 `never|do not|don't|must not|may not|forbidden` ⇒ 0（本席预扫 = 0）；why 子句逐块：A = `A number restated in §2 stays alive only until the next design change falsifies it`；B = `a criterion or count written into batch record §2 as its own text is that second criterion`；C = `a correction left unbooked is one nobody comes back to make`；D = `judging closeout by a stale §2 is what turns a correct implementation red`；E = `closeout fails correct work by a stale criterion` |
 | A5 | §13.13 ⑤：提示词面零文档引用 · 体量读数（无帽） | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0；**块 E 内容判据 = 落地行与本节块 E 逐字围栏块整行相等**（行首三空格缩进在内；只判字数时，措辞微调仍可全绿）；字符读数（persona 63,292 / discipline 38,186 / designer 18,619）只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③） |
 | A6 | §13.13 ⑥：与既有条款逐句对照无矛盾；结论记入批次档 | 对照表八行逐句判读结论 = 零矛盾（依据 = 本表「为何不矛盾」列）；结论已记入本批 §2「验收 ⑥ 对照结论」行 |
@@ -1722,11 +1902,11 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 | # | 决策 | 理由 |
 |---|---|---|
 | K1 | 规则 1 的权威短句落 `thincoder-core/prompts/persona-eng-designer.md:53` 后（§2 的笔）；父侧只落优先级与射程两句 | 写 §2 的动作者是 designer（D1）；只落父侧 ⇒ 写者从未见过规则，规则只在下游被消费 = 假指令（同 §6.36 K4 判据）；父侧两句治的恰是它的两个缺口，不是规则本体（D2：本体 = 本节） |
-| K2 | 传播落 `thincoder-core/prompts/persona-engineering.md:341` 后新 bullet | 触发（设计变更落地）与动作（扫描 + 派 designer 修正轮）都是父侧动作；贴任务书节 = 与「任务书从哪来」同轴读 |
+| K2 | 传播落 `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `A landed design change propagates to the task books that cite it` 条后新 bullet | 触发（设计变更落地）与动作（扫描 + 派 designer 修正轮）都是父侧动作；贴任务书节 = 与「任务书从哪来」同轴读 |
 | K3 | 对账落 D7 清单内、`counts` 之后 | D7 = 收口固定动作集；与 `counts` 相邻 = 同族（本档计数 vs 跨档计数），行内插入不增行 |
 | K4 | 引用形态 = `design §N.M` / `requirements §N.M` | 让引用可机扫（规则 2 的扫描依赖它）+ 区分同号不同档；既有裸 `§N.M` 由标题串补扫兜住 |
 | K5 | `thincoder-core/prompts/common.md` / `tool-docs` / 批次档骨架不落 | 受众 = 工程模式父侧 + 设计席；common 含普通模式（本批另裁）与写不了 §2 的子代理；骨架只列 §2 装什么，不含形态规则 |
-| K6 | 更正 = append，不改旧行 | §2 append-only 是工具机械事实；旧行保留为当时记录，更正行自带「当前口径」语义 |
+| K6 | 更正 = **就地改**（`edit`），旧行删掉；要加内容才用 `append` | §2 是规范面（`docs/core/design/BATCH-RECORD.md` §4.19）：照它做的东西留两行相左 = 两种读法；旧值住 git，不在文档里 |
 | K7 | 对账带逃生面「差异已记 §6」 | 收口时无法当轮修正的差异（设计仍在校准 / 实现已按旧判据完成）记 §6 使其可见——比强行判红或静默放过好（D7 差异显式化同轴） |
 | K8 | 批次档设计档登记 = `BATCH-RECORD.md` §4.10 一行（格式归属，回指本节） | §2 的格式面元素以批次档设计档为登记面（承 §4.10「已定决定」行登记先例：行形要登记，引用形态同样要登记）；机制描述单源仍 = 本节（D2 管机制，不管格式归属）；骨架不含形态规则，零随动 |
 
@@ -1738,12 +1918,12 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 
 **来源**：用户 2026-10-19 23:27「放行 = 有权发起，不等于已批准 这条纪律是哪里来的？」· 23:29「**这条纪律有问题啊！应该是要能够自动跑完的。**」· 23:30「**我是觉得如果这个规则进了提示词，应该要改正。**」
 
-需求权威 = `ENGINEERING-MODE-V2.md` §13.14（FR36，三条）；台账 `#1715`。被取代条文 = `thincoder-core/prompts/persona-engineering.md:14`；出处 = `docs/batches/2026-10-17-prompt-firing-rights.md` B1（冻结档，只读）。
+需求权威 = `ENGINEERING-MODE-V2.md` §13.14（FR36，三条）；台账 `#1715`。被取代条文 = `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的旧「整批令不豁免批准门」句（已不在盘）；出处 = `docs/batches/2026-10-17-prompt-firing-rights.md` B1（冻结档，只读）。
 
 **要修的那一处（实读 · 2026-10-19 本席）**：
 
-- `thincoder-core/prompts/persona-engineering.md:18` 现文：`The go-ahead **does not exempt the approval gate**: the review still runs, the user's approval is still required — **"authorized to fire" is not "approved"**.` 该句让整批令在批准门再停一次——同一份授权收两次费。
-- 设计档自身两处登记引用旧语义：`:1226`（§6.34 成因表 G4，闭合列写「预授权不豁免批准照旧成立」）∥ `:1285`（§6.34 对照表第 2 行，「`:13` 仍成立：预授权照旧不等于批准」）（本笔已落，见 L6 / L7）。
+- `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的 `The go-ahead covers the approval gate` 句 现文：`The go-ahead **does not exempt the approval gate**: the review still runs, the user's approval is still required — **"authorized to fire" is not "approved"**.` 该句让整批令在批准门再停一次——同一份授权收两次费。
+- 设计档自身两处登记引用旧语义：§6.34 成因表 G4 的闭合列（原写「预授权不豁免批准照旧成立」）∥ §6.34 对照表第 2 行（原写「预授权照旧不等于批准」仍成立）（本笔已落，见 L6 / L7）。
 
 **机制（四条 = 需求三条 + 默认档一条 · 回指 §13.14）**：
 
@@ -1754,7 +1934,7 @@ E. `thincoder-core/prompts/persona-eng-designer.md:53` 之后新增一行（三�
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形；R2 / R3 = 仅前缀的插入串，行内其余取原句逐字）**：
 
-R1 — `thincoder-core/prompts/persona-engineering.md:18` 整行替换：
+R1 — `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的 `The go-ahead covers the approval gate` 句整行替换：
 
 ```text
 The go-ahead **covers the approval gate**: the batch runs its whole chain through in one pass — review, fixes, implementation, closeout — because the go-ahead already authorizes the batch's whole scope, and a second stop at the approval gate charges the same authorization twice. **The review still 
@@ -1764,7 +1944,7 @@ The go-ahead **covers the approval gate**: the batch runs its whole chain throug
   semantics (ii) implementation would have to deviate from the approved design (iii) the user says hold / design only / not yet (iv) the scope changes — a new requirement outside the batch. Without a batch-wide go-ahead, each step waits for the user's word as before.
 ```
 
-R2 — `thincoder-core/prompts/persona-engineering.md:8` 行首插入作用域前缀（**只给前缀**；该行其余 = `:8` 原句逐字零改）：
+R2 — `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的 `Without a batch-wide go-ahead` 句行首插入作用域前缀（**只给前缀**；该句其余逐字零改）：
 
 ```text
 **Without a batch-wide go-ahead**,
@@ -1772,7 +1952,7 @@ R2 — `thincoder-core/prompts/persona-engineering.md:8` 行首插入作用域�
 
 落笔形 = 插入串 + 一个空格 + 原句（`Review firing and advancement both stop at the user's approval gate — …`）；净增 35 字符（34 + 空格），与 Δ 列一致。
 
-R3 — `thincoder-core/prompts/persona-engineering.md:97` 行首插入作用域前缀（**只给前缀**；插在该行 `> ` 之后；块 C 原句逐字零改——加粗与首字母大写保留）：
+R3 — `thincoder-core/prompts/persona-engineering.md` §Advance & stop 的 `Without a batch-wide go-ahead, once the review has passed, the approval is that word` 句行首插入作用域前缀（**只给前缀**；插在该行 `> ` 之后；块 C 原句逐字零改——加粗与首字母大写保留）：
 
 ```text
 **Without a batch-wide go-ahead**,
@@ -1852,7 +2032,7 @@ R3 — `thincoder-core/prompts/persona-engineering.md:97` 行首插入作用域�
 
 **先例 ∥ 偏离**：先例 = 本档 §6.34（逐字英文文本 + 对照表 + 验收 + 用例表）∥ §6.36（就地改、理由随句）。**对齐** = 同一形制、新增文本携 why、落点全在既有段落内。**偏离** = ① 本条额外回改前节（§6.34 两处旧登记）——旧条被推翻后，前节的「仍成立」断言会作为当前规则被检索到；② 本条逐句判定 `:8` / `:55` / `:59` 三句（需求点名），§6.34 当时只判成因表。
 
-**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md`（`:1-14` / `:52-60` / `:136-155` 实读）· 本档 §6.34 全文（`:1208-1338`）∥ §6.35 ∥ §6.36 ∥ §6.37（形制）。
+**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md`（实读：发起权边界 ∥ 推进与叫停 ∥ 批档生命周期至派发收尾三段）· 本档 §6.34 全文 ∥ §6.35 ∥ §6.36 ∥ §6.37（形制）。
 
 另读 `ENGINEERING-MODE-V2.md` §13.14 ∥ §13.10（FR32）· `docs/batches/2026-10-17-prompt-firing-rights.md` B1（`:13` / `:172` / `:195`，只读）· `scripts/prompt-refs-check.mjs`（J1/J2/J3 域）· `PROJECT-MANIFEST.json` `checkConfig` / `index.publicRepos` 实读 = `[]`。
 
@@ -1870,9 +2050,9 @@ R3 — `thincoder-core/prompts/persona-engineering.md:97` 行首插入作用域�
 
 | # | 坐标 | 现文 | 缺的那一半 |
 |---|---|---|---|
-| F1 | `thincoder-core/prompts/persona-engineering.md:453` | `Submit and go — queuing is the mechanism's job` … `a hand-kept queue duplicates the scheduler` | 机制在，失效模式没点名：模型把「共享文件」读成「并行失败」，于是提前等待 ∥ 换落点 |
-| F2 | 同上（`:229` 行内） | domain conflicts are queued by the scheduler (returns `queued` + position) | 只写了回执形态，没写读法——`queued` 被当成代价 |
-| F3 | `thincoder-core/prompts/persona-engineering.md:74` | `anything past the approval gate has no approval behind it` | FR36 后整批令覆盖批准门 ⇒ 批内已授权；该断言无作用域，字面不成立（`#1716`） |
+| F1 | `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的 `Submit and go — queuing is the mechanism's job` 句 | `Submit and go — queuing is the mechanism's job` … `a hand-kept queue duplicates the scheduler` | 机制在，失效模式没点名：模型把「共享文件」读成「并行失败」，于是提前等待 ∥ 换落点 |
+| F2 | 同上（§Parallel dispatch 的同一句内） | domain conflicts are queued by the scheduler (returns `queued` + position) | 只写了回执形态，没写读法——`queued` 被当成代价 |
+| F3 | `thincoder-core/prompts/persona-engineering.md` §In-flight ask（旧断言句已不在盘） | `anything past the approval gate has no approval behind it` | FR36 后整批令覆盖批准门 ⇒ 批内已授权；该断言无作用域，字面不成立（`#1716`） |
 
 体量读数（本席 `node` 实读 2026-10-20）：`thincoder-core/prompts/persona-engineering.md` = **243 行 / 63,674 字符**——只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③）。
 
@@ -1894,7 +2074,7 @@ R3 — `thincoder-core/prompts/persona-engineering.md:97` 行首插入作用域�
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**：
 
-S1 — 在 `thincoder-core/prompts/persona-engineering.md:459` 之后**新增一整行**（`:229` 原行零改；新增 = 一个 `- **…**` bullet）：
+S1 — 在 `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的 `One job = one record` 条之后**新增一整行**（原行零改；新增 = 一个 `- **…**` bullet）：
 
 ```text
 - **A perceived file overlap is a scheduling input, not a reason to hold or relocate**: the perception is exactly what the `files` declaration exists for — declare the domain, dispatch, and let the scheduler queue what overlaps; a hand-kept wait stalls the batch on the same conflict the queue would 
@@ -1905,7 +2085,7 @@ S1 — 在 `thincoder-core/prompts/persona-engineering.md:459` 之后**新增一
   a `dependsOn` on the producing task orders the edit after it. **Pre-dispatch self-check**: "am I waiting, or have I moved the landing point, because of file overlap?" — if yes, declare `files` and dispatch; the queue holds the conflict while the work proceeds.
 ```
 
-R4 — `thincoder-core/prompts/persona-engineering.md:74` 整行替换：
+R4 — `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `Defaults stay in bounds` 句整行替换：
 
 ```text
 - **Defaults stay in bounds**: a default is drawn only from the scope already confirmed — a default that widened that scope would carry a decision nobody made, and the user would meet the work only after it landed. A batch-wide go-ahead puts the batch's whole scope inside that confirmation, so a 
@@ -1950,11 +2130,11 @@ R4 的作用域句（`A batch-wide go-ahead puts the batch's whole scope inside 
 | # | 验收 | 判法 / 读数 |
 |---|---|---|
 | A1 | §13.15 ①：三句 + 自检各 1 次 | 提示词面子串各 1 次命中：`A perceived file overlap is a scheduling input` · `` `queued` is a normal admission receipt `` · `Line-number drift is a content problem, not a timing one` · `Pre-dispatch self-check` |
-| A2 | §13.15 ②：旧断言清零 + 作用域句在场 | `thincoder-core/prompts/persona-engineering.md:76` 含 `A batch-wide go-ahead puts the batch's whole scope inside that confirmation` 1 次；提示词面 `thincoder-core/prompts/**` 扫 `anything past the approval gate has no approval behind it` ⇒ 0（设计档 F3 ∥ 需求档 ∥ 批次档的引文属分析面，不计） |
+| A2 | §13.15 ②：旧断言清零 + 作用域句在场 | `thincoder-core/prompts/persona-engineering.md` §In-flight ask 含 `A batch-wide go-ahead puts the batch's whole scope inside that confirmation` 1 次；提示词面 `thincoder-core/prompts/**` 扫 `anything past the approval gate has no approval behind it` ⇒ 0（设计档 F3 ∥ 需求档 ∥ 批次档的引文属分析面，不计） |
 | A3 | 携 why、无禁令腔 | 新增文本（S1 全文 + R4 全文）扫 `never\|do not\|don't\|must not\|may not\|forbidden` ⇒ 0；why 子串各 1 次：`stalls the batch on the same conflict` · `the content lands where its criterion does not live` · `turns a same-minute dispatch into a hand-kept wait` · `a wait leaves the shifted line exactly where it was` |
 | A4 | 提示词面零文档引用 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0 |
 | A5 | 体量读数（无帽） | 只作记录，不作判据（提示词无预算帽——见 §7 D-PS42 ③）；预计 65,134（基线 63,674 + 1,460） |
-| A6 | §6.38 对照表 +1 行且含 `:40` | 对照表数据行 10 → 11；新行「既有句」列含 `:40`；A9 计数句为「十一行」，与行数一致 |
+| A6 | §6.38 对照表 +1 行且含 §In-flight ask 的 `Defaults stay in bounds` | 对照表数据行 10 → 11；新行「既有句」列含该句；A9 计数句为「十一行」，与行数一致 |
 | A7 | 触发点可观察 | 本节「触发点」表四行在场；三个观察面 = 派单那一刻 / `queued` 回执 / 串行编辑前 |
 | A8 | 台账收口条件 | `#1716`：A2 两条同时成立即达收口条件；`#1717`：本批 §6 结算（实施面 A1 + A5 绿） |
 | A9 | 对照结论记入批次档 | 实施轮在 §5 记一行对照结论（§6.39 对照表 = 零矛盾，引 §6.39）；收口轮核其在场（§5 含「对照结论」且引 §6.39） |
@@ -1976,7 +2156,7 @@ R4 的作用域句（`A batch-wide go-ahead puts the batch's whole scope inside 
 **对齐** = 同一形制；新增文本携 why；小改走「新增一行 + 整行替换」，相邻行零改。
 **偏离** = ① 本条同时落到既有 bullet 的紧邻（`:229` 之后）与另一节（`:40`），§6.38 全部落在同一节内；② 本条是「三句 + 自检」的成组落地，不是单条替换——四句互为出口，拆开任一句都留一个失效模式无人对撞。
 
-**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md`：`:5-15`（发起权边界 + 整批令）· `:30-42`（在飞提问 · `:40`）· `:155-192`（实施委托结构化 · `:171` / `:175` / `:178-180` / `:188` / `:189`）· `:224-231`（并行派发 · `:229`）· `:238-244`。
+**勘察证据行**：已读 `thincoder-core/prompts/persona-engineering.md`：§Firing-rights boundary（发起权边界 + 整批令）· §In-flight ask（在飞提问）· §Dispatch & close discipline（实施委托结构化）· §Parallel dispatch（并行派发）· 收口清账各条。
 
 本档 §6.38 全文（`:1721-1863`）∥ §6.37（`:1551` 起，形制）。`ENGINEERING-MODE-V2.md` §13.15（`:794-806`）· 本批批次档 §1。
 
@@ -1986,7 +2166,7 @@ R4 的作用域句（`A batch-wide go-ahead puts the batch's whole scope inside 
 `PROJECT-MANIFEST.json` `index.publicRepos` 实读 = `[]` ⇒ 无跨仓公共源可查——已查，无相关。
 
 全仓扫 `anything past the approval gate`：命中 = 提示词面 `:40`（实施轮改）· 需求档 §13.15（权威处，零改）· 冻结批档 `2026-10-19-goahead-covers-gate`（只读）· 本批批次档 §1。无其它规范面引用旧句。
-全仓扫 `thincoder-core/prompts/persona-engineering.md:2[3-9][0-9]`：命中 = 两份批次档（历史记录，不回改）——本条插入点之后的坐标引用不落在规范面。
+全仓扫「`thincoder-core/prompts/persona-engineering.md` + 冒号 + 2 开头三位数字」形态的坐标：命中 = 两份批次档（历史记录，不回改）——本条插入点之后的坐标引用不落在规范面。
 
 **上抛项**：无。
 
@@ -2002,14 +2182,14 @@ R4 的作用域句（`A batch-wide go-ahead puts the batch's whole scope inside 
 | F1 | `thincoder-core/prompts/discipline-engineering.md:30` | `Requirements — discuss what's wanted until clear, land it in the requirements doc, confirm, then move on.` | 只有动词「discuss」：没写问什么、几类、何时算问过 ⇒ 可以读成「自己读代码读到清楚」 |
 | F2 | `thincoder-core/prompts/discipline-engineering.md:37` | `(user confirmed, or answers no longer change the requirements)` | 自判逃生口：一次没问，也能宣布「答案不再改需求」 |
 | F3 | `thincoder-core/prompts/common.md:15` | `Ask only when the docs leave it unanswered and the answer would change what you do next` | 成本过滤没有分界：业务意图既不在文档里、也没被认成「改变下一步」⇒ 永不发问 |
-| F4 | `thincoder-core/prompts/persona-engineering.md:68` ∥ `:54-59` | 在飞提问（给默认值 · 不阻塞 · `Channel boundary`）∥ 推进与叫停 | 与 F1 的「必须问」没有分面：两套规则同场，读者不知道哪条管需求形成、哪条管执行 |
+| F4 | `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `The ordinary reply text beats both bad choices` 句 ∥ 同档 §Confirmation & approval gate | 在飞提问（给默认值 · 不阻塞 · `Channel boundary`）∥ 推进与叫停 | 与 F1 的「必须问」没有分面：两套规则同场，读者不知道哪条管需求形成、哪条管执行 |
 
 **机制（三条 = 需求三条 + 一条面分界）**：
 
 1. **需求必须问出来**（R1）：新功能 / 新业务规则进入时，设计开始前至少一轮「提问 → 用户回答」，覆盖四类——业务规则 · 边界 · 优先级 · 验收口径。判定「问过了」= 四类里用户能答的都答过，不是问题条数配额。读代码只填事实：事实可以支撑规则，不能代替用户把规则说出来。
 2. **需求完成 = 用户明确确认**（R2）：原话或点选；agent 自判「够清楚了」不算确认。未确认 ⇒ 本步产出是待确认问题清单，不是设计。自判逃生口删除。
 3. **`thincoder-core/prompts/common.md` 分界**（R3）：文档能答的是事实；意图 / 规则 / 取舍是用户的话，必须问。这不是给成本过滤开豁免口，而是指出这一类永远落在「文档答不了」且「答案决定做什么」那一侧 ⇒ 过滤本身放行。用户说过一次即事实，不重问。
-4. **面分界**（R3 末句）：三条只作用于需求形成期；执行面的在飞提问（不阻塞 · 默认值 · 四停相）零改，默认值仍只从已确认范围取（`persona:40`）。
+4. **面分界**（R3 末句）：三条只作用于需求形成期；执行面的在飞提问（不阻塞 · 默认值 · 四停相）零改，默认值仍只从已确认范围取（`thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `Defaults stay in bounds`）。
 
 **逐字英文文本（实施席照此落笔 · 唯一权威目标形）**：
 
@@ -2053,12 +2233,12 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 | `common:15` 成本过滤 | 只问「答了会改变下一步」的问题 | 意图 / 规则 / 取舍永远落在过滤放行侧 | 不是豁免：R3 说明该类「文档答不了」（条件一成立）且「答案决定做什么」（条件二成立）⇒ 过滤本身放行。过滤面零改 |
 | `common:16-20` why ∥ 两边都适用 ∥ checked-evidence line | 过滤的理由与提交形态 | 分界只在「哪些问题属于用户的话」 | 零改：父代理 ∥ 子代理的 checked-evidence line 照旧要带 |
 | `common` 上行通道节 `Ask only when both hold` | 子代理 → 父代理的提问过滤 | 主会话向用户问意图 | 适用对象不同；子代理问意图仍满足该节两条件（材料里没有、答案改变做法） |
-| `persona:36-39` 在飞提问（给默认值 · 不阻塞） | 执行期：长任务中途用默认值前进 | 需求形成期：无默认值可代规则，必须问到答案 | R3 末句显式分面：形成期问、执行期默认值推进；`:37` 的触发条件（mid-run + 有工作默认值）在形成期不成立 |
-| `persona:40` `Defaults stay in bounds` | 默认值只能从已确认范围取 | 形成期的答案 = 新的已确认范围 | 同源：先问出来、用户答了，默认值才有取值域；未确认就没有默认可给 |
-| `persona:41` `Channel boundary`（硬门用 `question` ∥ 停下上报） | 硬问题走阻塞通道 | 需求四类问题属硬门 | 同向：规则 / 边界 / 验收口径正是该句的「a ruling on a criterion」，通道指引不变 |
-| `persona:42` `Discipline`（一问一答 · 重问已授权范围耗注意力 · 默认值领先） | 执行期在飞提问的提问纪律 | 需求形成期「已陈述即事实、不重问」的注意力理由 | 同一理由（重问耗用户注意力）两层各一条关键锚点：`persona:42` 管已授权范围，R3 管已陈述事实；common 层读者含两模式 + 全部子代理，persona 层读者只有工程侧 ⇒ 各层须独立可读（D-PS41），两处保留，D2 不判违规 |
-| `persona:54-59` 推进与叫停 ∥ `:8` 发起权 | 谁发起、何时停 | 需求没确认就不进设计 | 同向：本条把「进设计」的前置写明；发起权仍在用户 |
-| `persona:14` 四停相（§6.38） | 已跑的批为什么停 | 需求未确认不进设计 | 两轴：四停相管「跑起来的批」，R2 管「还没放行的需求」 |
+| `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `Trigger (both must hold)` 条（给默认值 · 不阻塞） | 执行期：长任务中途用默认值前进 | 需求形成期：无默认值可代规则，必须问到答案 | R3 末句显式分面：形成期问、执行期默认值推进；该触发条的触发条件（mid-run + 有工作默认值）在形成期不成立 |
+| `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `Defaults stay in bounds` | 默认值只能从已确认范围取 | 形成期的答案 = 新的已确认范围 | 同源：先问出来、用户答了，默认值才有取值域；未确认就没有默认可给 |
+| `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `Channel boundary`（硬门用 `question` ∥ 停下上报） | 硬问题走阻塞通道 | 需求四类问题属硬门 | 同向：规则 / 边界 / 验收口径正是该句的「a ruling on a criterion」，通道指引不变 |
+| `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `Discipline`（一问一答 · 重问已授权范围耗注意力 · 默认值领先） | 执行期在飞提问的提问纪律 | 需求形成期「已陈述即事实、不重问」的注意力理由 | 同一理由（重问耗用户注意力）两层各一条关键锚点：`Discipline` 条管已授权范围，R3 管已陈述事实；common 层读者含两模式 + 全部子代理，persona 层读者只有工程侧 ⇒ 各层须独立可读（D-PS41），两处保留，D2 不判违规 |
+| `thincoder-core/prompts/persona-engineering.md` §Advance & stop 的 `Stop-and-check is intent, not a word list` ∥ §Firing-rights boundary 的 `Without a batch-wide go-ahead` | 谁发起、何时停 | 需求没确认就不进设计 | 同向：本条把「进设计」的前置写明；发起权仍在用户 |
+| `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary 的 `Four shapes still stop the run and send it back to the user`（§6.38） | 已跑的批为什么停 | 需求未确认不进设计 | 两轴：四停相管「跑起来的批」，R2 管「还没放行的需求」 |
 
 **对照表 · 与既有设计节（§6.34 ∥ §6.38 ∥ §6.39）**：
 
@@ -2079,7 +2259,7 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 | C5 | 错误防御 · 自判放行 | agent 认为「够清楚了」直接进设计 | 判为违规：本步产出应为待确认问题清单；判据 = 用户明确确认 |
 | C6 | 错误防御 · 问过但没记 | 用户答了，需求档未更新 | 按 `:38` 当轮落盘，再请用户确认清单 |
 | C7 | 错误防御 · 借轻通道跳过 | 新业务规则被当成 detail 走轻通道 | 按 `:58` 一句边界判回全链；轻通道准入面零改 |
-| C8 | 边界 · 执行期冒出新问题 | 实施中途出现一条规则问题 | 走 `persona:36-42` 在飞提问 ∥ 硬门；本节只界定形成期，不改执行期通道 |
+| C8 | 边界 · 执行期冒出新问题 | 实施中途出现一条规则问题 | 走 `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的在飞提问 ∥ 硬门（`Channel boundary` 条）；本节只界定形成期，不改执行期通道 |
 
 测试覆盖：零单元测试档（纯文本改动、无分支）；机判 = 既有 `scripts/prompt-refs-check.mjs` + 交付门 `doc_check`，不新增常驻断言。
 
@@ -2093,7 +2273,7 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 | A4 | 面分界句在场（需求面 vs 执行面） | `thincoder-core/prompts/common.md` 内 `The line holds while the requirement is being formed` · `the in-flight ask still steers with a workable default` 各 1 次 |
 | A5 | 携 why、无禁令腔 | 新增文本（R1 + R2 + R3）扫 `never\|do not\|don't\|must not\|may not\|forbidden` ⇒ 0（本席预扫 = 0）；why 子句各 1 次：`a fact can support a rule`（R1）· `the work built on it gets redone`（R3） |
 | A6 | §13.16 ③：提示词面零文档引用 · 逐档体量读数（无帽）（D-PS42 ③） | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0；逐档判：`thincoder-core/prompts/discipline-engineering.md` 预计 38,203· `thincoder-core/prompts/common.md` 预计 43,728· `thincoder-core/prompts/persona-engineering.md` ±0（65,134）；三档合计 147,065 ≤ 149,917 只作附带读数 |
-| A7 | 同档自洽（五要素计数 · 相邻句零改 · 按引文判） | `:30` / `:31-35` / `:38` / `thincoder-core/prompts/common.md:14` = 改前坐标、只作读数；按引文判：`thincoder-core/prompts/discipline-engineering.md` 内 `discuss what's wanted until clear, land it in the requirements doc, confirm, then move on` · `organized by **five elements**` · `A decision lands in the round it is made` 各 1 次、五要素子 bullet 仍 5 条（`:31-35`；步骤 1 另有一条既有决策子 bullet，不计入）；`thincoder-core/prompts/common.md` 内 `Before you ask anything, look for the answer in the docs` 1 次 |
+| A7 | 同档自洽（五要素计数 · 相邻句零改 · 按引文判） | 改前坐标（`thincoder-core/prompts/discipline-engineering.md` 三处 ∥ `thincoder-core/prompts/common.md` 一处）只作读数；按引文判：`thincoder-core/prompts/discipline-engineering.md` 内 `discuss what's wanted until clear, land it in the requirements doc, confirm, then move on` · `organized by **five elements**` · `A decision lands in the round it is made` 各 1 次、五要素子 bullet 仍 5 条（以引文为准；步骤 1 另有一条既有决策子 bullet，不计入）；`thincoder-core/prompts/common.md` 内 `Before you ask anything, look for the answer in the docs` 1 次 |
 | A8 | §6.36 位置判据复跑（条文本锚已退役，只剩尾句界） | `thincoder-core/prompts/discipline-engineering.md` 内 `are the marker that requirements were accepted.` 1 次，且 `A decision lands in the round it is made` 所在行在其后、`2. **Design**` 行亦在其后（§6.36 A1 位置判据重跑绿；前段引文不参与判定——见 L7） |
 | A9 | 对照结论记入批次档 | 实施轮在 §5 记一行对照结论（§6.40 对照表 = 零矛盾，引 §6.40）；收口轮核其在场 |
 
@@ -2110,7 +2290,7 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 | K3 | 判定「问过了」= 四类覆盖面，不设问题条数 | 需求给的判据就是「四类里能答的都答过」；固定配额会在某一类问满就收工，其余类永远不问 |
 | K4 | R3 不写「成本过滤不适用」，写「这一类永远落在过滤放行侧」 | 直接豁免会与 `common:15` 的 `Ask only when…` 字面冲突，读者得二选一；按条件归类的写法两句话都成立（文档答不了 + 答案决定做什么），过滤本体零改 |
 | K5 | 面分界句落 `thincoder-core/prompts/common.md`（R3 末句），不落 persona | 界要在读者同时看到两条规则时存在；common 恒第二位注入 = 全角色两模式共读。persona 的在飞提问节读者只有主 agent，界写在需求面才两侧都读到 |
-| K6 | `thincoder-core/prompts/persona-engineering.md` 零改 | 执行面规则由需求点名「不改」；R3 末句已把分界给到读者，persona 再加一句 = D2 第二份活描述。`:42` 既有句与 R3 的注意力子句 = 关键锚点重复，处置见对照表 `persona:42` 行（声明保留，不新增句） |
+| K6 | `thincoder-core/prompts/persona-engineering.md` 零改 | 执行面规则由需求点名「不改」；R3 末句已把分界给到读者，persona 再加一句 = D2 第二份活描述。该档既有句与 R3 的注意力子句 = 关键锚点重复，处置见对照表同行（声明保留，不新增句） |
 
 **先例 ∥ 偏离**：先例 = 本档 §6.38（逐字英文文本 + 对照表 + 用例表 + 验收）∥ §6.39（插入行 + 整行替换、相邻行零改）。
 **对齐** = 同一形制；新增文本携 why；落点 = 既有节内增行 ∥ 整行替换；机判沿用既有脚本与交付门。
@@ -2121,7 +2301,7 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 
 **勘察证据行**：已读 `thincoder-core/prompts/discipline-engineering.md:28-45`（基本流程 · 五要素 · `:37` 判据 ∥ `:38` 决策落盘）∥ `:50-58`（轻通道 · 一句边界）。
 
-已读 `thincoder-core/prompts/common.md:13-20`（Check the docs before you ask 全段）∥ `:68-96`（上行通道 · `Ask only when both hold`）· `thincoder-core/prompts/persona-engineering.md:5-15`（发起权边界 + 整批令）∥ `:35-42`（在飞提问 · `:40` 默认值 · `:41` 通道界）∥ `:54-59`（推进与叫停）；
+已读 `thincoder-core/prompts/common.md`（Check the docs before you ask 全段 ∥ 上行通道的 `Ask only when both hold` 条）· `thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary（发起权边界 + 整批令；as-of 2026-10-22 实读）∥ §In-flight ask（默认值与通道界两条）∥ §Advance & stop；
 
 本档 §6.34（`:1208` 起）∥ §6.36（`:1409` 起，其 L3 锚引 `thincoder-core/prompts/discipline-engineering.md:37`）∥ §6.38 ∥ §6.39（形制）· 需求档 §13.16（`:809-822`）· 本批批次档 §1。
 
@@ -2144,11 +2324,11 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 | # | 坐标 | 现文 | 缺的那一半 |
 |---|---|---|---|
 | F1 | `thincoder-core/prompts/discipline-engineering.md:42` | `Closest-precedent survey … survey how **similar / same-kind features currently do it** … an intended deviation ⇒ an **explicit rationale**` | 「相似」即可交差：勘察可做、名字不必答出；「偏离 + 理由」是合法通道（F-W23 偏离理由逐字「F-W23 ①/② 逐字指定」） |
-| F2 | `thincoder-core/prompts/persona-engineering.md:225` | 轻通道三例 + 两种披露句式 | 笔前无「现成件」问题；三例全是小改 ⇒ 设计前规则对它们无效 |
+| F2 | `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Light channel` 条 | 轻通道三例 + 两种披露句式 | 笔前无「现成件」问题；三例全是小改 ⇒ 设计前规则对它们无效 |
 | F3 | `thincoder-core/prompts/advisor-design.md:23` | 第 9 条 Closest-precedent check：查「先例行在场 + 偏离理由显式」 | 只查「有没有写」，不查「现成件为什么没用」——存在门缺席 |
 | F4 | `thincoder-core/prompts/discipline-engineering.md:116-117` | `Naming discipline`（名字要携定义）· `One word per thing`（一名一物：`doc word = UI word = conversation word, 1:1`） | UI 标签 / 字段名 / 按钮文字没有挂靠面：`:117` 已把 UI word 纳入一对一，却没有「先挂靠产品已载概念」的动作 |
 | F5 | 全部门 | 需求 ↔ 设计 ↔ 实现 ↔ 测试逐层自洽 | 无一道问「是不是已经存在」（批次档 §1 行 1；F-W23 五道门零拦截） |
-| F6 | `thincoder-core/prompts/persona-engineering.md:209` | 收口清账条：收口扫台账、每条给处置 | 收口不读该轮 §1 的笔行——答案行缺了没有地方现形 |
+| F6 | `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closing ledger sweep` 条 | 收口清账条：收口扫台账、每条给处置 | 收口不读该轮 §1 的笔行——答案行缺了没有地方现形 |
 
 坐标注：需求 §13.17 与派单书引 `thincoder-core/prompts/discipline-engineering.md:40`；现盘实读 = `:42`——FR38 的 R1 在 `:35` 后插入两行所致（§6.40 L1 已预告位移）。本条按现盘坐标落笔，`:40` 作历史引文不参与定位。
 
@@ -2160,11 +2340,11 @@ R3 — `thincoder-core/prompts/common.md:16` 之后新增一行（`**Why**: …`
 4. **笔前也答**（需求 ④ · F2）：轻通道 / 直改同样先答三问，答案进批档 §1 该笔行；轻通道准入本体零改。
 5. **评审存在性判据**（需求 ⑥ · F3）：新名字 / 组件 / 端点存在且设计未用、未说明为何不可用 ⇒ **🔴**；缺答案行本身仍 **🟡**（现状 = 缺先例行）。落点 = `thincoder-core/prompts/advisor-design.md` 新增第 11 条（判据 = K1）；**作用域 = 设计所依据的需求集要求该答案行时**——普通模式的需求集无此要求 ⇒ 第 11 条不判（二择一理由见 K10）。
 6. **新名挂靠**（需求 ③ · F4）：UI 标签 / 字段名 / 按钮文字 = 产品**已载概念**的直译，文档写明对应；无对应 ⇒ 登记新名 + 说明取代谁 ∥ 扩展谁。落点 = `thincoder-core/prompts/discipline-engineering.md:117` 同一 bullet 的续句（一名一物的执行形；K8）。
-7. **收口抽读**（验收 ② 的读者面 · F6）：父侧收口轮读该轮 §1 的笔行——**抽样 ≥2 行，不足 2 行全查**——逐行判三形在场。落点 = `thincoder-core/prompts/persona-engineering.md:215` 之后的新 bullet（B2b）：「父侧收口轮」是运行期动作，规则只住中文设计档 = 运行时不触发（同本条对三次实例的诊断）。
+7. **收口抽读**（验收 ② 的读者面 · F6）：父侧收口轮读该轮 §1 的笔行——**抽样 ≥2 行，不足 2 行全查**——逐行判三形在场。落点 = `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closeout samples the pen lines` 条之后的新 bullet（B2b）：「父侧收口轮」是运行期动作，规则只住中文设计档 = 运行时不触发（同本条对三次实例的诊断）。
 
 **唯一机检项 = 答案行在场性（判据形 · 非机械门）**（需求验收 ②）：
 
-- **谁在何时读**：① 设计评审（第 11 条）读设计档的每条落点行——**仅当设计所依据的需求集要求该行时**；② 父侧收口轮读批档 §1 的笔行——**抽样 ≥2 行，不足 2 行全查**（落点 = B2b，`thincoder-core/prompts/persona-engineering.md:215` 后）。
+- **谁在何时读**：① 设计评审（第 11 条）读设计档的每条落点行——**仅当设计所依据的需求集要求该行时**；② 父侧收口轮读批档 §1 的笔行——**抽样 ≥2 行，不足 2 行全查**（落点 = B2b，`thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closeout samples the pen lines` 条后）。
 - **怎么判**：行内三形之一（`existing:` ∥ `none found:` ∥ `existing but unusable:`；中文记录面 `已查无：` ∥ `现成不可用：`）⇒ 已答；**缺行 = 「没查」**，不得读成「查无」。
 - **不做**：不新增脚本、不进 CI、不加批次档机判门；`scripts/prompt-refs-check.mjs` 与交付门 `doc_check` 照旧。
 
@@ -2193,7 +2373,7 @@ B2 — 移到轻通道段末：`Closeout-chain segment map` 行之后 / `- **Rou
   left it unusable — a different shape, a smoother fit or a nicer look is taste, not a reason. A full-chain pen writes the same line in its design doc's new-mechanism section, one per landing.
 ```
 
-B2b — `thincoder-core/prompts/persona-engineering.md:215` 之后新增 bullet（空行分隔 · 与 104 同形）：
+B2b — `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closeout samples the pen lines` 条之后新增 bullet（空行分隔 · 与 `Closing ledger sweep` 条同形）：
 
 ```text
 - **Closeout samples the pen lines**: at each batch closeout, read at least two of the round's §1 pen lines — fewer than two ⇒ read them all — and check each carries a three-question answer (`existing:` ∥ `none found:` ∥ `existing but unusable:`, the Chinese record face `已查无：` ∥ `现成不可用：`); a missing 
@@ -2222,10 +2402,10 @@ B4 — `thincoder-core/prompts/discipline-engineering.md:117` 整行替换（保
 | `discipline:30` 需求步（过程步名） | 四步顺序与步骤入口 | 设计步内部的前置动作 | 两轴：`:30` 管何时进设计，本节管进设计后第一笔怎么做 |
 | `discipline:37` FR38 需求必须问出来 | 需求形成期问用户 | 设计 / 落笔前查现成件 | 相邻两门：问用户（意图）与查代码（事实）各一侧；`common:17` 已写「文档答事实、意图问用户」——本条走文档 / 代码一侧 |
 | `discipline:50-58` 轻通道节 | 三例旁路全链 | 旁路的笔前前置（答三问 · 写 §1） | 准入三例与边界零改；只加「笔前先答」，不缩也不放准入 |
-| `persona:107-111` 轻通道披露句式 | 父侧逐笔披露（轻 ∥ 全链） | 披露行里多一段答案行（B2 落轻通道段之后、`Closeout-chain segment map` 行后 / `- **Round field**` 行前——顶层段落，零缩进） | 披露形不变；答案行加入 §1 笔行 = 披露面的内容扩充；B2 不回插披露列表内部 ⇒ 轻通道列表项与「The disclosure carries…」的指代关系零动 |
-| `persona:104` 收口清账条 | 收口扫台账，每条给处置 | 收口抽读该轮 §1 笔行（B2b） | 同轮同拍、两个读面：一处扫台账，一处扫笔行；清账判据零改 |
-| `persona:120` 派单公共源坐标句 | 派单时给公共源坐标；没有 ⇒ 明写「已查无」 | 落笔时给现成件答案；查无 ⇒ `none found:` | **同形不同题**：一个是派单给方向（公共源坐标，主 agent → 设计席），一个是落笔交答案（现成件，笔 → 评审 / 收口）；两形各定死在各自面，「缺行 = 没查」的判法同源 |
-| `persona:54-59` 推进与叫停 | 谁发起、何时停 | 笔前答三问 | 两轴：本节不动发起权 / 叫停判据 |
+| `thincoder-core/prompts/persona-engineering.md` §Change-face routing, light channel, and dispatch fields 的 `Light channel (detail-face ∥ convergence-face pens` 段（披露句式） | 父侧逐笔披露（轻 ∥ 全链） | 披露行里多一段答案行（B2 落轻通道段之后、`Closeout-chain segment map` 行后 / `- **Round field**` 行前——顶层段落，零缩进） | 披露形不变；答案行加入 §1 笔行 = 披露面的内容扩充；B2 不回插披露列表内部 ⇒ 轻通道列表项与「The disclosure carries…」的指代关系零动 |
+| `thincoder-core/prompts/persona-engineering.md` §Debts, ledger upkeep, and the closeout sweep 的 `Closing ledger sweep` 条 | 收口扫台账，每条给处置 | 收口抽读该轮 §1 笔行（B2b） | 同轮同拍、两个读面：一处扫台账，一处扫笔行；清账判据零改 |
+| `thincoder-core/prompts/persona-engineering.md` §Change-face routing, light channel, and dispatch fields 的 `Design-round dispatches carry public-source coordinates` 条 | 派单时给公共源坐标；没有 ⇒ 明写「已查无」 | 落笔时给现成件答案；查无 ⇒ `none found:` | **同形不同题**：一个是派单给方向（公共源坐标，主 agent → 设计席），一个是落笔交答案（现成件，笔 → 评审 / 收口）；两形各定死在各自面，「缺行 = 没查」的判法同源 |
+| `thincoder-core/prompts/persona-engineering.md` §Advance & stop 的 `Stop-and-check is intent, not a word list` | 谁发起、何时停 | 笔前答三问 | 两轴：本节不动发起权 / 叫停判据 |
 | `discipline:116` 命名纪律 | 名字要携定义（可读性） | 新名字先挂靠产品已载概念 | 两轴同节：`:116` 管「名字怎么起」，B4 管「起之前挂靠谁」 |
 | `discipline:117` 一名一物 | 一物一名；`doc word = UI word = conversation word, 1:1` | 是它的执行形：先挂靠、无对应须登记 | 同条续句：`:117` 给判据，续句给动作；一条两处写同一机制即两份活描述（D2），故并入同条、复用该条既有 why |
 | `advisor-design:23` 第 9 条先例行 | 查先例行在场 + 偏离理由显式 | 第 11 条查「现成件为什么没用」 | 两条相邻不同问：第 9 条查「写了没」，第 11 条查「用了没」；第 11 条另限作用域 = 需求集要求该行时（K10），第 9 条无此限 |
@@ -2285,12 +2465,12 @@ B4 — `thincoder-core/prompts/discipline-engineering.md:117` 整行替换（保
 | K1 | 评审存在性判据落 `thincoder-core/prompts/advisor-design.md` 新增第 11 条；**不写不删** `.thincoder/advisor.md` | ① `thincoder-core/advisor/history.mjs:53-58` 实读：`loadAdvisorMd(cwd)` 读 `join(cwd, ADVISOR_MD_PATH)`、命中即**整档取代**内建判据（文件注释 `if present, otherwise the built-in defaults`）——写它会把 1–10 条整体换掉，除非整份复制；② 该档在**本仓 cwd**（`D:\teamcode\thincoder\.thincoder\`）实读不存在；**共存事实**：工作区根 `D:\teamcode\.thincoder\advisor.md` 实存（`# Advisor 评审标准（workspace 级：D:\teamcode）`，自带 6 条设计评审判据）⇒ 会话 cwd 落在工作区根时 `loadAdvisorMd` 命中该档、整档取代内建，**只改提示词档的 B3 在那一 cwd 不生效**（该行为面影响未实证，标 `unverified`）；本批写权也不及该路径；③ `PROJECT-MANIFEST.json` `advisor.docMap` / `standardsDoc` 均为空串 ⇒ 无声明面；④ 先例 = D-PS37 把勘察证据行落为同档第 10 条（同族判据同址） |
 | K2 | 三问 = 先例勘察句的**执行形**，整行替换、不另起一段 | 需求验收 ③ 明写「后者保留、前者是其执行形」；另起一段 = 同一机制两句并存（D2 两份活描述）；整行替换后读序仍是「勘察 → 对齐 → 偏离」 |
 | K3 | 三形定死 + 记录面两字面 | 判据必须能区分「没查」与「查无」还要能说「找着了但不用」；英文面 `existing:` / `none found:` / `existing but unusable:`，中文记录面 `已查无：` / `现成不可用：`（批次档 / 台账中文面） |
-| K4 | 笔前规则落 `thincoder-core/prompts/persona-engineering.md` 轻通道节，与 discipline 层成对 | 受众分层：discipline 层读者 = 主会话 + eng-coder + eng-designer；persona 层 = 主 agent 的笔披露形（轻通道写权独属）。同 FR38 的 twin-anchor 处置（`persona:42` ∥ `common` R3）：两层各须独立可读，D2 不判重复 |
+| K4 | 笔前规则落 `thincoder-core/prompts/persona-engineering.md` 轻通道节，与 discipline 层成对 | 受众分层：discipline 层读者 = 主会话 + eng-coder + eng-designer；persona 层 = 主 agent 的笔披露形（轻通道写权独属）。同 FR38 的 twin-anchor 处置（§In-flight ask 的 `Discipline` ∥ `common` R3）：两层各须独立可读，D2 不判重复 |
 | K5 | 评审两档严重度：现成件未用且无说明 ⇒ 🔴；缺答案行 ⇒ 🟡 | 需求第 6 条给的就是这两档；缺行若也判 🔴，一次评审会把每条落点行判红，设计轮变填空题——「存在门」的目标是现成件被绕开，不是每行都被填满 |
 | K6 | 唯一机检项不做脚本，只给判据形（谁读 / 何时读 / 怎么判 / 抽样 ≥2） | 需求明写「不做机械门」；判据形让「没查」有地方现形，且不把成本摊到每次运行 |
-| K7 | §6.26 计数连带行（`:644`）的 `10` → `11` 由本条设计轮同步 | D3 计数与列表同改；留 `10` 则本档内部两处计数互斥（§6.26 vs §6.41） |
+| K7 | §6.26 计数连带行的 `10` → `11` 由本条设计轮同步 | D3 计数与列表同改；留 `10` 则本档内部两处计数互斥（§6.26 vs §6.41） |
 | K8 | B4 落 `thincoder-core/prompts/discipline-engineering.md:117` **同一 bullet 的续句**（替换该行），不落 `thincoder-core/prompts/common.md` | ① 判据面就在 `:117`（一名一物，且已含 `UI word`）——另立一条 = 同一机制两份活描述（D2）；② `thincoder-core/prompts/common.md` 无命名纪律节（`:113-118` 是搜索工具节），落那里即错位，且公共层与工程纪律层在工程会话里同读一份 ⇒ 孪生锚 = 同一读者读两遍，收益为零；③ 并入同条 = 复用宿主行既有 why（`a second name for the same thing is a defect`），并复用宿主行既有 why（39,336 ≤ 39,349 · 余 13） |
-| K9 | 收口抽读落 `thincoder-core/prompts/persona-engineering.md:215` 之后（B2b），不停在设计档 | 验收 ② 的读者是父侧收口轮——运行期只读提示词；规则只住中文设计档 = 不触发（本条对三次实例的同一诊断） |
+| K9 | 收口抽读落 `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closeout samples the pen lines` 条之后（B2b），不停在设计档 | 验收 ② 的读者是父侧收口轮——运行期只读提示词；规则只住中文设计档 = 不触发（本条对三次实例的同一诊断） |
 | K10 | 第 11 条作用域 = **设计所依据的需求集要求该答案行时**，不按「工程模式」限定 | 二择一：① 需求集限定——评审的判据面（判据 1 已按需求覆盖判），且缺省不判，普通模式不会误红；② 工程模式限定——评审上下文无可核模式信号：`thincoder-core/prompts/advisor-design.md:2` 无条件自称 `inside an engineering-mode session`，普通模式同读该档时该句照样在场（`thincoder-core/advisor.mjs:100-102` 只按 `reviewType === "design"` 选档，无模式分支）⇒ 按模式限定在普通模式仍会误判，等于没改。取 ①；代价 = 需求集不要求该行的设计判据不触发（宁可不判，不误判——误判要整轮整改） |
 
 **先例 ∥ 偏离**：先例 = 本档 §6.40（同批形制：逐字英文文本 + 对照表 + 用例表 + 验收）∥ §6.39（整行替换 + 相邻行零改）∥ D-PS37 / §6.26（评审判据落 `thincoder-core/prompts/advisor-design.md` 新条目 + 条目数计数连带）。
@@ -2302,7 +2482,7 @@ B4 — `thincoder-core/prompts/discipline-engineering.md:117` 整行替换（保
 
 **勘察证据行**：已读 `thincoder-core/prompts/discipline-engineering.md:29-47`（四步 · 需求步 · `:42` 先例勘察）∥ `:50-66`（轻通道 · 一句边界 · 轮形）· `:114-118`（`## Doc discipline` · `:116` 命名纪律 · `:117` 一名一物）。
 
-`thincoder-core/prompts/persona-engineering.md:5-15`（发起权）∥ `:104-120`（收口清账条 · 轻通道披露形 · 启动即挂账 · `:120` 「已查无」）· `thincoder-core/prompts/advisor-design.md` 全文（判据 1–10 · 严重度 · Judgment Rules）。
+`thincoder-core/prompts/persona-engineering.md` §Firing-rights boundary（发起权）∥ §Dispatch & close discipline（收口清账条 · 轻通道披露形 · 启动即挂账；本轮实读） · 同节「已查无」条）· `thincoder-core/prompts/advisor-design.md` 全文（判据 1–10 · 严重度 · Judgment Rules）。
 
 `thincoder-core/prompts/common.md:13-21`（先查档 · 分界）∥ `:113-118`（搜索工具节——无命名条）∥ `:192-223`（文档体系评估标准——无 UI 命名面）⇒ 公共层无 B4 的既有宿主，K8。
 
@@ -2324,7 +2504,7 @@ B4 — `thincoder-core/prompts/discipline-engineering.md:117` 整行替换（保
 | # | 坐标 | 现文 | 缺的那一半 |
 |---|---|---|---|
 | F1 | `thincoder-core/prompts/common.md:115` · `:146` · `:169` | `fallback` 三处全是正当用法（Bing 兜底 · 压缩兜底 · 路由表） | 全档无一句把「兜底」与业务失败相连 ⇒ 模型只学到「兜底是好事」 |
-| F2 | `thincoder-core/prompts/common.md:17` · `thincoder-core/prompts/persona-engineering.md:68` · `thincoder-core/prompts/persona-normal.md:27-28` | `workable default` 族：长任务里给默认值继续推进 | 执行面默认与业务门无分界 ⇒ 模型可把「继续推进」读成「让业务失败也能通」 |
+| F2 | `thincoder-core/prompts/common.md:17` · `thincoder-core/prompts/persona-engineering.md` §In-flight ask · `thincoder-core/prompts/persona-normal.md:27-28` | `workable default` 族：长任务里给默认值继续推进 | 执行面默认与业务门无分界 ⇒ 模型可把「继续推进」读成「让业务失败也能通」 |
 | F3 | `thincoder-core/prompts/discipline-engineering.md:103-113` | 测试纪律九条：单元 / 集成 / 收口行 / 断言形态 | 无一条要求业务门带失败用例；`happy path` 单独即可交差 |
 | F4 | `thincoder-core/prompts/advisor-round1.md:46-58` | 代码评审判据 R1–R7e（正确性 / 设计偏离 / 裁决 / 脆弱测试 / 范围 / 测试缝 / 文档态） | 无「兜底把该失败的业务路径做通」判据 |
 | F5 | `thincoder-core/prompts/advisor-round1.md:53` | R6 `??` default fallback（测试缝注入默认） | 唯一既有 `fallback` 字面 = 测试缝，生产行为不变 ⇒ 本条不改（对照表 K7） |
@@ -2401,7 +2581,7 @@ B3 — `thincoder-core/prompts/discipline-engineering.md`：`- **Assertions ride
 | `thincoder-core/prompts/common.md:115` Bing 兜底 · `:169` 路由表 | 搜索工具的可用性回退（工具择一，非业务判定） | 业务门的失败与兜底 | **范围不同**：B1 首句把范围钉在 business gate；工具回退不产生业务结果 ⇒ 不触发（且 `:115` 原文是「工具不可用才换」，与本条同向） |
 | `thincoder-core/prompts/common.md:146` 压缩兜底 | 机制运行期行为（到线自动压缩） | 业务门 | 机制面，不改变业务判定 ⇒ 不在 B1 判据内 |
 | `thincoder-core/prompts/common.md:17` `A doc answers facts; intent gets asked` 末句 | 两件：问与不问（`The line holds while the requirement is being formed`）· 执行期带 `workable default` 推进（`once work is under way`） | 业务结果不许被默认值改变 | 两轴：`:17` 管何时问、何时带默认推进；B1 末段只给分界判据（结果，不是机制），不复述 `:17` 的默认句 |
-| `thincoder-core/prompts/persona-engineering.md:68` · `thincoder-core/prompts/persona-normal.md:27-28` `workable default` | 长任务不阻塞：带默认继续推进 | 业务门不满足必须失败 | 同上一行：**判据 = 结果是否改变**，不是机制形态；B1 末段就是这条分界的落地句（防重演 `#54` 的规则压错面） |
+| `thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `workable default` 句 · `thincoder-core/prompts/persona-normal.md:27-28` `workable default` | 长任务不阻塞：带默认继续推进 | 业务门不满足必须失败 | 同上一行：**判据 = 结果是否改变**，不是机制形态；B1 末段就是这条分界的落地句（防重演 `#54` 的规则压错面） |
 | `thincoder-core/prompts/persona-plan.md:22` plan 的 `fallback`（须给具体恢复路径） | 计划步骤的风险恢复形态 | 恢复路径允许的边界 | 「具体恢复路径」本身不违规；B1 规定它要么以同一业务结果收尾、要么显式失败 ⇒ 同向（K6） |
 | `thincoder-core/prompts/discipline-engineering.md:22` · `:24` · `:27` `fail-closed` | 改动面分类：未列举 ⇒ 按产品代码面走全流程 | 业务门失败必须浮出 | **同一族判断的两种场合**：分类面宁可多走一道流程，业务面宁可显式失败；两处都反对「悄悄放过」 |
 | `thincoder-core/prompts/discipline-engineering.md:170` `not a fallback for undecided differences` | 多实现面差异不得以「兜底」代替裁决 | 业务兜底 | 同向：都要求「说清 / 不允许含糊过去」；本条把同一条思路落到运行期行为 |
@@ -2437,7 +2617,7 @@ B3 — `thincoder-core/prompts/discipline-engineering.md`：`- **Assertions ride
 | A4 | 需求 ④：业务 / 技术分界 + 例外落档 | `thincoder-core/prompts/common.md` 内 `Business and technical do not trade` · `which rule, who approved it, until when` · `Code does not grant itself tolerance` 各 1 次 |
 | A5 | 需求 ⑤：代码评审判据 + 作用域 | `thincoder-core/prompts/advisor-round1.md` 内 `R8 Business-gate fallback` · `should have failed succeed ⇒ 🔴` · `no evidence that the business result is unchanged ⇒ 🟡` 各 1 次；既有判据 11 条（R1–R7e）→ 加 R8 = 12 条（`^R\d+[a-z]? ` 计 12） |
 | A6 | 需求 ⑥：失败路径机器可判用例 | `thincoder-core/prompts/discipline-engineering.md` 内 `A business gate ships with its failure case` · `The happy path alone does not show the gate exists` 各 1 次 |
-| A7 | 执行面分界（设计点 8） | `thincoder-core/prompts/common.md` 内 `A workable default is a different thing` · `The line is the outcome, not the mechanism` 各 1 次；`workable default` 族零改 = 四行逐字在场（`thincoder-core/prompts/persona-engineering.md:68` ∥ `:37` · `thincoder-core/prompts/persona-normal.md:27` ∥ `:28`）；读数 = persona 两档各 2 次 · `thincoder-core/prompts/common.md:17` 1 次（只作读数，不作判据） |
+| A7 | 执行面分界（设计点 8） | `thincoder-core/prompts/common.md` 内 `A workable default is a different thing` · `The line is the outcome, not the mechanism` 各 1 次；`workable default` 族零改 = 四行逐字在场（`thincoder-core/prompts/persona-engineering.md` §In-flight ask 两处 · `thincoder-core/prompts/persona-normal.md:27` ∥ `:28`）；读数 = persona 两档各 2 次 · `thincoder-core/prompts/common.md:17` 1 次（只作读数，不作判据） |
 | A8 | 提示词面零文档引用 · 机检 | `node scripts/prompt-refs-check.mjs` ⇒ 命中 0（基线 69 档 / 463 档 / 0）；`doc_check(mode:"gate")` ⇒ PASS |
 | A9 | 携 why、反例携后果 | B1 的 why 句 = `a silent error is never found, never fixed, never learned from`；B3 的 why 句按两段连续子串各 ≥1 判：`a gate nobody has watched reject` · `catching its way to success`（判读串必须是连续子串——省略号形态不可判） |
 | A10 | 需求档零改 · 需求六条逐条有落点 | `ENGINEERING-MODE-V2.md` §13.18 git diff = 零；本表 A1–A6 与需求 ①–⑥ 一一对应；③ 的记录面 = B1 自检段 `write the answer on the record` 句（批档笔行 ∥ 设计档），A3 判其在场 |
@@ -2459,7 +2639,7 @@ B3 — `thincoder-core/prompts/discipline-engineering.md`：`- **Assertions ride
 | K1 | 主落 `thincoder-core/prompts/common.md` 新节（`## Business gates — a business failure must fail`），位置 = `## Evidence discipline` 之后 | 受众 = 两模式 + 全部子代理；`thincoder-core/prompts/common.md` 恒第二位注入 = 唯一全覆盖面（同 D-PS22 / D-PS30 / D-PS36 判例）。邻位选「证据纪律」之后：一个管「说真话」，一个管「运行期别把错误做没」，同族相邻 |
 | K2 | `thincoder-core/prompts/discipline-engineering.md` **不同落**业务门本体 | 需求把落点判断交设计；工程会话里 `thincoder-core/prompts/common.md` 与工程纪律层同读一份 ⇒ 双份 = 同一机制两份活描述（D2），孪生锚收益为零（§6.41 K8 同判）。工程纪律层只落**测试形态**（B3），因为测试纪律住那一层 |
 | K3 | 评审判据只落 `thincoder-core/prompts/advisor-round1.md`（首轮代码评审），不落设计评审、不落二 / 三轮 | 首轮是**发现面**（`Cover everything now`），二 / 三轮只查修态（`:41`）⇒ 判据落首轮即全覆盖，落后面两轮 = 三份活描述且不增加发现能力。设计评审读的是设计文档，没有「兜底分支」可判 |
-| K4 | `workable default` 族（`thincoder-core/prompts/persona-engineering.md:68` ∥ `thincoder-core/prompts/persona-normal.md:27-28` ∥ `thincoder-core/prompts/common.md:17` 末句）**零改**，由 B1 末段一次分界 | 那条规则管「不阻塞」，这套规则管「结果不许被改变」——两轴不冲突（`#54` 的教训是规则压错面）；在 persona 三处各加一句 = 三份活描述 + 同一条分界写三遍。公共层一次说清 + 判据是「结果」而非「机制」，任何一处读者都能自行落在自己的面上 |
+| K4 | `workable default` 族（`thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `workable default` 句 ∥ `thincoder-core/prompts/persona-normal.md:27-28` ∥ `thincoder-core/prompts/common.md:17` 末句）**零改**，由 B1 末段一次分界 | 那条规则管「不阻塞」，这套规则管「结果不许被改变」——两轴不冲突（`#54` 的教训是规则压错面）；在 persona 三处各加一句 = 三份活描述 + 同一条分界写三遍。公共层一次说清 + 判据是「结果」而非「机制」，任何一处读者都能自行落在自己的面上 |
 | K5 | 自检问句用逐字英文，并用引号 + 斜体包起来 | 需求明写「逐字 + 可机检子串」；引号让它在一段说明文字里可直接 grep，且与 `thincoder-core/prompts/common.md` 既有的引用体例一致（`"did this spot get fixed right?"`） |
 | K6 | `thincoder-core/prompts/persona-plan.md:22`（plan 步骤须给具体 fallback）不单改 | plan 的 fallback 是「恢复路径」形态约束，没说允许改变业务结果；B1 的判据管辖一切 fallback 的合法性 ⇒ 原文与 B1 同向。单改 = 在第四个文件重复同一条判据 |
 | K7 | `thincoder-core/prompts/advisor-round1.md:53` R6 的 `??` default fallback 不动 | 该句的成立理由逐字是 `default null → production behavior unchanged` = B1 唯一判据的合法形。它是本条要**保留**的样板，不是要修的对象 |
@@ -2480,7 +2660,9 @@ B3 — `thincoder-core/prompts/discipline-engineering.md`：`- **Assertions ride
 
 `thincoder-core/prompts/advisor-round1.md` 全文（身份 · 严重度 `:32` · 判据 R1–R7e `:46-58` · `:53` R6 测试缝）· `thincoder-core/prompts/advisor-design.md:71`（同 R6 句 —— 设计档不带兜底判据）∥ `thincoder-core/prompts/advisor-round2.md:55` · `thincoder-core/prompts/advisor-round3.md:51`（收敛轮同形）。
 
-`thincoder-core/prompts/persona-engineering.md:68` ∥ `thincoder-core/prompts/persona-normal.md:27-28`（`workable default`）· `thincoder-core/prompts/persona-plan.md:22`（plan fallback）· `thincoder-core/prompts/persona-eng-coder.md:16`（`a silent degradation is a deviation` —— 与本条同向的既有句）。
+`thincoder-core/prompts/persona-engineering.md` §In-flight ask 的 `workable default` 句 ∥ `thincoder-core/prompts/persona-normal.md:27-28`（`workable default`）
+
+`thincoder-core/prompts/persona-plan.md:22`（plan fallback）· `thincoder-core/prompts/persona-eng-coder.md:16`（`a silent degradation is a deviation` —— 与本条同向的既有句）。
 
 `PROJECT-MANIFEST.json` `index.publicRepos` 实读 = `[]` ⇒ 工作目录内无独立公共源文档仓——已查，无相关。
 本档 §6.40 ∥ §6.41（形制与落点体例）。
@@ -2816,8 +2998,8 @@ B3 — `thincoder-core/prompts/common.md:19`（`## Check the docs before you ask
 | # | 坐标 | 现文 | 缺的那一半 |
 |---|---|---|---|
 | F1 | `thincoder-core/prompts/` 16 档（逐档） | 290 行超过 300 字符 | 一条规则与它的理由 / 例外 / 反例挤在同一行，靠分号串联；模型一次前向同时面对多件事，哪句是规则没有边界 |
-| F2 | `thincoder-core/prompts/persona-engineering.md:209` | 超宽长行（closing ledger sweep） | 同上；改写样板取自这一行 |
-| F3 | 本档六处（`:476` `:627` `:653` `:2818` `:2849` `:2870`） | 三族口径把提示词行排除在行宽判据之外（族名与逐处处置见连带项 C 表） | 与 FR46 相抵：提示词面受行界约束、一条规则一行 |
+| F2 | `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closing ledger sweep` 行 | 超宽长行（closing ledger sweep） | 同上；改写样板取自这一行 |
+| F3 | 本档六处（逐处见连带项 C 表） | 三族口径把提示词行排除在行宽判据之外（族名与逐处处置见连带项 C 表） | 与 FR46 相抵：提示词面受行界约束、一条规则一行 |
 
 **机制（为什么行长会伤执行）**：
 
@@ -2833,7 +3015,7 @@ B3 — `thincoder-core/prompts/common.md:19`（`## Check the docs before you ask
 2. **加粗只落在每行的题眼上**：满行加粗等于没有重点（样板每行恰一处加粗）。
 3. **需要回查的指代要改写或删除**：读的人拿不到「那条规则就在附近」的保证。
 
-**逐字围栏块（样板 · `thincoder-core/prompts/persona-engineering.md:209` 的改写结果 · 六行）**：
+**逐字围栏块（样板 · `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closing ledger sweep` 行的改写结果 · 六行）**：
 
 ```text
 - **Closing ledger sweep**: sweep the ledger before declaring a batch closeout done — and at session close, when the user says so.
@@ -2933,7 +3115,7 @@ C6 — `docs/core/design/PROMPT-SYSTEM.md:2870`：
 |---|---|---|
 | K1 | 两舱推进、甲舱先行：甲舱 = 7 档 persona-* + 2 档 discipline-*（9 档）；乙舱 = `thincoder-core/prompts/common.md` + 4 档 advisor-* + `thincoder-core/prompts/consult-base.md` + `thincoder-core/prompts/subagent-base.md`（7 档） | 用户裁（需求 §13.24 两舱）；甲舱每轮都读，读错的代价最高；舱 = 批次边界（≤15 档），派单按波（样板一波 · 其余每席一到两档） |
 | K2 | 重写，不折行、不切段 | 折行只改源码排版，模型读到的块不变；FR45 验收 ② 已把「段中插换行判定不变」立为机判 |
-| K3 | 样板先行，且样板过同一条线 | 需求原话「样板也要过同一条线，否则示范本身就违规」；样板 = 全档最长行（`thincoder-core/prompts/persona-engineering.md:209`）的改写结果 |
+| K3 | 样板先行，且样板过同一条线 | 需求原话「样板也要过同一条线，否则示范本身就违规」；样板 = `thincoder-core/prompts/persona-engineering.md` 全档最长行（量法 = 逐行字符数取最大；as-of 2026-10-28；∈ §Dispatch & close discipline 的 `Closing ledger sweep` 条）的改写结果 |
 | K4 | 语义对账 = 一次性映射表落批次档 §5 | 一次性材料不混入常驻档（D2）；四列 = 规则 / 条件 / 例外 / 理由，每列都要有判断——无内容写「—（本条无）」，不许编 |
 | K5 | 行界只读数、不设常驻门 | 引擎改造属 FR45 批；本批用一次性 `node` 脚本改前改后各取一次，验收看读数 |
 | K6 | 两面块定义不同，各自成判 | 文档面量段（人读渲染），提示词面量行（模型读原始文本）；依据 = 需求 §13.23，本节承接 |
@@ -2952,10 +3134,10 @@ C6 — `docs/core/design/PROMPT-SYSTEM.md:2870`：
 
 **勘察证据行（本席直读 · 2026-10-22）**：
 
-- `thincoder-core/prompts/persona-engineering.md:104` 全文实读——样板取自此行。
+- `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closing ledger sweep` 条全文实读（as-of 2026-10-28）——样板取自此条。
 - `thincoder-core/doc-check/` 现为四档：`anchors.mjs` · `index.mjs` · `version.mjs` · `width.mjs`，无 `paragraph.mjs` ⇒ 本批行界读数用一次性 `node` 脚本，不依赖引擎改造。
 - `node scripts/prompt-refs-check.mjs` 零参实跑 = 提示词面 69 档 · 代码面 463 档 · 命中 0。
-- 需求档 §13.24（`:1000-1048`）∥ §13.23（`:978-995`）· 本档 §6.43 ∥ §6.44 · 本档六处相反口径（`:476` `:627` `:653` `:2818` `:2849` `:2870`，三族实扫）· 本批批次档 §1。
+- 需求档 §13.24 ∥ §13.23 · 本档 §6.43 ∥ §6.44 · 本档六处相反口径（三族实扫）· 本批批次档 §1。
 - 工作目录内无独立公共源文档仓（`index.publicRepos = []`）——已查，无相关。
 
 **UI / 交互决策**：无界面面——本条只改模型可见提示词文本。
@@ -3473,7 +3655,7 @@ existing but unusable = `thincoder-core/prompts/persona-engineering.md`——有
 
 - `docs/core/requirements/TESTING.md:73` F1 全行 · `:74` F2 义务句逐字 · `:75` F3 · `:84` F12（集成集 = 发布门）· `:160` F19（禁止新写散文锚）。
 - `thincoder-core/prompts/discipline-engineering.md`：342 行 / 42,920 字符 / max 300 / >300 = 0 / `##` 10；`:192` 门句 · `:193` Iteration · `:194` release gate · `:197` 报告行。
-- `thincoder-core/prompts/persona-engineering.md`：473 行 / 68,194 字符 / max 300 / >300 = 0 / `##` 17；`:344` `**acceptance**` · `:345` 旧副本整行；档头 slot = `[1] consumers:[main session·engineering mode; …]`（本席实读 `:1`）。
+- `thincoder-core/prompts/persona-engineering.md`：494 行 / 71,784 字符 / 最长行 300 / `>300` = 0 / `##` 17（2026-11-01 按 `split('\n').length - 1` 与逐行字符数实算）；`**acceptance**` 条 ∥ 其旧副本整行；档头 slot = `[1] consumers:[main session·engineering mode; …]`（引文定位）。
 - `thincoder-core/prompts/persona-eng-designer.md`：148 行 / 19,168 字符 / max 298 / >300 = 0 / `##` 9；`:114` Acceptance 元素 · `:115` Dependencies · `:130` item 5。
 - `thincoder-core/prompts/advisor-design.md`：135 行 / 14,710 字符 / max 290 / >300 = 0 / `##` 7；`:52-55` 第 12 条全文（判断句 ∥ 例外句 ∥ Why）· `:56` 空行 · `:57` `## Output Format`（B3 新落点 = `:55` 之后）。
 - `docs/batches/2026-10-24-tool-timeouts.md:125`：`npm test` 绿（收集面 = `thincoder-cli/test/*.test.mjs` + `test/integration/*.test.mjs`）——设计席写全量的实证。
@@ -3485,7 +3667,7 @@ existing but unusable = `thincoder-core/prompts/persona-engineering.md`——有
 
 **上抛项（待裁）**
 
-- 〔父侧 · 落点 1 的既有副本〕`thincoder-core/prompts/persona-engineering.md:345` 在本批前已在盘（本席实读；今晚任务书仍写全量 ⇒ 规则存在但无人执行）。本设计按 K2 删除它并并入 B1；若父侧认为该副本应保留（例如认为它守着别的读法），删除项 L2 请驳回——不驳回则按 L2 落。
+- 〔父侧 · 落点 1 的既有副本〕`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `The task book is batch record §2` 句在本批前已在盘（as-of 2026-10-24 实读；今晚任务书仍写全量 ⇒ 规则存在但无人执行）。本设计按 K2 删除它并并入 B1；若父侧认为该副本应保留（例如认为它守着别的读法），删除项 L2 请驳回——不驳回则按 L2 落。
 - 〔父侧 · 编号〕本节未加 §7 D-PS 行（D-PS46 / D-PS47 归属仍待父侧收口时定，承 §6.47 ∥ §6.48 上抛项）。
 
 ### 6.50 集成测试判据 = 既有用例断言的业务可观察结果（提示词四面 · 定义逐字 · 用例只从两入口长出）
@@ -4054,9 +4236,9 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | M3 | `thincoder-core/prompts/persona-coder.md:18` | `A related problem is not extra work` | 整行替换 | V1：题眼与公共 4.3 字面相同；V2：7 词 | `Leave nothing broken beside it` |
 | M4 | `thincoder-core/prompts/persona-normal.md:20` | `A related problem is not extra work` | 整行替换 | V1：题眼复用公共 4.3；V2：11 词（`a related problem is not extra work change a signature and`） | `Nothing next door is someone else's problem` |
 | M5 | `thincoder-core/prompts/persona-eng-coder.md:13` | `No step is cut for time` | 整行替换 | V2：8 词（`work is a decision made in a hurry`）= 公共 4.2 的理由子句 | `A step skipped is a step the review has to find` |
-| M6 | `thincoder-core/prompts/persona-engineering.md:44` | `Lay the options out and let them pick` | 整行替换 | V2：7 词（`lay the options out and let them`）= 公共 4.4 的动子句原句 | `The call is the user's, the framing is yours` |
-| M7 | `thincoder-core/prompts/persona-engineering.md:45` | `Say the extra sentence` | 整行替换 | V2：22 词 = 公共 2.3 正文近全抄（只把 `the human` 换 `them`） | `Nothing important stays in your head` |
-| M8 | `thincoder-core/prompts/persona-engineering.md:47` | `A finished job comes with its account` | 整行替换 | V1：题眼复用公共 3.7；V2：9 词 | `A batch ends with its account, not with "done"` |
+| M6 | `thincoder-core/prompts/persona-engineering.md` §Identity 的 `The call is the user's, the framing is yours` 句 | `Lay the options out and let them pick` | 整行替换 | V2：7 词（`lay the options out and let them`）= 公共 4.4 的动子句原句 | `The call is the user's, the framing is yours` |
+| M7 | `thincoder-core/prompts/persona-engineering.md` §Identity 的 `Nothing important stays in your head` 句 | `Say the extra sentence` | 整行替换 | V2：22 词 = 公共 2.3 正文近全抄（只把 `the human` 换 `them`） | `Nothing important stays in your head` |
+| M8 | `thincoder-core/prompts/persona-engineering.md` §Identity 的 `A batch ends with its account` 句 | `A finished job comes with its account` | 整行替换 | V1：题眼复用公共 3.7；V2：9 词 | `A batch ends with its account, not with "done"` |
 
 替换后的逐字全文 = 本节 P1–P4 块（唯一权威目标形）；M 表只给「哪行、删或改、新题眼」。
 
@@ -4103,9 +4285,9 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | K3 | `thincoder-core/prompts/common.md:44` ∥ `:48` ∥ `:49` ∥ `:50` 零改 | `:48` ∥ `:49` ∥ `:50` 是冲突时的取舍规则（该节主题）；公共块的 4.2 ∥ 4.4 是原则本体、人格层的诚实句是角色形态——三处粒度不同，不是重复（父侧 2026-10-26 02:16 裁定）。`:44` 同判：2.2 整句留在 `## Who you are` 作位置句（人定方向 / 你拥有代码 = 两模式共同的位置），人格层写的是该条在本角色上的形态——留着不是漏改，删掉反而丢了位置句 |
 | K4 | 不设 `Why:` 行 | 七档已 300 行封顶体量（`thincoder-core/prompts/persona-engineering.md` 最长行 300）；每条理由写进句内（破折号后一段），单独起 `Why:` 行会把每档再抬 7 行且与编写纪律「一条规则一行」相抵 |
 | K5 | 七档一律用加粗题眼 `**Character in this seat** — …` 起块，不用 `##` 标题 | 同 K1：`##` 计数零连带；题眼与既有 `**Practice deposit**` 等加粗行同形，是这些档既有的块起手法 |
-| K6 | `persona-normal` 不重写 3.1 ∥ 2.2、`persona-explore` 不重写 3.5、`persona-coder` 不重写 3.2 | 三档既有句已承担该条（J4 ∥ J5 ∥ J9）；重写即成同档两份同文（D2）。修正轮实证：`persona-coder` 新落句与既有 `:20` 的 `COMPLETE delivery` 句同规则同粒度 ⇒ M1 删新句 |
+| K6 | `persona-normal` 不重写 3.1 ∥ 2.2、`persona-explore` 不重写 3.5、`persona-coder` 不重写 3.2 | 三档既有句已承担该条（J4 ∥ J5 ∥ J9）；重写即成同档两份同文（D2）。修正轮实证：`persona-coder` 新落句与既有 `COMPLETE delivery` 句同规则同粒度 ⇒ M1 删新句 |
 | K7 | 人格行的判据 = 三判（V1 题眼不复用公共题眼 ∥ V2 与公共行最长连续同文 ≤5 词 ∥ V3 同档一条只一处），逐字块按三判写 | 机制旧措辞只说「不是两份全文」，没说哪一句才算形态——落地复核实测 39 条里 7 条越线（22 ∥ 11 ∥ 9 ∥ 8 ∥ 7 ∥ 7 ∥ 6 词）、3 条还复用公共题眼、1 条同档两处。口号不可判，数出来才可判；5 词是「短语」与「子句」的分界（6 词起已能载一条理由），而重复理由正是两份全文的实质 |
-| K8 | 修 caller 的两判 = **caller 的意思变不变**：只变写法（改名 ∥ 符号搬家 ∥ 参数用旧值填）⇒ 修掉并说明；要变意思（调用方得换一种用法、得自己决定传什么）⇒ 停并上报。`:9` 写停的一侧（P3b）、`:17` 写修的一侧（P3） | 只写「停」⇒ 每次 caller 断裂都升级，实施席被卡住；只写「修」⇒ 实施席自行改别人的接口契约，设计未经批准就被改。两种失败都出自同一处：边界没写。取「意思变不变」而非「谁的模块」= 可判且与代价对齐——机械后果不构成决定，意思变了才构成决定，而决定不是实施席的。两句各写一侧、命题不重叠 ⇒ V3 不受影响（同一条规则的两半句，不是两条规则） |
+| K8 | 修 caller 的两判 = **caller 的意思变不变**：只变写法（改名 ∥ 符号搬家 ∥ 参数用旧值填）⇒ 修掉并说明；要变意思（调用方得换一种用法、得自己决定传什么）⇒ 停并上报。P3b 写停的一侧、P3 写修的一侧 | 只写「停」⇒ 每次 caller 断裂都升级，实施席被卡住；只写「修」⇒ 实施席自行改别人的接口契约，设计未经批准就被改。两种失败都出自同一处：边界没写。取「意思变不变」而非「谁的模块」= 可判且与代价对齐——机械后果不构成决定，意思变了才构成决定，而决定不是实施席的。两句各写一侧、命题不重叠 ⇒ V3 不受影响（同一条规则的两半句，不是两条规则） |
 
 **诚实条两处粒度不同，不是重复（父侧 2026-10-26 02:16 裁定）**：人格层七档的诚实行写的是「**你是什么样的人**」——诚实是你的品质；`thincoder-core/prompts/common.md:50` 在 `## When choices conflict` 里，写的是「**诚实与体面冲突时选哪个**」——那是取舍规则。`:48` ∥ `:49` 与公共 4.2 ∥ 4.4 同判。
 
@@ -4128,7 +4310,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 - 改后模拟（node 按 L1–L9 逐档替换后实测）：八档行/字符/最长行/`^## ` 见 A3 ∥ A4；A1 十串各恰 1；`Honesty over saving face` 在 `thincoder-core/prompts/common.md` = 1（`:50`，K3 零改）∥ 人格块 P1–P5 各 1（P6 ∥ P7 用各自形态题眼，见 A8 ②）。
 - `thincoder-core/prompts/persona-coder.md:20`：`- COMPLETE delivery: solve the ENTIRE task the parent gave you — every requirement, every file, every acceptance criterion; anything less is a partial delivery the parent did not approve.` 逐字（J9——3.2 在该档的既有承载，M1 删新落句的判据）。
 - 边界半句（`thincoder-core/prompts/persona-coder.md:9` ∥ `:17`）实算：两句与九条公共行的最长连续同文各 = 2 词、公共题眼复用 = 0；`thincoder-core/prompts/persona-coder.md` 按 P3 + P3b 模拟后 = 29 行 / 2,768 字符 / 最长行 295（`>300` = 0）、`^## ` = 3（改前改后同数）。
-- 人格行全量扫描（本席 `node` 实算：小写·去标点·按空白切词·最长公共连续词串）：七块逐字块 39 条 × 九条公共行。越 ≤5 词线 7 条——`thincoder-core/prompts/persona-engineering.md:45` 22 词 ∥ `thincoder-core/prompts/persona-normal.md:20` 11 词 ∥ `thincoder-core/prompts/persona-engineering.md:47` 9 词 ∥ `thincoder-core/prompts/persona-eng-coder.md:13` 8 词 ∥ `thincoder-core/prompts/persona-engineering.md:44` 7 词 ∥ `thincoder-core/prompts/persona-coder.md:18` 7 词 ∥ `thincoder-core/prompts/persona-coder.md:17` 6 词；其中三条同时与公共题眼字面相同（`:20` ∥ `:47` ∥ `:18`）。M1–M8 后复扫 38 条：>5 词 = 0、公共题眼复用 = 0，最大 = 5（`thincoder-core/prompts/persona-eng-coder.md:12`）。`**/test/prompts-*.mjs` 未命中该断言档（只命中 `.thincoder/tmp/head/` ∥ `.wt-head-probe/`）⇒ T-CL1 不在现盘、跑不动（A4 据此收窄）。
+- 人格行全量扫描（本席 `node` 实算：小写·去标点·按空白切词·最长公共连续词串）：七块逐字块 39 条 × 九条公共行。越 ≤5 词线 7 条——`thincoder-core/prompts/persona-engineering.md` §Identity 的 `Nothing important stays in your head` 句 22 词 ∥ `thincoder-core/prompts/persona-normal.md:20` 11 词 ∥ `thincoder-core/prompts/persona-engineering.md` §Identity 的 `A batch ends with its account` 句 9 词 ∥ `thincoder-core/prompts/persona-eng-coder.md:13` 8 词 ∥ `thincoder-core/prompts/persona-engineering.md` §Identity 的 `The call is the user's, the framing is yours` 句 7 词 ∥ `thincoder-core/prompts/persona-coder.md:18` 7 词 ∥ `thincoder-core/prompts/persona-coder.md:17` 6 词；其中三条同时与公共题眼字面相同（`:20` ∥ `:47` ∥ `:18`）。M1–M8 后复扫 38 条：>5 词 = 0、公共题眼复用 = 0，最大 = 5（`thincoder-core/prompts/persona-eng-coder.md:12`）。`**/test/prompts-*.mjs` 未命中该断言档（只命中 `.thincoder/tmp/head/` ∥ `.wt-head-probe/`）⇒ T-CL1 不在现盘、跑不动（A4 据此收窄）。
 - 需求档现盘重读：`docs/core/requirements/PROMPT-SYSTEM.md:71` ∥ `:72` 已是新形（L12 两笔 = 零笔）；`docs/core/requirements/PHILOSOPHY.md:144` 仍含「流程未覆盖处的四条准则」⇒ 待笔。
 - 公共源勘察：`PROJECT-MANIFEST.json:35` `"publicRepos": []` ⇒ 独立公共源文档仓无，已查无相关。
 
@@ -4213,8 +4395,8 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **勘察证据行（本席实读 · 2026-10-28）**
 
-- `thincoder-core/prompts/persona-engineering.md`：`split('\n').length - 1` = 470；`^## ` = 17（`:5/:28/:49/:67/:81/:87/:91/:99/:130/:151/:269/:295/:323/:369/:425/:458/:465`）；`^### ` = 0；字符 67,515；全档 `>300` 行 = 0、最长行 300 位于 `:153`；节内空行仅 `:214` `:251` `:259`。
-- 目标节内容锚实读：`:163` = `- **Every round ends with user-facing text or an explicit wait state**…` ∥ `:164` = `- **Commit discipline**:` ∥ `:168` = `- **Fix-round dispatch must write three sentences**…` ∥ `:173` = `- **Parent does not ghost-write**…` ∥ `:175` = `- **Close three states — a "promise" is not a state**…` ∥ `:184` = `- **Debts go on the list**…` ∥ `:215` = `- **Implementation-round role routing**…` ⇒ 五个插点均落在实读行上。
+- `thincoder-core/prompts/persona-engineering.md`：494 行（`split('\n').length - 1`）；`^## ` = 17（`grep -c '^## '`）；`^### ` = 5；字符 71,784；全档 `>300` 行 = 0、最长行 300（2026-11-01 逐行字符数实算）。
+- 目标节内容锚实读（§Dispatch & close discipline · 引文为准）：`- **Every round ends with user-facing text or an explicit wait state**…` ∥ `- **Commit discipline**:` ∥ `- **Fix-round dispatch must write three sentences**…` ∥ `- **Parent does not ghost-write**…` ∥ `- **Close three states — a "promise" is not a state**…` ∥ `- **Debts go on the list**…` ∥ `- **Implementation-round role routing**…` ⇒ 五个插点均落在实读句上。
 - `thincoder-core/prompts/common.md`：`###` 六处（`:201/:208/:224/:227/:254/:261`）；`:200-201` = `## Tool discipline` 紧接 `### Search tool priority`，零空行 —— 写形先例。
 - 模拟落笔（`node` 内存插入 5 行后实测）：475 行 / 67,773 字符 / `##` 17 / `###` 5 / 标题节点 22 / `>300` = 0 / 最长行 300 移至 `:154`；按行首 `### ` 滤标题行后与改前**逐字节相等** = `true`；五条标题字符 56 + 58 + 32 + 48 + 59 = 253，+258 与实测字符增量和自洽。
 - `doc_check(mode:"report", docs=["docs/core/design/PROMPT-SYSTEM.md"])` ⇒ 命中 0 条（本档基线清）。
@@ -4393,10 +4575,10 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | A3 | 计数面零连带 | `^## ` 17 不变 · `^### ` 5 不变 · 标题节点 22 不变（既有节内增列，不新建节） |
 | A4 | 写形零回归 | 全档 `>300` = 0、最长行仍 300；新增三行 168 ∥ 130 ∥ 250 |
 | A5 | 示例面不再示范复用 | 两行模板改后字面分别为 `<batch record path A>` ∥ `<batch record path B>`（改后位于 `:438` ∥ `:439`，各 134 字符）；全档该占位符另存 1 处 = `:330` 的单席示例（单席无复用面，本批不动） |
-| A6 | 与既有条不重复 | 判法（可复跑）：`thincoder-core/prompts/` 全 16 档扫 `its own batch record`，**排除本条载体行**（`**One batch record serves one spawn at a time** …` 那一行）后应只剩 1 处 = `thincoder-core/prompts/discipline-engineering.md:257`（该条轴 = 批次↔实现轮次↔批档；本条轴 = 并发席↔批档），两轴不同。**读数（2026-10-28 实跑）**：含载体共 2 处 = `thincoder-core/prompts/discipline-engineering.md:257` + `thincoder-core/prompts/persona-engineering.md:335`，第二处即本条载体本身，不构成重复。**新增三行逐句比**（≥40 字符 5 句，对全 16 档去载体行后比）0 重复。**同档三条近面分工**（定位以引文为准；行号 as-of 本次读数）：`Dispatch size discipline (pre-flight)`（同档 `:361`）讲**一单多大** · `parallelize aggressively`（同档 `:434`）讲**可并行** · `one call per design, all in the same reply`（同档 `:437`）讲**一次多派怎么排**；本条只讲**拆开 / 多派之后每席各带哪一本批档**——不重述拆法、不禁并行、不改多派排法 |
+| A6 | 与既有条不重复 | 判法（可复跑）：`thincoder-core/prompts/` 全 16 档扫 `its own batch record`，**排除本条载体行**（`**One batch record serves one spawn at a time** …` 那一行）后应只剩 1 处 = `thincoder-core/prompts/discipline-engineering.md:257`（该条轴 = 批次↔实现轮次↔批档；本条轴 = 并发席↔批档），两轴不同。**读数（2026-10-28 实跑）**：含载体共 2 处 = `thincoder-core/prompts/discipline-engineering.md:257` + `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time`，第二处即本条载体本身，不构成重复。**新增三行逐句比**（≥40 字符 5 句，对全 16 档去载体行后比）0 重复。**同档三条近面分工**（定位以引文为准）：`Dispatch size discipline (pre-flight)` 讲**一单多大** · `parallelize aggressively` 讲**可并行** · `one call per design, all in the same reply` 讲**一次多派怎么排**；本条只讲**拆开 / 多派之后每席各带哪一本批档**——不重述拆法、不禁并行、不改多派排法 |
 | A7 | 不把标准流程判成违规 | L1 第 2 行逐字锚 `sequential handoff` ∥ `keeps the same record` ∥ `never overlaps` 各 ≥1，与 `thincoder-core/prompts/discipline-engineering.md:257`（一个批次 = 一个实现轮次 = 一本批档）相容：同一本批档按顺序服务设计席 → 实施席 → 修正轮，任一时刻只有一个在飞 |
 | A8 | `doc_check` | `doc_check(mode:"gate", docs=["thincoder-core/prompts/persona-engineering.md"])` 首行 `PASS` |
-| A9 | 相邻判据（新条不被读成上一条的续句） | 收尾句（`  Implement sized batches through a subagent…`）的后一行 = 新块首行（`**One batch record serves one spawn at a time**`）；新块末行（`- **Why**: §2 is the whole batch's account…`）的后一行 = `- **Task books are re-derived, not transcribed**` 那一 bullet 的首行。即：该收尾句与下一 bullet 之间只有新块三行，收尾句不紧跟新 `- **Why**` 行。**定位以引文为准；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:338`** |
+| A9 | 相邻判据（新条不被读成上一条的续句） | 收尾句（`  Implement sized batches through a subagent…`）的后一行 = 新块首行（`**One batch record serves one spawn at a time**`）；新块末行（`- **Why**: §2 is the whole batch's account…`）的后一行 = `- **Task books are re-derived, not transcribed**` 那一 bullet 的首行。即：该收尾句与下一 bullet 之间只有新块三行，收尾句不紧跟新 `- **Why**` 行。**定位以引文为准** |
 
 **用例表（正常 / 边界 / 错误）**
 
@@ -4424,10 +4606,10 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 |---|---|---|
 | K1 | 条文落 `:331`–`:334` 的 bullet 之后（「Implementation dispatch structure」节内；取该 bullet **收尾句** `:334` 之后，不取 `:333` Why 行之后——否则收尾句紧跟新 `- **Why**` 行读成新条续句），不在 `## Parallel dispatch & multi-task` 节另起一条 | 缺口就是「是**谁的**任务书」这半句，而 `:331` 正是「it IS the task book this spawn implements」所在——紧接着写即把那一句补完（§1 落点首选）。并行节只改模板占位符：示例即模板，改字面比再加一条规则更早拦住照抄 |
 | K2 | 规则带「顺序交接」边界行（L1 第 2 行） | `thincoder-core/prompts/discipline-engineering.md:257` 已定「一个批次 = 一个实现轮次 = 一本批档」，而一个批次正常要顺序派设计席 → 实施席 → 修正轮；只写「一个批档 = 一个 spawn」会与那条相抵、把标准流程判成违规 ⇒ 本条对象是**并发**，边界行把这条说死 |
-| K3 | 示例只改占位符、不改 `When spawning multiple eng-coders at once, one call per design, all in the same reply` 领起句（引文为准；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:437`） | 领起句讲「一次多派怎么排」，与本条不同面；让人照抄复用的就是那两行模板里的 `batchDoc` 字面 |
-| K4 | 不写子席侧判据（「发现 §2 像多席的活就上抛」） | `The files parameter is a SCHEDULING channel…` 那一 bullet 逐字：the child cannot see the `files` array（引文为准；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:351`）⇒ 子席无信号判「这一行是我的还是别人的」；写成规则只会让每次派单变成猜。能判的只有派单侧 |
+| K3 | 示例只改占位符、不改 `When spawning multiple eng-coders at once, one call per design, all in the same reply` 领起句（引文为准） | 领起句讲「一次多派怎么排」，与本条不同面；让人照抄复用的就是那两行模板里的 `batchDoc` 字面 |
+| K4 | 不写子席侧判据（「发现 §2 像多席的活就上抛」） | `The files parameter is a SCHEDULING channel…` 那一 bullet 逐字：the child cannot see the `files` array（引文为准）⇒ 子席无信号判「这一行是我的还是别人的」；写成规则只会让每次派单变成猜。能判的只有派单侧 |
 | K5 | 提示词行内不写文件行号、不写批次名 ∥ 日期 | 该档既有纪律：维护者注一律进设计档不进提示词 |
-| K6 | L1 第 1 行「各自的台账行」的依据 = 建一本批档即带出一行 | `test/RTM.md:165` 13-1 逐字：不传 `ledger` 建一档 ⇒ 台账 +1 行（`status = 在途` · `task_book` = 该档 · `trigger = 归批`）。与 `Dedupe on booking: when registering, scan existing rows on the same face.`（入库查重：登记时先扫同面存量）∥ `One row = one settlement unit`（一行 = 一个结算单元）相容：三席并行 = 三个不相干工作对象 ⇒ 三行，且不成族行（`Family rows` 族行要求成员同轮收口，三席各自收口；引文为准，行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:421` ∥ `:423` ∥ `:424`） |
+| K6 | L1 第 1 行「各自的台账行」的依据 = 建一本批档即带出一行 | `test/RTM.md:165` 13-1 逐字：不传 `ledger` 建一档 ⇒ 台账 +1 行（`status = 在途` · `task_book` = 该档 · `trigger = 归批`）。与 `Dedupe on booking: when registering, scan existing rows on the same face.`（入库查重：登记时先扫同面存量）∥ `One row = one settlement unit`（一行 = 一个结算单元）相容：三席并行 = 三个不相干工作对象 ⇒ 三行，且不成族行（`Family rows` 族行要求成员同轮收口，三席各自收口；引文为准：`Family rows` ∥ `Dedupe on booking` ∥ `One row = one settlement unit` 均在 §Ledger） |
 
 **先例 ∥ 偏离**
 
@@ -4436,19 +4618,19 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **既有件三问（新增名）**
 
-`existing` = `thincoder-core/prompts/persona-engineering.md:331` · name: "it IS the task book this spawn implements" · consumers: 两模式主会话的派单面 —— 本条紧接它写，补「是谁的」半句，不改它一字。
+`existing` = `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `batchDoc is mandatory` 条 · name: "it IS the task book this spawn implements" · consumers: 两模式主会话的派单面 —— 本条紧接它写，补「是谁的」半句，不改它一字。
 
-`existing`（模板面）= 两行 spawn 模板（以引文定位——收尾分别是 `batchDoc=<batch record path A>` ∥ `batchDoc=<batch record path B>` 的那两行；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:438` ∥ `:439`）· consumers: 同时多派 eng-coder 的父侧 —— 只改 `batchDoc` 占位符字面。
+`existing`（模板面）= 两行 spawn 模板（以引文定位——收尾分别是 `batchDoc=<batch record path A>` ∥ `batchDoc=<batch record path B>` 的那两行）· consumers: 同时多派 eng-coder 的父侧 —— 只改 `batchDoc` 占位符字面。
 
 `none found` = `serves one spawn` ∥ `one spawn at a time` ∥ `own ledger row`：本席对 `thincoder-core/prompts/` 全目录逐档实扫（忽略大小写）零命中；`its own batch record` 唯一命中 = `thincoder-core/prompts/discipline-engineering.md:257`，轴不同（A6）。
 
 **勘察证据行（本席实读 · 2026-10-28）**
 
 - `thincoder-core/prompts/persona-engineering.md`：475 行 / 67,773 字符 / `^## ` 17 / `^### ` 5 / 标题节点 22 / 最长行 300 / `>300` = 0。
-- 锚实读：`:331` = `  **\`batchDoc\` is mandatory** — … it IS the task book this spawn implements.` · `:332` = `  **Omitted = refused** — a mechanical gate whose criterion is only "param present + path readable" (content is never validated).` · `:333` = `  - **Why**: an execution without a task book runs on a guessed direction.`
-- 插入点 = 收尾句 `Implement sized batches through a subagent…` 那一行之后、`- **Task books are re-derived, not transcribed**` 那一 bullet 之前（**定位以引文为准；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:334` ∥ `:338`**）——取该 bullet 收尾句之后，则新 `- **Why**` 行的后一行即下一 bullet 起头，收尾句不会贴在它前面读成续句（A9）。
-- 模板锚实读：`:434` = `- **When spawning multiple eng-coders at once, one call per design, all in the same reply**:` · `:435` ∥ `:436` 两行 `batchDoc=<batch record path>` 字面相同（**node 实测各 132 字符**）⇒ 改后各 134 字符（占位符各 +2：「 A」∥「 B」等长）。
-- 子席无信号实读：`:348` = `  **The \`files\` parameter is a SCHEDULING channel, not a briefing channel**: the child cannot see the \`files\` array (the conflict detector consumes it and it is not injected into the child's prompt).`（K4 的依据）。
+- 锚实读（§Implementation dispatch structure）：`  **\`batchDoc\` is mandatory** — … it IS the task book this spawn implements.` · `  **Omitted = refused** — a mechanical gate whose criterion is only "param present + path readable" (content is never validated).` · `  - **Why**: an execution without a task book runs on a guessed direction.`
+- 插入点 = 收尾句 `Implement sized batches through a subagent…` 那一行之后、`- **Task books are re-derived, not transcribed**` 那一 bullet 之前（**定位以引文为准**）——取该 bullet 收尾句之后，则新 `- **Why**` 行的后一行即下一 bullet 起头，收尾句不会贴在它前面读成续句（A9）。
+- 模板锚实读（§Parallel dispatch）：`- **When spawning multiple eng-coders at once, one call per design, all in the same reply**:` · 其下两行 `batchDoc=<batch record path>` 字面相同（**node 实测各 132 字符**）⇒ 改后各 134 字符（占位符各 +2：「 A」∥「 B」等长）。
+- 子席无信号实读（§Implementation dispatch structure）：`  **The \`files\` parameter is a SCHEDULING channel, not a briefing channel**: the child cannot see the \`files\` array (the conflict detector consumes it and it is not injected into the child's prompt).`（K4 的依据）。
 - 机制面邻档实读（`docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.26「机制性指令注入位置：spawn 固块改走 system 面」）：该节裁定表只分**注入位置**（逐字节稳定 ⇒ system ∥ 逐轮变化 ⇒ user），第 3 行 `_engTaskInput` 判「非注入点 · 保持」；其边界 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.22.7（`:395` 逐字「不改 `batchDoc` 必填性与路径判据（参数在 + 路径可读；内容不校验）」）⇒ **该档不承载「一个批档服务几个 spawn」，本节也不动它**（机制面另议 = 台账 `#1873`）。
 - 模拟落笔（`node` 内存实测）：插入 3 行 + 替换 2 行后 = 478 行 / 68,328 字符 / `##` 17 / `###` 5 / 标题节点 22 / 最长行 300 / `>300` = 0；三行宽 168 ∥ 130 ∥ 250。
 - 重复面读数：`thincoder-core/prompts/` 全目录 16 档逐档扫 `serves one spawn` ∥ `one spawn at a time` ∥ `own ledger row` = 0；`its own batch record` = `thincoder-core/prompts/discipline-engineering.md`（`:257`）。
@@ -4490,9 +4672,9 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | A2 | 行数 ∥ 字符 | 480 ⇒ 480 行（零变）∥ 68,668 ⇒ 68,665 字符（`node` 模拟替换实测；Δ = −3 = 新 why 行 171 − 旧 why 行 174） |
 | A3 | 计数面零连带 | 该档 `^## ` 17 不变 · `^### ` 5 不变 · 标题节点 22 不变（既有节内增列，不新建节） |
 | A4 | 写形零回归 | 全档 `>300` = 0、最长行仍 300；两行 164 ∥ 171 |
-| A5 | 与既有条不重复 | 判法（可复跑）：`thincoder-core/prompts/` 全 16 档扫两串，**先排除本条载体两行**（`**One job = one record** …` 那一行 ∥ 紧随其后的 `- **Why**: this is the counting unit…` 那一行）再判。① `own batch record` —— 落笔后共 3 处，去载体剩 2 处 = `thincoder-core/prompts/discipline-engineering.md:257`（轴 = 批次↔实现轮次↔批档）∥ `thincoder-core/prompts/persona-engineering.md:335`（轴 = 并发席↔批档，讲能不能共用），两轴都不是「什么算一份」⇒ 不构成重复。② `one record` —— 落笔后共 4 处，去载体剩 3 处 = `thincoder-core/prompts/advisor-round2.md:29` ∥ `thincoder-core/prompts/advisor-round3.md:30` ∥ `thincoder-core/prompts/persona-engineering.md:337`（`:337` 的 `two children on one record` 讲共用后果 = 轴不同）。**读数（2026-10-28 实跑 · `node` 内存模拟落笔）**：两串落笔前 = 2 ∥ 3、落笔后 = 3 ∥ 4，各 +1 即本条第 1 行自身（它同时含两串）⇒ **判据按「去载体后的数」判，不按总数判** —— 总数含本条自己，照总数判会把新条文判成重复。**同档四条近面分工**：`:335` 判**能不能共用** ∥ `:336` 给**顺序交接不拆账**边界 ∥ `:357` 教「一件形看着不一样还算不算」的自检 ∥ 本条给**什么算一份**——四条各占一轴；与 `:335` 的谓语接口见「先例 ∥ 偏离」偏离段 |
+| A5 | 与既有条不重复 | 判法（可复跑）：`thincoder-core/prompts/` 全 16 档扫两串，**先排除本条载体两行**（`**One job = one record** …` 那一行 ∥ 紧随其后的 `- **Why**: this is the counting unit…` 那一行）再判。① `own batch record` —— 落笔后共 3 处，去载体剩 2 处 = `thincoder-core/prompts/discipline-engineering.md:257`（轴 = 批次↔实现轮次↔批档）∥ `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time`（轴 = 并发席↔批档，讲能不能共用），两轴都不是「什么算一份」⇒ 不构成重复。② `one record` —— 落笔后共 4 处，去载体剩 3 处 = `thincoder-core/prompts/advisor-round2.md:29` ∥ `thincoder-core/prompts/advisor-round3.md:30` ∥ `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Why` 行（`two children on one record` 讲共用后果 = 轴不同）。**读数（2026-10-28 实跑 · `node` 内存模拟落笔）**：两串落笔前 = 2 ∥ 3、落笔后 = 3 ∥ 4，各 +1 即本条第 1 行自身（它同时含两串）⇒ **判据按「去载体后的数」判，不按总数判** —— 总数含本条自己，照总数判会把新条文判成重复。**同档四条近面分工**：`One batch record serves one spawn at a time` 判**能不能共用** ∥ 其邻条给**顺序交接不拆账**边界 ∥ `one call per design` 族教「一件形看着不一样还算不算」的自检 ∥ 本条给**什么算一份**——四条各占一轴；与 `One batch record serves one spawn at a time` 的谓语接口见「先例 ∥ 偏离」偏离段 |
 | A6 | 覆盖 11:34 那个形 | 拿「一本批档拆 13 / 15 / 4 三个文件域、三席并行」去套 L1：三个文件域 = 三份 ⇒ 三本批档（用例 C1） |
-| A7 | 顺序交接不误伤 | L1 第 1 行逐字锚 `running in parallel` ≥1 ⇒ 设计席 → 实施席 → 修正轮（不并行）仍是一本账，与 `:336`（`A sequential handoff … keeps the same record: it never overlaps, so nothing is shared.`）相容 |
+| A7 | 顺序交接不误伤 | L1 第 1 行逐字锚 `running in parallel` ≥1 ⇒ 设计席 → 实施席 → 修正轮（不并行）仍是一本账，与 §Implementation dispatch structure 的 `A sequential handoff … keeps the same record: it never overlaps, so nothing is shared.` 相容 |
 | A8 | `doc_check` | `doc_check(mode:"gate", docs=["thincoder-core/prompts/persona-engineering.md"])` 首行 `PASS`；两行均 ≤300 字符（164 ∥ 171） |
 
 **用例表（正常 / 边界 / 错误）**
@@ -4532,25 +4714,27 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **既有件三问（新增名）**
 
-`existing` = `thincoder-core/prompts/persona-engineering.md:335` · name: "One batch record serves one spawn at a time" · consumers: 两模式主会话的派单面 —— 本条与它分工：`:335` 判能不能共用，本条判什么算一份；谓语接口同形（`carries its own batch record`）、主语不同（一本批档 ∥ 一份工作），见「先例 ∥ 偏离」偏离段。
+`existing` = `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time` 条 · name: "One batch record serves one spawn at a time"
 
-`existing`（锚条）= `thincoder-core/prompts/persona-engineering.md:444` · name: "Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain" · consumers: 镜像 / 并行派单面 —— 只在其后增列，原文零改。
+consumers: 两模式主会话的派单面 —— 本条与它分工：`:335` 判能不能共用，本条判什么算一份；谓语接口同形（`carries its own batch record`）、主语不同（一本批档 ∥ 一份工作），见「先例 ∥ 偏离」偏离段。
+
+`existing`（锚条）= `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的镜像派单条 · name: "Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain" · consumers: 镜像 / 并行派单面 —— 只在其后增列，原文零改。
 
 `none found` = `one job` ∥ `counting unit` ∥ `per job` ∥ `unit of measure`：本席对 `thincoder-core/prompts/` 全 16 档逐档实扫（忽略大小写）落笔前零命中；落笔后 `one job` ∥ `counting unit` 各 1 处 = 本条载体两行自身（`One job = one record` ∥ `this is the counting unit`），`per job` ∥ `unit of measure` 仍 0 —— 口径与 A5 同：去载体后判。
 
 **勘察证据行（本席实读 · 2026-10-28）**
 
-- `thincoder-core/prompts/persona-engineering.md`：480 行 / 68,668 字符（UTF-16）/ `^## ` 17 / `^### ` 5 / 标题节点 22 / 最长行 300 / `>300` = 0；两行宽 164 ∥ 174（why 行 `:446` 待替换为本节围栏块第 2 行）。
-- 锚实读 `:444` = `- **Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain** — overlapping domains are queued by the scheduler rather than hand-serialized.`（187 字符）。
-- `:335` = `  **One batch record serves one spawn at a time** — a second spawn that would run while this one is still in flight carries its own batch record and its own ledger row.`（168 字符）。
-- `:336` = `  A sequential handoff (designer → coder → a fix round's re-spawn) keeps the same record: it never overlaps, so nothing is shared.`（130 字符）。
-- `:337` = `  - **Why**: §2 is the whole batch's account — every entry, affected file and acceptance line — and a child cannot tell which rows are its own; two children on one record therefore each work the full table, and the same file ends up with two writers.`（250 字符）。
-- 模拟替换（`node` 内存实测，把 `:446` 换成围栏块第 2 行）：480 行 / 68,665 字符 / `##` 17 / `###` 5 / 标题节点 22 / 最长行 300 / `>300` = 0；两行宽 164 ∥ 171。
+- `thincoder-core/prompts/persona-engineering.md`：494 行 / 71,784 字符（UTF-16）/ `^## ` 17 / `^### ` 5 / 标题节点 22 / 最长行 300 / `>300` = 0（2026-11-01 实算）；两行宽 164 ∥ 174（why 行待替换为本节围栏块第 2 行，以引文定位）。
+- 锚实读（§Parallel dispatch）`- **Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain** — overlapping domains are queued by the scheduler rather than hand-serialized.`（187 字符）。
+- 锚实读（§Implementation dispatch structure）`  **One batch record serves one spawn at a time** — a second spawn that would run while this one is still in flight carries its own batch record and its own ledger row.`（168 字符）。
+- 同一节 `  A sequential handoff (designer → coder → a fix round's re-spawn) keeps the same record: it never overlaps, so nothing is shared.`（130 字符）。
+- 同一节的 why 行 `  - **Why**: §2 is the whole batch's account — every entry, affected file and acceptance line — and a child cannot tell which rows are its own; two children on one record therefore each work the full table, and the same file ends up with two writers.`（250 字符）。
+- 模拟替换（`node` 内存实测，把 §Parallel dispatch 的 `Spawn mirror tasks…` 条 why 行换成围栏块第 2 行）：480 行 / 68,665 字符 / `##` 17 / `###` 5 / 标题节点 22 / 最长行 300 / `>300` = 0；两行宽 164 ∥ 171。
 - 重复面判法：扫 `own batch record` ∥ `one record` ∥ `one job` ∥ `counting unit` ∥ `per job` ∥ `unit of measure` 六串，命中行逐条登记（处数判时现算，本档不载点值）⇒ 判法见 A5。
 - 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席 manifest read 实读）⇒ 独立公共源文档仓无，已查无相关。
 - 集成面读数：`test/RTM.md` 262 行 / `## ` 5 / `###` 19 / 表行 96。
 - 字符口径 = UTF-16 `.length`（与 §6.56 A2 同口径）：该档含 8 个非 BMP 字符（6 × U+1F534 + 1 × U+1F7E1 + 1 × U+1F535）⇒ 同一档 code point 口径读 68,660、UTF-16 口径读 68,668（A2 的改后读数 68,665 同口径，其 code point 读 68,657）；本节一律取 UTF-16 口径。
-- §6.56 落地状态实读：`thincoder-core/prompts/persona-engineering.md:335`–`:337` 与 §6.56「L1 逐字目标形」围栏块三行**逐行整行相等**（`node` 逐行 `===` 各 true）⇒ 本节以「§6.56 已按设计落地」为前提的取值成立。
+- §6.56 落地状态实读：`thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `One batch record serves one spawn at a time` 三行（含顺序交接边界与 `Why`）与 §6.56「L1 逐字目标形」围栏块三行**逐行整行相等**（量法 = `node` 逐行 `===`，各 true；as-of 2026-10-28）⇒ 本节以「§6.56 已按设计落地」为前提的取值成立。
 
 **UI / 交互决策**：无界面面——本节只改模型可见提示词文本与设计档。
 
@@ -4677,7 +4861,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 **判（本席本轮实读）**
 
 - **规则在，位置错**：池里只有一条覆盖行 ⇒ 必须 `ledger:"#N"` 接手——该句写在「台账」节，而违规发生在**开批那一秒**（那一刻的心思是「我要做一件新事」），两处不相邻即不触发。
-- **既有唯一扫描义务扫错面**：`thincoder-core/prompts/persona-engineering.md:430` 逐字 `**Dedupe on booking**: when registering, scan existing rows on the same face.`——它扫的是**登记面**，不是「我十天前写下的欠条」。
+- **既有唯一扫描义务扫错面**：`thincoder-core/prompts/persona-engineering.md` §Ledger 的 `Dedupe on booking` 条逐字 `**Dedupe on booking**: when registering, scan existing rows on the same face.`——它扫的是**登记面**，不是「我十天前写下的欠条」。
 - **两句分工**：结构兜底管「开不出来」（机械，`docs/core/design/LEDGER.md` §6.3——拒文自带候选清单：`id` 升序 = 最老欠条优先、至多 10 行、超出行数给计数与自取命令 ⇒ 读者一眼见该接哪行）；提示词管「知道该接谁」（判断）。
 - **为什么提示词治不了**：项目判据（`docs/core/design/TESTING.md` §3.5）立论——每条纪律要能回答「靠哪个结构兜底」；本句落笔前无结构，只靠自觉。今晚 `#1925` 做对是因为刚被坑过（记忆），不是机制。
 
@@ -4720,7 +4904,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **既有件三问（新增名）**
 
-`existing` = `thincoder-core/prompts/persona-engineering.md:430`（`**Dedupe on booking**: when registering, scan existing rows on the same face.`）· consumers: 两模式主会话的台账登记面——本条紧接它的续行之后写，补「开批面」半句。
+`existing` = `thincoder-core/prompts/persona-engineering.md` §Ledger 的 `Dedupe on booking` 条（`**Dedupe on booking**: when registering, scan existing rows on the same face.`）· consumers: 两模式主会话的台账登记面——本条紧接它的续行之后写，补「开批面」半句。
 
 `existing`（机制面）= `thincoder-core/ledger-write-ops.mjs:211` `ledgerBindBatch`（create 路径建档建行单事务）· consumers: `thincoder-core/agent-tools/batch-ledger-bind.mjs:133`（唯一调用点）——本节不改它一字，门体落点见 `docs/core/design/LEDGER.md` §6.3。
 
@@ -4728,15 +4912,15 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **勘察证据行（本席实读 · 2026-11-01）**
 
-- `thincoder-core/prompts/persona-engineering.md`：490 行（`read` 尾行读数）；锚实读 `:430` = `**Dedupe on booking**: when registering, scan existing rows on the same face.` ∥ `:431` = `**The same item** (same problem ∥ same work object — irrespective of the \``kind\`` field) ⇒ merge (no second row); …` ∥ `:432` = `**One row = one settlement unit**: …`。
-- 机制面实读：`thincoder-core/agent-tools/batch-ledger-bind.mjs:97`（`const ledgerNo = parseLedgerNo(args?.ledger)`）· `:96`（`const board = normalizeBoard(args?.board)`）· `:108`（动态 import `../ledger.mjs`）· `:133`（`ledgerBindBatch({…})` 调用）；`thincoder-core/agent-tools/batch.mjs:304`–`:307`（`ledger` 参数描述）· `:308`–`:311`（`board`）；`thincoder-core/ledger-write-ops.mjs:211`（`export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, title, kind = "tech_todo", board = null, boundary, executorSessionId = null, agent = {} }, writeRecord)`）。
+- `thincoder-core/prompts/persona-engineering.md`：494 行（`split('\n').length - 1` · 2026-11-01）；锚实读 `**Dedupe on booking**: when registering, scan existing rows on the same face.` ∥ `**The same item** (same problem ∥ same work object — irrespective of the \``kind\`` field) ⇒ merge (no second row)` ∥ `**One row = one settlement unit**`。
+- 机制面实读（符号名为准）：`thincoder-core/agent-tools/batch-ledger-bind.mjs` 的 `parseLedgerNo(args?.ledger)` ∥ `normalizeBoard(args?.board)` ∥ 动态 import `../ledger.mjs` ∥ `ledgerBindBatch({…})` 调用；`thincoder-core/agent-tools/batch.mjs` 的 `ledger` / `board` 参数描述；`thincoder-core/ledger-write-ops.mjs` 的 `export function ledgerBindBatch({ cwd, ledgerNo = null, targetAbs, taskBook, title, kind = "tech_todo", board = null, boundary, executorSessionId = null, agent = {} }, writeRecord)`。
 - 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席本轮 `manifest read` 实读）⇒ 独立公共源文档仓无，已查无相关。
 - 集成面读数：`test/RTM.md` 304 行 / `^## ` 5 / `^### ` 23 / 表行 110（本席本轮 `node` 实算）。
 
 **集成测试设计**：**单源 = `docs/core/design/LEDGER.md` §6.3「集成测试设计」**（六列 + delta 结论）——本节不复制。三行读数：破行 **1**（13-1 题设补「同面无未决行」前提）· 冗余 **0** · 新增 **1**（13-4，号已定；实施轮写入 `test/RTM.md` 故事 13 并落 `test/integration/batch-ledger-bind.test.mjs`）。
 
 
-**边界（本节不做）**：不改机制（门体 = `docs/core/design/LEDGER.md` §6.3）· 不写 `newDebt` ∥ `ledger` 参数名 ∥ 文件行号 ∥ 批次名进提示词 · 不动 `thincoder-core/prompts/persona-engineering.md:430` 原文一字（只在其后续行之后增列）· 不改需求档 · 不动 advisor 层。
+**边界（本节不做）**：不改机制（门体 = `docs/core/design/LEDGER.md` §6.3）· 不写 `newDebt` ∥ `ledger` 参数名 ∥ 文件行号 ∥ 批次名进提示词 · 不动 `thincoder-core/prompts/persona-engineering.md` §Ledger 的 `Dedupe on booking` 条原文一字（只在其后续行之后增列）· 不改需求档 · 不动 advisor 层。
 
 **UI / 交互决策**：无界面面——本节只改模型可见提示词文本与设计档。
 
@@ -4775,7 +4959,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | D-PS25 | **台账关联条目合并扫描 = 落 `thincoder-core/prompts/persona-engineering.md`「台账」节「批设计」条原位扩展**（现文逐字保留 + 前插扫描步；不并理由记入轮次记录） | 扫描产出 = 入批条目集 ⇒ 贴「一次落多个需求点」的消费点（判断链不断——同 D-PS9 判据形）；生命周期表受需求档 FR30 验收「五行」锁定（`docs/core/requirements/ENGINEERING-MODE-V2.md:696`——塞第 6 行即破计数）⇒ 不入事件表；时机以文本自带（「批点火前」）；最小改动（±0 行 / 零计数连带——`##` 块计数随正） |
 | D-PS26 | **台账治理纪律增补五条 = 落 `thincoder-core/prompts/persona-engineering.md` 两节内**（「派发与收尾纪律」：`欠账入清单` 原位扩展 ∥ `暂缓批先复核` 条尾追加 ∥ 开局自查新 bullet；「台账」节：入库查重 ∥ 单行单结新 bullet + 生命周期 ③ 条尾追加）——零 `##` 块计数连带；不新造机制 | 五条均主 agent 行为纪律（欠账 / 自查 / 登记 / 结算 / 收口 = 写权独属动作面）⇒ 人格层（同 §6.8 / §6.19 / FR30 判例）；「生命周期」表受 FR30 五行锁定 ⇒ 不增行只扩条文；需求档攒批五条计数零变 |
 | D-PS27 | **「段」口径定形 = 标题段**（标题节点〔层级 2+，含行内〕及其领起内容——逐段对位；复算 = **17/17 全配对**、零孤段） | 「段」原口径无在案记录；复算前置 = 定口径——取「段配对」与标题树同粒度（段 = 标题段）使读数可复算、可机判 |
-| D-PS28 | **同族句换写 = EN 两处**（`:38` ∥ `:51`；弃 1:1 基数、保内核、补关系句——「文档归板块（板内分域分档、可多档）」） | 三层模型（板 → 域 → 档）收口后「一板块一档」/`design/<板块>.md` 的 1:1 基数与之相抵；修 = EN 两处同改 |
+| D-PS28 | **同族句换写 = EN 两处**（弃 1:1 基数、保内核、补关系句——「文档归板块（板内分域分档、可多档）」） | 三层模型（板 → 域 → 档）收口后「一板块一档」/`design/<板块>.md` 的 1:1 基数与之相抵；修 = EN 两处同改 |
 | D-PS29 | **普通模式管理教学 = 普通侧三档**（`thincoder-core/prompts/discipline-normal.md` 新增节「工作管理（批次档 + 台账 + 收口）」〔台账用法 ∥ 批次档用法 ∥ 收口纪律〕∥ `thincoder-core/prompts/persona-normal.md` 设计师席句〔节内〕∥ `thincoder-core/prompts/common.md` 六段作者行模式分辨〔节内换写〕） | 需求 F-N2.1 判据句钉纪律层用法节；三块跨相位（建档 / 落地 / 收口）无单一既有节承载位 ⇒ 新增节（先例 §6.18）；主 agent 独属动作以主 agent 视角直书纪律节（普通侧人格档薄——单点承载；先例 = 既有 task / 持久清单句在纪律层）；公共层句 = 全角色两模式共读面（按角色写死即误导）；**单套逻辑** = 文本结构照工程同构、按普通模式单位改写（N-N2.1） |
 | D-PS30 | **「产品常识（配置项必须有配置界面）」= 公共层档末新增第 16 节**（`thincoder-core/prompts/common.md`「产品常识（Product common sense）」——配置项必须有配置界面 ∥ 例外须显式说明经用户裁 ∥ 界面提示文案不得指向界面里不存在的入口） | 受众 = 两模式 + 全部子代理（用户「这是常识，不仅仅针对工程模式」）⇒ 公共层恒第二位 = 唯一全覆盖范围；与 §13–§15 同形（档末追加——D3 计数随动）；形态沿 D-PS22 先例（**移档末**——段中插入 ⇒ 档末，§N 零漂移） |
 | D-PS31 | **清账轮三条 = 落 `thincoder-core/prompts/persona-engineering.md` 两节内**（「派发与收尾纪律」：锚点复核新 bullet ∥ 「台账」节：族行 ∥ evidence 文字太长，难于阅读新 bullet ×2）——**EN 按本节设计于实施轮落笔**；既有节内增列 ⇒ 零 `##` 块计数连带；不新造机制（工具面零改） | 三条均主 agent 行为纪律（池面锚维护 ∥ 行组织 ∥ 行形态 = 台账写权与行使面）⇒ 人格层（同 §6.8 / §6.20 / FR30 判例）；生命周期表受 FR30 五行锁定 ⇒ 三条不入事件表（锚点复核 trigger = 清账轮；族行 / evidence 文字太长，难于阅读 = 行面形态） |
@@ -4792,21 +4976,25 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | D-PS42 | **禁类写法改因面三条**：① **不硬编因果**——「可改因」的唯一依据 = 原句（或同段邻句）已带原因（准入①），其次才是机制档有可核坐标（准入②，须给坐标；给不出不得走②）；两道都不成立 ⇒ 归「约定」或「需裁」，不补理由。② **标题命名轴 = 该块赖以成立的机制或裁决**，不按服从强度命名。③ **体量只作读数、不设帽**（2026-10-21 用户裁：提示词无预算；§6.11 的 ≤8,000 帽属工具描述面） | ① 用户 2026-10-17 23:46 令 + 「给约定编一个原因比禁令更坏」（假理由会被拿去推断没见过的场合）；② §6.32「标题命名轴」一句可判；③ 提示词逐请求注入 ⇒ 字节即成本，相对帽随档体量自适（本批基线 262,499 字符，上限 +7,875）；被否 = 绝对帽（各档体量差 30 倍，同一帽会同时过松与过紧） |
 | D-PS43 | **文档检索路由（FR41）= `thincoder-core/prompts/common.md`「工具纪律」节内新增 `###` 子节**（`### Document search — finding a document vs locating a line`——发现式 ⇒ `doc_search` 首查 ∥ 定位式 ⇒ `grep` 照用；**why 主轴 = 声明域（多仓）vs 一个路径（默认本仓）⇒ 跨仓结构性失明**，过程档在域外 = 次因〔用户 2026-10-22 10:06 裁「问题不是扫全树，是会忽略跨仓文本」〕；两处落笔字面：`doc_search: none found` ∥ `cross-repo: not indexed`）；**EN 按 §6.43 于实施轮落笔**；零 `##` 节计数连带（20 ⇒ 20）；标题节点 25 ⇒ 26 | 受众 = 两模式 + 全子代理 ⇒ 公共层恒第二位（同 D-PS36）；`###` = 零 `##` 连带（同 D-PS39 ∥ D-PS40）；同节已装联网面两张搜索选择子节、文档面缺位（§6.43 落点判断表）；被否 = 改 `### Codebase exploration order` 正文（毁 2 行记忆锚）∥ 工具路由表加注（单元格装不下 why） |
 | D-PS44 | **推断不许当事实（FR43）= `thincoder-core/prompts/common.md`「证据纪律」段内追加三段**（`## Evidence discipline` · `:48` 后）+ **提问面 `:19` 原位替换一行**（`## Check the docs before you ask` 的 checked-evidence 句：key text 定形为「本轮逐字一行」，查无点名查面）+ **`thincoder-core/prompts/advisor-round1.md` 新增 R9**（R8 后 · `Source:` 前）；三条 = 依据的可判界（本轮 · 整行 · 抄得一致）∥ 派生物（摘要 / 子代理回报 / 长期记忆）只作线索 ∥ 决定面携依据（五处）；**「非决定面可以不标」按「本条只伸五面」落，不落成放宽总则**；**EN 按 §6.44 于实施轮落笔**；零 `##` 节连带（20 ⇒ 20）· `thincoder-core/prompts/common.md` +6 行 · 该档 `:19` ±0 行（+238 字符）· `thincoder-core/prompts/advisor-round1.md` +1 行 | 受众 = 两模式 + 全子代理 ⇒ 公共层恒第二位（同 D-PS36 / D-PS43）；机制已在 `thincoder-core/prompts/common.md:44-46`，缺的是可判的界 ⇒ 同节追加、不新建节（同 D-PS5 判例）；R9 落评审自含档（判据须评审读得到）；被否 = 新 `##` 节（块计数连带 + 需求档节表锁定）∥ 三条各写一条禁令（禁令不给新场合的判断力——D-PS42）∥ 把「非决定面可以不标」落成总则放宽（静默取消 `unverified`） |
-| D-PS45 | **提示词面一条规则一行（FR46）= 16 档重写，两舱推进**（甲舱 9 档 = 7 档 persona-* + 2 档 discipline-*，先行；乙舱 7 档 = `thincoder-core/prompts/common.md` + 4 档 advisor-* + `thincoder-core/prompts/consult-base.md` + `thincoder-core/prompts/subagent-base.md`）；写形 = 一条规则一行、行首短语点题、条件与例外独立成行、理由以 Why 起头；样板 = `thincoder-core/prompts/persona-engineering.md:104` 改写为六行（实测最长 288 ≤ 300）；**EN 按 §6.45 于实施轮落笔**；连带收正本档三族六处（设计席修正轮的设计档笔，见 §6.45 连带项 C 表） | 用户 12:28「MoE 模型看 3000 多字能看明白啥」+ 12:31「改法对，就照这个来」；模型读原始文本、一行 = 一个块 ⇒ 折行只改源码排版、切段文字未变，只有重写能改块（FR45 段 / 行两面分判）；两舱 = 两批、舱内分波（样板档单波先行 · 每席一到两档）、甲舱每轮都读价最高先行；被否 = 折行 ∥ 切段 ∥ 引擎改造并入本批（属 FR45 批） |
+| D-PS45 | **提示词面一条规则一行（FR46）= 16 档重写，两舱推进**（甲舱 9 档 = 7 档 persona-* + 2 档 discipline-*，先行；乙舱 7 档 = `thincoder-core/prompts/common.md` + 4 档 advisor-* + `thincoder-core/prompts/consult-base.md` + `thincoder-core/prompts/subagent-base.md`）；写形 = 一条规则一行、行首短语点题、条件与例外独立成行、理由以 Why 起头；样板 = `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Closing ledger sweep` 条改写为六行（as-of 2026-10-22 实测最长 288 ≤ 300）；**EN 按 §6.45 于实施轮落笔**；连带收正本档三族六处（设计席修正轮的设计档笔，见 §6.45 连带项 C 表） | 用户 12:28「MoE 模型看 3000 多字能看明白啥」+ 12:31「改法对，就照这个来」；模型读原始文本、一行 = 一个块 ⇒ 折行只改源码排版、切段文字未变，只有重写能改块（FR45 段 / 行两面分判）；两舱 = 两批、舱内分波（样板档单波先行 · 每席一到两档）、甲舱每轮都读价最高先行；被否 = 折行 ∥ 切段 ∥ 引擎改造并入本批（属 FR45 批） |
 | D-PS46 | **三观分层落地 = 17 条按性质拆 8 人格 / 9 公共**：公共九条落 `thincoder-core/prompts/common.md` 的 `## Who you are` 内一块（不新建 `##` 节，节数 21 不动）；人格八条按角色取形落七份 `persona-*.md`（不是每条进每档；2.4 落 `persona-engineering` ∥ `persona-eng-designer`）；顾问 / 会诊自含装配 ⇒ 三观本批不接、待另批；需求 §5 对应表随之收正四行 | 用户 2026-10-26 02:06–02:10 五句裁定（17 条一条不少 ∥ 三观属人格 ∥ 按性质拆 ∥ 人格按角色调 ∥ 映射已批准）；落公共层 = 恒第二位 ⇒ 两模式 + 全子代理一处覆盖（同 D-PS36 判据）；不新建节 = D3 零连带；2.4 补落两档 = 评审 #1（初稿映射七档无一含它，实落 16 条）；人格行判据 = 三判（题眼不复用公共题眼 ∥ 与公共行最长连续同文 ≤5 词 ∥ 同档一条只一处——取形不成两份全文） |
-| D-PS47 | **`thincoder-core/prompts/persona-engineering.md`「Dispatch & close discipline」节拆 5 个 `###`**（`:151` 节 117 行 ⇒ `### Dispatch, agent reports, and the zero-write watchdog`（`:152`–`:162`）∥ `### Round close, commit discipline, and fix-round dispatch`（`:163`–`:174`）∥ `### Close states and claim basis`（`:175`–`:183`）∥ `### Debts, ledger upkeep, and the closeout sweep`（`:184`–`:214`）∥ `### Change-face routing, light channel, and dispatch fields`（`:215`–`:267`））；**纯结构 · 零语义**：只加 5 行标题，不加空行、不删行、不换序；零 `##` 块计数连带（17 不变）· 标题节点 17 ⇒ 22 · 段数（D-PS27 口径）同移 17 ⇒ 22 | 该节 117 行 = 全档 24.9%，主题在 `:215` 已换而零标题分隔 ⇒ 读者滑过去不知道进了新段；`###` = 零 `##` 连带（同 D-PS39 ∥ D-PS43），写形取 `thincoder-core/prompts/common.md:200-201`（标题紧接领起内容，不靠空行）；取 5 刀不取 4 刀 = 内容族 12 个按物理顺序排，4 刀必有一条标题装 4–5 族或把「收尾三态 + 断言带据」并进「债务 + 台账」（父侧 2026-10-28 裁定 A）；被否 = 4 刀 ∥ 顺带改词（违零语义前提） |
+| D-PS47 | **`thincoder-core/prompts/persona-engineering.md`「Dispatch & close discipline」节拆 5 个 `###`**（§Dispatch & close discipline 节 117 行 ⇒ `### Dispatch, agent reports, and the zero-write watchdog` ∥ `### Round close, commit discipline, and fix-round dispatch` ∥ `### Close states and claim basis` ∥ `### Debts, ledger upkeep, and the closeout sweep` ∥ `### Change-face routing, light channel, and dispatch fields`）；**纯结构 · 零语义**：只加 5 行标题，不加空行、不删行、不换序；零 `##` 块计数连带（17 不变）· 标题节点 17 ⇒ 22 · 段数（D-PS27 口径）同移 17 ⇒ 22 | 该节 117 行 = 全档 24.9%，主题中途已换而零标题分隔 ⇒ 读者滑过去不知道进了新段；`###` = 零 `##` 连带（同 D-PS39 ∥ D-PS43），写形取 `thincoder-core/prompts/common.md:200-201`（标题紧接领起内容，不靠空行）；取 5 刀不取 4 刀 = 内容族 12 个按物理顺序排，4 刀必有一条标题装 4–5 族或把「收尾三态 + 断言带据」并进「债务 + 台账」（父侧 2026-10-28 裁定 A）；被否 = 4 刀 ∥ 顺带改词（违零语义前提） |
 | D-PS48 | **`thincoder-core/prompts/discipline-engineering.md` 两节收正**：A 件 = `## Basic flow (four steps, in order)` 拆为两个 `##`——四步（`:53`–`:98`）∥ 新 `## Light channel`（`:98` 与 `:99` 之间插入 1 行，`:99`–`:121` 全文归其下）；纯结构 · 正文逐字不动 · 顺序不动；`##` 10 ⇒ 11 · 标题节点 ∥ 段数 17 ⇒ 18。B 件 = `## Testing discipline` 内 `:176`–`:185` 禁令三遍 ⇒ 一遍：10 行 ⇒ 8 行，三条判据（`trimmed copy` ∥ `no business scenario` ∥ `whose job the guarding is`）∥ 两个 Why ∥ 实例全留，两处重复收尾合一 | A 件 = 轻通道是**旁路**（让改动跳过四步），却住在四步节末尾 ⇒ 读者最易读成「第五步」，而按四步去查它得翻过全部四步；拆到同为 `##` 的平行节即消此误读，零语义改（A1 逐字节）。B 件 = 同一禁令说三遍而三遍各带判据——压的是叙述、不是判据；两处「one ledger row / no permanent file」是同句复用，合一不丢判断力。**受写形约束、不能多压**：再压 2 行就要把相邻两条并成一行，而并后即 312 ∥ 372 ∥ 379 字符、全越 300 行宽，两条 Why 又分属两形态各占一行（K3）。被否 = 把三遍合成一句口号（丢「怎么判」）∥ 删实例 ∥ 改「违者」句式 ∥ 顺手改正文（违 A1）∥ 动 `:186`–`:191`（不在授权内） |
-| D-PS49 | **一个批档只服务一个并发 spawn = `thincoder-core/prompts/persona-engineering.md`「Implementation dispatch structure」节内增列 3 行**（`batchDoc is mandatory` bullet 的收尾句 `:334` 之后：规则 ∥ 顺序交接边界 ∥ why；不取 `:333` Why 行之后，见 A9）+ **并行派发示例两行的 `batchDoc` 占位符改为 `<batch record path A>` ∥ `<batch record path B>`**（该两行以引文定位——收尾分别是 `batchDoc=<batch record path A>` ∥ `batchDoc=<batch record path B>` 的那两行；行号 as-of 本次读数 = `thincoder-core/prompts/persona-engineering.md:438` ∥ `:439`）；零 `##` 块计数连带（17）· 标题节点 22 不变 · 475 ⇒ 478 行。**不写子席侧判据**（子席看不见 `files`，无信号分席，见 K4）；不改机制、不动 `it IS the task book this spawn implements` ∥ `The task book is batch record §2` 既有两句（引文为准；行号 as-of 本次读数 = `:331` ∥ `:345`）、不动需求档 | 病因 = 三席共用一本批档后各按 §2 全表动手，同档两写者、其中一席按行号批删写出语法坏档（台账 `#1871`）；缺口在「是**谁的**任务书」这半句——`it IS the task book this spawn implements` ∥ `The task book is batch record §2` 两句只讲「是任务书」（引文为准；行号 as-of 本次读数 = `:331` ∥ `:345`）。规则的对象是**并发**：`thincoder-core/prompts/discipline-engineering.md:257` 已定「一个批次 = 一个实现轮次 = 一本批档」，一个批次正常顺序派设计席 → 实施席 → 修正轮 ⇒ 只写「一批档 = 一 spawn」会与那条相抵并把标准流程判成违规，故新增边界行（K2）。示例改字面 = 模板即被照抄的东西，两行原样相同就是复用示范（K3）。**本行落点一律以引文定位、行号只作 as-of 读数**：同节 A5 ∥ A6 ∥ A9 已取此形，一处写死行号则同一事实必出两个号（A5 说 `:438`、此处却停在改前的那个号），读者无从判断哪个是现状。被否 = 在 `## Parallel dispatch` 节另起一条（与 `:331` 拆成两处，D2）∥ 子席侧「读到像多席就上抛」（`The files parameter is a SCHEDULING channel…` 那一 bullet 子席看不见 `files`；引文为准，行号 as-of 本次读数 = `:351`，写规则 = 每次派单变猜）∥ 本批改机制（§1.5 明确不改） |
+| D-PS49 | **一个批档只服务一个并发 spawn = `thincoder-core/prompts/persona-engineering.md`「Implementation dispatch structure」节内增列 3 行**（`batchDoc is mandatory` bullet 的收尾句之后：规则 ∥ 顺序交接边界 ∥ why；不取其 Why 行之后，见 A9）+ **并行派发示例两行的 `batchDoc` 占位符改为 `<batch record path A>` ∥ `<batch record path B>`**（该两行以引文定位——收尾分别是 `batchDoc=<batch record path A>` ∥ `batchDoc=<batch record path B>` 的那两行）；零 `##` 块计数连带（17）· 标题节点 22 不变 · 475 ⇒ 478 行。**不写子席侧判据**（子席看不见 `files`，无信号分席，见 K4）；不改机制、不动 `it IS the task book this spawn implements` ∥ `The task book is batch record §2` 既有两句（引文为准）、不动需求档 | 病因 = 三席共用一本批档后各按 §2 全表动手，同档两写者、其中一席按行号批删写出语法坏档（台账 `#1871`）；缺口在「是**谁的**任务书」这半句——`it IS the task book this spawn implements` ∥ `The task book is batch record §2` 两句只讲「是任务书」（引文为准）。规则的对象是**并发**：`thincoder-core/prompts/discipline-engineering.md` 已定「一个批次 = 一个实现轮次 = 一本批档」，一个批次正常顺序派设计席 → 实施席 → 修正轮 ⇒ 只写「一批档 = 一 spawn」会与那条相抵并把标准流程判成违规，故新增边界行（K2）。示例改字面 = 模板即被照抄的东西，两行原样相同就是复用示范（K3）。**本行落点一律以引文定位、行号只作 as-of 读数**：同节 A5 ∥ A6 ∥ A9 已取此形，一处写死行号则同一事实必出两个号（A5 记的是改后那个号、此处停在改前那个号），读者无从判断哪个是现状。被否 = 在 `## Parallel dispatch & multi-task` 节另起一条（与该节拆成两处，D2）∥ 子席侧「读到像多席就上抛」（`The files parameter is a SCHEDULING channel…` 那一 bullet 子席看不见 `files`；引文为准，写规则 = 每次派单变猜）∥ 本批改机制（§1.5 明确不改） |
 | D-PS50 | **两句 = 单测档落点 + 先例必须在盘，都落 `thincoder-core/prompts/discipline-engineering.md` 既有两条内**（句一接 `Delete on use` 条之后 ∥ 句二并入 `Closest-precedent survey` 条；既有节内增列 ⇒ `##` 11 · `###` 7 · 标题节点 18 全不变；+5 行）；**句一的人读权威 = `docs/core/design/TESTING.md` §2.4**（本批新增；同批按 §1.5 收窄边界把 §2.3 表 `:126` ∥ `:128` 两行改成实读——`:126` 的 cli 读数与代码相反）· **句二的人读权威 = §6.58**；**EN 按 §6.58 逐字于实施轮落笔**；不加 `doc_check` 路径存在机检 ∥ 不清存量坐标（台账 `#1925`）∥ 不动人格层 ∥ `thincoder-core/prompts/common.md` ∥ advisor 层 | 病因 = 设计席把批内单测档写成 `<包>/test/xxx.test.mjs`，同一形状复发两次（`2026-10-30` ∥ `2026-11-01`）；规则本体在 `docs/core/design/TESTING.md` §2 ∥ §3.1 ① 早就对（行号 as-of：`:90` ∥ `:130` ∥ `:159`），提示词层零覆盖（`docs/batches` 16 档 0 命中）⇒ 纪律层只给生命周期、不给位置。第二半 = 先例库已死：旧坐标还教旧形，而「先对齐先例」会忠实抄回（`:76` 逐字 `Survey how **similar / same-kind features currently do it** … **align first**`）。被否 = 两句分两档落（两模式共读面对普通模式误导，K1）∥ 给 `thincoder-core/prompts/common.md:353` 加交叉指（引用面 vs 落点面两条平行轴，K3）∥ 同时加机检（存量一次全红，违零假阳优先） |
-| D-PS51 | **一份工作 = 一本账 = `thincoder-core/prompts/persona-engineering.md`「并行派发与多任务」节内 `:444` 之后增列 2 行**（规则 ∥ why；锚条 = `Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain` 那一行）；零 `##` 块计数连带（17）· `###` 5 · 标题节点 22 不变；478 ⇒ 480 行。**不写「N 棵树 ⇒ N 本档」特例式**；不动 `:335`–`:337` 三行 ∥ 不动 `:444` 原文 ∥ 不改机制 ∥ 不改需求档 | 缺口 = 「什么算一份」这半句不在任何一处：`:335` 讲能不能共用（约束面），本条讲计量单位（一份 = 一棵树 ∥ 一个席 ∥ 一个文件域）。11:34 事故的形是三个**文件域**而不是三棵树，特例式只覆盖字面树形，下一个说法即绕过（§1.3）；限定词 `running in parallel` 防与 `:336` 顺序交接边界相抵（K4）。被否 = 接半句到 `:444` 行尾（两规则一行，违该档一条规则一行写形（K1））∥ 另起节（与 `:444` 拆成两处，D2）∥ 本批改机制（§1.5：机制拦在 `#1883`） |
+| D-PS51 | **一份工作 = 一本账 = `thincoder-core/prompts/persona-engineering.md`「并行派发与多任务」一节内 `Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain` 条之后增列 2 行**（规则 ∥ why；锚条 = `Spawn mirror tasks across independent trees as parallel eng-coders, each declaring its own file domain` 那一行）；零 `##` 块计数连带（17）· `###` 5 · 标题节点 22 不变；478 ⇒ 480 行。**不写「N 棵树 ⇒ N 本档」特例式**；不动该节三条边界行 ∥ 不动 `Spawn mirror tasks…` 原文 ∥ 不改机制 ∥ 不改需求档 | 缺口 = 「什么算一份」这半句不在任何一处：`One batch record serves one spawn at a time` 讲能不能共用（约束面），本条讲计量单位（一份 = 一棵树 ∥ 一个席 ∥ 一个文件域）。11:34 事故的形是三个**文件域**而不是三棵树，特例式只覆盖字面树形，下一个说法即绕过（§1.3）；限定词 `running in parallel` 防与顺序交接边界条相抵（K4）。被否 = 接半句到该锚条行尾（两规则一行，违该档一条规则一行写形（K1））∥ 另起节（与该锚条拆成两处，D2）∥ 本批改机制（§1.5：机制拦在 `#1883`） |
 
-| D-PS52 | **开批即接手（一句）= `thincoder-core/prompts/persona-engineering.md` 「台账」节 `Dedupe on booking` 条续行之后（`One row = one settlement unit` 条之前）增列 2 行**（规则 ∥ why；既有节内增列 ⇒ `##` ∥ `###` ∥ 标题节点零连带；+2 行）；**EN 逐字照 §6.59**；机制面 = `docs/core/design/LEDGER.md` §6.3（`batch` create 省略 `ledger` 的同面判门）；不写参数名进提示词（拒文自嚣） | 病因 = 开批为了做一条已在池里的债却又开一行，同一笔债两个持有者 ⇒ 收口时一行永远闭不成已核销，只能撤回（五实例；台账 `#1927`）。规则已在「台账」节（池里只有一条覆盖行 ⇒ 必须 `ledger:"#N"`），但它写在登记节、违规发生在于开批那一秒；唯一扫描义务（`:430`）扫的是登记面。落点贴 `Dedupe on booking` = 同一判据的登记面 / 开批面相邻（D2）。本批**同时**落机制门（与 §6.56 ∥ §6.57 不同——那两条只止血） |
+| D-PS52 | **开批即接手（一句）= `thincoder-core/prompts/persona-engineering.md` 「台账」节 `Dedupe on booking` 条续行之后（`One row = one settlement unit` 条之前）增列 2 行**（规则 ∥ why；既有节内增列 ⇒ `##` ∥ `###` ∥ 标题节点零连带；+2 行）；**EN 逐字照 §6.59**；机制面 = `docs/core/design/LEDGER.md` §6.3（`batch` create 省略 `ledger` 的同面判门）；不写参数名进提示词（拒文自嚣） | 病因 = 开批为了做一条已在池里的债却又开一行，同一笔债两个持有者 ⇒ 收口时一行永远闭不成已核销，只能撤回（五实例；台账 `#1927`）。规则已在「台账」节（池里只有一条覆盖行 ⇒ 必须 `ledger:"#N"`），但它写在登记节、违规发生在于开批那一秒；唯一扫描义务扫的是登记面。落点贴 `Dedupe on booking` = 同一判据的登记面 / 开批面相邻（D2）。本批**同时**落机制门（与 §6.56 ∥ §6.57 不同——那两条只止血） |
 
 
-| D-PS53 | **「文字太长，难于阅读」口径并入三面 = 名 + 阈值分句 + 行说法**（设计档 7 行 12 处：`:148` ∥ `:598` ∥ `:606`×3 ∥ `:610` ∥ `:618` ∥ `:5353`×2 ∥ `:5354`×3 = 本席本轮已落；需求档 `:58` = 主 agent 笔；英文 `thincoder-core/prompts/persona-engineering.md:437`-`:438` = 实施席照 §6.61 围栏块落笔）；**值 300 不动**；条目名的词头由量词换成毛病 | 判由：① 逐字采用 `docs/core/design/LEDGER.md:883` 已定形——一个东西一个名（D2）；② 数字只住阈值那句——名字带数，读者就去量长度而不是看读不读得下去（`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 2）；③ 量的口径会把读者推向「把字删短凑进线内」，细节仍在行里（前批已记）；④ 做法词「指针化」与英文 `pointer-ized` 保留——治的是条目名，不是做法词。被否 = 沿用旧名（三面两个名）∥ 只改中文不改英文（§1.4 以中文终稿为准译）∥ 把旧口径词表写进本档（A4 的 0 命中判据会命中自己，且状态档不承载旧名——见 §6.61 K6） |
+| D-PS53 | **「文字太长，难于阅读」口径并入三面 = 名 + 阈值分句 + 行说法**（英文 `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch & multi-task 的 `one call per design, all in the same reply` 两行 = 实施席照 §6.61 围栏块落笔）；**值 300 不动**；条目名的词头由量词换成毛病 | 判由：① 逐字采用 `docs/core/design/LEDGER.md` 已定形——一个东西一个名（D2）；② 数字只住阈值那句——名字带数，读者就去量长度而不是看读不读得下去（`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 2）；③ 量的口径会把读者推向「把字删短凑进线内」，细节仍在行里（前批已记）；④ 做法词「指针化」与英文 `pointer-ized` 保留——治的是条目名，不是做法词。被否 = 沿用旧名（三面两个名）∥ 只改中文不改英文（§1.4 以中文终稿为准译）∥ 把旧口径词表写进本档（A4 的 0 命中判据会命中自己，且状态档不承载旧名——见 §6.61 K6） |
 | D-PS54 | **「文字太长，难于阅读」的处置动词 = 重新组织语言重写**（中文设计档 `:606` ∥ `:5354` 两行及判由③ 句形〔§6.62 ④ 逐处表〕∥ 英文面四行；英文围栏块就地换写）——本批已落；**值 300 不动 · 名与阈值句不动 · §1.4 五族零改**；判据单源逐字 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 1 ∥ `docs/core/design/DOC-DISCIPLINE.md` §3.18 ⑥ | 判由：① 旧词「收窄」是宽度词——读者照它删字凑线，细节留在行里且被打碎；② 判据单源早写了处置口径（重新组织语言重写），档里却换了另一个动词，读者按档里那个手；③ 一个动作一个动词（D2）——同一条规矩三面出现三种处置词即分叉；④ 例外行 `narrow` 与例外语义相反（例外允许的是**一段摘要**，落点出现后是**搬走 + 重写**） |
 | D-PS55 | **提示词面同机制反调收口 = `thincoder-core/prompts/common.md:355` 整行换三行**（实测 103 → 228 ∥ 150 ∥ 128 字符）；**删的是 `(a dedicated cleanup batch is required)` 整半句**，换来的三行 = 判据句 + `The why` 句 + 点名被删退路的一句；**理由住提示词面，不搬进设计档**；判据句 `whenever it was written` ∥ `did I touch this file this round` 逐字留；**EN 已按 §6.63 围栏块落盘**；零 `##` 节计数连带 · 标题节点 +1（§6.63 新增） | 用户 2026-11-01 19:32 逐字「你最好别让他再推给清账批了，就地处理。」+ 19:34 逐字「理由为什么不写进提示词那一行？」；判由 = ① 退路留在提示词面就是留门——下一个人拿它当「碰到也可以不清」的理由，而机制面 `docs/core/design/DOC-DISCIPLINE.md:1147`–`:1152` 已定触达即本轮；② 规矩住提示词、理由藏设计档 ⇒ 模型只读到一句「不许」，照字面绕（禁令要带理由）。被否 = 保留括注改成「清账批降为补充手段」（仍是退路，读者照退路走）∥ 换个清账说法（同效）∥ 理由只写设计档不进提示词行（读者拿不到「为什么」，规则沦为执法条文） |
-| D-PS56 | **派单尺寸纪律去掉「一面一单」= `thincoder-core/prompts/persona-engineering.md:361`-`:362` 两行换四行**（尺寸闸 ∥ 验收面照写 ∥ 未决口径先裁 ∥ `The why`；240 ∥ 215 ∥ 244 ∥ 245 字符）；**`files` ≤15 档保留，理由换成「一单小到能一次说清 + 冲突检测有意义」**；**「跨面 ⇒ 按面拆单」整条删**；本档 §6.9 机制 ①② 同步改写，§6.39 对照行与用例、§6.56 A6、D-PS10 四处回收；零 `##` 节连带 · 标题节点 +1（§6.64） | 用户 2026-11-01 19:30 逐字「你那条一批活只改一类面的约束去掉了吗？」+ 19:31「你不去掉他改别的有用吗？」；判由 = ① 验收面由「这一批要验什么」定，不由「碰了几类文件」定——面数只是代理指标；② 今天代理错了：38 档同属文档面、同一件事被拆成 11 轮设计席派单，每轮重写 §2、重跑门、动一次坐标，而「单一验收面」的收益一次都没用上；③ 尺寸闸的真用处是「一单小到能一次说清、冲突检测有意义」，与切面无关。被否 = 只删「按面拆」留「一面一单」这个说法（说法在，读者照说法拆）∥ 连尺寸闸一起删（拆单失去唯一的量） |
+| D-PS56 | **派单尺寸纪律去掉「一面一单」= `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `Dispatch size discipline (pre-flight)` 两行换四行**（尺寸闸 ∥ 验收面照写 ∥ 未决口径先裁 ∥ `The why`；240 ∥ 215 ∥ 244 ∥ 245 字符）；**`files` ≤15 档保留，理由换成「一单小到能一次说清 + 冲突检测有意义」**；**「跨面 ⇒ 按面拆单」整条删**；本档 §6.9 机制 ①② 同步改写，§6.39 对照行与用例、§6.56 A6、D-PS10 四处回收；零 `##` 节连带 · 标题节点 +1（§6.64） | 用户 2026-11-01 19:30 逐字「你那条一批活只改一类面的约束去掉了吗？」+ 19:31「你不去掉他改别的有用吗？」；判由 = ① 验收面由「这一批要验什么」定，不由「碰了几类文件」定——面数只是代理指标；② 今天代理错了：38 档同属文档面、同一件事被拆成 11 轮设计席派单，每轮重写 §2、重跑门、动一次坐标，而「单一验收面」的收益一次都没用上；③ 尺寸闸的真用处是「一单小到能一次说清、冲突检测有意义」，与切面无关。被否 = 只删「按面拆」留「一面一单」这个说法（说法在，读者照说法拆）∥ 连尺寸闸一起删（拆单失去唯一的量） |
+| D-PS57 | **设计前置加一条「数据事实勘察」= `thincoder-core/prompts/discipline-engineering.md` 设计步内增列 4 行**（接 `Public-source survey (design precondition)` 条 why 行之后、`- Design = a check on requirements` 行之前；既有节内增列 ⇒ `##` 11 ∥ `###` 7 ∥ 标题节点 18 全不变；363 ⇒ 367 行）；**判据 = 一句话「这个设计的任意一句话里，有没有一句不看数据就无法确定真假」**——按句子问、不按设计类别问；取过数写读数 ∥ 没取写「无此句」，**空着 = 没做**；**EN 按 §6.65 逐字于实施轮落笔**；不加评审判据（`thincoder-core/prompts/advisor-design.md`）∥ 不落人格层 ∥ 不动 `thincoder-core/prompts/common.md` ∥ 不动需求档 | 台账 `#1722`（会话 .3 实测：04:56 令「你先去拉几条数据看看」，05:01 读数据后目标判断整个改了）。判由 = ① 现行设计步两条前置只问「现成的东西在哪」「旁边有哪些源文档」，没有一条问数据那句话是不是真的（提示词面五串实扫各 0 命中）；② 类目式判据（「涉及数据的设计」）人人答不涉及 ⇒ 这一步等于没加，所以判据落到句子：点得出即先取数，点不出即写「无此句」，两种答案都留字面；③ 顺序后于两条前置 = 判据相对「代码与文档能答什么」定义，残余断言才是它的对象。被否 = 只落设计档不落提示词（设计席读不到，等于自律段落）∥ 落人格层做第二条活描述（D2）∥ 同时加评审判据（射程外，K5） |
+| D-PS58 | **提示词面证据形改「档 + 逐字引文 / 符号名 / 量法 + 日期」，行号不作引用形**（设计面 = 本档 §6.66）；提示词面 21 处父侧已落，另两处残留也已落笔（本席本轮实读：`thincoder-core/prompts/persona-plan.md` 的 `cite real file paths and the exact words you read there` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` 的 `the quoted text alone — a line number is not evidence: quote what the line says`）；**本批待实施轮 = §6.66 B 组两处**（旧理由换扇出形，逐字见该节围栏块）；五份复制（`advisor-design` ∥ `advisor-round1` ∥ `advisor-round2` ∥ `advisor-round3` ∥ `consult-base`）同句同改、设计档不记第三份；工具描述两处（`notify_parent` ∥ `question`）已换形、不设例外 | 病因 = 一边禁行号引用（`docs/core/design/DOC-DISCIPLINE.md` §1 的 D4 细则）、一边命令必写 `file:line`（提示词面 21 处），模型照它读到的那一个办；机械闸挡不住绕行且提示词仍在命令 ⇒ 真防线 = 提示词里不留口子。被否 = 建机械闸（只挡老实人）∥ 判据只看新增行（分档即开口）∥ 工具描述面造「上游通道例外」∥ 五份复制收成一处再引用（面禁指针，收不成） |
+
+
 
 
 ### 6.60 工具描述面的举例不得指向本仓档（`thincoder-core/tool-docs/advisor.md` · 一行换举例形）
@@ -4969,7 +5157,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 ③ **evidence 文字太长，难于阅读**（行内只留「症状 + file:line + 指针」；阈值 300 字——超 300 字即算命中，读数非闸门；处置 = **重新组织语言重写**；例外 = 细节尚无落点）。
 ```
 
-**英文面终稿（实施席照此落笔 · 唯一副本 = 本节；替换 `thincoder-core/prompts/persona-engineering.md:437`-`:439` 三行，落成四行 `:437`-`:440`）**
+**英文面终稿（实施席照此落笔 · 唯一副本 = 本节；替换 `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的 `one call per design` 三行，落成四行）**
 
 ```text
 **Evidence too long to read**: write rows this way from registration on — the row holds only a one-line symptom + file:line + a pointer; details go into the referenced doc.
@@ -4986,7 +5174,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 |---|---|---|
 | A1 | 设计面逐行终稿在盘（**一次性读数，不作断言**） | 按上表 C1–C9 逐行实读、读数报 §5；散文锚禁作常驻判据（`docs/core/design/TESTING.md:380`）——本批的交付读数就是 §5 那一段 |
 | A2 | 需求面终稿在盘（**一次性读数**） | `docs/core/requirements/PROMPT-SYSTEM.md:58` 的 ③ 一节含本节「需求面」围栏块那一段（该行是 ① ② ③ 同一行的第三段，故判包含不判全行相等）；已在盘（主 agent 笔域，本席只复核） |
-| A3 | 英文面逐字（**一次性读数**） | `thincoder-core/prompts/persona-engineering.md:437`-`:440` 与本节围栏块**逐行整行相等**（`node` 逐行 `===`）；四行均 ≤300；全档 `>300` = 0 保持 |
+| A3 | 英文面逐字（**一次性读数**） | `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的 `one call per design` 四行与本节围栏块**逐行整行相等**（`node` 逐行 `===`；as-of 2026-11-01）；四行均 ≤300；全档 `>300` = 0 保持 |
 | A4 | 单测档只留 A1（**与 §6.62 A1 同一套**） | 单测档 = `import { EVIDENCE_TOO_LONG_MAX }` 取真实导出、断言 `=== 300`，一条断言、不读文案；旧口径清零 = 本批一次性实跑读数（报批档 §5），不挂单测档（K6：词表本体不进本档） |
 | A5 | 值不动 | `thincoder-core/ledger-db.mjs:150` 仍 `EVIDENCE_TOO_LONG_MAX = 300`；中文三面的 300 读数不变 |
 | A6 | 引用锁零新 | `node scripts/prompt-refs-check.mjs` 命中数与改前同（改前读数 = 实施席实跑后报 §5） |
@@ -5039,7 +5227,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 - `docs/core/design/PROMPT-SYSTEM.md`：旧名在场的行 = 6 行（`:148` ∥ `:598` ∥ `:606` ∥ `:618` ∥ `:5353` ∥ `:5354`）；短名并列形（同一个东西的第三个名）另有 2 行（`:610` ∥ `:5353` 右半）+ 行类变体 1 处（`:5354` 判由③）——本席本轮逐行实扫（`node` 逐串 `includes`）；新名在改前 = 0。
 - `docs/core/requirements/PROMPT-SYSTEM.md`：293 行；`:58` 逐字见本节围栏块的改前对照（该行 ③ 一节即射程）。
-- `thincoder-core/prompts/persona-engineering.md`：492 行 / 最长行 300 / `>300` = 0；`:437` = 172 · `:438` = 136 · `:439` = 109 · `:440` = 167 字符（现盘 `node` 实算）。
+- `thincoder-core/prompts/persona-engineering.md`：494 行 / 最长行 300 / `>300` = 0（2026-11-01 实算）；该节四条 bullet 行宽 172 ∥ 136 ∥ 109 ∥ 167 字符（`node` 逐行字符数实算 · 2026-11-01）。
 - 定形坐标实读：`docs/core/design/LEDGER.md:869` ∥ `:883` · `thincoder-core/tool-docs/ledger.md:7`-`:8` ∥ `thincoder-core/doc-check/paragraph.mjs:19`（`para: "文字太长，难于阅读"`）。
 - 词表实扫（本席 `node`，域 = 仓内活档，排除 `docs/batches/**` ∥ `.thincoder/tmp/**` ∥ 构建产物）：命中的活档只有三处——设计档 ∥ 需求档 ∥ 英文提示词面；旧标识符两枚（上一批的读数键与常量名）在活档 = 0（本批守，逐串见批档 §2 词表第 8–9 项）。
 - `.thincoder/tmp/**` 存有 5 份旧文快照 ⇒ 判据域必须排除（临时区不属产品面）。
@@ -5179,14 +5367,14 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 - 前三条 = 动作面的正面写法；第四条 = 判据单源那句的译文（`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.23 判据 1「折行、切段、缩短都不是重写」），本批引入。
 - 第四条也进 `none found`：它查的是同一个问题——这个说法在提示词面有没有；改前 0 ⇒ 本批新造。只列前三条，「查过、没有」与「本批新造」两件事就只剩前者可核。
-- 改后落点：`thincoder-core/prompts/persona-engineering.md:438`（`items to rewrite` 1 处）∥ `:439`（`reorganize the wording` ∥ `is not a rewrite` 各 1 处）。
+- 改后落点：`thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 含 `items to rewrite` 1 处（`reorganize the wording` ∥ `is not a rewrite` 各 1 处）。
 
 **勘察证据行（本席实读 / 实算 2026-11-01）**
 
 - 判据单源实读：`docs/core/requirements/ENGINEERING-MODE-V2.md:1021`（判据 1）∥ `docs/core/design/DOC-DISCIPLINE.md:936`（打回句）∥ `:1458`（处置句）。
 - 逐处实测（`node` 逐行）：`docs/core/design/AGENT-LOOP-SUBAGENT.md:332` ∥ `:333` ∥ `:339` ∥ `:368` ∥ `:426` ∥ `:448`；`docs/core/design/TESTING.md:1035` ∥ `:1241` ∥ `:1272` ∥ `:1276`；`docs/core/design/LIGHT-CHANNEL.md:285` ∥ `:302` ∥ `:317` ∥ `:318` ∥ `:322`；`docs/core/design/ANCHOR-DEBT-REPAIR.md:83` ∥ `:97` ∥ `:178` ∥ `:200` ∥ `:224`；`docs/core/design/CORE-UNIFICATION.md:1016`；`docs/core/design/PROMPT-SYSTEM.md:4161`——22 处逐行读过原文，改前截逐字见上表。
 - 域外五族读数（写死坐标；折行 ∥ 拆行 两族在本批射程档内本身就有命中，故域外坐标改取未触面 `docs/core/design/DOC-DISCIPLINE.md`）：`docs/core/design/DOC-SYSTEM.md` `行宽` 3 行 · `docs/core/design/CONTEXT-COMPACTION.md` `压缩` 140 行 · `docs/render-core/design/RENDER-CORE.md` `收窄` 4 行 · `docs/core/design/DOC-DISCIPLINE.md` `折行` 7 行 ∥ `拆行` 0 行（改前 = 改后，本轮实算）。`docs/core/design/LIGHT-CHANNEL.md` 的 `拆行` 由 1 行降至 0 行——那处正是 22 处之一（`:322`），故不作域外读数。
-- `thincoder-core/prompts/persona-engineering.md`：492 行 / 最长行 300 / `>300` = 0；`:437` = 172 · `:438` = 136 · `:439` = 109 · `:440` = 167 字符（现盘 `node` 实算）。
+- `thincoder-core/prompts/persona-engineering.md`：494 行 / 最长行 300 / `>300` = 0（2026-11-01 实算）；该节四条 bullet 行宽 172 ∥ 136 ∥ 109 ∥ 167 字符（`node` 逐行字符数实算 · 2026-11-01）。
 - 需求档 `docs/core/requirements/PROMPT-SYSTEM.md:58` 实读：③ 一节已含「处置 = **重新组织语言重写**」（父侧笔）——本批的设计面与需求面现已同词。
 - 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]` ⇒ 独立公共源文档仓无，已查无相关。
 
@@ -5313,7 +5501,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **判（为什么代理指标失效）**：验收面由「这一批要验什么」定，不由「这一批碰了几类文件」定。面数只是代理指标，今天代理错了：38 档同属文档面，要验的本来就是同一件事（这类账有没有退干净）——拆开不产生第二个验收面，只产生十一次重复劳动与十一次漂移机会。
 
-**落点**：`thincoder-core/prompts/persona-engineering.md` 的两行整体换成四行——`Dispatch size discipline (pre-flight · one dispatch, one change face)` ∥ `Three gates, every one of them`（行号 as-of = `:361`-`:362`）。
+**落点**：`thincoder-core/prompts/persona-engineering.md` 的两行整体换成四行——`Dispatch size discipline (pre-flight · one dispatch, one change face)` ∥ `Three gates, every one of them`（引文为准）。
 
 **替换形**：逐字目标形 = 本档 §6.9 围栏块（唯一副本，本节不复制）；行首短语 = `Dispatch size discipline (pre-flight)` ∥ `Acceptance surface` ∥ `Settle it first` ∥ `The why`。该档 492 行 ⇒ 494 行（两行换四行，+2）。
 
@@ -5326,7 +5514,7 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 | A3 | 行宽 | 落点四行各 ≤300（设计轮逐行实算 = 240 ∥ 215 ∥ 244 ∥ 245）；全档 `>300` = 0（现盘 492 行 / 最长 300） |
 | A4 | 引用锁零新 | `node scripts/prompt-refs-check.mjs` 命中数与改前同（改前读数 = 实施席实跑后报 §5） |
 | A5 | 文档纪律 | `doc_check(mode:"gate", target:"D:/teamcode/thincoder")` 首行 `PASS` |
-| A6 | 第三闸在位 | 落点第 3 行逐字含 `an undecided call inside the implementation face`（设计轮实读：提示词面全 16 档该串改前 1 处 = 被替换的 `:362`，改后 1 处 = 第 3 行本身） |
+| A6 | 第三闸在位 | 落点第 3 行逐字含 `an undecided call inside the implementation face`（设计轮实读：提示词面全 16 档该串改前 1 处 = 被替换的那一行，改后 1 处 = 第 3 行本身） |
 
 **用例表（正常 / 边界 / 错误）**：
 
@@ -5352,8 +5540,8 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 
 **勘察证据行（本席实读 / 实算 2026-11-01）**：
 
-- `thincoder-core/prompts/persona-engineering.md`：492 行 / 最长行 300 / `>300` = 0；`:361` = 285 · `:362` = 295 字符（`node` 实算）。两行原文 = 该档 `:361`-`:362`，以引文定位、不以行号作判据。
-- 本档回收点实读（行号 = 本轮改后现盘）：§6.9 `:261` 标题与 `:266`-`:268` 机制 · 围栏块 `:272`-`:277`（内容四行 `:273`-`:276`）· §6.39 对照行 `:1928` 与用例 C4 `:1940` · §6.56 A6 `:4396` · §7 D-PS10 `:4760` ∥ D-PS56 `:4809`。
+- `thincoder-core/prompts/persona-engineering.md`：492 行 / 最长行 300 / `>300` = 0；两行原文以引文定位（`Dispatch size discipline (pre-flight · one dispatch, one change face)` 行宽 240，2026-11-01 `node` 逐行字符数实算）。
+- 本档回收点实读：§6.9 的标题与机制段 · 其围栏块内容四行 · §6.39 对照行与用例 C4 · §6.56 A6 · §7 D-PS10 ∥ D-PS56。
 - 需求档 `docs/core/requirements/ENGINEERING-MODE-V2.md:333`-`:335` 实读（本轮）：尺寸上限 ∥ 跨面不构成拆单理由 ∥ 预检两闸（含「未决口径 ⇒ 先裁」）⇒ 与本批同向，无相反现行要求。
 - `docs/core/design/TOOLS.md` 实读两处：`:1774` = `**实施拆分（两舱 · 文件集不重叠）**：`（标题）∥ `:1781` = 「不合并的理由：两舱文件集不重叠 ⇒ 可并行派工、`dependsOn` 不需要——`files` 本就是调度通道（冲突检测用），不是切面依据」⇒ 无悬空依据。
 - `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md:634` 实读（本轮）：旧句以需求档已退场的「一舱一单面 ≤15 档」为据、并写「舱内不跳面」；该批 12 档新 / 改档全部在盘（`skip-dirs.mjs` ∥ `agent/write-face.mjs` ∥ `agent-tools/batch-ledger-bind.mjs` ∥ `batch-closeout.mjs` ∥ `batch-reopen.mjs` ∥ `agent/live-batch.mjs` 等）⇒ 分舱 = 已发生的调度选择，判为记录，只换依据。
@@ -5373,6 +5561,502 @@ P7 —— `thincoder-core/prompts/persona-explore.md`，`Your role is to search,
 1. 〔已随正 · 需求档〕`docs/core/requirements/ENGINEERING-MODE-V2.md:333`-`:335` 现读三行 = 尺寸上限 ∥ 跨面不构成拆单理由 ∥ 预检两闸（含「未决口径 ⇒ 先裁」），与用户 19:30 / 19:31 裁定同向。需求档 = 主 agent 笔域，本席零触、只复核；实施轮开工前不再有相反要求。
 2. 〔已落 · `docs/core/design/TOOLS.md`〕同族悬空依据两处已收：`:1781` 的依据换成「两舱文件集不重叠 ⇒ 可并行调度，`files` 是调度通道、不是切面依据」，`:1774` 标题改为「两舱 · 文件集不重叠」；`:1776` 表头与 `:1781` 的「面」字是那批实际划分的记录，原样留。
 3. 〔知会 · 编号〕§7 本席落 D-PS56（顺 D-PS55 下一位）；编号可由父侧收口时改。
+
+### 6.65 设计前置：数据事实勘察（`thincoder-core/prompts/discipline-engineering.md` 设计步 · 一句判据 · 四行）
+
+**来源**：本批 §1——用户 2026-11-01 20:47 逐字「那你把这三批都处理了吧」；台账 `#1722`（会话 .3 实测：04:56 用户令「你先去拉几条数据看看」，05:01 读数据后「v2 里已经有 operatingexp、301 个案。这条改变了目标判断」）。前情 = 无（独立批）。
+
+**判（现行设计步没有这一步）**
+
+现行设计步的两条前置都只回答「现成的东西在哪」——`Closest-precedent survey` 问位置 / 名字 / 消费者，`Public-source survey` 问旁边有哪些源文档。
+
+**没有一条问「设计里关于数据的那句话是不是真的」。**
+
+提示词面 16 档实扫（本席本轮 `node`）：`read the data` ∥ `data fact` ∥ `read the rows` ∥ `sample the data` ∥ `the facts in the data` 各 **0** 命中 ⇒ 缺口实在，别处也补不上。
+
+**判据：一句话，可判否**
+
+> **这个设计的任意一句话里，有没有一句「不看数据就无法确定真假」的断言。**
+
+**为什么它能判否**：它不按「这类设计算不算涉及数据」问——那个问法人人答「不涉及」，这一步就等于没加：加了也没人判它。
+
+它按**句子**问：要么从设计里点出那一句（⇒ 先取数），要么点不出（⇒ 写「无此句」照常设计）。两种答案都落字面，没有第三种。
+
+**两份答案落在哪**：设计档新机制节、与**勘察证据行**并排——取过数写读到了什么（一句查询 ∥ 几行真数据 + 看到的读数）；没取写「无此句」。空着 = 没做。
+
+这是本仓既有的「写不出那一行就红」形（同类先例行 ∥ 勘察证据行 ∥ 依据格）：格子空着看得见，自律段落看不见。
+
+**与既有两步怎么排**
+
+顺序 = 先例三问 → 公共源勘察 → **数据事实勘察** → 设计成文（`- Design = a check on requirements` 之前）。
+
+理由：判据里的「无法确定真假」是**相对于代码与文档能答出什么**定义的——前两步先把代码 / 文档能答的答掉，剩下的残余断言才是这一步的对象；放前面则取数范围无从收窄。
+
+不另起一节：接在设计步已有两条前置之后，同一份勘察清单的第三条。
+
+**逐字目标形（实施席照此落笔 · 唯一副本 = 本节；插入 `Public-source survey` 条 why 行之后、`- Design = a check on requirements` 行之前）**
+
+```text
+   - **Data-fact check (design precondition)**: list the claims the design makes about the data facts — how many rows, whether a field is filled, which values an enum takes today.
+     One of them that cannot be settled true or false from code and docs alone ⇒ read the data first (one query, or a few real rows), and put what you saw on the record.
+     Every claim settled by code and docs ⇒ write "no claim needs data" — the answer is a line, never silence.
+     Why: a judgment made before the data was read is the expensive kind of wrong — read the rows and the whole target judgment changes, with the design already written.
+```
+
+四行宽 179 ∥ 169 ∥ 110 ∥ 169（≤300；本席本轮 `node` 实算）；该档 363 ⇒ 367 行，`##` 11 ∥ `###` 7 ∥ 标题节点 18 全不变（既有节内增列）。
+
+**验收（A1–A6）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 四行逐字在盘 | 快判 = 全档扫 `Data-fact check (design precondition)` ≥1；硬判 = 插入处四行与本节围栏块逐行整行相等（`node` 逐行 `===`） |
+| A2 | 落点贴对锚 | 首行的前一行 = `Public-source survey` 条的 why 行；末行的后一行 = `- Design = a check on requirements …` |
+| A3 | 行宽 | 四行各 ≤300；全档 `>300` = 0 保持（现盘 363 行 / 最长行 300） |
+| A4 | 计数面零连带 | `##` 11 ∥ `###` 7 ∥ 标题节点 18 不变；行数 = 改前 + 4（关系式，改前读数由实施席报 §5） |
+| A5 | 引用锁零新 | `node scripts/prompt-refs-check.mjs` 命中数与改前同（读数由实施席实跑报 §5） |
+| A6 | 文档纪律 | `doc_check(mode:"gate", target:"D:/teamcode/thincoder")` 首行 `PASS` |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 设计里有一句数据断言 | 「表里已经有 operatingexp 这一列」这类断言，代码与文档都答不出 | 先取数（一句查询 ∥ 几行真数据），读数写进设计档；取数推翻目标判断 ⇒ 目标改，设计照新判断写 |
+| C2 | 边界 · 全部由代码 / 文档可答 | 设计只讲接口与调用链，数据断言一句没有 | 写「无此句」，照常设计——这一步不因设计「看起来」涉及数据而触发 |
+| C3 | 错误 · 判据读成「涉及数据的设计」 | 设计席自答「本设计不涉及数据」，既不点句子也不写「无此句」 | 判违规：空着 = 没做，这一步等于没加——加了也没人判它 |
+| C4 | 错误 · 取数不落字面 | 私下查了数、设计档里没有一个读数 | 判违规：答案行缺席 ⇒ 下一个人无从判断这一段是否看过数据（决定面须携依据） |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 判据按「句子」问，不按「设计类别」问 | 「涉及数据的设计」人人可答不涉及 ⇒ 零信息；句子可点可辩，答案必落字面 |
+| K2 | 只落纪律层一处，不另加人格层落点 | 纪律层在设计席装配面内（persona → common → discipline → subagent-base）⇒ 设计席读得到；再加人格层 = 同一规则两处活描述（D2）。先例 §6.26 三处同落，是因为那三条各属不同受众（义务 / 交付物形态 / 派单），本条只有一个受众 |
+| K3 | 排在两条前置之后、设计成文之前 | 判据相对「代码与文档能答什么」定义 ⇒ 必须后于这两次读；放在成文前最后一格 = 结论一旦被推翻，改的是还没写下的设计 |
+| K4 | 答案行与勘察证据行并排，不新设交付物项 | 设计档 8 项计数不动；两者同形（本轮查过什么的一句读数），同格相邻才对照得起来 |
+| K5 | 不加评审判据（`thincoder-core/prompts/advisor-design.md`） | 本批的验收面 = 判据是否可判否；先看它在勘察面成立，复核面另议——扩到第四档 = 射程外的连带 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.26（设计前勘察义务：义务落纪律层设计步 + 证据行落设计档）∥ §6.58（既有节内增列 · 逐字目标形只此一份）。**对齐** = 落点选纪律层设计步、逐字形交实施席、计数面零连带。
+
+**偏离** = ① 本次只落一处（§6.26 落四处）——理由见 K2；② 判据取「可点出那一句」形，不取「涉及 X 的设计」类目形——理由见 K1。
+
+**既有件三问（新增名）**
+
+`existing` = `thincoder-core/prompts/discipline-engineering.md` 的 `Public-source survey (design precondition)` 条（同一步骤、同为设计前置）· name: "Public-source survey (design precondition)" · consumers: 设计席 + 主 agent 直改笔 ⇒ 本条落在它的下一格，不改它一字。
+
+`none found` = `Data-fact check` ∥ `read the data` ∥ `data fact` ∥ `no claim needs data`：`thincoder-core/prompts/` 16 档实扫各 0 命中 ⇒ 本节新造，无旧句可复用。
+
+**勘察证据行（本席实读 / 实算 2026-11-01）**
+
+- `thincoder-core/prompts/discipline-engineering.md`：363 行 / `##` 11 / `###` 7 / 标题节点 18 / 最长行 300 / `>300` = 0（本席本轮 `node` 实算）。
+- 落点实读（行号 as-of 本轮）：`:88`–`:90` = `Public-source survey (design precondition)` 条三行；`:91` = `- Design = a check on requirements — wherever the design resists being written, the requirements were not clear (ask back); inventing an implementation hides the requirement gap inside code.`
+- 设计步现有四条 bullet 逐字读过：`:76`–`:87` 先例三问 ∥ `:88`–`:90` 公共源勘察 ∥ `:91` 设计即需求检查 ∥ `:92` 需求缺口停止链。
+- 提示词面 16 档扫五串（`read the data` ∥ `data fact` ∥ `read the rows` ∥ `sample the data` ∥ `the facts in the data`）= 各 0 命中（本席本轮 `node`）。
+- 公共源勘察：`PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（本席本轮 `manifest read` 实读）⇒ 独立公共源文档仓无，已查无相关。
+
+**集成测试设计**：`none` —— 改动面 = 提示词一档 +4 行 + 本档一节，零代码档。两条入口均不成立：① 不改任何既有用例断言的业务可观察结果（该文本是设计席读的纪律）；② 未新增业务上真需要的场景——设计行为面从业务入口复现不出可机判结果。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**RTM 读数**（本席本轮 `node` 实算）：`test/RTM.md` 327 行 / `^## ` 5 / `^### ` 25 个业务故事节 / `^\|` 表行 147。近面无涉——故事 7「收口只判本批改过的档」（本批不新增门）· 故事 20「一本批档只服务一个并发 spawn」（不动派单面）。
+
+**边界（本节不做）**：不加评审判据 · 不动人格层 8 项（K4）· 不动 `thincoder-core/prompts/common.md`（两模式共读面，普通模式无设计步）· 不新增机检、不设豁免 · 不动需求档（主 agent 笔域）· 不动 `Change-face routing` 与轻通道两节。
+
+**UI / 交互决策**：无界面面——本节只改设计档与模型可见提示词文本。
+
+**上抛项**
+
+1. 〔父侧 · 需求面〕本条在需求档没有对应条目（需求档 = 主 agent 笔域，本席零触）：若需求面要有它，落 `docs/core/requirements/ENGINEERING-MODE-V2.md` 设计步那几条之侧，判据逐字取本节引的那一句。
+2. 〔知会 · 编号〕§7 本席落 D-PS57（顺 D-PS56 下一位）；编号可由父侧收口时改。
+
+### 6.66 提示词面证据形：引用钉内容，不钉位置（扇出成本判据 · 两种引用形 + 一条读数规则）
+
+**来源**：用户 2026-11-01 逐字 21:08「**他这个理由不对！因为如果用行号做引用，原文改了，引用他的文件就都得改！工作量大过天！**」· 21:09「**而且改一处，后续的所有位置都漂移，大量的引用文件都要改！**」· 21:10「**所以，在这个基础上重新梳理提示词系统。**」；同族前令 20:52「不能用行号做引用」· 20:55「你提示词和文档里的口子清干净了吗？」· 20:57「不要判据只看新增行！」· 20:58「必须给我清干净！」；台账 `#1966`。
+
+**判据句（一条。主语 = 写进档的引用形态，不带按时间 / 按轮次 / 按是否新增 / 按面的限定词）**
+
+> **引用只钉内容，不钉位置。** 行号钉的是位置：上面插一行，它以下整片引用同时失效——代价不落在某一次读错上，落在每一次改动上。指一条规则 / 判据 / 约束 ⇒ 档名 + 该句逐字引文；指代码里的一个东西 ⇒ 符号名。
+
+判据本体的人读权威 = `docs/core/design/DOC-DISCIPLINE.md` §1 的 D4 细则（本档不复制——D2）。本节管的是它在**提示词面**的落地形态：提示词面不留任何一句教模型写行号。
+
+**射程（本条管到哪、不管到哪）**
+
+判法一句：**这条管的是「引用」，不是「数」**——数是机制本体就留；数被当成引用用、或过期后仍留在规范句里，才是负债。
+
+| 在射程内 | 不在射程内 |
+|---|---|
+| 写进档的引用**形态**：钉位置还是钉内容 | **权威读数表**——§6.11 的「预算表（唯一权威处——本表；邻位只挂指针行 · D2）」是那个机制的本体，搬到记录面等于把机制搬空 |
+| 把读数**当引用用**：照引用去理解读数，于是又去找一个位置 | **带量法与日期的读数块**——本节「实测」表即此形：读者照量法能重算，不必找位置 |
+| 规范句里**已过期**的读数：无日期、无来源，或已被新读数取代而仍留着 | **当下准确的读数**（含 §1 的档数陈述——查一遍目录即真伪）——不是负债 |
+
+**行号形有两笔代价，判据只立在第一笔上**
+
+| # | 代价 | 量纲 | 改的人当次是否看得见 |
+|---|---|---|---|
+| 一 | **扇出**：一次改动把它以下的整片引用一起失效，引用档逐份重核 | 改动数 × 引用者数 | 看不见——改的人通常不知道有谁引用了它 |
+| 二 | **静默**：位置漂了而引用没跟着改，读者被送到别处 | 1 | 要等到有人读才发现 |
+
+判据立第一笔：它可数、可度量，且随引用面一起增长。第二笔单独不成判据——它只管某一次读，而那一次再贵也只是一次。
+
+**为什么是两种引用形，不是三种**
+
+判据给出一张可以直接套的表：一次「不改变被引内容」的改动之后，这处引用还指不指向它原本所指的东西。
+
+| 引用对象 | 形态 | 一次无关改动之后 | 判定 |
+|---|---|---|---|
+| 文档里的一条规则 / 判据 | 档名 + 该句逐字引文 | 位置变了，它不变；会变的是被引的那句话本身 | ✅ 钉在内容上 |
+| 代码里的一个东西 | 符号名 | 位置变了，它不变；会变的是符号改名 | ✅ 钉在内容上 |
+| 一个读数 | 量法 + 日期 | 无关改动不影响它——但它不是引用 | ⚠️ 见下 |
+
+**读数不是第三种引用形**
+
+三形并列是旧理由留下的形：旧理由算的是「读者会找错位置」，于是一个读数也得配一个位置，才显得与另两种同构。
+
+按扇出判据，读数**没有可钉的位置**——它不是对某处的指向，是记录面上的一条断言。把它并列进「引用形」那张表，等于把一条记录规则塞进引用规则里，两张表互相稀释：读者照引用去理解读数，于是又去找「位置」。
+
+**⇒ 两种引用形 + 一条读数规则**：读数写量法 + 日期。负债只有两种——**把读数当引用用**（照它去找一个位置），以及**过期读数留在规范句里**；权威读数表、带量法与日期的读数块、当下准确的读数，都不是负债（判法见上「射程」）。
+
+**读数形会不会自己制造扇出（逐条判）**
+
+| 子问题 | 判 | 为什么 |
+|---|---|---|
+| 别人的改动会不会让它失效 | **不会** | 它不含位置；上插一行与它无关 |
+| 同一个量各写一套量法，会不会产生互不可比的读数 | **会** | 两处各写一套量法 ⇒ 同一个量有两个互不可比的形，后来的读者判不出谁对 = **定义扇出**。修法不是删量法，是把量法定死一次（单源 = 本节判据句所在处），读数照抄那句量法、不各自造一套 |
+| 状态档里的读数会不会静默过期 | **会** | 读数在状态档不是在「引」，是在**断言一个会变的量**；数字过期后读起来仍然像真的。⇒ 状态档的规范句不留**过期**读数（D8「当下为真」在读数面上的落点）；带量法与日期的读数块 ∥ 权威读数表 ∥ 当场可核的当下读数不在此列——「射程」右列已列死 |
+
+**写法因人而异不是扇出**：扇出 = 一处改动带来了别处的改动；两个人对同一个量各写一遍，是同一个量被写了两次——那是单源问题（D2），不按本条收。
+
+**实测（本席本轮 `node` 实算 · 2026-11-01）**
+
+| 读数 | 值 | 量法 |
+|---|---|---|
+| 指向 `thincoder-core/prompts/*.md` 的行号坐标 | **1,195 处 / 101 档** | 正则 `thincoder-core/prompts/<档>.md:<数字>`，扫 `docs` + `thincoder-cli/docs` + `thincoder-vscode/docs` 的全部 `.md`（共 460 档），排除 `_archive` |
+| 其中状态面（design + requirements） | **381 处 / 14 档**；`docs/core/design/PROMPT-SYSTEM.md` 一档占 **342** | 同上，按路径筛（路径含 `design/` ∥ `requirements/` 的共 116 档，其中 14 档有命中） |
+| 状态面全部 `file:NNN` 坐标 | **4,037 处 / 81 档**（116 档中 81 档有命中） | 同上，正则放宽到 `.md` / `.mjs` |
+| `docs/core/design/API-CONTRACT.md` 生成区去行号 | **4,633 行**（`git diff --numstat` = 4633 / 4633） | 生成器改一行，整区每一行的 `:<行号>` 同时消失 |
+| 提示词面 `file:<数字>` 字面 | **0**（70 档逐行扫） | `thincoder-core/prompts` 16 档 + `thincoder-core/tool-docs` 54 档 |
+
+前两行与最后一行合起来就是这条判据的量纲：**提示词面自己已经一处行号引用都没有，可指向它的引用还有 1,195 处**——一处 2 行的编辑，代价按 1,195 记，不按 2 记；而最大的一处爆点（342）正是写这条规则的设计档本身。
+
+`docs/core/design/API-CONTRACT.md` 那一行是同一判据的反面例：4,633 个位置换成符号名之后，改生成器一行整区全消——扇出不是不可消的，是形态选错才消不掉。
+
+**证据形清单（16 档 + 54 档 · 逐档「有 / 无」）**
+
+| 组 | 现形（逐字定位用） | 档 | 处置 |
+|---|---|---|---|
+| **A 规则在位、理由为本形** | 判据句 + 扇出理由 | `thincoder-core/prompts/common.md`（`A line number is never the citation`）· `thincoder-core/prompts/advisor-design.md`（`Never cite a line number` ∥ `A line number is not a citation`）· `thincoder-core/prompts/advisor-round1.md`（`Never cite a line number`）· `thincoder-core/prompts/advisor-round2.md`（`Never cite a line number`；同档另有 B / C 两组）· `thincoder-core/prompts/advisor-round3.md`（`Never cite a line number`；同档另有 B / C 两组）· `thincoder-core/prompts/consult-base.md`（`Never cite a line number`）· `thincoder-core/prompts/persona-plan.md`（`Never a line number`） | 零改（只复核）——例外：`thincoder-core/prompts/advisor-design.md` 与五档同句那一行本批只折行、文本逐字不动（§6.67） |
+| **B 规则在位、理由为旧形** | `Line numbers alone are NOT evidence — they may be fabricated or stale`——把代价算在编造 / 过期上，不算在扇出上 | `thincoder-core/prompts/advisor-round2.md` 的 `**Line numbers alone are NOT evidence**` 起那一行 · `thincoder-core/prompts/advisor-round3.md` 的 `**Why**: line numbers alone are NOT evidence` 起那一行 | **改**：理由换成扇出形——逐字见本节「B / C 组英文逐字围栏块」 |
+| **C 规则在位、无理由** | `a line number is not evidence: quote what the line says`——只说引文才算证据，不说为什么 | `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md`（同为 `**Every "Unfixed" or "New" entry MUST quote the exact line content**` 起那一行） | **改**：行零改——理由由相邻 B 句供给，同档 why 只有一份 |
+| **D 只写引文形 / 符号形，无行号禁令** | `the file path plus the exact words, or the symbol name` | 7 档 / **23 处**（量法 = 扫 `the exact words` ∥ `the symbol name` 两串的行命中处数）：`thincoder-core/prompts/discipline-normal.md` · `thincoder-core/prompts/persona-engineering.md` · `thincoder-core/prompts/persona-eng-designer.md` · `thincoder-core/prompts/common.md` · `thincoder-core/tool-docs/notify_parent.md` · `thincoder-core/tool-docs/question.md` · `thincoder-core/tool-docs/verify.md` | 合规，零改——它已经只用两形，禁令在这里没有要禁的东西 |
+| **E 全文无引用形句** | — | 提示词面其余 6 档（`thincoder-core/prompts/discipline-engineering.md` · `thincoder-core/prompts/persona-coder.md` · `thincoder-core/prompts/persona-eng-coder.md` · `thincoder-core/prompts/persona-explore.md` · `thincoder-core/prompts/persona-normal.md` · `thincoder-core/prompts/subagent-base.md`）· `thincoder-core/tool-docs/` 其余 51 档 | 合规，零改——不引用就不需要引用形；工具描述里的 `line` / `offset` / `after_line` 是工具契约，不是引用形态 |
+
+**B / C 组英文逐字围栏块（实施席原样落笔 · 唯一副本 = 本节）**
+
+落点 = 2 档 / 4 处（B 组 2 处改，C 组 2 处行零改）。行宽 275 ∥ 185（本席本轮 `node` 实算 · 2026-11-01，判据 = 300）。
+
+`thincoder-core/prompts/advisor-round2.md` · B 组那一行整行替换为：
+
+```text
+- **Line numbers alone are NOT evidence** — one line inserted above shifts every position below it: every citing file must be recomputed, and the work grows with the number of referrers; findings without a fresh quoted line are treated as unverified and will not be accepted.
+```
+
+`thincoder-core/prompts/advisor-round2.md` · C 组那一行原样（零改）：它的 why 由上面这条 B 句供给，同档 why 只有一份。
+
+```text
+- **Every "Unfixed" or "New" entry MUST quote the exact line content from THIS round's `read` output** (the quoted text alone — a line number is not evidence: quote what the line says).
+```
+
+`thincoder-core/prompts/advisor-round3.md` · B 组那一行整行替换为：
+
+```text
+  **Why**: a line number is not evidence — one line inserted above shifts every position below it: every citing file must be recomputed, and the work grows with the number of referrers.
+```
+
+`thincoder-core/prompts/advisor-round3.md` · C 组那一行原样（零改）：它的 why 由同一 bullet 的 `**Why**` 行供给。
+
+```text
+- **Every "Unfixed" or "New" entry MUST quote the exact line content from THIS round's `read` output** (the quoted text alone — a line number is not evidence: quote what the line says).
+```
+
+**清单的维护面**：本形只在两处维护——本节（人读权威的唯一活描述）与 A 组的五份同句复制。五份保留是硬约束不是偏好：五个槽位各自独立装配，一个文件里的句子进不了另一个文件的装配面（§6.2）。
+
+**关口（D 组零改不改变它）**：提示词面以后任何新写 / 改写的文本，都按本节判据句校验——责任在写者与交付评审，不在机检（K5）。
+
+D 组现在合规是时点判断，不是豁免：它说明此刻没有要改的句子，不说明以后不校验。
+
+这道关口与 `thincoder-core/prompts/common.md` 里那条禁令（`A citation = any token that sends the reader to` **another document**）是两条不同判据：那条禁的是把读者送进另一份档（档名 / 节号），本节禁的是坐标形（位置）。一条生效不代替另一条。
+
+**验收（A1–A9）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 判据句在场且无限定词 | 扫描域 = 本节判据句那一个引用块（行首 `>` 起的整段），本节其余散文不参与；块内逐字含 `引用只钉内容，不钉位置`，且块内扫 `新增\|存量\|本批\|上游\|读数例外` ⇒ 0 |
+| A2 | 提示词面行号引用清零（常驻零） | 70 档扫正则 `file:[0-9]` ⇒ **0**（本席本轮实扫 = 0）。这是常驻零，不随本批改动而变——证明本批改动的三条是 A3 – A5 |
+| A3 | 旧理由清零 | 70 档扫 `fabricated or stale` ⇒ **0**（改前 2 处，档与逐字引文见清单 B 行：`**Line numbers alone are NOT evidence**` ∥ `**Why**: line numbers alone are NOT evidence`） |
+| A4 | 新理由句在位（本批正面读数） | 70 档扫 `every citing file` ⇒ **4**（改前 2 = `thincoder-core/prompts/advisor-design.md` 的 `**Cite with the file path plus the exact words**` 行 ∥ `thincoder-core/prompts/persona-plan.md` 的 `**Never a line number**` 行）；新增 2 处逐字含围栏块那句 `one line inserted above shifts every position below it` |
+| A5 | 五份同句复制逐字节相等 + 各折行 ≤300 | `node` 取含 `**An assertion has two sources only**` 的五档，去缩进后逐字节比较 ⇒ 全等；行宽 = **143 ∥ 215**（提示词面 `lineMax: 300`）——该读数随本批拆行更新（原 356；拆法见 §6.67）；`thincoder-core/prompts/common.md` 那条不带粗体标记，不在本判据域 |
+| A6 | 引用锁零新 | `node scripts/prompt-refs-check.mjs`（仓根实跑 · 2026-11-01）⇒ 命中 **4 条**／退出码 1，四条全在 `thincoder-core/agent-tools/advisor.mjs`（三条指 `ADVISOR-GUARDS.md` · 一条指 `METHODOLOGY.md`），无一指向提示词面。本批零新增的判法 = **命中集合判，不按数字判**（数字随锁自身的档名判据与盘面变）——判法见 §6.67 A6 |
+| A7 | 文档纪律 | `doc_check(mode:"gate", target:"D:/teamcode/thincoder")` 首行 `PASS` |
+| A8 | 读数形无引用化 | 本节「实测」表 + 「勘察证据行」逐行：每处读数同行携量法、同段携日期（`2026-11-01`）；两档新增文本内 `file:[0-9]` ⇒ 0、读数句 0 处 |
+| A9 | D 组零改稳定 | D 组 7 档扫 `the exact words` ∥ `the symbol name` 的命中处数 = **23**（改前 = 改后；本席本轮 `node` 实算 · 2026-11-01） |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 引设计档一条规则 | 写「本档 §6.9 的 `Settle it first`」 | 合规：节名 + 逐字引文 |
+| C2 | 正常 · 引代码里的东西 | 写 `ContinueError` | 合规：符号名 |
+| C3 | 正常 · 报一个读数 | 批档 §5 写「提示词面 `file:<数字>` 命中 0（`node` 逐行实算 · 2026-11-01）」 | 合规：量法 + 日期，住记录面 |
+| C4 | 错误 · 教人写行号 | 写 `cite real file paths and line numbers` | 违规：指令形，与判据句正面相反 |
+| C5 | 错误 · 举例给出可抄坐标 | 举例写 `run.mjs:<行号>: …` 这类带真数字的坐标 | 违规：要求可以照旧，例子不给出可抄 token |
+| C6 | 错误 · 给判据加限定词 | 写「存量可用行号」或「新增行不准」 | 违规：判据句主语不带任何限定词 |
+| C7 | 边界 · 规范句里留着过期读数 | 设计档正文仍写「提示词面 16 档」，而盘上已是另一数 | 违规：过期的数留在规范句里——改成关系句或删数。当下准确的读数、带量法与日期的读数块、权威读数表，都不在这一条里 |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 判据只写一条，不按面 / 按轮分档 | 分档就是开口：一旦按「是否新增」判，新增与存量各有一半不算数 |
+| K2 | 读数移出「引用形」表，改判「两种引用 + 一条读数规则」 | 三形并列是旧理由的形；留着它，读者照引用去理解读数，于是又去找一个位置——那条判据正是本批要治的 |
+| K3 | 第一笔（扇出）立判据，第二笔（静默）降为补充 | 第二笔量纲恒为 1，不随引用面增长；拿它立判据，判据就随「某一次读」定价，而用户给的定价是「每一次改动」 |
+| K4 | 量法单源、读数照抄 | 各写一套量法 = 同一个量两个不可比的形 = 定义扇出；修法在单源，不在删量法 |
+| K5 | 不加机检门 | 「是否教人写行号」判不了：机器能数字面，数不出散文化的说法——`file:line` 字面 0 命中的那一轮，仍有 2 处形态存活（B 组） |
+| K6 | D 组零改（不逐档补禁令） | 已按两形写，禁令在那里没有使用场景——补 23 处重复（7 档，量法见清单 D 行），等于给一条无人违反的规则配 23 份副本（分支无场景纪律） |
+
+**先例 ∥ 偏离**
+
+**先例（形制）** = 本档 §6.65 形制（判据句 · 逐处登记 · 验收表 · 用例表 · 决策表）。
+
+**先例（判据换理由同形）** = 本档 §6.64：尺寸闸保留、理由换写——`旧理由挂在「单一验收面」上，那半句删了闸就没了理由；它真正的用处是一单小到能一次说清`。本条同形：规则一字不动，换的是它立在哪一笔代价上。
+
+**先例（理由同驻提示词面）** = 本档 §6.63：`理由与规则同住提示词面`——所以本节的 B 组把理由换掉而不是删掉。
+
+**先例（实施坐标）** = `thincoder-core/prompts/common.md` 的 `## Evidence discipline` 节——`A line number is never the citation` 就是本节判据句在提示词面的既有活描述，两者同源，本节不另造句子。
+
+**对齐** = 判据本体零新造，逐字取 `docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则。
+
+**偏离** = ① 判据只立两种引用形 + 一条读数规则，不把读数并列成第三形——理由是读数没有可钉的位置（K2）；② 首次给读数判出**负债条件**（被当引用用 ∥ 过期后留在规范句），而不是按「住哪一面」判——写明它在状态档里为什么是负债而不只是不精确。
+
+**既有件三问（新增名）**
+
+`existing` = `docs/core/design/DOC-DISCIPLINE.md` §1 的 D4 细则 · name: "行号一律不作引用形态（强制 · 无例外）" · consumers: 文档作者 / 评审 / 设计席 ⇒ 逐字沿用，零新造。
+
+`existing`（第二坐标）= `thincoder-core/prompts/common.md`「Evidence discipline」节 · name: "An assertion has two sources only" · consumers: 全部读提示词的模型 ⇒ 本节的判据句就是它在文档面的同一个判据。
+
+`none found` = `no line-number citations` ∥ `position-free citation` ∥ `content-anchored citation`：提示词面 70 档实扫各 0 命中 ⇒ 这三个说法本批不采用，避免给同一件事造第三个名。
+
+**勘察证据行（本席实读 / 实算 2026-11-01）**
+
+- 扇出读数：指向提示词面的行号坐标 1,195 处 / 101 档；其中状态面 381 处 / 14 档，本档占 342；状态面全部 `file:NNN` 坐标 4,037 处 / 81 档（量法 = 「实测」表第一行的正则，按路径筛；本席本轮 `node` 实算 · 2026-11-01）。
+- `docs/core/design/API-CONTRACT.md`：`git diff --numstat` = `4633 4633`，diff 显示生成区每行由 `` `symbol` | `path.mjs:NNN` | `kind` `` 变为 `` `symbol` | `path.mjs` | `kind` ``（本席本轮 `git` 实读 · 2026-11-01）。
+- 提示词面 70 档（`thincoder-core/prompts` 16 + `thincoder-core/tool-docs` 54）逐行实扫（本席本轮 `node` 实算 · 2026-11-01）：`file:[0-9]` = **0** · `fabricated or stale` = **2** · `every citing file` = **2** · `never cite a line` = **5**（五个槽位）· `**An assertion has two sources only**` = **5** 档且去缩进后逐字节全等 · D 组 `the exact words` ∥ `the symbol name` = **23** 处 / 7 档。各处逐字引文见清单与验收行。
+- 本节围栏块两行行宽 275 ∥ 185（本席本轮 `node` 实算 · 2026-11-01）。
+- 本档结构实读：`## 1`–`## 9`；本节所在 `### 6.66`，前序节 = §6.65，后接 `## 8 提示词承载`。
+- 公共源勘察：项目 manifest 的 `index.publicRepos` 实读 = `[]` ⇒ 无跨仓公共源可查——已查，无相关。
+
+**集成测试设计**：`none` —— 改动面 = 本档一节重写 + 提示词面四处文本（实施轮落），零代码档。两条入口都不成立：① 不改任何既有用例断言的业务可观察结果（该文本是模型读的引用纪律）；② 未新增业务上真需要的场景，也不是生产真出过的问题——引用形态从业务入口复现不出可机判结果。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**RTM 读数**（本席本轮 `node` 实算）：`test/RTM.md` 334 行 / `^## ` 5 段 / `^### ` 26 个业务故事节 / `^\|` 表行 149。近面无涉——故事 7「收口只判本批改过的档」（本批不新增门、不改段判据）· 故事 21「跨项目读账读的是目标项目」（不动读数字段与出参键）。
+
+**UI / 交互决策**：无界面面——本节只改设计档文字；提示词面四处由实施轮落英文。
+
+**边界（本节不做）**：不动提示词本体（产品代码面，实施轮 coder 落）· 不清存量行号（那是上抛项 2 的分期排队，不是判据）· 不改 `docs/core/design/DOC-DISCIPLINE.md` 的 D4 细则语义 · 不新增机检门、不设豁免 · 不动需求档（主 agent 笔域）· 不动工具参数说明里的 `line` / `offset` / `after_line`（工具契约，不是引用形态）· 本节自己不留行号坐标。
+
+**上抛项**
+
+1. 〔已随正 · 需求档 · 本席复核过〕`docs/core/requirements/ENGINEERING-MODE-V2.md` 的 D4 行现读「**读数不是引用形**（它不钉位置，是记录面的一条断言，写**量法与日期**）——**两种引用形 + 一条读数规则覆盖全部引用**，没有「各归其面」的第四类」⇒ 与本节同一口径，无相反表述。需求档 = 主 agent 笔域，本席零触。
+2. 〔待裁 · 存量分期〕判据已立、存量按自标面分期清（需求 D4「**存量收正 = 分期执行**」·「**完成判据 = 自标面（需求 / 设计 / 提示词）的行号形引用归零**」）；设计面拆两期——本档是规则的家，先开，其余设计档与需求档各占一期：
+
+| 期 | 面 | 起手读数 | 完成读数 | 谁清 |
+|---|---|---|---|---|
+| 一 | 设计面 · 本档 | **342 处**（量法同「实测」第一行；本席本轮 `node` 实算 · 2026-11-01） | 本档 `file:NNN` 坐标 **0** | eng-designer（设计档笔域） |
+| 二 | 设计面 · 其余 11 档 | **24 处**（同上量法；`docs/core/design/` 下除本档，命中最多 = `docs/core/design/TESTING.md` 的 9 处） | 这 11 档 `file:NNN` 坐标 **0** | eng-designer（设计档笔域） |
+| 三 | 需求面 · 2 档 | **15 处**（同上量法；`docs/core/requirements/ENGINEERING-MODE-V2.md` ∥ `docs/core/requirements/METHODOLOGY.md`） | 这两档 `file:NNN` 坐标 **0** | 主 agent（需求档笔域） |
+| 四 | 提示词面 · 70 档 | **0**（70 档扫 `file:[0-9]`） | 已是终点，零动作 | — |
+
+一二三合计 = **381 处 / 14 档** = 「实测」表第二行，一档不漏。期一建议先开：342 那处爆点就在规则的家，家不清则判据示范不了自己。**本节自身存量 = 0**——本节档定位一律走档名 + 逐字引文。分批由父侧定。
+3. 〔待落 · 提示词面四处〕B 组 2 处（两档的 `**Line numbers alone are NOT evidence**` ∥ `**Why**: line numbers alone are NOT evidence` 两行——理由换成围栏块那一句）+ C 组 2 处（同两档的 `**Every "Unfixed" or "New" entry MUST quote the exact line content**` 行——行零改，理由由相邻 B 句供给）。四处同属 2 档，一次落笔。
+4. 〔知会 · 编号〕本节是对既有 §6.66 的重写，不新增 §7 机制条目（同一机制、同一编号，换的是判据所立的代价）。
+
+### 6.67 提示词面超宽行收正（同一句五份复制 + 同笔写宽的第二处 · 拆点落语义边界）
+
+**来源**：本批批次档 §1（父侧 2026-11-01 21:45 转实施席实跑：交付门 `doc_check` REFUSED，阻断批次档 append 与收口）；台账 `#1970`。成因 = 扇出理由句落笔时把这两句写宽，不是历史遗留、不是实施轮引入。
+
+**病（本席本轮 `node` 实算 · 2026-11-01）**：提示词面 16 档扫 `[...line].length > 300` ⇒ **6 处 / 5 档**：
+
+| 处 | 档 | 逐字定位（引文） | 原宽 |
+|---|---|---|---|
+| 五份同一句 | `thincoder-core/prompts/advisor-design.md` · `thincoder-core/prompts/advisor-round1.md` · `thincoder-core/prompts/advisor-round2.md` · `thincoder-core/prompts/advisor-round3.md` · `thincoder-core/prompts/consult-base.md` | `**An assertion has two sources only**` 那一行 | 356 ×5 |
+| 同笔第二处 | `thincoder-core/prompts/advisor-design.md` | `**Cite with the file path plus the exact words**` 那一行 | 353 |
+
+判据源 = `thincoder-core/doc-check/paragraph.mjs`（提示词面逐行裸判 `[...line].length > lineMax`、无结构豁免）∥ 阈值 `lineMax: 300` = `thincoder-core/doc-check/index.mjs` 的 `DOC_CHECK_BUILTINS`。
+
+父侧口径 = 「五档全 356」，本席实测 6 处——第六处在 `thincoder-core/prompts/advisor-design.md`，同属这一笔、是同一句扇出理由的第一人称变体；只修五处，交付门仍拒。
+
+**为什么它先清**：`batch` 工具的文档门判「本次写入文本 ∪ 本会话触达档」——六处任一在触达账里，批次档 append 与收口一律 REFUSED ⇒ 实施席 §5、父侧 §6 都写不进来。清它是为了让账本还能落笔，不是为了某个数字。
+
+**判据（拆点，一条）**
+
+> **拆点落在句边界上，不落在字数上。** 提示词面的读者是模型，一行就是一个块：拆出来的两半各自以一个完整句子开始（各自带 `**加粗引导句**`），读到的就是两个句子；按 300 硬切会从句、括号或加粗跨度中间断开，读到的是一句被劈成两段的残句。
+
+**三个禁用拆点**：① 括号之内；② `**…**` 加粗跨度之内；③ 两半之间插空行——空行把同一段拆成两段，后半句脱离所在条目。
+
+**拆法（六处 · 五份同一形状、逐字共用）**
+
+- 五份同一句：拆成 **2 行**，拆点 = 第二个加粗引导句 `**Never cite a line number**` 之前（前一半止于 `unverified` 的句号）。行宽 **143 ∥ 215**。
+- 同笔第二处：拆成 **2 行**，拆点 = `**A line number is not a citation**` 之前（前一半止于 `design-document text` 的句号）。行宽 **154 ∥ 198**；该档 `## Citation Discipline` 节各行不缩进 ⇒ 后一半同样不缩进。
+- **零改字**：把拆出的两行以单个空格接回，与拆前原文逐字节相等（本席本轮 `node` 实测 · 2026-11-01 = 两组均相等）⇒ 这是折行，不是改写；判据句与理由句一个字没动。
+- **五份仍逐字节相等**：同一处、同一种缩进（条目内续行 3 空格），去缩进后逐字节 `===` 照旧成立。
+
+**逐字目标形（实施席原样落笔 · 唯一副本 = 本节）**
+
+五档（`thincoder-core/prompts/advisor-design.md` · `thincoder-core/prompts/advisor-round1.md` · `thincoder-core/prompts/advisor-round2.md` · `thincoder-core/prompts/advisor-round3.md` · `thincoder-core/prompts/consult-base.md`）含 `**An assertion has two sources only**` 的那一行整行替换为：
+
+```text
+   **An assertion has two sources only**: what you read (the file path plus the exact words, quoted as they stand) or an explicit `unverified`.
+   **Never cite a line number** — it records a position, so one line inserted above **shifts every position below it**: every file citing this one must be recomputed, and the work grows with the number of referrers.
+```
+
+`thincoder-core/prompts/advisor-design.md` · `## Citation Discipline` 节含 `**Cite with the file path plus the exact words**` 的那一行整行替换为：
+
+```text
+**Cite with the file path plus the exact words** (e.g. ``docs/core/design/NAME.md`` — "the sentence as written there") when you cite design-document text.
+**A line number is not a citation**: it records a position, so one line inserted above **shifts every position below it** — every citing file must be recomputed, and the reader has no way to notice.
+```
+
+**A5 ∥ A7 的互斥与解法**：§6.66 的 A5 原记「五档行宽均 356」，A7 要求 `doc_check` 门首行 PASS（阈值 300）——按字面两条不能同时成立。解法 = **356 是测量值，不是要求**：要求是五份同句复制去缩进后逐字节相等（本批照旧成立）；行宽随本次拆行更新为 143 ∥ 215，A5 判法追加「各折行 ≤300」，A7 原样成立。改后两条同时为真。
+
+**验收（A1–A9 · 可机判）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 五份拆后逐字节相等且各 ≤300 | `node` 取含 `**An assertion has two sources only**` 的五档各行，去缩进后 `===` 全等；行宽 = **143 ∥ 215** |
+| A2 | 同笔第二处拆后各 ≤300 | 取含 `**Cite with the file path plus the exact words**` 的档该行与下一行；行宽 = **154 ∥ 198**（本席本轮 `node` 实算 · 2026-11-01） |
+| A3 | 提示词面超宽行清零 | 16 档扫 `[...line].length > 300` ⇒ **0**（改前 = 6 处 / 5 档，量法同「病」表） |
+| A4 | 折行零改字 | 拆后两行以单个空格接回，与**拆前一刻的盘面字节**逐字节相等——两组各 1 次（五档 356 · 第六处 353）。拆前原文取盘面、不取 `git` 版本：这六处的改前态从未提交，`git` HEAD 里是不同的更早文本（五份同句 = 「cite file:line」形；第六处那行 = 「Cite with the exact file:line format」形，`git show HEAD` 实读 · 2026-11-01）⇒ 取 HEAD 比的是另一段文字。时序 = 落笔前一刻量「围栏块两行接回 === 盘面原行」，落笔后量「落地行 === 围栏块」 |
+| A5 | 行宽读数更新 | §6.66 A5 的读数 = 143 ∥ 215（原 356），且该格写明「随本次拆行更新」 |
+| A6 | 引用锁零新（集合判，不按数字判） | 判法 = `node scripts/prompt-refs-check.mjs`（仓根实跑）后逐条看命中落点：命中集合里没有一条指向本批六处文本 ⇒ 零新增。读数（本席本轮实跑 · 2026-11-01）= **4 条**／退出码 1，全在 `thincoder-core/agent-tools/advisor.mjs`（三条指 `ADVISOR-GUARDS.md` · 一条指 `METHODOLOGY.md`）——闸态红由这四条既存命中撑着，与六处折行无因果。数字不作判据：锁自身的档名判据一变，同一个盘面的命中数就跟着变；折行不增不删字符集，集合因此不变 |
+| A7 | 文档纪律（交付门） | `doc_check(mode:"gate", target:"D:/teamcode/thincoder")` 首行 `PASS` |
+| A8 | 装配面无涉 | 装配 = 整文件拼接（§6.2）⇒ 槽位与档数不变；六处折行不改任何档的档名、槽位、节标题 |
+| A9 | 无新增行号引用 | 本节与 §6.66 改后各格扫 `\.md:[0-9]` ⇒ 0（本节档定位一律走档名 + 逐字引文） |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 五份同句 | 按围栏块在两行落笔 | 五档去缩进后 `===`；行宽 143 ∥ 215；A7 绿 |
+| C2 | 边界 · 只改一档 | 只改 `thincoder-core/prompts/advisor-round1.md` | 判违规：五份逐字节相等被破坏（A1 红）——五份是硬约束，五个槽位独立装配 |
+| C3 | 边界 · 第六处漏改 | 只修五份 | 判违规：`thincoder-core/prompts/advisor-design.md` 仍 353 ⇒ A3 ∥ A7 红（父侧「五档」口径即此漏） |
+| C4 | 错误 · 按 300 硬切 | 在第 300 个字符处折行 | 判违规：从句 ∥ 括号中间断开，模型读到的是一句残句（禁用点 ①②） |
+| C5 | 错误 · 两半之间插空行 | 拆后两半之间留一空行 | 判违规：同段被拆成两段，后半句脱离所在条目（禁用点 ③） |
+| C6 | 错误 · 顺手改写措辞 | 拆行时把 `the work grows with the number of referrers` 缩短 | 判违规：A4 接回比对不相等——本批只折行，不改字 |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 拆成 2 行、拆点取句边界 | 两半各自成完整句、各自带加粗引导句 ⇒ 模型读到两个句子；按 300 硬切得到残句 |
+| K2 | 五份共用同一拆法 | 五份逐字节相等是硬约束（§6.66「清单的维护面」）；各拆各的必然分叉 |
+| K3 | 读数跟着现实走 | 356 是测量值；要求是逐字节相等。让一个数反过来管文本，会把合规文本锁在超宽态 |
+| K4 | 第六处（353）同批收 | 同一笔写宽、同一句扇出理由；只修五处则交付门仍拒 ⇒ 修了等于没修 |
+| K5 | 不新增机检、不设豁免 | 行宽判据已在；本节只是把文本改到判据之内，加豁免等于把判据关掉 |
+| K6 | 不新增 §7 机制条目 | 同一机制（§6.66 判据句）、同一处罚则，本节只收正形态 |
+
+**先例 ∥ 偏离**：先例 = 本档 §6.66（逐字围栏块 + 验收表 + 用例表）∥ §6.63（规则与理由同驻提示词面，故不删字、只折行）。**对齐** = 唯一副本住设计面、实施席逐字照落、行宽读数随改。**偏离** = ① 本批验收对象是形态而非措辞（A4 用「接回逐字节相等」证零改字，既往各节用子串在场）；② 首次把「读数随现实更新」写成 A5 的一条读数。
+
+**既有件三问（新增名）**：`existing` = `thincoder-core/prompts/advisor-round1.md` 等的 `**An assertion has two sources only**` 句（五份同句）· name: "An assertion has two sources only" · consumers: 五个槽位各自装配的评审席 ∥ 咨询席模型 ⇒ 就地折行，零新造名。`none found` = 无（本批零新造名，唯一动作 = 折行）。
+
+**勘察证据行（本席实读 / 实算 2026-11-01）**
+
+- 提示词面 16 档扫 `[...line].length > 300` ⇒ 6 处：五档的 `**An assertion has two sources only**` 行各 356 · `thincoder-core/prompts/advisor-design.md` 的 `**Cite with the file path plus the exact words**` 行 353（`node` 实算 · 2026-11-01）。
+- `doc_check(mode:"report", target:"D:/teamcode/thincoder")` 实跑读数 = `命中 6 条（锚 0 · 文字太长，难于阅读 0 · 行太长 6）`，逐条点名同上六处（本席本轮实跑 · 2026-11-01）⇒ 工具口径与实际一致，父侧「五档」口径漏第六处。
+- 五份同句：去缩进后逐字节全等、缩进 3 空格；所在条目 = 评审 ∥ 咨询档的 `Evidence discipline` 条（`thincoder-core/prompts/advisor-round1.md` 序号 2 ∥ `thincoder-core/prompts/consult-base.md` 序号 1），前后邻行同为 3 空格续行 ⇒ 拆出的第二行与邻行同形（`node` 实读 · 2026-11-01）。
+- 拆点实算：五份 = 143 ∥ 215；第二处 = 154 ∥ 198；两组「以单空格接回 = 原文」均成立（`node` 实算 · 2026-11-01）。
+- `thincoder-core/prompts/common.md` 的 `An assertion has two sources only`（不带粗体、单句、136 宽）已合规且非同一形 ⇒ 本批零触（§6.66 A5 已注明不在该判据域）。
+- 判据源实读：`thincoder-core/doc-check/paragraph.mjs` 提示词面 `[...line].length > lineMax` 逐行裸判、无结构豁免；`thincoder-core/doc-check/index.mjs` 的 `DOC_CHECK_BUILTINS` = `paragraphMax: 300` · `lineMax: 300`。
+- 公共源勘察：项目 manifest 的 `index.publicRepos` 实读 = `[]` ⇒ 无跨仓公共源可查——已查，无相关。
+- RTM 读数（`node` 实算 · 2026-11-01）：`test/RTM.md` 334 行 / `^## ` 5 段 / `^### ` 26 个业务故事节 / `^\|` 表行 149。
+
+**集成测试设计**：`none` —— 改动面 = 提示词六处折行 + 本档两节，零代码档。两条入口均不成立：① 不改任何既有用例断言的业务可观察结果（该文本是模型读的引用纪律）；② 未新增业务上真需要的场景，也不是生产真出过的问题——行宽形态从业务入口复现不出可机判结果。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**边界（本节不做）**：不动提示词本体（产品代码面，实施轮 coder 落）· 不改判据句与理由句的任何措辞（A4 判）· 不动 `thincoder-core/prompts/common.md`（不同形、已合规）· 不改 `lineMax` 阈值、不设豁免、不新增机检门 · 不动需求档（主 agent 笔域）· 不重述 §6.66 的引用形态判据（唯一副本在 §6.66）· 本节不留行号坐标。
+
+**UI / 交互决策**：无界面面——本节只改设计档文字与提示词面折行。
+
+**上抛项**
+
+1. 〔报 · 前提更正〕父侧口径 = 「五档全 356」；本席实测 = **6 处 / 5 档**，第六处 = `thincoder-core/prompts/advisor-design.md` 的 `**Cite with the file path plus the exact words**` 行（353，同一笔、同一句扇出理由的第一人称变体）。只修五处则交付门仍拒 ⇒ 本节按六处设计；若父侧要缩回五处，A3 ∥ A7 须同步改写。
+2. 〔知会 · 编号〕本节落 §6.67（顺 §6.66 下一位）；不新增 §7 机制条目（同一机制、同一判据，本节只收正形态）。
+
+### 6.68 档引形态（引任何 `.md` 一律仓根完整路径 · 一句 · `thincoder-core/prompts/persona-engineering.md` 批档生命周期节）
+
+**来源**：用户 2026-11-02 04:00 逐字「**裸档名的问题为什么还没有解决？提示词还没有告诉你应该如何填写吗？**」；台账 `#1986`。
+
+**判据（一句）**：批档与文档里引任何 `.md`，一律写仓根完整路径；裸名只在同目录可解析，跨目录必缺。
+
+**为什么必须落在提示词面**：判据本体住 `docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则（人读权威，单源不动）；可落笔者写批档时手上只有提示词与门——规则住在他不会翻的那一页，于是同一条门一天拒了五次。**规则必须落在干活的人会看的那一层：设计档约束评审，提示词约束落笔。**
+
+**落点**：`thincoder-core/prompts/persona-engineering.md` 的 `## Batch-record lifecycle` 节末，新增一条；该节标题的数目字随清单同笔改（改前 `(five rules)` ⇒ 落笔后 `(six rules)`——D3 计数与清单同步）。此后判据只看关系、不写当前读数：标题数目字 = 该节内以 `^\d+\.` 起首的行数（A2）。不落纪律档：这是「怎么落笔」，不是「怎么判」。
+
+**逐字终稿（中文 = 规范面 · 唯一副本 = 本节）**
+
+```text
+- **引任何 `.md` 一律写仓根完整路径**：裸名只在同目录可解析，跨目录必缺——写裸名会被门当场拒写，整段零字节落盘。
+```
+
+**参考译（英文 · 实施席按中文终稿逐字译）**
+
+```text
+- **Cite any `.md` by its full path from the repo root**: a bare name resolves only inside its own directory and is missing across directories — written bare, the gate refuses the write on the spot and the whole segment lands as zero bytes.
+```
+
+**验收（A1–A5）**
+
+| # | 验收 | 判法 / 读数 |
+|---|---|---|
+| A1 | 逐字在盘且节对 | 该档扫 `Cite any \`.md\` by its full path from the repo root` ⇒ **1**，落在 `## Batch-record lifecycle` 节内（节切 = 该 `##` 至下一个 `^##`） |
+| A2 | 标题计数同步 | 判法只认一种量法：该节内以 `^\d+\.` 起首的行数 = **6**（`1.`–`6.`），节标题 = `## Batch-record lifecycle (six rules)`。不按 bullet 数——该节是编号条，bullet 与编号两种量法会得两个读数（D3：数与清单同拍） |
+| A3 | 行宽 | 新增行 ≤300；全档 `>300` = 0 保持 |
+| A4 | 无文档引用 | 新增行扫 `DOC-DISCIPLINE` ∥ `.md §` ∥ `§[0-9]` ⇒ 0（提示词面不带档引用） |
+| A5 | 文档纪律（交付门） | `doc_check(mode:"gate")` 首行 `PASS` |
+
+**用例表（正常 / 边界 / 错误）**
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 仓根完整路径 | 批档 §2 写 `docs/core/design/PROMPT-SYSTEM.md §6.8` | 可解析，门放行 |
+| C2 | 错误 · 裸档名 | 批档 §2 写 `BATCH-RECORD.md`（该档不在批档同目录） | 门当场拒写，整段零字节落盘——不是事后警告 |
+| C3 | 边界 · 同目录裸名 | 在设计档里引同目录另一档的裸名 | 能解析，但仍写完整路径——判据不按目录分叉，避免「有时行有时不行」 |
+
+**关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| K1 | 落人格档批档生命周期节，不落纪律档 | 这是落笔形态（怎么写），纪律档管判（怎么判）；写批档的人读人格档 |
+| K2 | 只加一句、不复制 D4 判据、不引节号 | 判据单源在 `docs/core/design/DOC-DISCIPLINE.md` §1 D4；提示词面不带档引用，复制即第二份活描述 |
+| K3 | 后果写成「门当场拒写、整段零字节」 | 一句后果比一句劝告可执行：写的人知道代价落在这一次落笔上，不落在将来的评审上 |
+| K4 | 标题数目字同笔改 | D3：数与清单不同拍，下一个人照「five rules」数出六条，就会以为多出的那条是别人加的 |
+
+**先例 ∥ 偏离**：先例 = §6.65（一句判据 + 四行落点 + 逐字围栏块 + 验收表）。**对齐** = 唯一副本住设计面、实施席照译。**偏离** = 本节零新增节、零新增名——只在既有节内加一条，故不设决策表的候选枚举（同一判据、同一处）。
+
+**既有件三问（新增名）**：`existing` = `thincoder-core/prompts/persona-engineering.md` 的 `## Batch-record lifecycle` 节（写批档的唯一一节）· name: "Batch-record lifecycle" · consumers: 主 agent 批档笔 ⇒ 该节内增一条，不改其余五条一字。
+
+`none found` = `full path from the repo root` ∥ `` `.md` by its full path ``：`thincoder-core/prompts/` 全 16 档实扫各 0 命中 ⇒ 本批新造，无旧句可复用。
+
+**勘察证据行（本席实读 2026-11-02）**
+
+- `thincoder-core/prompts/persona-engineering.md` 节标题逐字（本席 read 本轮 = 落笔前态）：`## Batch-record lifecycle (five rules)`；其下五条以 `1.`–`5.` 起；落笔后为 `(six rules)` / 六条——当前判法见 A2，不在行文里写读数。
+- 该档与 `thincoder-core/prompts/discipline-engineering.md` 全档扫 `.md` 引用形态句 ⇒ 唯一沾边 = `## Implementation coordinates` 那句，管的是代码坐标（`path:line`），不是档引用 ⇒ 档引用形态在提示词面无句，父侧实测 22 处命中无一条是它。
+- 判据本体实读：`docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则（引用写仓根完整路径；「see above / 见上」类相对指针不用），本节不重述。
+- 公共源勘察：项目 manifest `index.publicRepos` 实读 = `[]` ⇒ 无跨仓公共源可查——已查，无相关。
+
+**集成测试设计**：`none` —— 改动面 = 一档提示词一行 + 本档；零代码档。两条入口均不成立：① 不改既有用例断言的业务结果；② 未新增业务场景——门对裸名的拒写行为从产品入口复现不出业务可观察结果（`doc_check` 的拒绝属工具面，不属业务面）。⇒ 破行 0 · 冗余 0 · 新增 0。
+
+**RTM 读数**（本席本轮 `node` 实算 · 2026-11-02）：`test/RTM.md` 353 行 / `^## ` 5 段 / `^### ` 28 个业务故事节 / `^|` 表行 156。近面无涉——故事 7「收口只判本批改过的档」（本批不新增门、不改段判据）· 故事 8「批次档建在项目里（工作区锚报明、不落锚目录）」（不动建批档路径判据）。
+
+**边界（本节不做）**：不动 `thincoder-core/prompts/` 本体（实施轮 eng-coder 落英文）· 不复制 D4 判据、不引节号 · 不加第三个桶、不建体系 · 不动 `thincoder-core/doc-check/` 的门判据 · 不动需求档。
+
+**上抛项**
+
+1. 〔父侧 · 需求面〕`docs/core/requirements/PROMPT-SYSTEM.md` 与 `docs/core/requirements/ENGINEERING-MODE-V2.md` 是否要载这条判据、载在哪一节（需求档 = 主 agent 笔域，本席零触）。
+2. 〔知会 · 编号〕本节落 §6.68（顺 §6.67 下一位）；新增 §7 条目与否由父侧收口时定，本席未落 D 编号。
 
 ## 8. 提示词承载（单源 · M9 落点）
 

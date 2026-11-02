@@ -147,6 +147,7 @@ ACP 官方 SDK 是 npm 依赖——违反零依赖哲学，故自写精简层。
 **共享态经单一 `ctx` 传入**（不散落成各模块私有闭包）：
 `{ getCwd, sessions, notifyRef, requestRef, createSession, requireConfigured, releaseClosedSlot, log }`——
 `findSession` / 门助手 / 认领释放单点都由入口建一次、按引用传（**会话 id = 持久槽号**——load/new 同命名空间；`releaseClosedSlot` = 认领释放单点）。
+
 **每模块 ≤500（文件档）· ≤300（函数档）；`acp.mjs` 目标 ≈130 行。** 受影响文件与逐档读数 = 一次性材料，不入本档。
 
 ## 4. 鉴权与配置
@@ -201,8 +202,17 @@ ACP id 必须唯一。bridge 维护 **FIFO `toolQueue`（条目 `{ name, id, too
   → 写回 IDE 缓冲**。读回保证与 IDE buffer 一致（防客户端已改）；错误文本经抛错原样透传（与本地通道逐字一致）。
   - 单形态：读回 → `normalizeEOL` → `computeEditEntry` → `joinWithEol` 写回（LF 域判定、CRLF 域写回——与本地 edit 同判同恢复）。
   - 数组形态：条目自带 path 优先、缺省回退顶层 path（`path` / `filePath` 别名）；校验后读全部涉及文件缓冲
-    （同文件去重一次读）→ 逐条 computeEditEntry → 全通过后逐文件写回（判失败零写、写失败同本地 edit-batch 原子语义）。
-  - **结果回显**：`OK: edited <path> via IDE (<n> occurrence(s))`（含 note 时追加 ` — <note>`）。
+    （同文件去重一次读）→ 调核同一对零 IO 纯函数 `planEditEntries` / `applyPlannedEntries` 出计划并应用
+    （帧 = `docs/core/design/EDIT-HELPERS.md` §7.3 的 R1–R4：行号条目按 `startLine` 降序先应用、范围重叠整批拒、
+    内容条目随后按数组序累积；桥不另写组循环）→ 全通过后逐文件写回（判失败零写、写失败同本地 edit-batch 原子语义）。
+  - 行号锚护栏在桥面同判：判据与拒文取核单源（`docs/core/design/EDIT-HELPERS.md` §7.1 / §7.2），
+    `write` / `editSingle` / `editBatch` 三入口在写缓冲成功后各自记账（该档 §7.4）——少接一个入口，
+    同一份漂移就成了「本地 write 之后拒、IDE 缓冲 write 之后放」。
+  - **结果回显**：逐条回执按条目在 `edits` 数组里的**原始下标**排序——跨文件交错亦然：模型按位置对号，
+    顺序一变它会把结果贴到错的那一笔上。两形：替换条目 `OK: edited <path> via IDE (<n> occurrence(s))`
+    （含 note 时追加 ` — <note>`）；删行条目 `Deleted <line N|lines N-M> of <path> via IDE`。
+    单形态删行不经桥（路由门要求单形态的 `new_string` 是字符串，而删行只在省略它时成立）⇒ 落本地通道；
+    单形态经桥的回执恒为确认形，桥面的删行回执只来自 `edits` 数组形态。
 - **apply_patch** → **本地执行**（unified-diff 应用不路由）。
 - **delete、只读工具**（read / glob / grep / ls 等）→ **本地执行**（schema v1 无 `fs/delete`；读本地性能优先）。
 
@@ -320,8 +330,9 @@ export function relayPrefixOf(label, id) // → `${label}#${id}/`
   `:85`（`startsWith("⟦ev⟧")` **兜底消费**——注释原文「其余核事件：消费不泄漏」）即形态判据；核生成侧（`thincoder-core/agent/spawn-child.mjs:114-115` `EVENT_PHASE` / `EVENT_TYPE`）系**枚举**放行判据——**不引为形态先例**（枚举面 = D13 所否同形；**不在修法范围**）。
   ⇒ 本修法 = ACP 面与 VSC 面既有**形态判据**对齐，不是新语义。
 - **面覆盖注**：事件 token 生成侧发射**全走 `callbacks.onToken`**（逐点实核：`thincoder-core/agent.mjs:208` · `dispatch.mjs:296` · `subagent-scheduler.mjs:337` · `subagent-async.mjs:262` · `async-settle.mjs:228/:262/:264` · `subagent.mjs:359` · `subagent-run.mjs:143`
-  `thincoder-core/agent-tools/subagent-panel.mjs:98` · `consult.mjs:249` · `spawn-child.mjs:162`）；
-  `onReasoning`（`bridge.mjs:201-207`——只剥 relay 前缀；事件 token 不经此面）与 `agent_thought_chunk` / 工具卡 `title` / `request_permission` 文本面**不产** `⟦ev⟧` ⇒ 其余面残余向量 = **模型伪造**（非事件泄漏）——**接受**该边界（伪造面按核生成侧 strip 判据另行处置，不在本档）。
+  `thincoder-core/agent-tools/subagent-panel.mjs:98` · `consult.mjs:249` · `spawn-child.mjs:162`）。
+
+`onReasoning`（`bridge.mjs:201-207`——只剥 relay 前缀；事件 token 不经此面）与 `agent_thought_chunk` / 工具卡 `title` / `request_permission` 文本面**不产** `⟦ev⟧` ⇒ 其余面残余向量 = **模型伪造**（非事件泄漏）——**接受**该边界（伪造面按核生成侧 strip 判据另行处置，不在本档）。
 - **CLI 侧已有形态判据先例（非缺陷——同一判据家族已在位）**：`thincoder-cli/src/tui/render.mjs:245-256` 已是形态剥（结构化 `/⟦ev⟧[^\x1e…]*\x1e…/` + 末行 `/⟦ev⟧[A-Za-z]*/` 兜底）⇒ 修法**保留终止符约束**（`\x1e` 同现才剥），**不得**放宽为无终止符形态。
 - **另一消费点已自洽（非缺陷——登记为观察项）**：`thincoder-cli/src/tui/subagent-blocks.mjs:46` 的 `SUB_EVENT_RE` 枚举（含 `queued`、**不含** `cancelled`）之外另有 `:172` 显式 `cancelled` 分支 + `:187` `startsWith("⟦ev⟧")` 兜底 ⇒ 无泄漏面，**不改**。
 - **嵌套形态顺序不变**：relay 前缀由桥先剥（本节表①「信号检查改在 payload 上」）；前缀后 token 落 payload 首 ⇒ 同一判据命中。
@@ -418,6 +429,7 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
 - `AuthMethodTerminal.args`：「Additional arguments to **append to the configured agent invocation** for terminal auth.」；`env`：「… override same-named variables in the base launch configuration.」
 - **退出状态语义（两处上游文本，非同一条）**：
   ① `AuthMethodTerminal.description` 逐字：「A zero exit status signals success; any other termination signals failure.」——**AC8 回指本串（schema def）**；
+
   ② 文档（Authentication · Terminal authentication 节）逐字：「Exit status zero signals success; a non-zero status, termination without an exit status, or cancellation signals failure.」
   ② 另含流程说明「The descriptor **cannot** provide a command.」（两串均已逐字核对，各自锚不混用）。
 
@@ -437,8 +449,11 @@ ACP 不转发工具输出流式增量——**父工具与子代理工具同口�
   `SessionConfigOption` = required `["id","name"]` + oneOf select/boolean 判别键 `type`（select 另需 `currentValue` + `options[]`；boolean 需 `currentValue`）。
 
 **id 语义（全族单一命名空间）**：`session id` = **持久化槽位号字符串**——`session/new` 返回 = 本轮认领槽号、`session/list` 条目取值 = `String(s.slot)`；`session/load` / `resume` / `delete` 按槽位号解析（`Number(params.sessionId)`）。
+
 `session/prompt` / `cancel` / `close` / `set_config_option` / `set_mode` 认的 id 同源（`sessions` Map 的键）⇒ **`session/list` 输出可直喂全族方法**（不变量：`session/new` 返回 id ∈ 随后 list 集）。
+
 load / resume 的 id = **客户端传入原文形态**（同值读回保续；响应无 `sessionId`——id 不变语义）；同 id 在存 ⇒ 旧实例按 close 同法替换（先 cancel + 出容器 + 认领释放，再做占用检测与装载——拒载路径零副作用）。
+
 **fork 角**：载入遇他进程占用槽 ⇒ 既有 fork 语义（`newSession` 新槽）保持——本次存续期 id 与落盘槽号分离（重载后 list 显示 fork 槽号）。
 
 ### 11.4 G3 · `fs` 反向 RPC 的客户端能力门控
@@ -458,7 +473,8 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 ### 11.5 G8 · 凭据面（裁定）
 
 **现状**：`acp.mjs:39-45` `defaultIsConfigured()` = `loadConfig().provider?.apiKey`；
-而 `config.provider`（`thincoder-core/config.mjs:332-339`）= 统一解析 `resolveProviderPlan` 产物（核单源——回退序 + 三态，机制见 `doc:PROVIDER.md:§6.22`）：
+而 `config.provider`（`thincoder-core/config.mjs:332-339`）= 统一解析 `resolveProviderPlan` 产物（核单源——回退序 + 三态，机制见 `docs/core/design/PROVIDER.md` §6.22）：
+
 任一渠道持 key ⇒ 核必选中 ⇒ `provider` 非空 ⇒ 门**放行**（「持 key ∧ 无有效 `defaultModel`」= `fallback` 类——协议面零提示行）；
 仅「无 provider/key」（`invalid` 类）⇒ `provider = {}` ⇒ `-32000`。
 
@@ -467,14 +483,15 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 - **判据拆分与门失败文案**：`isConfigured()`（布尔注入口，决定放行 / `-32000`）**不动**；**同注入位姐妹探针** `providerStatus()`（默认 `defaultProviderStatus`，可注入）→ `{ ok, keyPresent, reason }`：
   - `ok` = `loadConfig().provider?.apiKey?.trim()`（与 `isConfigured()` 同源同式）；
   - `keyPresent` = `loadConfig().providers` 中任一 `apiKey` 在位；
-  - `reason` = `loadConfig().providerInvalidReason`（**name 面**——`thincoder-core/config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；`doc:PROVIDER.md:§6.22`）。
+  - `reason` = `loadConfig().providerInvalidReason`（**name 面**——`thincoder-core/config.mjs:337` 产出：入选渠道具名 ⇒ null ∕ 无入选渠道 ⇒ 非空；`docs/core/design/PROVIDER.md` §6.22）。
   **落点 = 各受门 handler 共用的门助手**（`requireConfigured()`，住 `handlers-session.mjs` 的 `ctx`；**`session/new` 是门链首个触点**）：
   - `ok === true` ⇒ 放行；
   - `keyPresent === false`（=「无 provider/key」类）⇒ `-32000`，文案指向 `~/.thincoder/config.json` 的 `providers[].apiKey` **与** `thincoder acp --login`——**不拼 reason**。
-  **核统一解析口径（`doc:PROVIDER.md:§6.22`）**：任一渠道持 key ⇒ 核必选中 ⇒ `ok` 恒真——故「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）**放行**（协议面**零提示行**——提示通道定形 = **不立**（见 §13）），② 分支（`keyPresent === true ∧ ok === false`）**默认接线不可达**。
+  **核统一解析口径（`docs/core/design/PROVIDER.md` §6.22）**：任一渠道持 key ⇒ 核必选中 ⇒ `ok` 恒真——故「持 key ∧ 无有效 `defaultModel`」（`fallback` 类）**放行**（协议面**零提示行**——提示通道定形 = **不立**（见 §13）），② 分支（`keyPresent === true ∧ ok === false`）**默认接线不可达**。
   （`authenticate` 失败复用同一文案；错误码恒 `-32000` ⇒ AC6 不变。）
-- **`session/new` 的装配后检查（兜底，与门互补）**：门拦的是「无 provider/key」（`invalid` 类）；装配后检查拦的是**门放行但 provider 仍不可用**的残余——结构不全（缺 `baseURL` 等——「持 key 但结构不全」归发送 ∕ 装配失败面，`doc:PROVIDER.md:§6.22`）。
+- **`session/new` 的装配后检查（兜底，与门互补）**：门拦的是「无 provider/key」（`invalid` 类）；装配后检查拦的是**门放行但 provider 仍不可用**的残余——结构不全（缺 `baseURL` 等——「持 key 但结构不全」归发送 ∕ 装配失败面，`docs/core/design/PROVIDER.md` §6.22）。
   现状 `defaultCreateSession` → `assembleAgent` 带 `_providerInvalid` **照样建会话**，问题延后到首个 prompt 才以含糊错误爆出。
+
   改法：装配后**显式检查** `agent._providerInvalid`，真 ⇒ 返回错误（文案 = `agent._providerInvalidReason`——核 `thincoder-core/agent/assemble.mjs` `validateProvider(agent, config)` 取 `config?.providerInvalidReason`（兜底三档文案「provider 不存在 / model 缺失 / 缺少 baseURL」））而**不建半死会话**。
 - **代码注释面（逐字目标）**：
   - `thincoder-core/config.mjs:11` → ` * API key comes from providers[].apiKey only — environment variables are not a key source.`
@@ -600,7 +617,7 @@ load / resume 的 id = **客户端传入原文形态**（同值读回保续；�
 
 **定形 = 不立**：「`fallback` 类放行」之后的协议面零提示行为 = **设计行为**（非缺口）。
 
-**登记去向**：本节（定形在档）；`doc:PROVIDER.md:§6.22`「未决」句 ⇒ 定形句替代（落点 = 实施轮）；`docs/cli/requirements/ACP-CLIENT.md` F8 判定句 **R-A5.12** ∥ **R-A5.11**（= §12 对位）。
+**登记去向**：本节（定形在档）；`docs/core/design/PROVIDER.md` §6.22「未决」句 ⇒ 定形句替代（落点 = 实施轮）；`docs/cli/requirements/ACP-CLIENT.md` F8 判定句 **R-A5.12** ∥ **R-A5.11**（= §12 对位）。
 
 ## 14. 用户文档面（对外文档 · 清单与同拍义务）
 

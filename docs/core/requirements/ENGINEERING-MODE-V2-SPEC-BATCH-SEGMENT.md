@@ -20,7 +20,7 @@
    | §6 收口 + 状态行 | 父代理 | 普通文档写（或 `batch` close 冻结） |
 
 2. **`batch` 工具**（action: create/append/status/close——生命周期契约 = `docs/core/design/BATCH-RECORD.md` §4）：append 段白名单——调用者身份定段号（designer → §2 · 设计评审 → §3 · coder → §5 · 主 agent → §1/§4/§6），**越段即拒**；create（骨架预齐）/ close（冻结）仅 depth-0。
-3. **append-only**：段不重叠、不回改。
+3. **两种处置**：§2（现行任务书 · 规范面）可就地改；§1 / §3 / §5 / §6（证据面）段不重叠、不回改，只追加。
 4. **前情指针形态**：`前情 = docs/batches/<旧档> §N（已收口 <日期>）`。
 5. **相对路径解析序与防嵌套（F-BP1）**：批次档路径串在四处调用点（create / append·status·close / 评审门 / spawn 门）统一经单源档 `agent-tools/batch-paths.mjs`——基底枚举 `batchDocBases`（单源）——
    - **候选序**（相对路径）：① `resolve(cwd, p)` → ② `resolve(项目根, p)` → ③ 逐基底 `resolve(基底, p)`；**读面**取首个可读文件，**create** 取首个落基底根内者；绝对路径照旧。

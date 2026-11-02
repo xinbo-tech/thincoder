@@ -27,9 +27,12 @@ replace_all applies to content-based edits only: literal replacement of every oc
 
 **Batch multiple changes into ONE call via the `edits` array** (preferred over N single edit calls) — same file or across files; atomic: any failure writes nothing. One permission ask, one undo unit, and one turn instead of N. Per-entry shape and targeting are in the schema.
 
+Line-number entries in one `edits` array apply first, in descending `startLine` order, so each is anchored on the numbers you read; their ranges must not overlap (overlap ⇒ the whole batch is refused, nothing written). Content entries then apply in array order. The receipt stays in call order.
+
 Notes:
 - Prefer this over write for targeted edits — it's safer and keeps changes targeted
 - If old_string matches zero times (even fuzzy): error. If it matches multiple times without replace_all: error — add more surrounding context to make it unique
 - Returns `Edited <path>: replaced N occurrence(s)` (delete-mode: `Deleted line N of <path>` / `Deleted lines N-M of <path>`) + git diff + syntax-check note + context block (L..-L..).
 - Never fabricate the old_string — copy it verbatim from the actual file using read first
+- **Line-number anchoring**: `line` / `startLine`+`endLine` are judged against the last write to that file: inside or below that write's affected range, or when the file was written after it without updating that anchor, the call is refused — naming the path, the drift (`L<startLine>`, `±shift`) and two ways on (re-read, or address the region without line numbers).
 - use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed

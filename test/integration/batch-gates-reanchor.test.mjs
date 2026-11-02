@@ -2,8 +2,9 @@
  * batch-gates-reanchor.test.mjs — 集成用例 14-1 … 14-8（RTM CLI 端故事 14「评审过、收口清、重开回」）。
  *
  * 判据原文 = `test/RTM.md` 第 14 节；机制 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 / §2.6 /
- * §2.7 / §2.11 / §2.13。**进入口 = 父侧工具面**（`batch` / `ledger` / `write`）——断言业务可观察结果
- * （拒 ∥ 写入、回执行、行状态、产品码可写性）。
+ * §2.6.1 / §2.7 / §2.11 / §2.13。**进入口 = 父侧工具面**（`batch` / `ledger` / `write`）——断言业务可观察结果
+ * （拒 ∥ 写入、回执行、行状态、产品码可写性）。14-1 的第二支是 `§3` 写入闸（`R-G3`）：无裁定行的 `§3`
+ * 在写的那一刻就拒，存量无裁定块仍由 `§5` 门报出来。
  *
  * 复跑（cwd = 仓根）：`node --test test/integration/batch-gates-reanchor.test.mjs`
  */
@@ -69,19 +70,36 @@ const runWrite = async (agent, rel) => {
   return res
 }
 
-test("14-1 §3 = 进行中 ⇒ append §5 拒；状态词过而末块无 pass 裁定 ⇒ 拒；末块携 pass 裁定 ⇒ 写入", async () => {
+test("14-1 无裁定行的 §3 写不进去（R-G3）；存量无裁定块仍拒 append §5（R-G2b）；补一块携 VERDICT: pass ⇒ 放行", async () => {
   const root = await freshRecord("14-1")
   const coder = batchTool(REC)
   const ctx = { depth: 1, agent: { ...agentOf(root, { designSlot: false }), _role: "eng-coder", _batchDoc: REC } }
   await assert.rejects(() => coder.execute({ action: "append", segment: "§5", text: "先写实现" }, ctx), (e) => /§5 append refused/.test(e.message))
-  // 判据 2（R-G2b）：状态词过了还不够——门所依赖的那个块得自己说结论（块内无裁定行 ⇒ 拒）
-  await review(root).execute({ action: "append", segment: "§3", text: "方案可行，另附两条补记。" }, { agent: agentOf(root) })
-  await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
+  // ① 工具写一笔无裁定行的 §3 ⇒ 当场拒（R-G3）：字节零改、轮次号不消耗（块数不变）
+  const before = readFileSync(recOf(root), "utf8")
+  const blocksOf = (s) => s.split("\n").filter((l) => /^### 轮次 \d+（评审子代理）/.test(l)).length
+  await assert.rejects(
+    () => review(root).execute({ action: "append", segment: "§3", text: "方案可行，另附两条补记。" }, { agent: agentOf(root) }),
+    (e) => /§3 append refused/.test(e.message)
+      && e.message.includes("VERDICT: pass") && e.message.includes("VERDICT: changes-required")
+      && /no round number was consumed/.test(e.message),
+  )
+  const afterRefusal = readFileSync(recOf(root), "utf8")
+  assert.equal(afterRefusal, before, "拒写：档字节逐字节不变")
+  assert.equal(blocksOf(afterRefusal), blocksOf(before), "拒写：轮次块数不变（N 未消耗）")
+  // ② 存量无裁定块（夹具直写、不经工具）⇒ `append §5` 仍拒（R-G2b：门所依赖的那个块自己没说结论）
+  writeFileSync(
+    recOf(root),
+    afterRefusal
+      .replace("## §3 设计评审（评审子代理）\n\n轮次 1 的发现与结论。",
+        "## §3 设计评审（评审子代理）\n**状态行**：评审通过\n\n### 轮次 1（评审子代理）\n\n存量块：只有散文，没有裁定行。"),
+  )
+  assert.match(readFileSync(recOf(root), "utf8"), /\*\*状态行\*\*：评审通过/, "夹具：状态词已过判据 1")
   await assert.rejects(
     () => coder.execute({ action: "append", segment: "§5", text: "先写实现" }, ctx),
     (e) => /last §3 round block carries no pass verdict/.test(e.message) && /块内裁定 = 无裁定行/.test(e.message),
   )
-  // 末块携 pass 裁定 ⇒ 两判据同过，写入
+  // ③ 末块携 pass 裁定 ⇒ 两判据同过，写入
   await review(root).execute({ action: "append", segment: "§3", text: "结论：通过。\n\nVERDICT: pass" }, { agent: agentOf(root) })
   assert.match(await coder.execute({ action: "append", segment: "§5", text: "实现落地" }, ctx), /appended/)
 })

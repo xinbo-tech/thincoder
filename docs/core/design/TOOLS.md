@@ -197,6 +197,8 @@ apply_patch——无坐标 hunk 宽容 + 文件头容缺；多文件原子。wri
 
 **路由**：edit 精确改 / insert_after 加行 / hashline 位置无关 / apply_patch 整块多文件 / write 整文件。共享 helper（EOL / 候选 / U+FFFD）权威 = 编辑辅助面；read 是读工具（非编辑）。
 
+**行号锚**：edit 行号形与 insert_after 的 `after_line` 同一道记账面护栏（拒在受影响区；拒文带漂移量与两条下一步）——判据与批量帧权威 = `docs/core/design/EDIT-HELPERS.md` §7，本段只给定位；机面落点 = §6.26。
+
 ### 6.7 逐工具契约（要旨）
 
 - **git**：action 集含 add / commit / push / tag / branch / checkout / restore / stash / fetch / pull / reset / revert / merge / cherry-pick + clone / init / rebase / remote / clean / switch / apply / worktree / archive / blame / mv。破坏性动作（reset --hard / checkout 丢改动 / rm / clean / rebase 有未提交时）
@@ -218,7 +220,7 @@ interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池
 
   **硬预算**（每动作超时必返——错误句携卡点步名）；**会话不假定常驻**（外部关闭 ⇒ 在飞即时显式失败 + 下一次自愈重开）；**异步通道** `async:true`（ack `browser#<id>` + 结算摘要；`wait_for "browser id:N done"` ∥ `process` kill）。设计权威 = `BROWSER-TOOL.md`（本层）。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
-- **batch**：批次档生命周期（action = create ∕ append ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；append 段写入 append-only；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
+ - **batch**：批次档生命周期（action = create ∕ append ∕ edit ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；**两种处置**——§2 是规范面可就地改（`edit`），§1 / §3 / §5 / §6 只追加；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
 - **manifest**：project-manifest 全键读写出口（三动作 `read` / `init` / `write`——点改 ∥ 全键族白名单 ∥ depth-0 两模式同挂）；机制 = `docs/core/design/MANIFEST.md` §2.10。
 - **doc_check**：文档纪律机检（只读 · 报告态 · 非门禁——不阻断、不置退出码）——判据两条（锚 = 文档指针可解析 ∥ 行宽 = 单行 > 阈值）；判据参数依据 `PROJECT-MANIFEST.json` `checkConfig`；参数 = `target`（可选）。机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20。
 - **notify_parent**：子代理上行通道（`kind` = ask / note；非阻塞；父侧队列 ≤20 条 ∥ 单条 ≤1,500 字符）；depth>0 段装配（consult 段除外）。
@@ -325,7 +327,7 @@ A13 调用方普查 · 集成测试级：集成层单入口 = 仓根 `node test/
 
 **裁定（用户两次定向）**：①「找仓这件事儿其实做 project-manifest 生成的时候做过一次，我觉得应该用同样一套逻辑」②「可以用同样的逻辑，**甚至共享代码**」⇒ `git` 工具的仓解析**复用 manifest 的仓发现逻辑**——**单源、禁两份实现**（D2）。
 
-**源逻辑现址**：`thincoder-core/manifest-discovery.mjs:129`（`resolveProjectRoot`——经 `manifest.mjs` 转口）；提示词侧同源成文 = `thincoder-core/prompts/persona-engineering.md:108`；需求侧 = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` ②.2。
+**源逻辑现址**：`thincoder-core/manifest-discovery.mjs:129`（`resolveProjectRoot`——经 `manifest.mjs` 转口）；提示词侧同源成文 = `thincoder-core/prompts/persona-engineering.md` §Project state file 的 `Project-root judgment walks DOWN`；需求侧 = `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-MANIFEST.md` ②.2。
 
 **发现规则（逐条——锚判定 + 一层向下）**：
 
@@ -600,7 +602,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 
 #### 6.15.2 F11 `batch` 词面协议结构化
 
-**机制总则**：六段 append-only / 一段一作者 / 冻结门（`assertGateOpen`）语义**零变**；单源纪律承 KD-4（skeleton ← lifecycle ← 主档）；散文纪律句**不删**（机判叠加）。变化全部 = **值的载体形态**。
+**机制总则**：六段结构 / 一段一作者 / 冻结门（`assertGateOpen`）语义**零变**；单源纪律承 KD-4（skeleton ← lifecycle ← 主档）；散文纪律句**不删**（机判叠加）。变化全部 = **值的载体形态**。（段内写入纪律不在本节：两种处置——§2 可就地改 ∥ 其余只追加——判据单源 = `BATCH-RECORD.md` §4.19。）
 
 **裁定点②——F11-A enum 化实现形态 = 运行时校验保持（唯一真值面）+ value 谓词收紧为「关键词锚定」+ 增独立 `note` 字段**：
 
@@ -669,11 +671,11 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 | VSC-2 | 工程段断言同步 | VSC 工程段装配单测 | 工程段 = timer…（无 task）断言更新后全绿 | vsc 单测档 |
 | VSC-3 | 端侧催更门排除（VSC 副本直驱） | 直驱 `maybeGuardPushbacks`——桩 agent：`_tasks` 含 pending ∧ `engineering=true`（advisor/verify 面不构成候选） | 零推回（返回 false · 零提醒注入） | vsc 单测档 |
 
-**边界（本节不做）**：台账工具自身零改（六态 enum 已是对照面）· eng/plan/escalate 既有门零改 · 普通模式 task 行为零变（不移注册不加开关）· batch 六段 / append-only / 一段一作者 / 冻结门语义零变 · 散文纪律句不删 · 铁律 3 提示词分支 = PROMPT-SYSTEM 板块（本节带上——条目文本 = §6.15.2「提示词面条目文本」逐字固化；落档 = eng-coder（内容依据 = 机制文档））。
+**边界（本节不做）**：台账工具自身零改（六态 enum 已是对照面）· eng/plan/escalate 既有门零改 · 普通模式 task 行为零变（不移注册不加开关）· batch 六段结构 / 一段一作者 / 冻结门语义零变（段内写入纪律 = 两种处置，判据单源 = `BATCH-RECORD.md` §4.19） · 散文纪律句不删 · 铁律 3 提示词分支 = PROMPT-SYSTEM 板块（本节带上——条目文本 = §6.15.2「提示词面条目文本」逐字固化；落档 = eng-coder（内容依据 = 机制文档））。
 
 VSC 副本 verify guard 分支同类缺差（`thincoder-vscode/src/agent/run-stages.mjs:105` 零 engineering 条件 vs 核 `thincoder-core/agent/completion.mjs:75` 有）= **随本节收口（hygiene-sweep 面）**。
 
-**提示词面条目文本（逐字固化——三撞点 = 提示词面（`thincoder-core/prompts/`）的 `thincoder-core/prompts/discipline-engineering.md` §🔴 铁律 · 第 3 条 / §基本流程 · 步骤 1「需求完成判据」 · `thincoder-core/prompts/persona-engineering.md:188`）**：
+**提示词面条目文本（逐字固化——三撞点 = 提示词面（`thincoder-core/prompts/`）的 `thincoder-core/prompts/discipline-engineering.md` §🔴 铁律 · 第 3 条 / §基本流程 · 步骤 1「需求完成判据」 · `thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Debts go on the list`）**：
 
 ① **铁律 3**（`thincoder-core/prompts/discipline-engineering.md` §🔴 铁律 · 第 3 条）——现行（EN）：
 「**Work is tracked by the batch record + the ledger**: after requirements are confirmed, build task entries one per requirement (entries land in batch record §2 + ledger rows);
@@ -685,7 +687,7 @@ the tracking authority is the batch record + the ledger.)」
 
 ② **需求完成判据**（`thincoder-core/prompts/discipline-engineering.md` §基本流程 · 步骤 1「需求完成判据」）——现行（EN）「…build task entries one per requirement — **the batch record §2 entry table + ledger rows** are the marker that requirements were accepted.」
 
-③ **欠账入清单**（`thincoder-core/prompts/persona-engineering.md:188`）——现行「**欠账入清单**：未发 / 未完成的自有事项 ⇒ **立即写进任务清单**（或批次档 §6 未决）——欠账**必须看得见**，不得只活在报告文字里、靠用户催问兑现。」
+③ **欠账入清单**（`thincoder-core/prompts/persona-engineering.md` §Dispatch & close discipline 的 `Debts go on the list`）——现行「**欠账入清单**：未发 / 未完成的自有事项 ⇒ **立即写进任务清单**（或批次档 §6 未决）——欠账**必须看得见**，不得只活在报告文字里、靠用户催问兑现。」
 
    建议（EN）「**Debts go on the list**: undispatched / unfinished items of your own ⇒ **immediately written into batch record §6 unresolved (or a ledger row)** — debts **must be visible**, never living only in report prose waiting for the user to chase.」
 
@@ -747,7 +749,7 @@ FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verif
 | 主会话（两端） | CLI 经 `assembleBuiltinTools`（`thincoder-core/tools/index.mjs:57-78`）；VSC 端自持清单（`thincoder-vscode/src/tools/index.mjs`） | **零改**——`question` 在职；机械门（无 UI 抛错）保留为第二道防线 |
 | VSC 端自持 depth>0 装配 | `thincoder-vscode/src/agent/setup-tooltable.mjs:296-300`——已按 `depth === 0 || t.name !== "question"` 过滤（行为正确，字面 = 第二份） | 字面改消费核单源排除集（`SUBAGENT_TOOL_EXCLUSIONS.has(t.name)`；谓词 `excludeSubagentTools(` = 核四点调用形态；**行为零变**——消第二份字面，防漂移） |
 
-**单源落点**：`thincoder-core/agent/helpers.mjs`——与只读谓词 `readonlyToolNames`（`:368`）同址新增排除集（`question` 唯一成员）与按面裁表谓词（恒返回新数组，不改父表、不别名）；`thincoder-core/agent.mjs` 的两处再导出面（`:21-32` / `:48-53`）补两名——子代装配点从 `../agent.mjs` 取用，import 面零改。
+**单源落点**：`thincoder-core/agent/helpers.mjs`——与只读谓词 `readonlyToolNames` 同址新增排除集（`question` 唯一成员）与按面裁表谓词（恒返回新数组，不改父表、不别名）；`thincoder-core/agent.mjs` 的两处再导出面（`:21-32` / `:48-53`）补两名——子代装配点从 `../agent.mjs` 取用，import 面零改。
 
 **生效面与装配序**：子代工具表 = 「**角色选择**（只读 / 全表）→ **排除谓词**」——排除恒在最后一步（两序等价性不得写成分支差异）。
 生效面 = 发给 provider 的工具 schema ∧ 执行面 `toolByName`（两者同源自子代的 `tools` 绑定值——`thincoder-core/agent/setup.mjs:163-171` 的展开面 = 绑定值 + 家族段 + caller 注入）。
@@ -866,7 +868,7 @@ FORBIDDEN this turn (mechanically enforced): modifying files, bash/execute/verif
 - **超时语义**：async 起跑不收默认 120s（长任务 = 本形目的）；显式 `timeout` 仍生效（到点杀树 + settle 状态 `killed: timeout`）；同步径默认 120s 照旧（§6.4 同句已限定）。
 - **收尾两档**：回合中断（停回合续跑）⇒ 不杀（F2 同款豁免——`docs/core/design/CONSULTATION.md`）；会话中止 ⇒ 逐条杀树 + 出池 + 墓碑（D-CO4 同规则）。
 - **帽**：`BG_TASK_MAX = 4`（对齐 `ASYNC_POOL_LIMITS` 单域 4）；超限显式拒（不静默）。
-- **depth 门**：`async` 参仅 depth-0——主落点 = 深度排除单点 `thincoder-core/agent/helpers.mjs:378`（`excludeSubagentTools`——对 `bash` 副本删 `async` 参）；第二道 = execute 面（`ctx.depth > 0 ∧ async` ⇒ 显式拒）；子代理 bash 同步照旧。
+- **depth 门**：`async` 参仅 depth-0——主落点 = 深度排除单点 `thincoder-core/agent/helpers.mjs`（`excludeSubagentTools`——对 `bash` 副本删 `async` 参）；第二道 = execute 面（`ctx.depth > 0 ∧ async` ⇒ 显式拒）；子代理 bash 同步照旧。
 - **边界**：跨会话存活 = 不做（会话结束即清）；可见面 v1 = 不做（面板块 / 状态行段——登记边界）。
 
 **接口契约（实现面）**：
@@ -1622,7 +1624,25 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | §1 尾部追记行 | `**重开记录**：<YYYY-MM-DD> · 原收口 <旧日期> · 理由 = <note> · 操作者 = 主 agent`（**原收口 = 改写前状态行的收口日期字面**；无日期字面 ⇒ 落「未标日期」——重开后首收口时点只在此行保留） |
 | §1 段内的不适用声明（主 agent 经 append §1 落） | `> 不适用：§N —— <理由>` |
 
-**边界（本节不做）**：不新增工具 / action / **schema 参数**（理由走既有 `note`）· 不改 `STATUS_WORDS` 词表 · 不改冻结门对已收口档 append / status 的拒（逐字）· 不改 `close` 的 §6 单段拒串（J2 逐字）· 端面零改（VSC / desktop 消费同一 tool-docs）。用例表 ∕ 验收回指 = `BATCH-RECORD.md` §4.18（本档不重述）。
+**④ `edit` 动作的描述面（`thincoder-core/tool-docs/batch.md` + `batch.mjs` 的 action 枚举行）——逐字**：
+
+| 键 | 换写后逐字（只列追加 / 改动分句；其余分句不动） |
+|---|---|
+| action 枚举行 | `edit — replace one anchored range inside your own section (§2 only: the spec section, which may be rewritten in place; §1 / §3 / §5 / §6 are append-only evidence) …` |
+| `edit` 参数说明 | `oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, and any anchor or replacement that touches or introduces a `**状态行**：` line (the status line has one writer: `status`).` |
+
+**⑤ `edit` 的拒句（逐字 · 模型可见）**：
+
+| # | 场景 | 逐字 |
+|---|---|---|
+| E1 | 空锚 | `batch: edit needs a non-empty oldText — a blank anchor cannot match exactly once. Nothing was written.` |
+| E2 | 零命中 | `batch: edit anchor not found — oldText must match the §2 body exactly once, byte for byte (line endings included). Nothing was written. Re-read the section and pass its current text verbatim.` |
+| E3 | ≥2 命中 | `batch: edit anchor is not unique — it matches <N> places inside §2 (lines <n1>, <n2>, …). Extend the anchor until it matches once. Nothing was written.` |
+| E4 | 锚越段界 | `batch: edit anchor crosses the section boundary — it starts outside the section body or reaches the next §N header, and rewriting across it would break section location. Nothing was written.` |
+| E5 | 触及 / 引入状态行 | `batch: edit would rewrite or introduce a **状态行** line — that line has exactly one writer: status, with a value from the section's word list. Nothing was written.` |
+| E6 | 已收口 / 段域 / 骨架保护 / 凭证 | 冻结串 · 骨架保护串 · 剥凭证**逐字同 append 面**；**骨架保护串的一句改写** = `…would break section location and the append-only guarantee.` → `…would break section location.`（两种处置下它仍成立，早先那句只对证据面成立）。**段域拒文自成一形两式**（不复用 append 串：那串对 eng-coder 说「§5 不是你的」，而 `edit` 的调用者正是能写 §5 的人 ⇒ 逐字复用即谎报）：depth-0 = `batch: §<N> is not yours to write — an in-place rewrite is allowed on §2 only (the spec section; §1 / §3 / §5 / §6 are append-only evidence — append them). Nothing was written.`；子代理 = `batch_segment: §<N> is not yours to write — this caller writes §2 only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5).` |
+
+**边界（本节不做）**：本批只**新增一个 action**（`edit`）与两个 schema 属性（`oldText` / `newText`）；其余 action 与参数零改（理由走既有 `note`）· 不改 `STATUS_WORDS` 词表 · 不改冻结门对已收口档 append / status / edit 的拒（串逐字）· 不改 `close` 的 §6 单段拒串（J2 逐字）· 端面零改（VSC / desktop 消费同一 tool-docs）。用例表 ∕ 验收回指 = `BATCH-RECORD.md` §4.19（本档不重述）。
 
 ### 6.25 eng-coder spawn 的令牌必填与门报错三态（FR33 · 工具说明 ∥ schema ∥ 拒句）
 
@@ -1724,7 +1744,7 @@ export function gateDesignToken(parent, args) {
 | L4 | `thincoder-core/agent-tools/subagent-spawn.mjs:131` | `throw new Error("Invalid or missing design token — run advisor with type='design' first and pass the returned token as designToken.")` → `throw designTokenRefusal("missing")` | 替换 |
 | L5 | `thincoder-core/agent-tools/subagent-spawn.mjs:240-258` | 三条件合取 + 同一句 → `issuedToken = gateDesignToken(parent, args)`（④）+ ③ 四条拒句 | 提取 + 分支（约 +30 行） |
 | L7 | 同档模块尾（`buildSpawnChild` 之后） | 新增 `export function designTokenRefusal` + `export function gateDesignToken` | 追加（约 +20 行；声明提升 ⇒ 前向调用合法，`:131` / `:237` 不漂移） |
-| L6 | `thincoder-core/prompts/persona-engineering.md:331` 后 | 提示词必填行 → `PROMPT-SYSTEM.md` §6.35 逐字块 A | 追加（本档不重述） |
+| L6 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `batchDoc is mandatory` 行之后 | 提示词必填行 → `PROMPT-SYSTEM.md` §6.35 逐字块 A | 追加（本档不重述） |
 
 **⑥ 测试计划**：
 
@@ -1780,6 +1800,35 @@ export function gateDesignToken(parent, args) {
 | 舱 B · 代码 + 测试面 | 门分支与拒句 | `agent-tools/subagent-spawn.mjs` · 核单测档 | A2 / A4 / A5 |
 
 不合并的理由：两舱文件集不重叠 ⇒ 可并行派工、`dependsOn` 不需要——`files` 本就是调度通道（冲突检测用），不是切面依据；验收面是同一份 A1–A5，两舱各读其中一部分。
+
+### 6.26 编辑族行号锚护栏（`edit` 行号形 ∥ `insert_after` 记账面）
+
+**判据（定位，不重述）**：行号来自模型上一次 `read`；那之后任何一笔写都让它整体错位，而错位不报错——它改到隔壁几行上，回执仍写成一次成功。判据 = 记账面六行（含 `isDirty` ∧ 陈旧快照），权威 `docs/core/design/EDIT-HELPERS.md` §7（本档不给判定表——D2）。
+
+**契约要点**：目标区整体在写点之前 ⇒ 放行，边界按记账类型分——`insert` 记的 `endLine <= startLine`、`edit` 记的 `endLine < startLine`。其余 ⇒ 拒，拒文带路径、漂移量 `±shift` 与两条下一步（重 `read` ∥ 位置无关寻址 `old_string` / `hashline_edit`）。`write` 全文重写后 ⇒ 任何行号拒。`isDirty` ∧ 快照在场 ⇒ 拒（快照陈旧）。
+
+批量同档：行号条目按快照降序先应用，重叠整批拒（原子零写），内容条目随后按调用序；判定点在组循环之前、用批前快照判一次。
+
+**机面落点**：
+
+| 面 | 落点 |
+|---|---|
+| 判据 + 拒文构造 | `thincoder-core/tools/write-path.mjs` 的 `lastWrites` 容器与 `lineAnchorVerdict` / `lineAnchorRefusal` |
+| edit 单形态 | `thincoder-core/tools/edit-diff.mjs`（`runSingleEdit`） |
+| edit 批量帧 | `thincoder-core/tools/edit-batch.mjs` |
+| ACP 桥 | `thincoder-cli/src/acp/bridge.mjs`（三入口 `write` / `editSingle` / `editBatch`——判据 + 帧 + 写后记账） |
+| patch 陈旧快照出口 | `thincoder-core/tools/patch.mjs` 的批级记账循环（`markDirty` 时同 `clearLastWrite`） |
+| insert_after | `thincoder-core/tools/file.mjs` 的 `insertAfterTool.execute`（改调单源判据与构造器） |
+| 描述面 | `thincoder-core/tool-docs/edit.md` · `thincoder-core/tool-docs/insert_after.md`（六要素 ⑤ 错误形态） |
+
+**不落快照的写入口**：`thincoder-core/agent-tools/batch.mjs`（批档直写）与 `bash`（外部进程直写）——判定 = 不接，理由住 `docs/core/design/EDIT-HELPERS.md` §7.4 末表。
+
+**受影响面闭集**：五条通道逐条判（`thincoder-core/agent-tools/` · `thincoder-core/tools/` · `thincoder-cli/src/acp/bridge.mjs` · `thincoder-vscode/src/` · `thincoder-desktop/src/`），判定与理由住 `docs/core/design/EDIT-HELPERS.md` §7.4（本段只指不述——D2）。缺席即视为漏：没提的那一档不进检查范围。
+
+**验收**：`docs/core/design/EDIT-HELPERS.md` §7.1 的六行判据（放行两行 / 拒四行）、§7.3 的批量帧 R1–R4、§7.2 的拒文四要素各有单测；拒文含路径、漂移量、两条下一步。
+
+**边界**：记账面 = 本进程内一张表——跨进程 / 跨实例写同一档不在护栏内（`EDIT-HELPERS.md` §7.4）。不加提示词面句子：护栏自己解释并给出下一步。不动 `write` / `apply_patch` / `hashline_edit` 的判定语义（`apply_patch` 只多落一笔清快照）。
+
 
 ## 9. checklist 废除
 

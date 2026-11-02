@@ -51,6 +51,10 @@ export function appendCappedText(prev, add, { hard, head = 0, tail = 0, marker =
  * straddling the boundary leaves a LONE high surrogate (U+D800-DBFF) that strict UTF-16
  * decoders reject. When the cut point lands on a high surrogate, step back one code unit
  * (the pair is dropped whole).
+ *
+ * 核内唯一定义（D2）：`thincoder-core/agent/offload.mjs`（双端 preview 头切片）与
+ * `thincoder-core/agent/setup.mjs`（doc_search 预览）经 import 复用本函数——核内不再有私有复本。
+ * 入参先归一（`String(text ?? "")`）：非字符串入参归一后按同一规则切片，不抛（既有导出契约）。
  */
 export function safeSliceUTF16(text, max) {
   const t = String(text ?? "")

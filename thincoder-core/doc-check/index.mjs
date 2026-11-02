@@ -12,11 +12,14 @@
  *   清单里不可判档（不在盘 ∥ 非 .md）⇒ 报错点名、整次零判定；
  *   `gate` = 交付时点的裁定——首行给机器可判 verdict；不可判档给跳过行（可见，不静默丢掉）。
  *   强制面住交付协议 + 批次档 §6 前置，工具本体不阻断任何动作。
+ * **`report` 面另有一份只读清点：行号坐标清单**（`./line-refs.mjs` · 口径 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W）——
+ *   **只报不拦**：不进 `gate`、不计入 `hits`、不阻断写入。判据面仍是上面两条，一字不改。
  */
 import { statSync } from "node:fs"
 import { relative, resolve } from "node:path"
 import { checkParagraphs, DOC_CLASS } from "./paragraph.mjs"
 import { checkAnchors } from "./anchors.mjs"
+import { collectLineRefs, lineRefsBlock } from "./line-refs.mjs"
 
 /** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
  *  ——豁免谓词（表行 / 围栏 / 列表项 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。 */
@@ -128,7 +131,8 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
  *   `docs`）——缺省 = `explicit`；只影响报面措辞。
  * @returns {{report:string, hits:{total:number, anchors:number, paragraph:number}, anchorHits:Array,
  *   paragraphHits:Array, files:string[], checkFiles:string[], paragraphMax:number,
- *   skipped:{missing:string[], notMarkdown:string[]}}}
+ *   skipped:{missing:string[], notMarkdown:string[]}, lineRefs?:{body:Array, fenced:Array, total:number}}}
+ *   `lineRefs`（行号坐标清单的采集结果）**只在 `report` 面返回**——`gate` 面构造上不产该字段。
  *   消费面判「清」须读 `report` 首行（gate）∥ `hits.total`（report），不得只看其中一个。
  */
 export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
@@ -170,6 +174,10 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
     return { ...shared, report: gateReport({ base, docsSource: source, checkFiles, skipped: shared.skipped, anchors, paragraphs }) }
   }
 
+  // 行号坐标清单的**唯一采集点**：放在 `if (gate)` 早返回之后——`gate` 分支上一行已返回，够不着这里。
+  // 「闸看不见清单」靠这个结构成立（不是「算出来再声明它不参与」——一份存在但被声明无用的数，读者迟早拿它当判据）。
+  const lineRefs = collectLineRefs({ files: checkFiles })
+
   const out = [
     "文档纪律机检（报告态 · 非门禁）",
     `射程：${base} · 传入清单 ${checkFiles.length} 档 · 区带豁免：${paragraphExemptZones.length ? paragraphExemptZones.join(" ∥ ") : "无"}`,
@@ -183,7 +191,9 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
       : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
   }
   for (const w of paragraphs) out.push(paragraphHitLine(base, w))
+  // 清单块位置 = 命中区之后、末行 `结论：…` 之前（报面的末行恒是结论句，清单不抢它的位）。
+  out.push(...lineRefsBlock({ base, files: checkFiles, refs: lineRefs }))
   out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）`)
 
-  return { ...shared, report: out.join("\n") }
+  return { ...shared, report: out.join("\n"), lineRefs }
 }

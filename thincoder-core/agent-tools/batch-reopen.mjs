@@ -17,7 +17,7 @@
  */
 import { dirname, relative } from "node:path"
 
-import { STATUS_LINE_RE, readBatchStatusLine, sectionHeaderRe, updateSectionStatusLine } from "./batch-skeleton.mjs"
+import { STATUS_LINE_RE, sectionHeaderRe, updateSectionStatusLine } from "./batch-skeleton.mjs"
 
 /** 本地今天（YYYY-MM-DD）——重开日期戳（close 侧同一枚，经本档导出复用——日期口径只此一处）。 */
 export function todayLocal() {
@@ -40,14 +40,15 @@ export function reopenReasonError() {
   return "batch: 重开需理由（reopen requires a reason）— reopening a frozen record reverses a recorded decision, so the reason must be stated: pass it as `note` (it lands verbatim in the §1 reopen record). Nothing was written."
 }
 
-/** §1 状态行值原文（改写前的读取面——readBatchStatusLine 只给三态，日期字面须自己读）。 */
+/** §1 状态行值原文（改写前的读取面——readBatchStatusLine 只给三态，日期字面须自己读）。
+ *  **取值区 = §1 段头区**（`## §1` 标题之后、下一 `^#{2,}` 起行之前——与写面同一条定位面）：
+ *  回执要的是真段级那一行，段体 / 轮次块里引述的状态行不算。 */
 export function readBatchStatusLineRaw(src) {
   const s1 = /^## §1(?=\s|$)/m.exec(src)
   if (!s1) return null
-  const nextRe = /^## §\d/gm
-  nextRe.lastIndex = s1.index + s1[0].length
-  const next = nextRe.exec(src)
-  const body = src.slice(s1.index + s1[0].length, next ? next.index : src.length)
+  const zone = src.slice(s1.index + s1[0].length)
+  const cut = zone.search(/^#{2,}/m) // 区界判据与写面同一条：任意 `##` / `###` 起行都结束段头区
+  const body = cut < 0 ? zone : zone.slice(0, cut)
   return body.split(/\r?\n/).map((line) => STATUS_LINE_RE.exec(line)).find(Boolean)?.[1] ?? null
 }
 

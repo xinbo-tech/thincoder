@@ -14,7 +14,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 
 | # | 需求 | 判定句（可机器验证） |
 |---|---|---|
-| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（类 `thincoder-core/agent/helpers.mjs:239`（唯一实现；VSC `thincoder-vscode/src/agent.mjs:9` 只剩转口）/ 抛点 `thincoder-core/agent/turn-loop.mjs:316`）；继续 = `resume:true` 重跑同一执行体 |
+| **F1** | 统一语义 | 撞墙 = `runAgent` 耗尽 `maxTurns` 抛 `ContinueError`（类 `thincoder-core/agent/helpers.mjs`（唯一实现；VSC `thincoder-vscode/src/agent.mjs:9` 只剩转口）/ 抛点 `thincoder-core/agent/turn-loop.mjs:316`）；继续 = `resume:true` 重跑同一执行体 |
 | **F2** | 续跑不重来 | 继续**不重新注入任务文本**、保留 history 与改动——`resume` 把子执行体的活 history 交回（VSC `thincoder-vscode/src/agent-tools/subagent-run.mjs:141`） |
 | **F3** | 全执行体覆盖 | 四类执行体均有续跑分支：主 agent（`thincoder-vscode/src/extension/panel-chat.mjs` 回合循环）· 子 agent（`agent-tools/subagent-run.mjs:85`/`:175`）· 飞刀（现体 = 核 `thincoder-core/agent-tools/subagent-actions.mjs`）· 会诊（`agent-tools/consult.mjs:310`） |
 | **F4** | 拒绝返回部分成果 | 拒绝 / headless / 无法续跑 → 部分成果 + turn-cap 标记（VSC `agent-tools/subagent-run.mjs:195`/`:199`，文本含 "work may be partial"）——报告据此判定「撞墙中断、工作可能不完整」 |
@@ -30,7 +30,7 @@ agent 撞上轮数上限时**不该丢掉已完成的工作**——可就地续�
 | # | 维度 | 标准（含度量） |
 |---|---|---|
 | **N1** | 继续次数不设上限 | 防卡死靠用户 Stop——无次数帽（VSC 侧 `src/` 面零命中实核） |
-| **N2** | 预算可配 | `agent.maxTurns` / `agent.subagentTurns` / `agent.consultTurns`（默认 200 / 100 / 40——单源 `thincoder-core/agent/helpers.mjs:24-25`）；explore 执行体走 `subagentTurns`（双端对齐） |
+| **N2** | 预算可配 | `agent.maxTurns` / `agent.subagentTurns` / `agent.consultTurns`（默认 200 / 100 / 40——其中 200 / 100 的单源 = `DEFAULT_MAX_TURNS` / `DEFAULT_SUBAGENT_TURNS`，`thincoder-core/agent/helpers.mjs`）；explore 执行体走 `subagentTurns`（双端对齐） |
 | **N3** | 时钟语义 | 会诊继续 = 新预算 = 墙钟 watchdog 重置（重挂点 VSC `agent-tools/consult.mjs:323-325`） |
 | **N4** | 显示 / 协议零改动 | 编号经既有回调与终态快照消费——**桥消息字段零新增**；webview 显示文件零改动 |
 | **N5** | 回归锁 | 跨段编号用例族全绿 + 全量回归全绿；双端语义同源、**异载体**（VSC 种子经 `opts`、核侧同一 child 对象跨段 ⇒ 种子零作用） |

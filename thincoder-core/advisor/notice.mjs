@@ -78,7 +78,7 @@ export function buildTypeGateRefusal({ criterion, received = null, declared = nu
   }
   parts.push(
     '  • type="code"   — code review: reviews the code you changed; pass paths=[...] to scope files/directories (documents=[...] adds acceptance-criteria context).',
-    '  • type="design" — design review: reviews design / requirement documents; pass documents=[...] (the explicit list) — plus batchDoc when a batch record is in flight.',
+    '  • type="design" — design review: reviews design / requirement documents; pass documents=[...] (the explicit list) and batchDoc — required, the batch record this review belongs to.',
     "Nothing was sent: no review instance, no round consumed, no design token minted, no LLM call.",
   )
   return parts.join("\n")

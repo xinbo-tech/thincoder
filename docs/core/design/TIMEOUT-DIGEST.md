@@ -33,8 +33,8 @@
 | 分支 | 依据 |
 |---|---|
 | 超时值 `≤0` / 非有限数 ⇒ 回退默认 | 同 `effectiveFetchTimeoutMs` 的既有判式（`provider/core.mjs:73`）；手写 config.json 的非法值不得静默禁用保护（`docs/core/design/AGENT-PARAMS.md` §2 同款裁定） |
-| 落盘改用 `offloadToolResult` 的 `force` 支，而不是新写一个落盘函数 | `offloadToolResult` 已是「预览 + 路径」文案单源（`thincoder-core/agent/helpers.mjs:156-172`）；同文案两处实现 = 漂移 |
-| `force` 支按正文长度二分渲染：≤64K 原样一份 + 路径；>64K 双端预览 + 路径 | `buildDualEndPreview` 对 `text.length ≤ 16K` 的正文头尾各返整串（`thincoder-core/agent/helpers.mjs:57`、`:72-76`）——原样复用会注入「正文两份 + `middle omitted: 0 chars`」，A4 的 200 字符用例正是此形（评审 #1） |
+| 落盘改用 `offloadToolResult` 的 `force` 支，而不是新写一个落盘函数 | `offloadToolResult` 已是「预览 + 路径」文案单源（`thincoder-core/agent/offload.mjs`）；同文案两处实现 = 漂移 |
+| `force` 支按正文长度二分渲染：≤64K 原样一份 + 路径；>64K 双端预览 + 路径 | `buildDualEndPreview` 对 `text.length ≤ 16K` 的正文头尾各返整串（`thincoder-core/agent/offload.mjs`）——原样复用会注入「正文两份 + `middle omitted: 0 chars`」，A4 的 200 字符用例正是此形（评审 #1） |
 | 判超记账保留、布尔改作渲染档位（超轮预算 ⇒ 只给清单行 + 路径），落盘不再看它 | `digestBudgetOver` 的 `used` 是四族共享的轮累计（`thincoder-core/agent-tools/digest-budget.mjs:51-56`）；删调用会让 consult 族的累计口径跟着变；渲染保留它，单轮 inline 正文仍受 64K 预算约束（评审 #7） |
 | 完成门加 `!poolLive(agent)` | 挂起尾巴已用同判据（`thincoder-core/agent/suspension.mjs:296`）；二次立口径 = 池空判定两处漂移 |
 | 首 chunk 窗 = `effectiveFetchTimeoutMs`（默认 600s），不新立配置键 | 用户现场（2026-10-28 00:25 逐字）：「我们的本地 spark 集群在长上下文时首 token 一定会超过这个时间」（指 `SSE idle timeout: no data for 120s`）；头阶段超时早已用同一值等上游（`thincoder-core/provider/core.mjs:428`），语义同为「等上游开口」 |
@@ -78,7 +78,7 @@ export function effectiveBodyIdleMs(provider) {
 
 数据流：配置盘 → `loadConfig` 合并 + 提升 → `agent.config.provider.bodyIdleTimeoutMs` → `chat(provider)` 各 transport → 两条读侧路径（直连 fetch 的读者定时器 ∥ 代理的 `_bodyIdleMs`）读同一个值。
 
-### 2.2 报告落盘（`thincoder-core/agent/helpers.mjs` `offloadToolResult` + `subagent-async.mjs` 注入点）
+### 2.2 报告落盘（`thincoder-core/agent/offload.mjs` `offloadToolResult` + `subagent-async.mjs` 注入点）
 
 `offloadToolResult(text, callId, dir?, { force = false })` 增一个开关 `force`。**`force` 只改「是否落盘」，不改「渲染形态」**——渲染按与既有长度门同一个常量二分：
 
@@ -162,7 +162,9 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 
 **代价认账**：首 chunk 窗默认取 600s ⇒「响应头已回、此后永不出字节」的发现时间由 120s 变为 600s。与「调大 `agent.bodyIdleTimeoutMs`」那条被拒选项的代价同源（§4 D7），本设计认这笔账：换来的是长上下文 prefill 不再被腰斩。缩短的旋钮只有一个且已在：`agent.fetchTimeoutMs`。
 
-单文件最大 = `thincoder-core/agent/helpers.mjs` 500 行，位于 500 行咨询档上沿，不越档、不拆分。若该档继续增长越档，拆点 = 把 offload / 预览族整块外移为 `thincoder-core/agent/offload.mjs`（原档保留 re-export，消费面零改），仅此一处。
+offload / 预览族住 `thincoder-core/agent/offload.mjs`：导出面三件 = `offloadToolResult` ∥ `cleanupOldToolResults` ∥ `TMP_RETENTION_MS`；档内私有件 = 落盘门限四常量 + `buildDualEndPreview` + 两把 UTF-16 安全切片。
+
+`thincoder-core/agent/helpers.mjs` 以具名 re-export 转口同名三件——所有既有 `import … from "…/helpers.mjs"` 逐字零改。
 
 批内用例落 `docs/batches/` 而非 `thincoder-core/test/`：后者是常驻机检档目录（`advisor-project-context` / `doc-check-*` / `manifest-five-keys` / `subagent-design-token-gate` 等），混入一次性档会让「零留存」不可读（`docs/core/design/TESTING.md:92-94` 的口径 = `docs/batches/*.test.mjs`，随批删）。
 
@@ -174,7 +176,7 @@ if (depth === 0 && !agent.config?.agent?.engineering && !poolLive(agent)
 | D2 | 默认值住 DEFAULTS 表 + 单源常量 `DEFAULT_BODY_IDLE_MS` | 只住 `provider/core.mjs` 常量（照抄 `fetchTimeoutMs`）——`settings list` 看不见该键，判据不成立；对照 `AGENT-PARAMS.md:21` 的 advisor 先例（默认只住常量）——本键因可见性判据不沿用 |
 | D3 | 非法值回退默认，不抛错、不解释成「禁用」 | 「`0` = 永不超时」——无场景判据（没有出现过的现场），且静默关保护；本轮不做开关 |
 | D4 | 报告落盘复用 `offloadToolResult` 的 `force` 支 | 新写 `persistReport`——与既有预览文案形成第二实现；在 settle 回调另起落盘点——四族 settle 各一处，注入点才是唯一共享面 |
-| D5 | 注入体 = 正文一份（≤64K）/ 双端预览（>64K）/ 清单行（超轮预算）+ 路径；短文绝不双端预览 | 短文双端预览——`buildDualEndPreview` 对 ≤16K 正文头尾各返整串（`helpers.mjs:57`、`:72-76`）⇒ 正文两份 + `middle omitted: 0 chars`；保留「超预算才落盘」——正是报告丢失的成因；全文 `inline`——64K+ 请求体的原事故面 |
+| D5 | 注入体 = 正文一份（≤64K）/ 双端预览（>64K）/ 清单行（超轮预算）+ 路径；短文绝不双端预览 | 短文双端预览——`buildDualEndPreview` 对 ≤16K 正文头尾各返整串（`thincoder-core/agent/offload.mjs` 的 `safeSliceUTF16End` ∥ `buildDualEndPreview`）⇒ 正文两份 + `middle omitted: 0 chars`；保留「超预算才落盘」——正是报告丢失的成因；全文 `inline`——64K+ 请求体的原事故面 |
 | D6 | 完成门加 `!poolLive(agent)`，判据取自 `suspension.mjs` | 在 `task.mjs` 侧改归零条件——`task` 更新与池状态无关，判据错位；新建池空判定——第二口径 |
 | D7 | 首 chunk 窗复用 `effectiveFetchTimeoutMs`，不新立配置键 | 新立 `agent.firstChunkTimeoutMs`——现无「首 chunk 窗要 ≠ 头阶段窗」的现场，多一个键多一个用户要学的旋钮；调大 `bodyIdleTimeoutMs`——把两种失败模式绑在一个旋钮上，流中途停摆的发现时间同比变长 |
 | D8 | 只修读侧面（`readSSE` ∥ `parseGeminiStream`），传输层看门狗另批 | 同批修传输面（`thincoder-core/proxy-transport.mjs`）——唯一的逐字现场（spark 报障）未提代理，无日志、无复现命令、无代理配置下的读数；分支要有现场才走，无现场的防御是没人走的路径 |

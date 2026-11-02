@@ -1,10 +1,27 @@
-Batch-record lifecycle tool (一段一作者 — six append-only sections, one author each). actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation;
+Batch-record lifecycle tool (一段一作者 — six sections, two write dispositions: §2 is the spec section and may be rewritten in place, §1 / §3 / §5 / §6 are append-only evidence).
+
+actions: create (depth-0 only — write a new six-section skeleton record; pass path + topic + source, plus optional ledger / board that fill the record's 台账 header line at creation;
 
 ledger:"#N" takes over an existing row, and omitting ledger opens a new row only when no unsettled row exists on the same board — otherwise create is refused with the candidate list and you pass newDebt:"<why this is a new debt>" or ledger:"#<id>")
 
 · append (add text to the END of YOUR section — existing lines are never rewritten or deleted)
 
-· status (update YOUR section's `**状态行**：` line — the value must carry exactly ONE legal keyword of your section's STATUS_WORDS entry, decorated only by surrounding symbols / a trailing ISO date / whitespace; prose goes to the separate `note` field, which lands as a parenthetical).
+A §3 append must carry exactly one verdict on its own line — `VERDICT: pass` or `VERDICT: changes-required`; the localized whole-line forms count too (`结论：通过` / `结论：不通过`, and their 需修改 variants), and the Chinese forms take an optional trailing 。.
+
+A §3 write that reads as no verdict line, or as both lines at once, is refused with nothing written — no round number is consumed, so resend the same text with the verdict line added.
+
+
+· edit — replace one anchored range inside your own section (§2 only: the spec section, which may be rewritten in place; §1 / §3 / §5 / §6 are append-only evidence)
+
+oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it.
+
+Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, and any anchor or replacement that touches or introduces a `**状态行**：` line (the status line has one writer: `status`).
+
+· status (update YOUR section's `**状态行**：` line — the value must carry exactly ONE legal keyword of your section's STATUS_WORDS entry, decorated only by surrounding symbols / a trailing ISO date / whitespace).
+
+Prose goes to the separate `note` field, which lands as a parenthetical.
+
+A §3 pass round sets that section's status line in the same write — `status` on §3 is an optional rewrite, never a required step.
 
 Writing §1 已收口 closes the record and runs the closeout-chain gate: §2 / §3 / §4 / §6 must each carry content, or §1 declares it inapplicable with `> 不适用：§N —— <reason>` (§2 / §3 / §4 only; §5 is exempt; §6 never).
 
@@ -22,6 +39,10 @@ Identity fixes what you may write (段白名单): main agent (depth 0) — creat
 
 append/status domains are mode-dependent: engineering — append §1/§4/§6, status §1; normal — append §1/§2/§4/§5/§6, status §1/§2/§5 (the main agent holds the designer seat and records direct implementation);
 
+edit is narrower than append — §2 is the only section rewritable in place, so it is open to eng-designer (engineering and normal) and to the depth-0 main agent in normal mode.
+
+In engineering mode §2 is eng-designer's and depth-0 writes §1/§4/§6 through append; a design review (§3) or eng-coder (§5) has no edit domain at all.
+
 eng-designer — §2; eng-coder — §5; a normal-mode coder bound via batchDoc — §5; design review (review binding) — §3.
 
 A write outside your own section is refused.
@@ -38,7 +59,7 @@ A design review's append is stamped by the tool with a `### 轮次 N（评审子
 
 Credential values are stripped mechanically before writing (never write a token or designId value).
 
-Document-check gate: every append runs it before the write — any section (§1–§6), depth-0 and sub-agent and design review alike — and so does closing a record (or setting §1 to 已收口).
+Document-check gate: every append runs it before the write — any section (§1–§6), depth-0 and sub-agent and design review alike — and so does an `edit §2` (what it judges is the rewritten §2 body), and so does closing a record (or setting §1 to 已收口).
 
 On append it judges three things: the text you are appending now, the markdown files already touched in this run, and the record itself — but only the first two can refuse the write.
 

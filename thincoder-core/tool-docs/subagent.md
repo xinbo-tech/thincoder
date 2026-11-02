@@ -46,7 +46,9 @@ Available roles (exposed per mode; the role is REQUIRED for action:'spawn' — a
   and an expired token is refused with expired named (its reply also echoes a designId — pass it:
   required to pick between concurrent designs, optional for one;
 
-  echo it back in the delivery report). REQUIRES a batchDoc — the batch record path, the task book this spawn implements (refused without it, when it does not resolve to a readable file, or when that record already has an in-flight spawn — one batch record serves one concurrent spawn: wait for the occupant to settle, or cancel it).
+  echo it back in the delivery report). REQUIRES a batchDoc — the batch record path, the task book this spawn implements (refused without it, when it does not resolve to a readable file, or when that record already has an in-flight spawn).
+
+  One batch record serves one concurrent spawn: wait for the occupant to settle, or cancel it.
 - eng-designer — engineering mode only: the SOLE author of the design documents and of the batch record's design section (requirement docs stay with the main agent). Writes no implementation code, does not edit prompts, does not fire reviews, needs NO designToken. Surveys on its own; may only spawn
   read-only explore children (sync, ≤6 per batch). REQUIRES a batchDoc (same gate as eng-coder).
 
@@ -56,7 +58,9 @@ Task book (normal-mode roles: explore / plan / coder): four core structured para
 All five are required: a missing, blank or non-string value is refused with the parameter named.
 A free-text task is an optional supplement, never the whole brief.
 
-Engineering roles (eng-coder / eng-designer) take their task book from the batch record: batchDoc (the record path) and round (initial|fix), plus files / dependsOn for scheduling; the child reads §2 of that record itself — no other task text is passed. A record carries one concurrent spawn at a time: a second spawn on a record still in flight is refused, naming the occupant — sequential hand-offs (design → implementation → fix round) pass, because the previous spawn has settled first.
+Engineering roles (eng-coder / eng-designer) take their task book from the batch record: batchDoc (the record path) and round (initial|fix), plus files / dependsOn for scheduling; the child reads §2 of that record itself — no other task text is passed.
+
+A record carries one concurrent spawn at a time: a second spawn on a record still in flight is refused, naming the occupant — sequential hand-offs (design → implementation → fix round) pass, because the previous spawn has settled first.
 
 An eng-coder spawn also carries designToken — the write credential (the exact value from the review, or copied verbatim from the action:'design-slots' row, the text after designToken=), and designId when several designs are open: missing or mismatched = the spawn is refused.
 
@@ -85,5 +89,5 @@ immediate spawn (no scheduler involvement).
 Writing the prompt:
 - The child starts with zero context — brief it like a colleague who just walked in: goal, what you already know, the specifics.
 - Put exact paths and commands in — do not make it search for what you already know.
-- Do not delegate understanding: resolve the paths/line numbers the task hinges on first.
+- Do not delegate understanding: resolve the paths and the symbols the task hinges on first.
 - Once it runs, leave that scope to it — don't redo its searches in parallel or finish manually midway.

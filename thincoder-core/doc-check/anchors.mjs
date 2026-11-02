@@ -14,6 +14,8 @@
  * 节在盘：**只读解析命中的那一档**（点查，不遍历）——目标档内存在标题行，其标题编号
  *   （标题文本去 `^#{1,6}\s` 后的首个 `\d+(?:\.\d+)*`）= 指针节号。
  * 残余登记（fail-open 方向——归评审核验面）：未闭合围栏 ⇒ 至档尾免；指针行的坐标尾不入判、同行的档 token 照判。
+ * 档名豁免（类名 ∥ 占位词干）的**判定只此一处** = 本档导出的 `docNameExemption`（判据单源 = §3.24 条目 X）：
+ *   两张表保持私有、不上导出面；另两处消费面（兄弟脚本 ∥ 行号坐标清单）只拿判定、拿不到名单。
  */
 import { readFileSync, statSync } from "node:fs"
 import { basename, dirname, resolve } from "node:path"
@@ -34,6 +36,28 @@ const FILENAME_CLASSES = new Set([
 const PLACEHOLDER_STEMS = new Set([
   "x", "a", "b", "file", "out", "foo", "bar", "example", "sample", "name", "path",
 ])
+
+/** 扩展名闭集（档名后缀族——与 `thincoder-core/doc-check/line-refs.mjs` 的抽取式同一组枚举）：
+ *  谓词按这一组剥后缀取词干。**两处必须同改**——两档互 import 会成环（`line-refs.mjs` 已 import 本档谓词），
+ *  所以这里留一份，改扩展名族时两处一起改。 */
+const DOC_EXTS = ["md", "mjs", "cjs", "js", "json", "css", "html", "svg", "yml", "yaml", "sh", "ps1"]
+
+/**
+ * 档名豁免判定（**唯一一处** · 判据单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.24 条目 X）：
+ * 三处消费同一个谓词——锚判（本档）∥ `scripts/prompt-refs-check.mjs`（J1 ∥ J3 命中过滤）∥ 行号坐标清单（`./line-refs.mjs`）。
+ * @param {string} name 档名 = **末段名、不带目录段**，大小写不敏感
+ * @returns {null|"filename-class"|"placeholder"} `"filename-class"` = 约定的类名（整名判，不剥后缀）；
+ *   `"placeholder"` = 占位词干（按闭集剥后缀后取词干，词干 ≤ 1 字符或命中占位表）；`null` = 不是豁免名
+ */
+export function docNameExemption(name) {
+  const bn = String(name ?? "").toLowerCase()
+  if (FILENAME_CLASSES.has(bn)) return "filename-class"
+  const dot = bn.lastIndexOf(".")
+  const ext = dot > 0 ? bn.slice(dot + 1) : ""
+  const stem = DOC_EXTS.includes(ext) ? bn.slice(0, dot) : bn
+  if (stem.length <= 1 || PLACEHOLDER_STEMS.has(stem)) return "placeholder"
+  return null
+}
 
 /** CANON 操作数族（**规范豁免串** · 判据单源 = `docs/core/design/PROMPT-SYSTEM.md` §6.6「判保留面」）：
  *  七个名字在模型面是**模型要写出来 / 读写的文件名**（行为操作数 · 路径操作数），不是「去读这个档」的指针——
@@ -121,10 +145,9 @@ export function checkAnchors(root, { files = [] } = {}) {
       while ((m = re.exec(scan)) !== null) {
         const token = m[1]
         const num = m[2] ?? null
-        const bn = basename(token).toLowerCase()
-        const stem = bn.replace(/\.md$/, "")
-        // 类名 ∥ 占位符两免：抽取面不把它们当指针（判据 = DOC-DISCIPLINE §3.20 ① 的「档 token」定义面）
-        if (FILENAME_CLASSES.has(bn) || stem.length <= 1 || PLACEHOLDER_STEMS.has(stem)) continue
+        // 类名 ∥ 占位符两免：抽取面不把它们当指针（判据 = DOC-DISCIPLINE §3.24 条目 X——
+        // 判定只此一处，兄弟脚本与行号坐标清单消费同一谓词）
+        if (docNameExemption(basename(token)) !== null) continue
         const r = resolveDoc(token, f, base)
         if (!r.ok) { hits.push({ file: f, line: i + 1, token, clazz: "档缺" }); continue }
         if (num !== null && !sectionOnDisk(r.path, num)) hits.push({ file: f, line: i + 1, token, clazz: "节缺", section: num, target: r.path })

@@ -12,7 +12,7 @@
 |---|---|---|---|
 | **D-1** | 12 例慢例 `slow(` 归册 | 逐例**单跑**读数在案；单跑 **>500 ms** 者一律 `slow(` 归册；归册后 `npm test` 绿（单入口——`slow` 纯别名，无拦截线） | `docs/vsc/requirements/PROJECT.md` §6 N-P1 / N-P2 |
 | **D-2** | 收发面全量对表 + 死码清理 | 表逐行在位（顶级判别式 · host 发射点 · 消费位 · 处置）；复跑**零未处置**；删项后全树**零悬空引用** | `WEBVIEW.md` §3 N-W7 |
-| **D-3** | 两档越 500 硬限 ⇒ 拆分 | 拆后各档（含新档）`wc -l` **≤500**；**缝保持**（既有导出名 / 调用点零改 · 既有用例零回归） | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
+| **D-3** | 两档越 500 软线 ⇒ 拆分（主动审视结论） | 拆后各档（含新档）`wc -l` **≤500**；**缝保持**（既有导出名 / 调用点零改 · 既有用例零回归） | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
 
 ## 3. 设计层
 
@@ -68,7 +68,7 @@
 
 **判据（可机判）**：① 被删标识符活代码面零命中（`grep -rn` 读数入 §5；射程 = §6 A6 注）② `npm test` 绿 ③ `npm run doc:check` 零悬空。
 
-### 3.3 D-3 两档越 500 硬限 ⇒ 结构拆分
+### 3.3 D-3 两档越 500 软线 ⇒ 结构拆分
 
 **先决约束（硬性）**：**动态载入面（`await import()` 动态载核登记册）必须留在 `setup.mjs`**——迁出即破该结构约束。
 
@@ -188,28 +188,28 @@
 
 ## 12. 四档结构拆分（越档面处理）
 
-> 判据源 = `docs/vsc/requirements/PROJECT.md` §6 **N-P3**（产品树任一档 ≤500 行；越档 ⇒ 结构拆分并保持对外缝）。建议线 = **主档 ≤300**。
+> 判据源 = `docs/vsc/requirements/PROJECT.md` §6 **N-P3**（产品树限源 / 测试档，任一档 ≤800 行；越档 ⇒ 结构拆分并保持对外缝）。软线 = **500 行**（>500 主动审视，无拆分义务）。
 
 ### 12.1 越线登记（现行读数 · 口径 `wc -l`）
 
-**触发判据（单源）**：软线 **500 行** / 硬限 **800 行**（判据源 = `docs/vsc/requirements/PROJECT.md` §6 **N-P3**——产品树任一档 ≤500 行；越档 ⇒ 结构拆分并保持对外缝）；主档建议线 **300**（咨询线——无拆分义务 ⇒ 不入本登记）。
+**触发判据（单源）**：软线 **500 行**（>500 主动审视）/ 硬限 **800 行**（>800 必须拆）（判据源 = `docs/vsc/requirements/PROJECT.md` §6 **N-P3**——产品树限源 / 测试档，任一档 ≤800 行；越档 ⇒ 结构拆分并保持对外缝）。
 **逐档触线（单源）**：`agent.mjs` · `setup.mjs`——**行数超线（拆分）复核触发**；未列档触发 = 触碰时复核（拆分候选按 §12.2 各档）。
 
 | 档 | 现行读数 | 越线状态 |
 |---|---|---|
-| `thincoder-vscode/src/extension/chat-panel.mjs` | **426** | >300 咨询线、≤500 硬限——触发未到 |
+| `thincoder-vscode/src/extension/chat-panel.mjs` | **426** | 在 500 软线内——触发未到 |
 | `thincoder-vscode/src/extension/panel-messages.mjs` | **357** | 同上（越线登记在册） |
 | `thincoder-vscode/src/extension/panel-session.mjs` | **322** | 同上（越线登记在册） |
 | `thincoder-vscode/src/extension/panel-turn-loop.mjs` | **311** | 同上（首登）——**触发式（未预拆）**：候选线 = 循环外适配 ∕ 绑定族（`newTurnController` ∕ `bindPanelAgent` ∕ `bindCarrierFace`〔+ 载体表〕∕ `attachToolDrivenLegs`——`:35-143` ≈109 行）出档〔新档名实施批定〕；消解窗口 = 该档下次结构性触碰的批（注释 ∕ 坐标 ∕ 词值 ∕ 行级小修不计） |
-| `thincoder-vscode/src/extension/settings.mjs` | **409** | >300 咨询线、≤500 硬限——触发未到 |
+| `thincoder-vscode/src/extension/settings.mjs` | **409** | 在 500 软线内——触发未到 |
 | `thincoder-vscode/webview/ui.js` | **494** | 同上——触发 = 下次实质触碰 ∨ 余量 ≤5（未到） |
-| `thincoder-vscode/src/extension/panel-turn-stages.mjs` | **250** | ≤300 咨询线 ⇒ 不入本登记 |
+| `thincoder-vscode/src/extension/panel-turn-stages.mjs` | **250** | ≤500 软线 ⇒ 不入本登记 |
 | `thincoder-vscode/src/extension/panel-chat.mjs` | **260** | 同上 |
 | `thincoder-vscode/src/agent/setup.mjs` | **298** | 触发线 **>497**——未触 |
 | `thincoder-vscode/src/extension/suspension.mjs` | **290** | **越线登记关闭** |
 | `thincoder-vscode/src/agent.mjs` | **9** | **越线登记关闭**（主循环归核） |
 | `thincoder-vscode/webview/chat.js` | **147** | **越线登记关闭** |
-| 其余现行读数（均 ≤500 硬限 ⇒ 无拆分义务） | — | `thincoder-vscode/src/agent/run-helpers.mjs` **88** · `thincoder-vscode/src/agent/setup-reminders.mjs` **41** · `thincoder-vscode/src/agent/tool-table.mjs` **181** · `thincoder-vscode/src/agent/turn-domains.mjs` **37** · `thincoder-vscode/src/agent/agent-state.mjs` **158** · `thincoder-vscode/src/extension/skills.mjs` **5** · `thincoder-vscode/src/extension/peer-claims.mjs` **34** · `thincoder-vscode/src/extension/peer-domains.mjs` **32** · `thincoder-vscode/src/extension/peer-instances.mjs` **20** · `src/extension/image-handler.mjs` **51** · `src/extension/panel-settings-push.mjs` **119** · `src/extension/provider-probe-window.mjs` **122** · `src/extension/panel-messages-settings.mjs` **205** · `src/extension/panel-messages-turn.mjs` **215** · `src/extension/panel-subagent-relay.mjs` **270** · `src/extension/panel-session-write.mjs` **144** · `webview/chat-messages.js` **238**（≤300 咨询线 ⇒ 不入本登记——值随 `WEBVIEW.md` §3 文件表同拍） · `webview/settings-tools.js` **212**（拆档已落 = §13.3） |
+| 其余现行读数（均 ≤500 软线 ⇒ 无拆分义务） | — | `thincoder-vscode/src/agent/run-helpers.mjs` **88** · `thincoder-vscode/src/agent/setup-reminders.mjs` **41** · `thincoder-vscode/src/agent/tool-table.mjs` **181** · `thincoder-vscode/src/agent/turn-domains.mjs` **37** · `thincoder-vscode/src/agent/agent-state.mjs` **158** · `thincoder-vscode/src/extension/skills.mjs` **5** · `thincoder-vscode/src/extension/peer-claims.mjs` **34** · `thincoder-vscode/src/extension/peer-domains.mjs` **32** · `thincoder-vscode/src/extension/peer-instances.mjs` **20** · `src/extension/image-handler.mjs` **51** · `src/extension/panel-settings-push.mjs` **119** · `src/extension/provider-probe-window.mjs` **122** · `src/extension/panel-messages-settings.mjs` **205** · `src/extension/panel-messages-turn.mjs` **215** · `src/extension/panel-subagent-relay.mjs` **270** · `src/extension/panel-session-write.mjs` **144** · `webview/chat-messages.js` **238**（≤500 软线 ⇒ 不入本登记——值随 `WEBVIEW.md` §3 文件表同拍） · `webview/settings-tools.js` **212**（拆档已落 = §13.3） |
 | CLI 面（登记载体 = 本档 §12.1——KD-26） | — | `thincoder-cli/src/tui/suspension-drive.mjs` **210**（核驱动装配 + 壳） |
 | CSS 类记录值（零拆分计划——引既有裁定「CSS 不入门」：N-P3 模块缝语义 + 评审先例「按既有裁定不升级、不重开」） | — | `thincoder-vscode/webview/chat.css` **514** · `webview/controls.css` **658** |
 
@@ -342,7 +342,7 @@
    六新档：`cd thincoder-vscode/src/extension && wc -l panel-messages-settings.mjs panel-messages-turn.mjs panel-turn-loop.mjs panel-turn-stages.mjs panel-subagent-relay.mjs panel-session-write.mjs`
 
    （Windows 无 `wc` 时用等价式自拟——口径 = 换行符计数；读数逐档入表。）
-   ⇒ 十档逐档 ≤500（硬限），四主档 ≤300（建议线）。
+   ⇒ 十档逐档 ≤500（软线）。
 5. `node scripts/doc-check.mjs --root .`（在 `thincoder/` 根）⇒ **判据 = 按档归属零新增**（改动档 = `docs/vsc/design/VSC-DEBT.md`：零新增悬空 ∕ 零新增超宽行）。
 
    > 口径提示：行宽判据**豁免表格行**（`scripts/doc-check-width.mjs:56-62` + 谓词 `isTableRow` `:40`）⇒ 本档宽表行不触发该门。
@@ -379,7 +379,7 @@
 | KD-12 | 缝 = re-export（导出名零改） | 消费点 30+ 处（§12.3）⇒ 改动面 30 倍且无收益（承 KD-6） |
 | KD-13 | `newTurnController` 随回合循环迁出（re-export 保缝） | 留主档 ⇒ 新档反向 import 主档（平白多一环）；且它与 `runTurnLoop` 的 controller 重建语义同族 |
 | KD-14 | `panel-turn-stages.mjs` 合并「准备 + 收尾」两面（不拆两档） | 拆两档 ⇒ 各 ≈60-80 行碎片档；两面同属「impl 阶段细节层」（`panel-callbacks.mjs` 头注既立手法） |
-| KD-15 | 收尾 `finally` 体**迁出**（非保留） | 保留 ⇒ 主档 ≈277（余量 23 行，再增行即逼近建议线）；迁出后主档 ≈240（余量 60） |
+| KD-15 | 收尾 `finally` 体**迁出**（非保留） | 保留 ⇒ 主档 ≈277；迁出后主档 ≈240 |
 | KD-16 | **不动**范围外三越档（`chat-panel.mjs` / `suspension.mjs` / `settings.mjs`——读数与登记 = §12.1，D2 单源） | 越范围 ⇒ 属"改需求面"；登记 §12.1（触发条件同 N-P3） |
 | KD-17 | 投递面两转口（`postSubagentStatus` / `postSubagentApproval`）随 relay 面入新档；原 `onSubagent` / `onSubagentApproval` 改委托 | `relayLiterals` 只扫**同档** ⇒ 字面量构造面必须同在持 RELAYS 行的档（副本 = 重复构造点，违 D2） |
 | KD-18 | 段 B 的 `runPanelChat` 回调**注入**（`deps.runChat`），不登记环 | 注入零语义且免一条环登记（登记环 = 平白多一环） |
@@ -389,7 +389,7 @@
 
 | # | 验收标准 | 机判命令 / 读数 | 回指 |
 |---|---|---|---|
-| A10 | 四主档 + 六新档逐档 `wc -l` ≤500，四主档 ≤300 | §12.4 第 4 条读数命令（十档逐行输出） | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
+| A10 | 十档（四主档 + 六新档）逐档 `wc -l` ≤500（软线） | §12.4 第 4 条读数命令（十档逐行输出） | `docs/vsc/requirements/PROJECT.md` §6 N-P3 |
 | A11 | 对外缝零改（§12.3 表逐条） | §12.4 第 3 条 grep ⇒ 既有 import 行逐字不变 | N-P3（既有导出名 / 调用点零改） |
 | A12 | 零语义：`npm test` 全绿、计数不降 | `cd thincoder-vscode && npm test` ⇒ exit 0 | §12.4 第 1 条 |
 | A13 | 对外缝保持（1-hop 解析面成立） | §12.2.3 R-6 两条 | N-P3（保持对外缝） |
@@ -402,7 +402,7 @@
 |---|---|---|---|---|
 | T-12 | 正常 | 拆分后集成测试（`npm test`） | 全绿（计数 ≥ 基线） | A12 |
 | T-13 | 正常 | 逐个导出缝 grep（§12.3 逐条） | 既有 import 行逐字不变 | A11 |
-| T-14 | 边界 | 主档行数贴建议线（300）场景 | 十档（四主档 + 六新档）逐档 `wc -l` 读数入表 ⇒ ≤500（硬限）· 四主档 ≤300（建议线）——**与 A10 同一条**（文档档不列行数读数） | A10 |
+| T-14 | 边界 | 主档行数贴 500 软线场景 | 十档（四主档 + 六新档）逐档 `wc -l` 读数入表 ⇒ 逐档 ≤500（软线）——**与 A10 同一条**（文档档不列行数读数） | A10 |
 | T-15 | 边界 | 环 import（messages ↔ messages-settings ↔ session；session ↔ session-write） | 两模块顶层零跨环读取 ⇒ 加载即通过（测试绿） | A12 |
 | T-16 | 错误 | re-export 漏项（如 `saveLines` 未转口） | 消费档 import 失败 ⇒ `npm test` 红并点名该档 | A11 |
 | T-17 | 错误 | 新档含裸标识符 `postMessage(payload)` 而 RELAYS 未登记 | 该档注册行缺失 ⇒ 机检点名该档 | A13 |

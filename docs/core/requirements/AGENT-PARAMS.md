@@ -17,8 +17,8 @@
 |---|---|---|---|
 | **F-AP1** | **评审墙钟可配置且默认更长** | 配置 `agent.advisor.timeoutMs` 即被整体评审墙钟采用；未配置时默认 `600000`（`thincoder-core/advisor/compaction.mjs:36`）；读取点 = `thincoder-core/advisor/loop.mjs:106` | 不给交互菜单加 `timeoutMs` 编辑项 |
 | **F-AP2** | **非法配置值回退默认** | 手写配置的 `0` / 负数 / 非数值 ⇒ 回退 `600000`——不静默禁用超时、不立即触发超时（判据式 = `Number.isFinite(cfg) && cfg > 0`） | 不把非法值当 0 处置（= 关掉超时） |
-| **F-AP3** | **explore 子代理用满轮次预算** | explore 角色不再套硬帽：`agent.subagentTurns`（默认 `100`——`thincoder-core/agent/helpers.mjs:25`）即其 maxTurns；VSC 面源码零硬帽形态（实核） | 不为 explore 单列独立预算键 |
-| **F-AP4** | **主 agent 轮次默认 200 + 显示面同步** | 未配置 `agent.maxTurns` ⇒ 200（`thincoder-core/config.mjs:36` · 兜底常量 `thincoder-core/agent/helpers.mjs:24`）；三级回退 = `thincoder-core/agent/setup.mjs:44`；TUI 显示兜底 `?? 200` 四处（`thincoder-cli/src/tui/cmd-config.mjs:340` / `:341` / `:366` / `:438`） | 不动 `goalTurns`（200，独立语义）与子代理默认轮次（`100`） |
+| **F-AP3** | **explore 子代理用满轮次预算** | explore 角色不再套硬帽：`agent.subagentTurns`（默认 `100`——`DEFAULT_SUBAGENT_TURNS`，`thincoder-core/agent/helpers.mjs`）即其 maxTurns；VSC 面源码零硬帽形态（实核） | 不为 explore 单列独立预算键 |
+| **F-AP4** | **主 agent 轮次默认 200 + 显示面同步** | 未配置 `agent.maxTurns` ⇒ 200（`thincoder-core/config.mjs:36` · 兜底常量 `DEFAULT_MAX_TURNS`（`thincoder-core/agent/helpers.mjs`））；三级回退 = `thincoder-core/agent/setup.mjs:44`；TUI 显示兜底 `?? 200` 四处（`thincoder-cli/src/tui/cmd-config.mjs:340` / `:341` / `:366` / `:438`） | 不动 `goalTurns`（200，独立语义）与子代理默认轮次（`100`） |
 
 ## 3. 非功能性需求
 

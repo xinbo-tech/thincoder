@@ -24,20 +24,22 @@ insert_after = **在已知行后插入新行**——纯插入（不改 / 不删�
 
 **互斥 / 优先级**：`after_line` 与 `after_regex` 都给 → **`after_line` 赢**。语义等价 `lines.splice(targetLine, 0, content)`。
 
-## 3. 精确判定（dirty 护栏——CLI）
+## 3. 精确判定（行号锚护栏——CLI）
 
-insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的写工具改过，行号会漂移 → **静默错位**。护栏（CLI）：
+insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的写工具改过，行号会漂移 → **静默错位**，回执仍写成一次成功。
 
-- 写工具记账受影响区（`lastWrite = { type, startLine, shift }`）。
-- `after_line` 在**未受影响区**（`<= startLine`）→ 允许；**受影响区内** → 拒绝（错误含 was modified since your last read）。
-- `write` 全文重写 → 任何 `after_line` 拒绝。
-- `read` 清 dirty + 更新快照。
+**判据单源**：这条护栏也是 `edit` 行号形的判据，权威 = `docs/core/design/EDIT-HELPERS.md` §7——判定表（六行，含 `isDirty` ∧ 陈旧快照）、拒文、批量帧均不在此重述（D2）。
+
+- 写工具记账受影响区（`lastWrite = { type, startLine, shift }`）；`read` 清写入快照（`thincoder-core/tools/file.mjs` 的 `readTool.execute` 调 `clearLastWrite`）。
+- 无行号目标（`after_regex` 形）只判第 1 / 2 / 6 行——第 3–5 行判的是模型给的行号，正则形没有（`docs/core/design/EDIT-HELPERS.md` §7.1）。
+- 本工具的边界 = `after_line <= startLine`；`edit` 行号形严一格（`endLine < startLine`）——理由是插入不读写目标行，替换读写目标行。
+- 拒文由 `thincoder-core/tools/write-path.mjs` 一处构造，与 `edit` 同句（英文，四要素含两条下一步：重 `read`，或改走位置无关寻址）。
 
 ## 4. EOL 与端差
 
 - EOL：写回按原行尾（`docs/core/design/EDIT-HELPERS.md` §4 F1）；**新建路径不适用**（insert_after 不建文件）。
 - VSC 端 `insert_after`：normalizeEOL + 编辑器分支换行符按 fileEol（消除 `$` 锚失配与混合 EOL 注入）——另见 VSC 侧档。
-- **端差（结构性）**：VSC 端**无 dirty 机制**（read-before-insert 护栏不适用——行号漂移靠模型自觉 re-read）。
+- **端差（结构性）**：VSC 端**无独立 dirty 机制**——其 `insert_after` 现体指核 `thincoder-core/tools/file.mjs`，行号锚护栏随核单源生效。
 
 ## 5. 何时用（模型路由）
 
@@ -49,22 +51,25 @@ insert_after 定位基于行号 / 正则；文件若在 `read` 之后被别的�
 
 | 面 | 落点 | 实核 |
 |---|---|---|
-| 工具对象 / 执行 | `thincoder-core/tools/file.mjs:284`（`insertAfterTool`） | 导出在位 |
-| dirty 护栏判定 | `thincoder-core/tools/file.mjs:309`（`lastWriteOf(abs)`） | 调用点在受影响区判定内 |
-| 记账面（dirty / lastWrite 容器） | `thincoder-core/tools/write-path.mjs:33`（`markDirty`）· `:35`（`isDirty`）· `:41`（`recordWrite`） | 由 `file.mjs:43` re-export |
-| 拒绝文案 | `thincoder-core/tools/write-path.mjs:74`（`dirtyRefusalMessage`） | 导出在位 |
+| 工具对象 / 执行 | `thincoder-core/tools/file.mjs` 的 `insertAfterTool` | 导出在位 |
+| 行号锚护栏判定 / 拒文 | `thincoder-core/tools/write-path.mjs` 的具名导出 `lineAnchorVerdict`（六行判据）· `lineAnchorRefusal`（四要素拒文）——判据与拒文单源 | `thincoder-core/tools/file.mjs` 的 `insertAfterTool.execute` 只调用，不各写 |
+| 记账面（dirty / lastWrite 容器） | `thincoder-core/tools/write-path.mjs` 的 `lastWrites` / `dirtyPaths` 容器与 `markDirty` · `isDirty` · `recordWrite` | 由 `file.mjs` 的 re-export 面转出 |
+| 拒文（dirty 面） | `thincoder-core/tools/write-path.mjs` 的 `dirtyRefusalMessage` | 导出在位 |
+| 拒文（行号漂移面） | `thincoder-core/tools/write-path.mjs` 的 `lineAnchorRefusal`（与 `dirtyRefusalMessage` 同处） | edit / insert_after 同句 |
 | 描述面（模型可见） | `thincoder-core/tool-docs/insert_after.md` | 在位（`DESC()` 加载） |
-| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs:12`（`insert_after`；现体 = 核 `thincoder-core/tools/file.mjs`） | 同名机制 · 独立实现 · 无 dirty 面（随核护栏） |
+| VSC 对位实现 | `thincoder-vscode/src/tools/more-file.mjs` 的 `insert_after`（现体 = 核 `thincoder-core/tools/file.mjs`） | 同名机制 · 无自有 dirty 面（随核护栏） |
 
 ### 6.2 记账面归位
 
-记账面独立成档（`thincoder-core/tools/write-path.mjs`，`file.mjs:43` re-export）——跨工具（write / insert_after / 编辑族）共用。
+记账面独立成档（`thincoder-core/tools/write-path.mjs`，由 `file.mjs` 的 re-export 面转出）——跨工具（write / insert_after / 编辑族）共用。
 
 ### 6.3 VSC 端差异
 
-VSC 端 `thincoder-vscode/src/tools/more-file.mjs:12`（`insert_after`；现体 = 核 `thincoder-core/tools/file.mjs`）——① **无 dirty 护栏**（结构性端差——行号漂移靠模型自觉 re-read，见 §4）；② **编辑器分支**：doc 已打开 → 换行符按 fileEol
-（normalizeEOL + 消除 `$` 锚失配与混合 EOL 注入——`docs/core/design/EDIT-HELPERS.md` §6）；③ 无 `DESC()` md 描述（内嵌）；行尾写回与 CLI 同（F1——`EDIT-HELPERS.md` §4）。
-（②经写路径缝承接）
+VSC 端 `thincoder-vscode/src/tools/more-file.mjs` 的 `insert_after`；现体 = 核 `thincoder-core/tools/file.mjs`，行号锚护栏随核单源生效（无独立记账面）。
+
+编辑器分支：doc 已打开 → 换行符按 fileEol（normalizeEOL + 消除 `$` 锚失配与混合 EOL 注入——`docs/core/design/EDIT-HELPERS.md` §6），经写路径缝承接。
+
+无 `DESC()` md 描述（内嵌）；行尾写回与 CLI 同（F1——`docs/core/design/EDIT-HELPERS.md` §4）。
 
 ## 7. 并入的关键决策记录
 
@@ -73,3 +78,4 @@ VSC 端 `thincoder-vscode/src/tools/more-file.mjs:12`（`insert_after`；现体 
 | D-I1 | read-before-insert **dirty 护栏**（受影响区拒绝） | 行号漂移的静默错位比报错昂贵得多 |
 | D-I2 | `after_line` 与 `after_regex` **互斥且 line 优先** | 两者皆给时以更精确者（行号）为准 |
 | D-I3 | `after_regex` **必须恰匹配一行** | 多匹配即定位不唯一——报错并列出候选优于任选其一 |
+| D-I4 | 行号锚判据与 `edit` **单源**（`EDIT-HELPERS.md` §7），拒文同句 | 同一份漂移两处各判必然分叉，模型学到的是「换一条路就过」 |

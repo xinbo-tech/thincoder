@@ -140,7 +140,18 @@ export function digestTraceLines(rec, startN = null) {
 export function synthSubTask(rec) {
   const meta = rec?.meta ?? {}
   const rows = Array.isArray(rec?.rows) ? rec.rows : []
-  const blocks = rows.map((r) => ({ kind: typeof r?.kind === "string" ? r.kind : "text", text: String(r?.text ?? "") }))
+  // 行首子标（跨端恢复——承接细则 = `docs/cli/design/TUI-SESSION-VIEW.md` §6「行首子标」条）：
+  // 条目带 `sub` ⇒ 行文 = `<sub> · <正文>`（与 VSC ∥ 桌面 `span.advisor-sub` 同一串：同字面 ∥ 同位置 ∥ 同分隔符）；
+  // 不带 ⇒ 原样（存量记录的子标烙在 `text` 内，逐字不变）。子标在此合成——本端渲染面逐字消费 `b.text`，零改。
+  // 空正文行 = 两端同判丢弃：跳过判据 = `text` 为空，与 `sub` 在场无关（与 VSC 派生面 `rowsOf` 同一谓词）。
+  const blocks = []
+  for (const r of rows) {
+    const text = String(r?.text ?? "")
+    if (text === "") continue
+    const kind = typeof r?.kind === "string" ? r.kind : "text"
+    const sub = typeof r?.sub === "string" && r.sub ? r.sub : null
+    blocks.push({ kind, text: sub === null ? text : `${sub} · ${text}` })
+  }
   const doneAt = Number.isFinite(meta.doneAt) ? meta.doneAt : null
   const started = Number.isFinite(meta.startedAt) ? meta.startedAt : (doneAt ?? 0)
   return {

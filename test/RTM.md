@@ -78,7 +78,7 @@
 ### 7. 收口只判本批改过的档
 
 > 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执；两条判据不分适用面，工具描述面同样受段长约束。另有一道与本门并行的前置：**本批改面单测档仍在盘 ⇒ 拒收口**（单测零留存，判据见行 7-4）——这一道判的是「该删的删了没」，与本门判的「改过的档干净不干净」是两件事。
-> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append，不直调 `runBatchGate`）；九态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：锚与段两条同时拦）。
+> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ edit ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append ∥ §2 改写 = 设计席 `edit`，写完的 §2 段体作 `pending` 进机检门；不直调 `runBatchGate`）；十态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：锚与段两条同时拦）· 7-10 正常（§2 就地改：目标行换掉、其余行逐字节不变；锚不唯一 ⇒ 拒）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
@@ -91,6 +91,7 @@
 | 7-7 | 同一夹具，批档干净、笔域集各档干净，跑一次 `batch close` | 收口放行；回执 `[doc-check gate] DOC-CHECK GATE: PASS · 范围 N 档`，N = 实判档数且 ≥ 1（批档自身在内） | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ②；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ④（判域恒非空）；用例号 = DD-135 | `test/integration/batch-close-gate.test.mjs` |
 | 7-8 | 子代理 append §2，本次写入文本把要求档写成不带目录段的名字；随后改成全路径再 append 一次 | 第一次被拒：命中行点名 `本次写入文本`，批档字节逐字不变（零字节落盘）；第二次落盘，前文零变 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ①（写段面强制集 = 本次写入文本）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ⑥；用例号 = DD-130 | `test/integration/batch-close-gate.test.mjs` |
 | 7-9 | 夹具项目里放一档 `thincoder-core/tool-docs/x.md`（内含一段 400 字符 + 一个解析不到的裸档名），入本批笔域集，跑一次 `batch close` | 收口被拒（throw）且拒因**锚与段两条同时点名**（命中行分别指向该裸档名 ∥ 该 400 字符段）；只删裸档名后同跑仍拒（段那条）；拆成两段后放行 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F3「判据不分适用面」· 判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.18 条 7 ∥ §5 A-DD35 判据 ①；缺口来源 = 台账 `#1847`（改工具描述档一句文案，写段与收口被段判据拦下）；用例号 = DD-137 ∥ DD-138 | `test/integration/batch-close-gate.test.mjs` |
+| 7-10 | 工程模式设计席对一本在飞批档的 §2 作一次更正（把一行已作废的判据就地换掉）：`batch({action:"edit", segment:"§2", oldText, newText})`；随后同一句在 §2 出现两处时再改一次 | 第一次：回执点名替换字符数、机检门 `PASS`；**§2 那一行被换掉、其余行逐字节不变**（行数不变、旧行不残留——不留「以本节为准」指针）。第二次：拒（锚不唯一 + 点名命中行号），档字节一字不动 | 待执行 | — | — | 回指 = `docs/core/design/BATCH-RECORD.md` §4.19 ∥ §4.8 BR-77 · BR-78 ∥ 台账 `#1990` ∥ 批次档 §1「已定决定（批档内两种东西、两种处置）」；本行起因 = `docs/batches/2026-11-02-review-requires-batch.md` §2 验收表留着已作废判据，实施席照表落笔会把已删的分支写回来 | `test/integration/batch-edit-spec-section.test.mjs` |
 
 ### 8. 批次档建在项目里（工作区锚报明、不落锚目录）
 
@@ -170,11 +171,11 @@
 ### 14. 评审过、收口清、重开回
 
 > 目的：`§5` 只在评审通过后开写；收口要 `§3 = 评审通过` 且把本批行推出 `在途`；核销判档面（换会话也成立）；重开把 `待核销` 行带回工作位。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.7 ∥ §2.11 ∥ §2.13；八态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误 · 14-8 错误。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §2.6 ∥ §2.6.1 ∥ §2.7 ∥ §2.11 ∥ §2.13；八态（行序）= 14-1 错误 · 14-2 错误 · 14-3 正常 · 14-4 正常 · 14-5 正常 · 14-6 正常 · 14-7 错误 · 14-8 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 14-1 | `§3` 无结论（段体有内容）时以 eng-coder 绑定 append `§5`；再让评审写一轮 `§3`（块内无裁定行）+ `§3 = 评审通过` 后重试；最后补一块携 `VERDICT: pass` 的轮次块重试 | 第一次拒（拒文含 `§5 append refused`，§5 字节不变）；第二次拒（拒文逐字 = `R-G2b`，块内裁定 = 无裁定行）；末块携 pass 裁定 ⇒ 写入成功 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-1 | `§3` 无结论时以 eng-coder 绑定 append `§5`；父侧派设计评审后评审 `append §3` 写一笔无裁定行（`batch append §3` ↔ `§3` 写入闸）；再夹具直写一笔含无裁定块的存量档（不经工具）并置 `§3 = 评审通过`，重试 `append §5`；最后补一块携 `VERDICT: pass` 的轮次块重试 | 第一次拒（拒文含 `§5 append refused`，§5 字节不变）；工具写无裁定行的 `§3` ⇒ 拒（拒文逐字 = `R-G3`，档字节不变、轮次块数不变）；存量无裁定块 ⇒ `append §5` 拒（拒文逐字 = `R-G2b`，块内裁定 = 无裁定行）；末块携 pass 裁定 ⇒ 写入成功。服务条目 = R4 + R27（`docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §5） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-2 | `§3` 非 pass 时 `batch close` | 拒，拒文含 `§3 状态行 = …，须 = 评审通过`；§1 状态行字节不变 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-3 | 换一个会话（ctx 无槽 / 无 designId）用 `ledger close` 核销一条「已收口 ∧ §3 = 评审通过」的合格行 | 核销成功（`status = 已核销`）——③ 判档面，不再看槽内归属 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-4 | `batch close` 一个含 1 行 `在途` + 1 行 `待讨论` 的批 | 分别落 `待核销` / `条件`；回执两行（在途行 / 未动行）各一行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
@@ -205,13 +206,14 @@
 
 ### 17. 评审没写进批档就不算过
 
-> 目的：判 pass 的评审必须已经把结论落进该批档 §3——不落地就不签发凭证，下游 spawn 拿不到授权（代价不落到实施席头上）。
-> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F-A13；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1 ∥ §1.3；交互组件 = 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；两态（行序）= 17-1 错误 · 17-2 正常。
+> 目的：判 pass 的评审必须已经把结论落进该批档 §3——不落地就不签发凭证；而没有批档绑定的设计评审根本发不出去（批次档是评审的前提，不是纸张）。下游 spawn 拿不到授权（代价不落到实施席头上）。
+> 节注：回指 = `docs/core/requirements/ADVISOR-CONVERGENCE.md` F-A13；机制单源 = `docs/core/design/ADVISOR-GUARDS.md` §1.1 ∥ §1.3（结算面 §3 落地门）∥ §2 第 6 条（准入面：设计评审必携 `batchDoc`）∥ §2 第 7 条（账链门：批档须挂未决台账行）；交互组件 = 准入面（`advisor` 工具入参门）⟷ 账链面（台账库读取）⟷ 结算面（`settleDesignReview`）⟷ 批档 §3 读写 ⟷ spawn 门 ⟷ 槽清点；进入口 = 父侧发设计评审（工程模式 depth-0）→ 读回执 → 派 eng-coder；三态（行序）= 17-1 错误 · 17-2 错误 · 17-3 错误。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 17-1 | 带 `batchDoc` 的设计评审回 pass 但不写 §3 | 无 token、回执含 `review record incomplete`、同 designId 的 eng-coder spawn 被机械拒；补写 §3 后重评 ⇒ 签发（spawn 门放行） | 待执行 | — | — | — | `test/integration/advisor-record-gate.test.mjs` |
-| 17-2 | 不带 `batchDoc` 的设计评审回 pass | 照常签发（本门不适用——零回归的业务可观测面：spawn 门放行） | 待执行 | — | — | — | `test/integration/advisor-record-gate.test.mjs` |
+| 17-2 | 不带 `batchDoc` 的设计评审（`documents` 只放设计档） | 当场拒发：回执首行点名 `batchDoc` 必填（标识行 `criterion=batchdoc-missing`）+ 两条期望形 + 无档时先 `batch create` 的下一步；拒发登记；跑前跑后槽数不变、零评审实例、零 LLM；随后同 designId 的 eng-coder spawn 因无授权被机械拒 | 待执行 | — | — | 修前红 = 准入判据未落地 ⇒ 不带 `batchDoc` 照常签发——本行断言的就是那条已退场的旧行为 | `test/integration/advisor-record-gate.test.mjs` |
+| 17-3 | 批档的未决行已被撤（`已废弃`）后，携该 `batchDoc` 发设计评审 | 拒发：回执含 `criterion=batchdoc-no-ledger` ∧ `reason=no-pending-row` ∧ `Record:` 读数 `unsettled: 0`；零实例 / 零 token / 零 LLM。反证格 = 另一本带未决行的批档发同调用 ⇒ 放行 | 待执行 | — | — | 修前红 = 账链门未落地 ⇒ 未决行被撤后照常发评审、token 照签而无收口能收 | `test/integration/advisor-record-gate.test.mjs` |
 
 ### 18. 一条后台报告只投递一次，未签收时才升级
 
@@ -294,12 +296,47 @@
 | 25-1 | CLI 会话把 `agent.maxTurns` 调小，发一个跑得比它长的任务，撞帽后在卡上选 Continue，第二段再撞帽 | 第二张卡的两行都同时含两个数：`Ran 3 turns — 6 turns total. Continue?` 与 `Continue after 3 turns (6 total)?`——本段 3、累计 6，零 `(limit` | ✅ 通过 | 2026-11-01 | 父侧（主 agent） | — | `test/integration/turn-cap-progress.test.mjs` |
 | 25-2 | 同一会话首段即撞帽（未续跑） | 首张卡 = `Ran 3 turns — 3 turns total. Continue?`（累计等于本段，两个数都在） | ✅ 通过 | 2026-11-01 | 父侧（主 agent） | — | `test/integration/turn-cap-progress.test.mjs` |
 
-## VS Code 端（thincoder-vscode）
+### 26. 清账要先有一把可复述的尺（report 面的行号坐标清单）
 
-**尚无集成用例**——本端集成层尚未建立；故事节随首个用例设立（编号先行：先定 RTM 编号，再落用例标题 `test('<编号> …')`）。
+> 目的：清存量行号引用之前，先让「还剩多少」可复述——同一份报面同时给出量法、两面读数与逐处坐标。
+> 节注：回指 = `docs/core/requirements/DOC-CHECK.md` F11 ∥ AC-9（AC-9 ①②④）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.23 条目 W；交互组件 = `doc_check({mode:"report"})` → 报面构造 → 行号坐标采集器 → 清单块；进入口 = 真 `doc_check` 工具调用（`mode:"report"` + 显式 `docs`）；两态（行序）= 26-1 正常 · 26-2 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
+| 26-1 | 夹具档里三种写法各放一处（紧贴 ∥ 同段承名 ∥ 跨段承名，档名均为在盘档），调 `doc_check`（`mode:"report"` + 显式 `docs`） | 清单块首行是**量法行**（含档名抽取式 ∥ 坐标抽取式 ∥ 扫描域三串）· 合计行读 `合计 3 处` · 逐处行三行且形别 ① / ② / ③ 各一 · 末行仍是 `结论：…` | 待执行 | — | — | — | `test/integration/doc-check-line-refs.test.mjs` |
+| 26-2 | 夹具档不含任何行号坐标，同一入口再跑一次 | 清单块仍出量法行 + 空态行「行号坐标 0 处」，块内无空行（空行读起来像「没跑」） | 待执行 | — | — | — | `test/integration/doc-check-line-refs.test.mjs` |
+
+### 27. 评审写一笔 §3 就够：状态行由工具置位
+
+> 目的：绑了批档的评审写一笔携 `VERDICT: pass` 的 §3 就完成该轮——段级状态行由工具在同一笔写盘里置位，评审不必记得再签一次 `status`；漏签不再白跑一轮评审。
+> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §5.3（§3 状态行由工具置位）；批档条目 = R23；机制 + 判据单源 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.5 ∥ §5 R23；交互组件 = `batch append §3`（`thincoder-core/agent-tools/batch.mjs` 的追加轨）⟷ §3 段级状态行（`updateSectionStatusLine`）⟷ 结算面（`settleDesignReview`）∥ `§5` 写入门（`assertSectionFiveGate`）；进入口 = 父侧派设计评审（工程模式 depth-0，`batchDoc` 绑定）→ 读回执 → 派 eng-coder（与 17-1 同一入口、同一格回执）；一态（行序）= 27-1 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 27-1 | 带 `batchDoc` 绑定的设计评审对**骨架原形批档**（§3 无段级状态行）只写一笔 §3，正文携 `VERDICT: pass`——**不另调 `status`、不手写状态行**；随后读回执、结算、由 eng-coder 追加 §5 | §3 段内出现 `**状态行**：评审通过`（轮次块 +1、零留痕行、读侧 `readSectionStatusWord` 同值）；结算签发 token（回执带 `Approved. Pass this exact token to eng-coder`、槽内为该 designId 的全串）；随后同一档 `append §5` 放行 | 待执行 | — | — | 修前红 = 那一笔之后 §3 仍无状态行 ⇒ 结算面拒 `status-not-passed`（「补一次签字」正是本行要消掉的那一步） | `test/integration/batch-status-auto-set.test.mjs` |
+
+### 28. 拿行号改文档不会静默改错行
+
+> 目的：同一会话里先写过一笔、再从旧快照拿行号去改 ⇒ 当场拒（点名路径 / 上次写入行 / 漂移量 / 两条下一步），文件字节零改。改前那里是「静默改到隔壁几行、回执还写成成功」。
+> 节注：回指 = `docs/core/design/EDIT-HELPERS.md` §7（行号锚护栏，判据单源）；批档条目 = `docs/batches/2026-11-02-edit-line-anchor-guard.md` §2；机制单源 = `docs/core/design/EDIT-HELPERS.md` §7.1 ∥ §7.2 ∥ §7.3；交互组件 = 编辑族行号形（`edit` 的 `line` / `startLine`+`endLine`）⟷ 写入记账面（`lastWriteOf` / `isDirty`，`thincoder-core/tools/write-path.mjs`）⟷ 会话工具结果面；进入口 = 同一会话内两次编辑工具调用（子代理与主 agent 共用一张记账表）；一态（行序）= 28-1 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 28-1 | 同一会话内先一笔 `edit`（或 `insert_after`）改到第 N 行附近，再用**旧快照的行号**调 `edit` 的 `line` / `startLine`+`endLine`，目标行落在受影响区内 | 当场拒：拒文逐字含路径、上次写入行、漂移量、两条下一步（重 `read` 与改走内容锚）；**文件字节零改**（改前后内容哈希相同）；回执不出现 `Edited …` 成功句 | 待执行 | — | — | 修前红 = 旧行号照旧应用、改到相邻行而回执报成功——本行断言的就是那条已退场的旧行为 | `test/integration/edit-line-anchor.test.mjs` |
+
+## VS Code 端（thincoder-vscode）
+
+> 本端集成层按故事设立（编号先行：先定 RTM 编号，再落用例标题 `test('<编号> …')`）。
+
+### 1. 归档块重开 ∥ reload 后，子代理行还是子代理行
+
+> 目的：会话重开 / 面板重载后，归档块里嵌套子代理那几行的行首子标仍在，不退化成正文；父自己的行照旧无子标。
+> 节注：回指 = 需求 F-W1（恢复后存续）∥ I-7（收窄负控）；机制单源 = 设计档 §5.7 行形条 ∥ D-W46；交互组件 = webview 归档派生点（`rowsOf` → `recordAppend`）⟷ 槽 JSON 记录 ⟷ 页级重建（`record-restore.js` + 核 `renderSubagentChunk`）；进入口 = VSC 里跑一个带嵌套子代理的回合 → 重开面板 ∥ `reload` 窗口 → 展开归档块读行首。三态（行序）= 1-1 正常 · 1-2 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 1-1 | VSC 里跑一个 `advisor` → `explore` 嵌套回合，等块归档落流；重开面板 ∥ `reload` 窗口，展开该归档块 | 每条子代行的行首有 dim 子标 `explore#1 · `（正文里不重复出现）；父自己的行零子标；行正文与重开前逐字一致 | 通过（6/6） | 2026-11-01 | 父侧（收口轮） | 无 | `test/integration/vsc-record-sublabel.test.mjs` |
+| 1-2 | 同一会话在 VSC 里跑完嵌套子代理回合（新形记录落流），再于 CLI 端恢复同一会话 | 存量记录（子标字面在 `text` 内）两端行文逐字一致；新形记录在 CLI 恢复面同样以 `explore#1 · ` 起头，行全文与 VSC 端逐字一致 | 通过（6/6） | 2026-11-01 | 父侧（收口轮） | 无 | `test/integration/vsc-record-sublabel.test.mjs` |
 
 ## Desktop 端（thincoder-desktop）
 

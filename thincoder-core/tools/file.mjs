@@ -16,7 +16,7 @@ import { applyEditBatch } from "./edit-batch.mjs";
 import { runSingleEdit } from "./edit-diff.mjs";
 // 单一写路径点（编辑器编辑径注入缝——CORE-UNIFICATION §2.13.5）：本档三个写点全走它，
 // 记账面同源住该档（下面只做再导出——保既有 import 面稳定）。
-import { writeThroughPath, clearDirty, clearLastWrite, lastWriteOf, isDirty } from "./write-path.mjs";
+import { writeThroughPath, clearDirty, clearLastWrite, lineAnchorVerdict, lineAnchorRefusal } from "./write-path.mjs";
 import { specForModel } from "../config.mjs";
 import { createHash } from "node:crypto";
 import { mkdir, readFile, stat } from "node:fs/promises";
@@ -231,7 +231,7 @@ export const editTool = {
       replace_all: { type: "boolean", description: "Replace all occurrences (default false)" },
       edits: {
         type: "array",
-        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; same-file entries apply serially, each based on the previous result). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) inside its edits entry; new_string replaces when given, and line-targeted entries may omit it to DELETE the line/range.",
+        description: "Batch form — multiple edits in ONE call, atomic (any failure writes nothing; line-number entries apply first, in descending startLine order, and their ranges must not overlap — overlap refuses the whole batch; content entries then apply in array order). Use it for multiple changes to the same file AND for independent changes across multiple files — prefer one batched call over N single edits. A top-level path is allowed — it defaults entries without their own path (entry paths win). Mutually exclusive with top-level old_string/new_string/line/startLine/endLine — provide each change's targeting (old_string, or line / startLine+endLine) inside its edits entry; new_string replaces when given, and line-targeted entries may omit it to DELETE the line/range.",
         items: {
           type: "object",
           properties: {
@@ -296,31 +296,16 @@ export const insertAfterTool = {
     // Read-before-insert guard: after_line anchors are line numbers, and any
     // write since the last read made them stale. Refuse instead of silently
     // inserting at a drifted position (the failure mode that corrupted test
-    // structure repeatedly). after_regex callers get the same gate — a stale
-    // target line is just as wrong, and the rule is simpler to reason about.
-    // 2026-08-31 工具顺手度（用户批准）：判定精确化——本 session 写入工具记录受影响区
-    // （lastWrite），after_line 在未受影响区（<= startLine）→ 行号未漂移 → 允许
-    // （消掉"我写的文件被当外部修改"的摩擦）；受影响区内/write 全文重写 → 拒绝。
-    const lw = lastWriteOf(abs)
-    if (lw && args.after_line != null) {
-      if (lw.type === "write") {
-        throw new Error(
-          `${args.path} 刚被 write 全文重写（was modified since your last read）——任何行号都可能漂移，必须重 read。`
-        )
-      }
-      if (args.after_line > lw.startLine) {
-        throw new Error(
-          `${args.path} 的 after_line ${args.after_line} 在上次写入（L${lw.startLine}）之后——` +
-          `行号已漂移 ${lw.shift >= 0 ? "+" : ""}${lw.shift}，请用新行号或先 read。`
-        )
-      }
-      // after_line <= startLine → 行号未漂移 → 允许
-    } else if (isDirty(abs)) {
-      throw new Error(
-        `${args.path} was modified since your last read — line numbers may be stale.\n` +
-        `Read the file again (read tool) to refresh line numbers, then retry insert_after.`
-      )
-    }
+    // structure repeatedly).
+    // 2026-11-02：判据与拒文单源 = tools/write-path.mjs 的 lineAnchorVerdict /
+    // lineAnchorRefusal（与 edit 行号形同一句、同一六行表——INSERT-AFTER.md §3）。
+    // 本工具的边界 = `after_line <= startLine`（插入不读写目标行，比 edit 松一格——
+    // 边界按记账类型分，已在判据内）；after_regex 没有模型给的行号（定位在工具内按当前
+    // 盘面做）⇒ 只判到记账态那一层（dirty 面无快照 ⇒ 第 6 行），与改前同判。
+    const afterLine = Number.isInteger(args.after_line) ? args.after_line : null
+    const hit = lineAnchorVerdict(abs, afterLine, afterLine)
+    if (hit) throw new Error(lineAnchorRefusal(abs, afterLine, afterLine))
+
     const raw = await readFile(abs, "utf8") // original bytes — EOL detection needs the file's real line endings
     const text = normalizeEOL(raw)
     const lines = text.split("\n")

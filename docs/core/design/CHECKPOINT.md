@@ -29,7 +29,7 @@
 **四要素明细**
 
 - **#48 `tools/git-checkpoint.mjs`**（同路径 · j 0.9091 · sha `7b56f04cc565` / `5d9a226a1321` · 143 / 150 行）
-  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs:7` 由 `thincoder-core/agent/helpers.mjs:89-91` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（`:8-16`）。
+  - 左端读数（CLI）：`escapeXml` 经 `thincoder-cli/src/tools/git-checkpoint.mjs:7` 由 `thincoder-core/agent/helpers.mjs` 导入（共享实现）；checkpoint 子系统依赖 `../git/checkpoint.mjs`（`:8-16`）。
   - 右端读数（VSC）：`escapeXml` 本地定义（`thincoder-vscode/src/tools/git-checkpoint.mjs:21-23`；注释自述「镜像 CLI 版本」）；依赖 `./checkpoint.mjs`（`:8-16`）；头注含「CLI 镜像：」行（`:5`）。
   - 建议归一形态：融合——`escapeXml` 下沉核内单一实现（消除本地副本）；依赖 / 路径按核内闭包归一。
   - 影响面：无行为差——两 `escapeXml` 实现逐字相同（同款 5 链替换、同序）；差异属组织面（共享函数本地副本化 + 子系统模块位置）⇒ 不命中三口径（须用户裁 = —）。

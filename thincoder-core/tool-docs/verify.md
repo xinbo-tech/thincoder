@@ -4,7 +4,7 @@ You DECLARE your verification status via the verification argument ({ status: 'p
 
 verify only mechanically gates on it ('passed' → allowed; 'failed' → blocked; 'skipped' → allowed but needs a reason).
 
-'basis' (optional) is the 'what it stands on' dimension of the declaration — a judgment source, a read file:line coordinate, or an explicit 'unverified' (declaration-only: no format is enforced or machine-checked);
+'basis' (optional) is the 'what it stands on' dimension of the declaration — a judgment source, the exact words you read at their path, or an explicit 'unverified' (declaration-only: no format is enforced or machine-checked);
 
 a passed / skipped declaration with no basis gets one advisory hint line in the report — never blocking and never changing the gate — while the failed face gets no basis hint (already blocked).
 

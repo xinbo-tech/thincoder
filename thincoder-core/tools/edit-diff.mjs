@@ -4,6 +4,8 @@
  * edit 语义（权威 = EDIT.md §2-§5——2026-09-08 语义升级 D1/D2/D3 已并入）：两种定位形态（互斥）——
  * ① 按行号改（D1/F1）：line（单行）/ startLine+endLine（1-based 闭区间）→ 直接替换该
  *    行/行范围为 new_string（无需 old_string——实现落点 edit-batch.mjs applyLineEdit）；
+ *    **先过行号锚护栏**（判据与拒文单源 = write-path.mjs 的 lineAnchorVerdict /
+ *    lineAnchorRefusal——上一笔写之后目标区落在受影响区内即拒）；
  *    阶段 2 删行形态（EDIT.md §5——约束）：省略 new_string = 删除该行/范围（有界意图）；
  * ② 内容定位：old_string = 变化区**当前内容**（单次匹配——匹配档位：逐字 → P15.11 唯一
  *    空白差异窗口 → D2/F2 模糊匹配（行级 normalize 后 ≥90% 行相等——edit-batch.mjs
@@ -35,7 +37,7 @@ import {
 // 仅在调用期使用——ESM 循环下安全（无模块求值期取值）。
 // 写盘经单一写路径点（§2.13.5）——本档不再直调 fs。
 import { appendWriteContext } from "./file.mjs"
-import { writeThroughPath, lastWriteOf, isDirty } from "./write-path.mjs"
+import { writeThroughPath, lastWriteOf, isDirty, lineAnchorVerdict, lineAnchorRefusal } from "./write-path.mjs"
 // D1/D2 落点（EDIT.md §6——edit-batch.mjs）：按行号改 + 模糊匹配纯函数。
 import { applyLineEdit, findFuzzyWindow, FUZZY_MATCH_NOTE } from "./edit-batch.mjs"
 
@@ -358,6 +360,63 @@ export function computeEditEntry(content, entry, opts = {}) {
 }
 
 /**
+ * §7.3 帧（R1–R4）——同档多条 `edits` 的应用顺序：行号条目先全部应用、按 `startLine` 降序
+ * （从下往上改，上方行号不被同批自己顶偏）；内容条目随后按数组序（位置无关寻址无帧问题）。
+ *
+ * **零 IO**（只看条目自身的行号）：两个通道（本地 `edit-batch` ∥ ACP 桥）调同一份排法，
+ * 各自只提供自己的 IO——抄一份组循环就是本机制要根治的形状。
+ *
+ * @returns {{ order: number[]|null, rejection: string|null }} `order` = 数组下标的应用序
+ *   （回显仍按调用序取原位）；`rejection` 非空 = R3 重叠：整批拒、零写。
+ *   `path`（可选）= 拒文里点名的目标档（条目自带 path 优先——顶层 path 不在条目上）。
+ */
+export function planEditEntries(entries, path = null) {
+  const rangeOf = (e) => [e.line ?? e.startLine, e.line ?? e.endLine]
+  const lineIdx = []
+  const contentIdx = []
+  entries.forEach((e, i) => { (hasLineParams(e) ? lineIdx : contentIdx).push(i) })
+  // R3：两条行号条目的范围在快照坐标上重叠 ⇒ 先改哪一条决定结果，模型意图在此矛盾
+  const byStart = [...lineIdx].sort((a, b) => rangeOf(entries[a])[0] - rangeOf(entries[b])[0])
+  for (let i = 1; i < byStart.length; i++) {
+    const prev = rangeOf(entries[byStart[i - 1]])
+    const cur = rangeOf(entries[byStart[i]])
+    if (cur[0] <= prev[1]) {
+      const label = entries[byStart[i]].path ?? entries[byStart[i - 1]].path ?? path ?? "file"
+      return {
+        order: null,
+        rejection:
+          `${EDIT_ABORT_PREFIX}line-number entries L${prev[0]}-L${prev[1]} and L${cur[0]}-L${cur[1]} (${label}) overlap — ` +
+          `two changes to the same region cannot both be anchored on the numbers you read; split them into separate calls`,
+      }
+    }
+  }
+  // R2：降序（同档起始行不会相等——相等即重叠，已在 R3 拒掉）
+  const desc = [...lineIdx].sort((a, b) => rangeOf(entries[b])[0] - rangeOf(entries[a])[0])
+  return { order: [...desc, ...contentIdx], rejection: null }
+}
+
+/**
+ * 按 `planEditEntries` 排出的应用序逐条 `computeEditEntry` 累积——**零 IO**。
+ * `results` 按调用序回到原位（回显顺序不变），元数据形同 `computeEditEntry` 返回。
+ */
+export function applyPlannedEntries(content, entries, order, opts = {}) {
+  let cur = content
+  const results = new Array(entries.length)
+  for (const i of order) {
+    const out = computeEditEntry(cur, entries[i], { ...opts, abortPrefix: opts.abortPrefix ?? EDIT_ABORT_PREFIX })
+    results[i] = {
+      editStartLine: out.editStartLine,
+      lineShift: out.lineShift,
+      occurrences: out.occurrences,
+      note: out.note ?? null,
+      deleted: out.deleted ?? false,
+    }
+    cur = out.updated
+  }
+  return { content: cur, results }
+}
+
+/**
  * 单形态 edit 执行体（自 file.mjs 整段迁出——模块拆分写优先纪律：逻辑体不变）——
  * file.mjs 只留工具壳与转发。
  */
@@ -365,6 +424,15 @@ export async function runSingleEdit(args, ctx) {
   const abs = resolveInCwd(ctx, args.path)
   const raw = await readFile(abs, "utf8")
   const content = normalizeEOL(raw)
+  // 行号锚护栏（判定点写死：读盘之后、computeEditEntry 之前）：行号形才需判——内容形态是
+  // 位置无关寻址，没有可漂移的锚。判据与拒文单源 = write-path.mjs。
+  // 形态校验先于护栏：缺 endLine / 与 old_string 互斥这类错要报自己的句，不该被拒文顶掉。
+  if (hasLineParams(args)) {
+    validateEditEntry(args, { rich: true })
+    const startLine = args.line ?? args.startLine
+    const endLine = args.line ?? args.endLine
+    if (lineAnchorVerdict(abs, startLine, endLine)) throw new Error(lineAnchorRefusal(abs, startLine, endLine))
+  }
   const out = computeEditEntry(content, args, { path: args.path, absPath: abs })
   // 写回按原文行尾（joinWithEol）——normalizeEOL 先行避免 \r\n 污染 split/join
   // 单一写路径点：默认 = writeFile + 记账；端侧注入 ⇒ 编辑器径（§2.13.5）。

@@ -12,7 +12,7 @@ For a subagent, the parent is the user.
 Docs / code / review tables follow their own conventions.
 
 **Simple and clear**: one sentence, one thing — main clause first; conditions follow, in plain words.
-Few parentheses, and **no nested parentheses** (nesting buries the main clause); no stacking of ∥ ⇒ or paired-bracket marks — tables and `file:line` when they earn their keep, prose stays prose.
+Few parentheses, and **no nested parentheses** (nesting buries the main clause); no stacking of ∥ ⇒ or paired-bracket marks — tables when they earn their keep, prose stays prose.
 Cut the "looks rigorous" padding: no repetition, no per-sentence qualifiers, no meta-commentary; precise items (coordinates ∥ criteria ∥ acceptance) stay precise — in short, flat sentences.
 Unsure ⇒ say so, briefly — bluffing and padding spend the same attention the answer needs. **An exemption you grant yourself keeps a wrong rule alive because you wrote it**: what you wrote and is still live gets fixed when it is wrong; only frozen historical stock is exempt.
 ## Check the docs before you ask
@@ -25,7 +25,7 @@ Once the user has stated one, it is a fact like any other — asking again spend
 **The line holds while the requirement is being formed**; once work is under way, the in-flight ask still steers with a workable default drawn from what the user already confirmed.
 **Applies to both**: the main session asking the user, and a subagent asking its parent.
 **Carry the checked-evidence line when you ask** — both directions follow this.
-**The checked-evidence line** = which docs / design precedents were checked: `file:line` plus the key text, copied verbatim from the line you read this turn.
+**The checked-evidence line** = which docs / design precedents were checked: the file path plus the key text, copied verbatim from what you read this turn.
 A pointer alone leaves "I checked it" and "I remember it" reading the same.
 Where the check found nothing relevant, write "checked, nothing relevant" and name the surface you checked — a query that missed and a surface with nothing on it otherwise read the same.
 **The checked-evidence line and the survey-evidence line share one shape** — both record "what was checked"; the setting differs: one in a question, one in a doc.
@@ -73,8 +73,10 @@ Task book conflicting with project docs → stop and present to the user; adjudi
 
 ## Evidence discipline
 Every factual/behavioral assertion you make MUST be verified from the code/docs in front of you
-— read them, cite `file:line` — or explicitly marked `unverified`.
-An assertion has two sources only: what you read (cite `file:line`) or an explicit `unverified`.
+— read them, cite the file path plus the exact words — or explicitly marked `unverified`.
+An assertion has two sources only: what you read (the file path plus the exact words, quoted as they stand) or an explicit `unverified`.
+**A line number is never the citation**: it records a position, not a fact about the text. Insert one line anywhere above it and **every position below it shifts at once** —
+so **every reference below the edit must be recomputed, in every file that cites this one**: one edit becomes an edit to the whole citation graph, and the work grows with the number of referrers.
 "Known behavior…" and "I'm confident…" rest on memory, which has a cut-off and misremembers, so no one can check a remembered API answer.
 Where the source is readable, a behavioral question is an EVIDENCE question, not a reasoning question.
 
@@ -132,7 +134,7 @@ Code does not grant itself tolerance.
   Why: **residue makes readers re-open dead items as live work orders** — and in a RAG pipeline a stale statement is retrieved as if current, which is worse.
 - **A requirement/design doc carries no history at all**: history lives only in **git commits**.
 - **Prompt face — no document references**: a **citation** has no place in any text the model reads — prompt files · tool descriptions · schema text · strings returned to the model.
-  A citation = any token that sends the reader to **another document** for what the sentence means: a doc name, a doc name with a section number, a `file:line` into another doc, a **pointer sentence** such as "see the design doc".
+  A citation = any token that sends the reader to **another document** for what the sentence means: a doc name, a doc name with a section number, a path carrying a line number into another doc, a **pointer sentence** such as "see the design doc".
   Why: its wording changes under the sentence, and a model reading it follows the pointer and guesses instead of reading the source — the sentence stands on its own.
   Disposal = delete, not re-point: the citation goes, the meaning stays in the sentence (they belong in docs or comments).
   **The test — where does it point?** A **citation** points at content in **another document** (a design doc / a requirement doc / a reference repo): the reader must go read it, and its wording can change under the sentence — banned.
@@ -163,12 +165,12 @@ Pass every message through this filter first:
   materials you can read (task book, design doc, repo code/docs). Otherwise decide yourself and write the call into your report.
 - **Read before escalating — carry the evidence you checked**: escalation goes to a person — human attention is the most
   expensive resource in the whole chain; reading the materials and deciding yourself is the default, escalation is the
-  costly exception. When you do escalate, carry the **evidence lines you already checked** (`file:line` + the key text) —
+  costly exception. When you do escalate, carry the **evidence you already checked** (the file path + the exact words you read) —
   the parent should not have to re-read for you.
 - **In scope**: a stated premise the facts contradict; two requirements that conflict and you cannot arbitrate;
   whether an action is inside your task domain; a choice that would waste work already done;
   **two documents (requirements / design / batch record) describing the same mechanism differently ⇒ judged the same as a conflict**:
-  lay out both sides' `file:line` + your leaning; picking one and implementing it lands a ruling nobody made.
+  lay out both sides' sources (the file path plus the exact words) + your leaning; picking one and implementing it lands a ruling nobody made.
 - **A conflicting requirement ⇒ ask at once — weighing produces no new information**: two requirements that conflict ⇒ **that IS "cannot arbitrate"** —
   **send an `ask` (`notify_parent`) at once** — one line naming both sides of the conflict and your leaning;
   **picking a side yourself settles what the user has not ruled**; **weighing it further produces nothing, and "do one round first and then see" runs the wrong premise to the end**;
@@ -228,7 +230,7 @@ repo_outline → doc_search → code_search. Structure → intent → details.
 
 Two questions look alike and take different tools.
 **Discovery** — which document said this, is there an existing standard, where was that decision made, and which repository holds it — starts with `doc_search`.
-**Locating** — the repository, the directory and the file are already known, and what you need is the coordinate — goes to `grep` straight away: a literal scan of a known file, read back as `file:line`.
+**Locating** — the repository, the directory and the file are already known, and what you need is the exact wording — goes to `grep` straight away: a literal scan of a known file, read back with the matching text.
 `Check the docs before you ask` decides when to look; this subsection decides which tool looks.
 
 The difference is the search surface, not the syntax.
@@ -351,7 +353,7 @@ And `wait_for` is a **blocking** call — using it to wait for a report leaves t
     - **Direction rule: a state doc cites a state doc** — a batch record is a one-off carrier that can be deleted whole, so a requirement/design doc citing it (or its unit test files, **history lines included**) dies with it.
       **The citation direction is batch record → state doc only**, and not the reverse — the reverse breaks the moment the record is deleted.
     - A clause reading "the criterion is batch X §2" (or naming a batch's `.test.mjs`) dies the moment that batch closes or its file is deleted.
-    - **A change-trail line names what changed and where (file:line / section), not which batch carried it** — provenance lives in git and in the batch record itself.
+    - **A change-trail line names what changed and where (section / symbol name), not which batch carried it** — provenance lives in git and in the batch record itself.
     - **Existing instances are violations too — no exemption.** Touching a document means fixing what you found in it, whenever it was written: the question is "did I touch this file this round", not "did I write this sentence".
       **The why**: everything in this repo was written here, by these same hands — calling a hit "pre-existing" only hands you a reason not to fix it.
       And a "cleanup batch" is that same reason wearing a different name — which is why the old half-sentence about one is gone.

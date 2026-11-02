@@ -6,7 +6,7 @@
  * 终端窗（件 = `views-sandbox-terminal.mjs`；`webui/SANDBOX.md` §2.1① ∥ `webui/TERMINAL.md`）。
  * **动作钮状态门 + 忙态 + 反馈（sandbox-container-actions 批——2026-10-13；台账 #1358）**：启动/停止/重启随容器态门矩阵（`actionGate`——重启锚定运行中）∥ 点击 ⇒ 该行七钮即时禁用 + 行闩（在飞零第二请求）⇒ 完成回门矩阵态（成功面另走既有重取；失败面按当刻态列重算）∥ 成功 `flash` 成功句（含容器名——三枚）/失败红条。
  * 契约 = gateway/API.md §2.5；文案经 `t()`（`webui/I18N.md` §2.1）；渲染一律节点 + textContent（零拼串）。
- * 拆档缘由 = `views-sandbox.mjs` 增量将越 500 硬线前外拆；窗体助手四件已迁 `modal.mjs`（避循环 import）。
+ * 拆档缘由 = `views-sandbox.mjs` 增量将越 500 软线前外拆；窗体助手四件已迁 `modal.mjs`（避循环 import）。
  * 单元测试档直测面 = `createContainerSection`（桩 ctx + 假 fetch 路由表）。
  */
 import { mapError, t } from "./i18n.mjs"

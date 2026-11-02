@@ -80,8 +80,8 @@ function messageText(m) {
 
 /** Truncate long content (~500 chars) with an explicit marker. The cut never splits a UTF-16
  *  surrogate pair (emoji etc.) — a lone high surrogate in tool output would be an eyesore at
- *  minimum; the send layer sanitizes it anyway, but clean output costs nothing (setup.mjs
- *  safeSliceUTF16 same rule). */
+ *  minimum; the send layer sanitizes it anyway, but clean output costs nothing
+ *  (thincoder-core/text-budget.mjs `safeSliceUTF16` same rule). */
 function truncateContent(text) {
   const t = String(text ?? "")
   if (t.length <= CONTENT_CAP) return t

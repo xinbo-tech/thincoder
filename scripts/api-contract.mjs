@@ -65,15 +65,15 @@ export function collect(root) {
       if (rest.startsWith("{") && !rest.includes("}")) {
         for (let j = i + 1; j < lines.length; j++) { rest += " " + lines[j].trim(); if (lines[j].includes("}")) break; }
       }
-      rows.push({ sym: symOf(rest).replace(/\|/g, "\\|"), at: `${rel}:${i + 1}`, form: formOf(rest) });
+      rows.push({ sym: symOf(rest).replace(/\|/g, "\\|"), at: rel, form: formOf(rest) });
     });
   }
   return { files: files.length, rows };
 }
 
-/** 渲染：机械三列（符号 ∥ 档:行 ∥ 导出形）。超 300 行 = 「, 」边界截尾 + `…（+N）` 标记（报告面计数）。 */
+/** 渲染：机械三列（符号 ∥ 档 ∥ 导出形）。超 300 行 = 「, 」边界截尾 + `…（+N）` 标记（报告面计数）。 */
 export function render(rows) {
-  const out = ["| 符号 | 档:行 | 导出形 |", "|---|---|---|"];
+  const out = ["| 符号 | 档 | 导出形 |", "|---|---|---|"];
   let truncated = 0;
   let dropped = 0;
   for (const r of rows) {

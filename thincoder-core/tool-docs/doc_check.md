@@ -40,6 +40,9 @@ What it checks — exactly two criteria, both built into the engine:
 - Line length — a prompt-face file (`thincoder-core/prompts/**`) is judged line by line: the model reads raw text, so
   one line is one block, and any single line over the threshold counts with no structural exemption.
 
+`report` mode also prints one extra block: an inventory of the line-number coordinates found in the documents you pass
+(`<doc>:12` shape). That block is a reading, not a criterion — `gate` never produces it, and it cannot change a verdict or a hit count.
+
 It cannot — in `report` mode — write anything, gate anything, or turn a finding into a refusal.
 
 Arguments — `target` (optional): the project root to check; defaults to the session anchor, relative paths resolve against it.
