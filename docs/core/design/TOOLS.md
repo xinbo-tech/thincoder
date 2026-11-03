@@ -220,7 +220,7 @@ interval 默认 1s 下限 100ms。**`advisor settled` 判据** = 后台评审池
 
   **硬预算**（每动作超时必返——错误句携卡点步名）；**会话不假定常驻**（外部关闭 ⇒ 在飞即时显式失败 + 下一次自愈重开）；**异步通道** `async:true`（ack `browser#<id>` + 结算摘要；`wait_for "browser id:N done"` ∥ `process` kill）。设计权威 = `BROWSER-TOOL.md`（本层）。
 - **process / file_ops / get_current_time / tree / lsp / lint / delete / bash**：按各自描述契约。
- - **batch**：批次档生命周期（action = create ∕ append ∕ edit ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；**两种处置**——§2 是规范面可就地改（`edit`），§1 / §3 / §5 / §6 只追加；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
+ - **batch**：批次档生命周期（action = create ∕ append ∕ edit ∕ status ∕ close；**无路径参数**——目标档 = spawn 绑定；身份定可写段）；**段内一个写面**——作者可 `append` 加内容、可就地 `edit` 自己那一段（`edit` 段域 = 同模式 `append` 白名单——一张表两动作；行级独占只留 `**状态行**：`，`status` 是它唯一的写者）；写前剔凭证；工具盖轮次戳（仅 §3）；fail-closed 逐条 throw。权威 = 工程模式板。
 - **manifest**：project-manifest 全键读写出口（三动作 `read` / `init` / `write`——点改 ∥ 全键族白名单 ∥ depth-0 两模式同挂）；机制 = `docs/core/design/MANIFEST.md` §2.10。
 - **doc_check**：文档纪律机检（只读 · 报告态 · 非门禁——不阻断、不置退出码）——判据两条（锚 = 文档指针可解析 ∥ 行宽 = 单行 > 阈值）；判据参数依据 `PROJECT-MANIFEST.json` `checkConfig`；参数 = `target`（可选）。机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20。
 - **notify_parent**：子代理上行通道（`kind` = ask / note；非阻塞；父侧队列 ≤20 条 ∥ 单条 ≤1,500 字符）；depth>0 段装配（consult 段除外）。
@@ -602,7 +602,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 
 #### 6.15.2 F11 `batch` 词面协议结构化
 
-**机制总则**：六段结构 / 一段一作者 / 冻结门（`assertGateOpen`）语义**零变**；单源纪律承 KD-4（skeleton ← lifecycle ← 主档）；散文纪律句**不删**（机判叠加）。变化全部 = **值的载体形态**。（段内写入纪律不在本节：两种处置——§2 可就地改 ∥ 其余只追加——判据单源 = `BATCH-RECORD.md` §4.19。）
+**机制总则**：六段结构 / 一段一作者 / 冻结门（`assertGateOpen`）语义**零变**；单源纪律承 KD-4（skeleton ← lifecycle ← 主档）；散文纪律句**不删**（机判叠加）。变化全部 = **值的载体形态**。（段内写入纪律不在本节：段内一个写面——作者可 `append` 加内容、可就地 `edit` 自己那一段——判据单源 = `BATCH-RECORD.md` §4.19。）
 
 **裁定点②——F11-A enum 化实现形态 = 运行时校验保持（唯一真值面）+ value 谓词收紧为「关键词锚定」+ 增独立 `note` 字段**：
 
@@ -614,7 +614,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 - **先红 / 先绿判读依据**：F11-A1 **先红**（现行谓词逐行推演：`hits=[已收口]` 恰一命中且 ∈ §1 词表 ⇒ 接受；新谓词 ⇒ 拒）；兼容-3（既有 C4 词表面）**先绿零改**——三格逐格判读同现行（见用例表兼容-3 行）。
 - **note 落盘形态 = 状态行括注（裁定）**：`status value="进行中" note="F10/F11 进设计轮"` ⇒ 状态行 = `**状态行**：进行中（F10/F11 进设计轮）`。
   括注是真实需求（骨架占位行自带括注；散文说明无处可去时会被塞回 value = 事故复现路径）。
-  note 值：单行（同 value 单行校验）+ **全词表零命中**（`Object.values(STATUS_WORDS)` 并集——括注永不误触 gate）+ 死占位判据零命中；落盘域 = 仅状态行行内（append-only 唯一豁免域不变，`updateSectionStatusLine` 承接）。
+  note 值：单行（同 value 单行校验）+ **全词表零命中**（`Object.values(STATUS_WORDS)` 并集——括注永不误触 gate）+ 死占位判据零命中；落盘域 = 仅状态行行内（行级独占的唯一处不变，`updateSectionStatusLine` 承接）。
 
 **裁定点③——F11-B create 参数补齐/归一化**：
 
@@ -628,7 +628,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 - **判定域 = 档头结构行（值形）**（§6.20）：仅骨架生成的三类档头结构行参与判定（标题行 `# …` / 编制行 `> 编制` / 台账行 `> 台账`）——行内出现死占位字面 ⇒ 残留；正文（段体）对占位字面的引用 / 讨论**豁免**（引用非未填）。纯函数 `findPlaceholderResidue(src)` 住 skeleton 档（零 fs，消费 STATUS 单源同址）；返回 `[{line, text}]`，非空 ⇒ 拒，错误句逐行列残留（行号 = 档头域内 1-based 便于定位）。
 - **档头两占位 `#<编号>` / `<板块>` 的填充路径与次序（消除新门与既有义务间的次序死锁）**（§6.20）：create 可选参 `ledger` / `board` **建即填**台账行
   （create 仍不代建台账条目 = 红线零变）；未给 ⇒ 占位留存——填充人 = **主 agent** · 时点 = **建档后、本档首个 append/status 之前** · 方式 = **普通文档写**
-  （档头 boilerplate 不在 append-only 段域内——改写 `> 台账 = …` 行；实态先例 = 批档档头 `> 台账 = #214/#215（TOOLS.md · 归批）`）。
+  （档头 boilerplate 不在段白名单内——改写 `> 台账 = …` 行；实态先例 = 批档档头 `> 台账 = #214/#215（TOOLS.md · 归批）`）。
 
   **次序句**：create（给参即填 ∥ 未给留占位 + 回执提示填法）⇒ 主 agent 填档头（`#<编号>` → 台账编号 · `<板块>` → 板块名）⇒ 本档首次 append/status 开放；未填 ⇒ 首写被 F11-C 拒（错误句逐行列残留行号 = 提示填充位置）——机检 = 次序约束的兜底，**非死锁**（填后立即放行）。
 - **close 不拦**（收口是主 agent 终态动作，残留面由既有通道自查）+ **create 不拦**（骨架本身合法含占位）；gate 在写入面（append/status），挂点：append 于 gate/text 校验后 `insertIntoSection` 前（主档）；status 于 `assertStatusValue` 后写盘前（lifecycle）。
@@ -671,7 +671,7 @@ Error: engineering mode is ON — task is unavailable (the batch record + the le
 | VSC-2 | 工程段断言同步 | VSC 工程段装配单测 | 工程段 = timer…（无 task）断言更新后全绿 | vsc 单测档 |
 | VSC-3 | 端侧催更门排除（VSC 副本直驱） | 直驱 `maybeGuardPushbacks`——桩 agent：`_tasks` 含 pending ∧ `engineering=true`（advisor/verify 面不构成候选） | 零推回（返回 false · 零提醒注入） | vsc 单测档 |
 
-**边界（本节不做）**：台账工具自身零改（六态 enum 已是对照面）· eng/plan/escalate 既有门零改 · 普通模式 task 行为零变（不移注册不加开关）· batch 六段结构 / 一段一作者 / 冻结门语义零变（段内写入纪律 = 两种处置，判据单源 = `BATCH-RECORD.md` §4.19） · 散文纪律句不删 · 铁律 3 提示词分支 = PROMPT-SYSTEM 板块（本节带上——条目文本 = §6.15.2「提示词面条目文本」逐字固化；落档 = eng-coder（内容依据 = 机制文档））。
+**边界（本节不做）**：台账工具自身零改（六态 enum 已是对照面）· eng/plan/escalate 既有门零改 · 普通模式 task 行为零变（不移注册不加开关）· batch 六段结构 / 一段一作者 / 冻结门语义零变（段内写入纪律 = 段内一个写面，判据单源 = `BATCH-RECORD.md` §4.19） · 散文纪律句不删 · 铁律 3 提示词分支 = PROMPT-SYSTEM 板块（本节带上——条目文本 = §6.15.2「提示词面条目文本」逐字固化；落档 = eng-coder（内容依据 = 机制文档））。
 
 VSC 副本 verify guard 分支同类缺差（`thincoder-vscode/src/agent/run-stages.mjs:105` 零 engineering 条件 vs 核 `thincoder-core/agent/completion.mjs:75` 有）= **随本节收口（hygiene-sweep 面）**。
 
@@ -1158,12 +1158,167 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 
 **删除面范围（⑫ 补）**：只涉保存档（⑪）——⑨ 非密记录**不随删**（非密预填面，生命周期 = 随 `configDir`）。
 
+**⑬ 传输面（`put` / `get`——单文件 · 二进制安全；需求档 §4.8 S10 ∥ S11 ∥ NS8 · 台账 #2026）**
+
+**机制一句话**：`put` / `get` = 在**既有会话那台主机**上跑一次 `scp`，走**同一条 askpass 凭据链**；文件字节只经磁盘，工具回执 = 会话冠行 + 一行状态句。
+
+**取法（既有件 ∥ 偏离）**：
+
+| 面 | 既有件坐标 | 对齐 ∥ 偏离 |
+|---|---|---|
+| 子进程 + askpass 链 | `thincoder-core/agent-tools/ssh-transport.mjs` 的 `buildSshEnv` ∥ `writeAskpassWrapper` ∥ `unlinkAskpass` | **对齐**：同一包装档（Win `.cmd` ∥ POSIX `.sh` 0700）、同一 `TC_SSH_SECRET`、同一 `nodeChildEnv`；**偏离** = 被起的是 `scp` 而非 `ssh`，命令行另一套（`-tt` / PTY / 提示单数在 scp 上无意义），`scpArgs` 本档自持 |
+| 失败分类族 | `ssh-transport.mjs` 的 `classifyFailure`（auth ∥ unreachable ∥ hostkey） | **对齐**：同一分类族、同一可读句；**偏离** = 传输面另有两类（协议 ∥ 远端路径、硬超时），由 `ssh-transfer.mjs` 的 `transferFailure` 按退出码 + stderr 尾段补标签——`classifyFailure` 本体零改 |
+| 池与主机面 | `thincoder-core/agent-tools/ssh-session.mjs` | **对齐**：主机 / 用户 / 端口 / `identityFile` 全取会话记录值（S10「不另填主机 / 凭据」）；**偏离** = 传输是**新连接**（scp 自己握手，不复用会话的 PTY 进程）⇒ 重走一次 ⑤ 凭据判定 |
+
+**先例节与先例批（三坐标的后两者）**：**先例节** = 本档 §6.22 ⑤–⑫（同一个工具的会话面：凭据链 ∥ 会话池 ∥ 失败分类族——传输面与它们同节同形，不另立节）；**先例批** = 无（传输面此前零批次，台账 `#2026` 为首批；同节各块的来源批见本节首行「来源」行）。
+
+**三问答案（本批新件）**：
+
+| 新件 | 何处住 · 名 · 谁用 | 既有件为何不用 |
+|---|---|---|
+| `ssh-transfer.mjs` | 住 `thincoder-core/agent-tools/`；名逐字 `ssh-transfer.mjs`（仓内零同名）；谁 = `thincoder-core/tools/ssh.mjs` 的 `put` / `get` 两分支 | **既有但不可用**：`ssh-transport.mjs` 职责 = PTY 会话运行面（剥离 / 四门 / 遮蔽尾缓冲），实测 556 行已越软线；传输面是**非交互**原语（无剥离、无就绪判据、无遮蔽），塞进去会把两套语义混在一档 |
+| `resolveSessionSecret` | 住 `ssh-session.mjs`；谁 = `connect` 与 `put` / `get` 两处 | **既有但无出口**：该判定现在是 `connect` 的内联段（探连密钥 → 密文库 → 凭据窗）；本批**提取为导出函数**（提取，非新增逻辑）——不提取就只能复制一份，D2 违 |
+| `scpBinary` ∥ `_setScpBinaryForTest` | 住 `thincoder-core/agent-tools/ssh-transfer.mjs`（模块级）；名逐字 `scpBinary` / `_setScpBinaryForTest`（仓内零同名）；谁 = 传输件起跑点 ＋ 本批单测格与两行集成格的夹具 | **既有缝换不到 scp**：仓内只有 ssh 二进制的缝——`thincoder-core/agent-tools/ssh-transport.mjs` 逐字 `export const sshBinary = () => _sshBinary ?? "ssh"`，全仓零 `scp` 缝；执行体 = 系统 `scp` 时替身无处落脚。照 `_setSshBinaryForTest` 同形补一缝（setter + `??` 缺省回落 + 用例 `finally` 复位），生产行为零变 |
+
+**勘察证据行（查过什么 ∥ 有没有相关的）**：
+
+- ① 传输面既有实现：`ssh-transport.mjs` 的 `buildSshEnv` ∥ `writeAskpassWrapper` ∥ `classifyFailure`。
+- ② 写门接面：`thincoder-core/agent/helpers.mjs` 的 `toolTouchPaths`（逐字 `const hook = tool?.touchedPaths`）∥ `thincoder-core/agent/write-gate.mjs` 的入口集 `LEDGER_ENTRY_TOOLS` 与 `ledgerGateApplies`（实读：无 `ssh` ⇒ 钩子永不生效）。
+- ③ 工具面现状：`tools/ssh.mjs` 的 `SSH_ACTIONS` 十动作（八既有 + `put` / `get`）与 `validateArgs`。
+- ④ 集成面现状：`test/RTM.md` 第 22 节三行。
+- ⑤ 公共源仓：`PROJECT-MANIFEST.json` 的 `"publicRepos": []` = 空 ⇒ 无仓外档可查。
+- ⑥ 协议面：§1「判据现状」所记，本机 `scp` OpenSSH 9.5p1 带 `-O`（`-O` = 经典 SCP 协议）。
+
+**① 协议面（缺省 = `scp -O`；覆盖 = `protocol:"sftp"`）**
+
+| 面 | 口径 |
+|---|---|
+| 缺省 | `scp -O`（经典 SCP 协议） |
+| 覆盖 | `protocol:"sftp"` ⇒ 去掉 `-O`（走 SFTP 子系统） |
+| 不做 | 不自动重试、不自动回落（同笔换协议 = 第二条实现路径，失败面的判据会分裂）；协议不对 ⇒ 退出码 + stderr 尾段如实交出，提示句**按现场分叉**：未传 `protocol` ⇒ 点名 `protocol:"sftp"` 可试；已传 `sftp` ⇒ 不再点该参数，只留「检查远端路径 ∥ 该主机可能两条协议都不通」 |
+| 平台面（如实记） | `-O` 需较新的本机 scp；确切版本门槛**未查证**（`unverified`——按上游发布说明回忆为 8.6，未核）。更老的客户端以 `unknown option -- O` 失败——可读、可改用 `protocol:"sftp"`。已核读数 = 本机 9.5p1 带 `-O`（§1）；版本门槛由实施轮真机腿收敛 |
+
+**分支依据**（每个分支一行，无可填依据的分支即删）：
+
+| 分支 | 依据 |
+|---|---|
+| 缺省走经典协议 | 需求档 NS8 逐字「**与只实现经典 SCP 协议的网络设备互通**」——设备侧无 `sftp` 子系统，缺省不这么走等于把主对象排除在外。**观测面：该场景在本仓尚未发生**（零台真机、零复现命令，唯一证据 = 用例 B20 的替身）——到期条件 = 实施轮真机腿接一台只跑经典协议的设备跑通一次 |
+| 保留 `protocol:"sftp"` 覆盖 | 需求档 §4.8 总体目标逐字「远端主机 / **网络设备**」——主机侧存在 SFTP-only 形态（`ForceCommand internal-sftp`、无远端 `scp` 程序），经典协议在那类主机上不可用。**场景尚未发生：本仓零台 SFTP-only 真机、零复现命令，唯一证据 = B20 替身**——到期条件 = 真机腿上一台 SFTP-only 主机跑通一次；到期前该分支按替身判据成立 |
+
+**② 参数面**
+
+| 参数 | 面 |
+|---|---|
+| `id`（必） | 会话 id——主机 / 用户 / 端口 / `identityFile` 全取该会话记录值 |
+| `localPath` / `remotePath`（必） | `put` = 本地 → 远端；`get` = 远端 → 本地；`localPath` 的 `~` 按 `expandHome` 展开——**单源 = `thincoder-core/expand-home.mjs`**，逐字 `export function expandHome(p, home = homedir())`（`config.mjs:18` 已 import 同一件）；传输件 import 该处、**自持副本删除**（D2） |
+| `overwrite`（可选，缺省 false） | **`get` 侧判据**：本地目标在盘 ⇒ **拒**（S11「不静默覆盖」），`overwrite:true` 才覆盖（判据 = 本地 `existsSync`）。**`put` 侧本门不判**：远端同名档由 `scp` 自身语义决定（两种协议都是覆盖），判远端存在性要另起一条 exec 通道，与「零新通道」相抵，且 S10 未要求该面——审批文案已点出传输两端，覆盖可见 |
+| `protocol`（可选） | `"scp"`（缺省）∥ `"sftp"` |
+| `timeoutMs`（可选） | 缺省 **600 000 ms**（选定策略值，非实测；真机读数不符 ⇒ 改这一个数）——到点杀进程树 + 可读句；**`get` 侧**并删半截本地档，判据 = 落点**字节数或 mtime 相对本次起跑变过**（`overwrite:true` 覆盖旧档而 `scp` 根本没打开时，一律删会拿用户旧档偿命）；未变 ⇒ 不删、回执照实写「落点原样」。`put` 侧本地源档不动，只可能远端留半截（失败面与边界句） |
+| 本地路径实参形（Windows 盘符，`unverified`） | `localPath` 先展开 `~`、解析成绝对路径，再把 `spawn` 的 `cwd` 设为该档所在目录、**命令行只传档名**——盘符的 `:` 与反斜杠都不进 scp 的参数位，`scp` 以首个 `:` 切分本地 / 远端的歧义整条消失。读数未经实机核（`unverified`，实机腿 = 仅 Windows）= 真机腿复核项 |
+| `get` 的本地父目录（硬前提，非参数） | **父目录必须已在盘**：不在 ⇒ 独立可读拒句 `Error: … local directory not found: <dir>`（与 `local source not found` 分形——一处是「来源缺」、一处是「落点没准备好」）、`scp` 零执行、本地零写。**不自动建目录**：建目录本身就是项目内一笔写，绕写门；且落点要让人看得见——打错臂的 `get` 会把人看不见的新目录当落点。`put` 侧不判此面（本地源档由失败面「`put` 本地源档不存在」一行判） |
+
+**凭据 = 既有面，零新通道**（§1 已定决定第二条）：传输是一次新 SSH 连接 ⇒ 走与 `connect` **同一段**判定（探连密钥 → 密文库 → 凭据窗），该段本批从 `connect` 内联段**提取**为导出的 `resolveSessionSecret`，两处共用。故 S10 的「密码主机走既有凭据面」与验收 ⑨ 的「不弹窗」是同一件事：**密文库有条目 ⇒ 零窗**——与 S6 / S7 同一判据，本面不另立。
+
+**传输面的凭据窗不带保存勾选（`offerSave: false`）**：保存动作只在 `connect` 面出现（⑪ 窗内勾选 + `auth` 回写）——传输是既有会话的**补连接**，不是建链入口 ⇒ 传输窗只问 user / password。要存凭据 ⇒ 先 `connect` 一次；用户可见后果由描述档写明。凭据判定段仍是同一条（`resolveSessionSecret`），差的只是这一次调用传 `offerSave: false`。
+
+**这条腿要写全（「不弹窗」的适用面）**：会话**不保留密码**——`ssh-session.mjs` 逐字 `spawn(entry.user, input.password)`，值只进 askpass 包装与遮蔽集，`entry` 上无密码字段（`resolveSecret` 用完即弃）。⇒ **窗口手输、未勾保存**建的会话，`put` / `get` 走新连接时**必再弹一次窗**。故验收 ⑨ 的「不弹窗」适用面 = **密文库或有密钥可用**，不覆盖这一类；账本身不欠（值不落盘 = 既有纪律），欠的只是这一句适用面。
+
+**③ 内容零入上下文（NS8）**：文件字节只在磁盘上走；工具回执 = 一行状态句 + 失败时的 stderr 尾段（≤ 600 字符，同 `failureText` 口径）。**不回读文件内容、不进 log、不进 offload 面**——传输面没有「结果全文」这个对象。
+
+**状态句字面（本节的字面单源——动作表 `put` / `get` 两行只指本条、不复写；两处并存即两个真值源，实施席无从判该发哪一形）**：
+
+| 动作 | 字面（`N` = 本次传输字节数） |
+|---|---|
+| `put` | `put <localPath> → <remotePath> · N bytes · exit 0` |
+| `get` | `get <remotePath> → <localPath> · N bytes · exit 0` |
+
+**冠行**：传输面回执**首行带会话状态行冠形**（同节既有面逐字「状态行冠形（每返回首行，便于判读）」）；上表两行字面 = **冠行之下那一行**，字面单源不变。理由 = 多设备会话里 `put` / `get` 回执只给路径，读的人无法确认推到了哪台主机。
+
+**④ `get` 的本地落盘走写门（S11 后半句）**
+
+落点 = 既有写门（`thincoder-core/agent/write-gate.mjs`）。三处落地缺一不可——**只补钩子不接线，门照样看不见这笔写**（实读反证，非推演）：
+
+- **① 钩子**（`thincoder-core/tools/ssh.mjs`）：补 `touchedPaths(args)`——`action === "get"` ∧ `localPath` 非空串 ⇒ `[expandHome(args.localPath)]`（**绝对形**；`~` 展开单源 = `thincoder-core/expand-home.mjs`），其余动作与缺参 ⇒ `[]`。钩子契约 = `thincoder-core/agent/helpers.mjs` 逐字 `const hook = tool?.touchedPaths`。
+  - **形差（如实记）**：钩子契约只收 `args`、拿不到 `ctx` ⇒ 钩子不做 `resolve(ctx.cwd, …)`。等价依据 = 门对钩子回值本就 `.map((p) => resolve(cwd, p))` 归一 ⇒ 绝对形过 `resolve` 恒等，判据点与真实落点同址。
+  - **为何必须绝对形**：回原样形（`[args.localPath]`）时，`get` 到 `~/.thincoder/tmp/x` 被判成 `<项目>/~/.thincoder/tmp/x` 这条虚构路径——工程模式无故要号，而 `~` 正是备份最常见的落点。
+- **② 入口集**（`write-gate.mjs`）：`LEDGER_ENTRY_TOOLS` += `"ssh"`。现集逐字 `const LEDGER_ENTRY_TOOLS = new Set([ "write", "edit", "insert_after", "apply_patch", "delete", "hashline_edit", "file_ops", "bash", "execute", "git", "manifest", "memory", ])`（十二把）——`ssh` 不在内，而门逐字 `if (!LEDGER_ENTRY_TOOLS.has(name)) return null // 入口集之外 ⇒ 本门不问` ⇒ 门在读到钩子之前就返回。集注释的计数随之改「十二把」→「十三把」（D3 计数随表）。
+- **③ 要号判据**（`write-gate.mjs` 的 `ledgerGateApplies`）：加分支 `if (toolName === "ssh") return String(args?.action ?? "") === "get"`。**此分支必须带**：该函数对未列工具回落逐字 `return true`（`git` / `manifest` / `memory` 各一分支之后），只加入口集不判 action ⇒ `connect` / `send` / `read` / `list` 全部变成要号，把会话面整条打死。
+
+判据点仍走既有链：`ledgerGateTargets` 对写盘族回落 `toolTouchPaths(tool, args)`，`ssh` 的钩子对 `get` 回 `expandHome` 绝对形（见 ①）、其余回 `[]`——空 ⇒ `null` ⇒ 「没有可判的目标」，本门不问。
+
+- 效果：门对 `get` 与对 `write` **完全同源**（同一个门、同一判据、同一句拒文），**零新谓词**。
+- 工程模式无在途号 ∥ 无项目 ⇒ 拒、本地档零写；普通模式本门不挂（与 `write` 一致）。
+- 拒文由门产生，本节不写第二份文案（D2）。
+
+**⑤ 失败面（每条一眼可判）**
+
+| 类 | 判据 | 回执 |
+|---|---|---|
+| 写门拒（仅 `get`） | 门的拒句 | 门原文（`scp` 零执行、本地档零写） |
+| 目标已存在（仅 `get`） | `overwrite !== true` ∧ 本地目标在盘（`existsSync`） | `Error: … target exists … pass overwrite:true`（不静默覆盖；`scp` 零执行、原档字节零改） |
+| `put` 本地源档不存在 | 展开 `~` 后 `existsSync(localPath)` 假 | `Error: … local source not found: <path>`（`scp` 零执行；远端零写） |
+| `get` 远端源档不存在 | 退出码非 0 ∧ stderr 尾段 | `Error: ssh transfer failed (… exit N)` + 尾段（不回读档、不伪造成功、不建空档） |
+| `get` 本地父目录不在盘 | 展开 `~` 后 `dirname(localPath)` 不在盘（`existsSync` 假） | `Error: … local directory not found: <dir>`（独立拒句、不与源档那句混形；**零建目录**——该目录事后仍不在盘；`scp` 零执行、本地零写） |
+| 认证 | `classifyFailure` 命中 auth | 既有 auth 句 |
+| 不可达 ∥ 指纹变更 | 同上（unreachable ∥ hostkey） | 既有句（指纹变更硬停，不改写 `known_hosts`） |
+| 协议 ∥ 远端路径 | 退出码非 0 ∧ stderr 尾段 | `Error: ssh transfer failed (… exit N)` + 尾段 + 提示**按现场分叉**（未传 `protocol` ⇒ 点名 `protocol:"sftp"` 可试；已传 `sftp` ⇒ 只留「检查远端路径 ∥ 该主机可能两条协议都不通」） |
+| 硬超时 | 到 `timeoutMs` | 杀树 + `Error: … timed out after Ns`；**`get` 侧**落点字节数或 mtime 变过 ⇒ 删并带 `(partial local file removed)`，未变 ⇒ 一律不删、回执照实写「落点原样」；**`put` 侧本地源档不动、远端可能留半截档——本批不清理（边界句，如实交底）** |
+| 会话不在池 | 池查询零命中 | 既有「`ssh#N` 不存在」句 |
+
+**夹具缝（本批新增 · 生产零影响）**
+
+- **缝形**：`thincoder-core/agent-tools/ssh-transfer.mjs` 模块级 `_setScpBinaryForTest(cmd, prefixArgs)` ＋ `scpBinary = () => _scpBinary ?? "scp"`。
+- **所照先例**：`ssh-transport.mjs` 的 `_setSshBinaryForTest` / `sshBinary`——setter + `??` 缺省回落 + 用例 `finally` 复位。
+- **谁挂它**：传输面判据句（S10 / S11 / NS8）与传输面各格（N11 / N12 / B20 / B21 / E12–E17）的替身全挂这一缝。**E17 例外**：它过真门、不起 `scp`，不挂缝。
+- **会话侧不动**：仍挂既有 `_setSshBinaryForTest`——两条缝各管一个二进制，不合并。
+
+**⑥ 受影响文件与档位结论**（行数 = 本轮实测；口径 = 每个换行计一行，故与 `wc -l` 差 1）
+
+| 文件 | 改动 | 档位（实测行数） |
+|---|---|---|
+| `thincoder-core/tools/ssh.mjs` | `SSH_ACTIONS` 八 → 十（`put` / `get`）；`validateArgs` 两动作必填面 + `protocol` 枚举 + schema 补面（四参数 + **`ledger`**——写门对 `get` 的放行条件就是 `args.ledger`，其余入集工具全带）；`execute` 两分支；新增 `touchedPaths(args)` 钩子；import 叶子 `../expand-home.mjs`（钩子回绝对形，不自持归一逻辑）；`isReadonlyAction` 零改（两动作 = 写动作，照常过审批门） | 147 行，仍在软线内 |
+| `thincoder-core/agent-tools/ssh-transfer.mjs` | **新档**：`scpArgs` ∥ `scpEnv`（复用 `buildSshEnv` 与包装档）∥ 起跑 ∥ 硬超时 ∥ `transferFailure` ∥ 半截档清理 ∥ 状态句 ∥ 冠行；**模块级夹具缝** `_setScpBinaryForTest` ∥ `scpBinary`（同 `_setSshBinaryForTest` 形）；`~` 展开 import 叶子 `../expand-home.mjs`（不自持副本） | 新档，210 行 |
+| `thincoder-core/agent-tools/ssh-session.mjs` | 提取 `connect` 凭据判定段为导出 `resolveSessionSecret`（提取，净增应 ≈ 0）+ 导出池查询 | **496 行**（软线 500，余 4）；越线 ⇒ **另批拆**（切面 = 池查询 / 导出面出去；`resolveSessionSecret` 凭据判定**留在本档**——它与会话生命周期同源，搬进传输件会把两套语义混在一档，正是本档新建 `ssh-transfer.mjs` 的理由） |
+| `thincoder-core/agent-tools/ssh-transport.mjs` | 加一行 import（`expandHome` 取自叶子 `../expand-home.mjs`）＋ 删内联 `expandHome` 副本、去 `node:os` 的 `homedir`，**行为零变**（全仓 `~` 展开单源）；`buildSshEnv` / `writeAskpassWrapper` / `unlinkAskpass` / `classifyFailure` 只被 import、零改 | 556 行，已越软线（拆分计划在册 = 台账 `#1922`，复启条件 = 下一次实质触碰该档） |
+| `thincoder-core/agent/helpers.mjs` | **零改**（`toolTouchPaths` 已支持钩子） | 408 行 |
+| `thincoder-core/expand-home.mjs` | **零改**（只被 import `expandHome`——`~` 展开单源：**传输面 `localPath` 与 `ssh` 钩子 `touchedPaths` 同 import 这一处**） | 17 行 |
+| `thincoder-core/agent/write-gate.mjs` | 写门接面：`LEDGER_ENTRY_TOOLS` += `"ssh"`（集注释计数十二把 → 十三把）；`ledgerGateApplies` += ssh 分支（`action === "get"` 才要号）；其余判据零改 | **522 行，已在软线之上**（本批净增 ≈ +5 行、不新增职责）⇒ 本批不拆；**拆分计划 = 判据段先出去**（入口集 ∥ 要号判据 ∥ 拒文构造另立档），解析取根段次之；**承接批 = 台账 `#2020`**（与 `#1996` / `#1999` / `#2003` 同批搬） |
+| `thincoder-core/permission.mjs` | `formatPermission` 的 ssh 行点出传输两端（`localPath` → `remotePath`） | 139 行 |
+| `thincoder-core/tool-docs/ssh.md` | 描述面（英文）——**不持逐字文本面**（同本节既有口径注；落笔 = eng-coder，内容依据 = 本节） | 65 行 |
+| `test/RTM.md` | 第 22 节两行 + 节注计数（落笔 = 实施轮） | — |
+| `test/integration/ssh-file-transfer.test.mjs` | **新档**：22-4 ∥ 22-5 两格的落地 | 新档 |
+| `docs/batches/2026-11-04-ssh-file-transfer.test.mjs` | 本批单元测试档（随批删——口径单源 = `docs/core/design/TESTING.md`） | 新档 |
+
+**档位结论**：跨 500 行软线面**一档**——`write-gate.mjs`（**522 行，已在软线之上**，本批只加两处判据、不新增职责 ⇒ 本批不拆；拆分计划 = 判据段先出去，承接批 = 台账 `#2020`）。`ssh-session.mjs` 改后 **496 行**、余 4 行，**未越线**；再触碰而越线 ⇒ 另批拆（切面 = 池查询 / 导出面；凭据判定留在本档）。其余全在软线内，`ssh-transfer.mjs` 为新档（210 行）。
+
+**⑦ 关键决策**
+
+| # | 决策 | 理由 |
+|---|---|---|
+| D-TO24 | 传输执行体 = **系统 `scp`**，缺省经典协议（`-O`），`protocol:"sftp"` 覆盖 | 零第三方运行时依赖（NS1 承诺不动）∧ 与网络设备互通（NS8）∧ 二进制安全由执行体保证，不自己在流上搬字节 |
+| D-TO25 | 凭据 = **提取 `resolveSessionSecret` 两处共用**，不做传输专用凭据通道 | §1 已定决定第二条（不新建凭据通道）；提取代替复制（D2） |
+| D-TO26 | `get` 落盘走**既有写门**：钩子（`touchedPaths`）∥ 入口集（`"ssh"`）∥ 要号判据（`action === "get"`）三处落地，缺一不可 | 门 / 判据 / 拒文全部单源；自建判据 = 第二个写面真值源，两处必漂移。只补钩子不加入口集 = 门先返回，钩子读不到（实读）；只加入口集不判 action = 会话面全要号。 |
+| D-TO27 | 不做自动换协议重试 | 被否 = 自动回落（同笔重试把「协议不对」这个可诊断事实埋在两次尝试之后，且两条协议路径都要维护）；代价在册 = 协议不对时要人工给一次 `protocol`，而失败句直接点名该参数 |
+
+**⑧ 集成用例增量（自 `test/RTM.md` 起答）**：破行 = **0**（第 22 节既有三行断的是 `send` / `read` / 硬超时，零涉传输；其余节零涉 `ssh`）· 冗余行 = **0** · 新增 **2** 行（第 22 节续行，节注计数随之由三态改五态）。**22-4 的通过条件含回执形**：回执 = 会话冠行 + 一行状态句（与 ⑬ ③ 同源；冠行让多设备会话里的人能确认推到了哪台）：
+
+| 行 | 所验的组件交互 | 断言的业务可观察结果 | 需求回指 | 进入口 |
+|---|---|---|---|---|
+| 22-4 | 工具面 `ssh` ⟷ 传输件 ⟷ askpass 凭据链 | 会话连上只实现经典 SCP 协议的替身，`put` 一个 1 MiB 二进制文件 ⇒ 远端副本 `sha256` 与本地相等；工具回执 = **会话冠行 + 一行状态句**（含 `bytes` 与 `exit 0`），对话里不出现文件内容 | §4.8 S10 ∥ NS8 | CLI 会话里让助手把固件推到交换机——用户看的是那一格工具结果回执 |
+| 22-5 | 传输件 ⟷ 写门 ⟷ 会话池 | 同一会话 `get` 一份远端配置到项目内路径：无在途号 ⇒ 拒且本地档不存在；带在途号 ⇒ 落盘、`sha256` 与远端相等；目标已存在且不给 `overwrite` ⇒ 拒、原档字节零改 | §4.8 S11 ∥ NS8 | 同上，助手把 running-config 备份回仓 |
+
+节注计数随之改：第 22 节首行 `三态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界` ⇒ `五态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界 · 22-4 正常 · 22-5 边界`；两行新格证据档 = `test/integration/ssh-file-transfer.test.mjs`（新档，常驻——与随批删的单元测试档是两个对象）。
+
+**UI / 交互决策**：本批**零界面面新增**——`put` / `get` 只**过既有审批门**（`onPermissionRequest`），审批文案点出传输两端（`permission.mjs` 一行）；无新弹窗、无新配置项、无新设置键。**与 NS3 的一处偏离（登记）**：NS3 判据是「审批文案一般含将发送原文」，而传输面载荷 = 文件字节——文案改为**点出两端**（`localPath` → `remotePath`）、**内容不入文案**（与 NS8「内容零入上下文」同向）；把文件正文抄进审批文案等于把内容灌进对话面。**无 open 项**。
+
 #### 接口契约（工具面 · 实现面）
 
 | 面 | 落点 | 形 |
 |---|---|---|
 | 工具本体 | `thincoder-core/tools/ssh.mjs` | `ssh` 工具：动作表见下；`readonly:false` + `isReadonlyAction(args)`（`list`/`read`/`credentials` ⇒ 只读 ⇒ 免审批；写动作照常询问——钩子消费点 = `agent/dispatch-gates.mjs:130`，先例 = 端壳 git 装饰面） |
 | 会话机制 | `thincoder-core/agent-tools/ssh-session.mjs` | 池 / 连接 / askpass 包装生成 / 读写 / 沉降 / 遮蔽 / 生命周期（单点） |
+| 传输机制 | `thincoder-core/agent-tools/ssh-transfer.mjs`（新） | `put` / `get` 传输面单点：`scp` 参数拼装 / 起跑 / 硬超时 / 回执句 / 半截本地档清理（不碰会话池；池查询由 `ssh-session.mjs` 出口供给） |
+| 写门接面 | `thincoder-core/tools/ssh.mjs`（钩子）· `thincoder-core/agent/write-gate.mjs`（入口集 + 要号判据）· `thincoder-core/agent/helpers.mjs`（零改） | `toolTouchPaths` 逐字 `const hook = tool?.touchedPaths`；`ssh` 补 `touchedPaths(args)`：`action==="get"` ∧ 非空 ⇒ `[expandHome(args.localPath)]`（绝对形——钩子拿不到 `ctx`，门侧 `.map((p) => resolve(cwd, p))` 对它恒等），其余 ⇒ `[]`；`LEDGER_ENTRY_TOOLS` += `"ssh"`；`ledgerGateApplies` 的 ssh 分支 = `action === "get"` 才要号 |
 | 保存库 | `thincoder-core/agent-tools/ssh-vault.mjs`（新） | 保存件单点：后端解析（DPAPI）/ 加解密 / 存取删 / 可用性判定 / 键形（`hostKey` 单源）∥ **观测缝（A 面四格判据落形）**：模块级读次计数 + 复位导出 `_vaultReadsForTest()` / `_resetVaultReadsForTest()`（读次 = 读盘入口调用数；缺省生产行为不变；用例 `finally` 复位；同族先例 = §6.14 测试态缝） |
 | 口令助手 | `thincoder-core/tools/ssh-askpass.mjs` | ssh 经包装档调用（独立进程）——非工具、不注册 |
 | 注册面（F1） | `thincoder-core/tools/index.mjs` | `builtinTools` + 导出面各一行；VSC 端装配清单 `thincoder-vscode/src/tools/index.mjs` 同拍（端侧零实现副本——W14 单源律） |
@@ -1185,13 +1340,15 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | `list` | — | 在活会话清单（id / host / user / 状态 / 空闲秒）——上下文压缩后的恢复路 |
 | `credentials` | — | 保存凭据清单（host / user / 保存时间 / 最近使用——**值零出现**）；只读 ⇒ 免审批 |
 | `forget` | `host`（必）· `port`（可选） | 删该主机保存凭据 + 确认句（幂等）；过审批门 |
+| `put` | `id`（必）· `localPath`（必）· `remotePath`（必）· `overwrite`（可选）· `protocol`（可选）· `timeoutMs`（可选） | 一行状态句（字面单源 = ⑬ ③）；文件内容零入上下文；远端同名档由 `scp` 自身语义决定（两种协议都是覆盖），**本门不判**——理据 = ② `overwrite` 行 |
+| `get` | 同 `put` 的参数面（方向相反） | 一行状态句（字面单源 = ⑬ ③）；文件内容零入上下文；**目标已存在而不给 `overwrite:true` ⇒ 拒**（S11「不静默覆盖」，判据 = 本地 `existsSync`——见 ② `overwrite` 行）；本地父目录不在盘 ⇒ 拒（② 硬前提行，零建目录）；本地落盘经既有写门（工程模式无在途号 / 无项目 ⇒ 拒、档零写） |
 
 状态行冠形（每返回首行，便于判读）：`[ssh (<id>) <host> — <state> · idle <n>s]`。
 
 
 > **口径注（描述文本面）**：`thincoder-core/tool-docs/ssh.md` 保存面变更**不持逐字文本面**（有意——与 §6.21 体例差异明记）：逐字文本面落笔 = eng-coder（内容依据 = 机制文档）；本节只列内容点。
 
-#### 验收判据（S1–S9 / NS1–NS7 逐条 → 判据句 · 机检形）
+#### 验收判据（S1–S11 / NS1–NS8 逐条 → 判据句 · 机检形）
 
 | 需求条目 | 判据句（机检形） |
 |---|---|
@@ -1209,6 +1366,10 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | **S7** 保存与静默复用 · fail-soft | 窗内勾选保存 ⇒ 保存档增条目（明文 0 命中）；**二次 `connect` ⇒ 凭据窗回调零调用**且连接成功（返回注记含「保存凭据已用」句）；四注入（坏密文 ∥ 后端抛 ∥ 结构损坏（坏 JSON 档）∥ 条目被服务端拒）逐一 ⇒ 均为「可读句 + 凭据窗恰一次 + 连接不崩」（不可解密 / 后端抛 ⇒ 条目保留；结构损坏 ⇒ 视同无——原档原位不动；被拒 ⇒ 该条目已删——档内零条目）；**档缺失** ⇒ 视同无（静默——正常首连态） |
 | **S8** 清单 · 删除 | 清单 = N7（值零出现）∥ `forget` ⇒ 条目消失；再 `connect` ⇒ 凭据窗恰一次（回落）；二次 `forget` ⇒ 可读句、零抛（幂等） |
 | **S9** 身份面 · `identityFile` | `connect identityFile=…` ⇒ `-i <路径>` 生效（`~` 展开）∧ 成功后记入 ⑨ 记录；再连（不给参）⇒ 复用记录值（⑩；N8 同判） |
+| **S10** `put` 单文件 · 二进制安全 | 夹具 = `_setScpBinaryForTest`（`thincoder-core/agent-tools/ssh-transfer.mjs`）换脚本化替身 `scp`（会话侧仍 `_setSshBinaryForTest`）：本地 1 MiB 随机二进制 `put` 到远端 ⇒ 远端副本 `sha256` = 本地（逐字节）；回执 = 会话冠行 + 一行状态句（含 `bytes` 与 `exit 0`），**回执内零文件内容可辨片段**（取本地前 64 字节做子串扫描 = 0 命中）；`put` 参数面没有 `host` / `user` / `port`（主机取会话记录值）；密文库有该主机条目时 `put` 成功 ∧ **传输期凭据窗回调零调用**（验收方向 ⑨ 的机检形——观测缝 = **计数的 `onSecretInput` 替身**：替身记本次传输期间凭据窗回调被调用次数，断言 = 0。**不借 `_vaultReadsForTest()`**：那个缝读的是保存件读次，而本格输入「密文库已有该主机条目」⇒ 读次必然 ≥ 1，两读数判的不是一件事） |
+| **S11** `get` 单文件 · 走写门 · 不静默覆盖 | 远端 1 MiB 文件 `get` 到本地 ⇒ `sha256` 相等；工程模式 depth-0 **无在途号** ⇒ 写门拒（拒文出自门本体）、`scp` 零执行、本地档不存在；带在途号同笔 ⇒ 放行、档在盘；目标已存在且不给 `overwrite:true` ⇒ 拒且原档字节零改 |
+| **NS8** 传输面 | 文件内容零入上下文（**仅回执面**扫本地文件前 64 字节 = 0 命中——传输面没有「结果全文」对象、不写 log，消息面 ∥ `tool-results` log 无从命中，不列为判据）∥ `timeoutMs` 到点 ⇒ 进程树被杀、返回可读句（不挂起）；**`get` 侧**并删半截本地档（`put` 侧本地源档完好，远端半截档残留见边界句）∥ 失败句含退出码与 stderr 尾段 ∥ 缺省 `scp -O` 使只实现经典协议的替身可通（替身判据 = 收到 `-O` 才放行，收 SFTP 子系统请求即失败） |
+| **S10 / S11** 描述面 | `thincoder-core/tool-docs/ssh.md` 含 `put` / `get` 两条动作条目 ∧ 各自的参数面与一行状态句口径 ∧ 「文件内容零入上下文」一句；六要素（§6.9）在位（落笔 = eng-coder，内容依据 = 本节 ⑬；判据形 = 逐条子串命中，非人工目检） |
 | **NS6** 保存面口径 | 明文 0 命中（会话档 / 结果 / log / trace / 保存档）；保存档仅密文 blob；子进程命令行零值（夹具记 argv）；仓内零落点（`git status` 读数） |
 | **NS7** 多端同源 | 三端共一份保存档（同 `configDir`）；端差仅渲染（勾选控件形）；保存 / fail-soft（S7）三端各跑同判 |
 | **S3 / NS2** 就绪判据（③ 本批） | 夹具（脚本化假设备，时间缝压低）：① 输出 `Building configuration...` 后停 3 s 再出 `[OK]` + 提示符 ⇒ 首次 `send` **不得**在静默窗判就绪，返回文本含 `[OK]`；② 缓冲末行为 `--More--` ⇒ 就绪原因为待答标记，且返回文本 `--More--` 恰 1 命中；③ 睡死不输出 ⇒ 硬超时返回可读句，且句内点名是哪一门没过；④ 中段回读（N9 后紧接 `read`）⇒ 结论 = `buffered`、用时 < 1 s（不付 60 s） |
@@ -1276,6 +1437,16 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 | B17 | 边界 | 收场时缓冲尾挂着半条序列（`\x1b[1;`） | 返回面 `\x1b` 0 命中 + 注记 `1 incomplete escape sequence dropped`；下一次 `read` 不受影响 |
 | B18 | 边界 | `--More--` 被后续输出顶走后出提示符 | 结论 = 提示符（门① 只看末行），不误发空格 |
 | B19 | 边界 | 回显的秘密值内含控制字节（`\x07`） | 归一后的秘密整串 ∥ 各归一段（≥ 4）**0 命中**；1–3 字符残段不判（边界句） |
+| N11 | 正常 | `put localPath=<1 MiB 随机二进制> remotePath=/flash/img.bin`（会话 = 密码机，密文库已有该主机条目） | 回执 = **会话冠行 + 一行状态句**（状态句含 `bytes` 与 `exit 0`）；远端副本 `sha256` = 本地；回执零文件内容片段；**传输期凭据窗回调零调用**（验收 ⑨ 的机检形——观测缝 = 计数的 `onSecretInput` 替身，断言回调次数 = 0；保存件读次不在本格断言之列，输入已含密文库条目 ⇒ 读次 ≥ 1） |
+| N12 | 正常 | `get remotePath=/flash/img.bin localPath=~/backup/img.bin overwrite:true`（**夹具前置 = `~/backup/` 已建**——父目录不在盘走拒句，见失败面与 E16） | 本地档 `sha256` = 远端；`~` 已展开；回执 = 冠行 + 一行状态句。**前提 = 本格直驱工具面（`sshTool.execute`），不过写门**——写门只挂在派发相位，直驱证明不了工程模式可用；「过门」那面由 E17 判 |
+| B20 | 边界 | 只实现经典 SCP 协议的替身（收到 SFTP 子系统请求即拒） | 缺省 `put` 成功（替身见 `-O` 放行）；同一笔传 `protocol:\"sftp\"` ⇒ 可读失败句 + 尾段如实交出，且提示句**不点 `protocol`**（只留「检查远端路径 ∥ 该主机可能两条协议都不通」——用户已用过的参数再点一次等于让人重试同一笔） |
+| B21 | 边界 | 传输 `timeoutMs: 200` 到点（替身中途停吐） | 可读句（`timed out after 0.2s` + `partial local file removed`）；进程树无残留；`get` 半截本地档不在盘；`put` 侧读数 = 本地档完好、**远端可能留半截档（本批不清理——边界句如实交底，不谎称已清）** |
+| E12 | 错误 | 工程模式 depth-0 无在途号 `get`（本地目标在项目内） | 写门拒（拒文 = 门本体原文）、`scp` 零执行、本地档不存在 |
+| E13 | 错误 | `put` 到远端不存在的目录 | 非 0 退出码 + stderr 尾段如实交出（不吞、不改写成成功） |
+| E14 | 错误 | `put` 的本地源档不存在（`localPath` 指向空处） | `Error: … local source not found: <path>`；`scp` 零执行（替身零命中）；远端零写 |
+| E15 | 错误 | `get` 的远端源档不存在（scp 报 `No such file or directory`） | 非 0 退出码 + stderr 尾段如实交出；本地零档（不改写成成功、不造空档） |
+| E16 | 错误 | `get` 的 `localPath` 父目录不存在（`~/nouveau/img.bin`，`~/nouveau/` 不在盘） | `Error: … local directory not found: <dir>`（独立可读句）；`scp` 零执行（替身零命中）；**零建目录**（该目录事后仍不在盘）；本地零档 |
+| E17 | 错误 | 与 N12 同落点的 `get` 走**真门**（`executeToolCalls` 派发相位：工程模式 depth-0、落点在项目外、无在途号） | 写门拒且判据点 = **真实落点**（`C:\Users\<用户>\…`，不是 `<项目>/~/…` 虚构路径）；拒因 = 「没有项目拥有这笔写」（**不**是「没带号」）；本地零档。**与 N12 合起来才成立**：N12 证明工具面可用、本格证明工程模式落项目外不可用（普通模式可用） |
 
 #### 关键决策
 
@@ -1347,7 +1518,11 @@ ctx.onSecretInput({ kind:"ssh-credential" | "ssh-secret", sessionId, host, user,
 - **凭据保存 = 显式 opt-in 的密文本机件**（⑪ / 裁决记录 ④）：不做通用凭据托管——仅 ssh **连接**凭据（`secret_input` 设备密文不在保存面）、仅本机（不跨机同步）、仅加密态；明文永不落盘；密钥事务仍归本机 ssh 配置 / agent。
 - **不做自动装公钥**（引导 = 文档步骤——⑩）∥ **mac / Linux 保存面不用**（`vaultAvailable()` 单点；勾选不出现——连接照既有窗路）∥ **保存面依赖系统 PowerShell（Windows）——缺席 ⇒ 保存不可用（连接照常，不 brick）** ∥ **不引第三方密钥库 / 原生件**（后端抽象留位；引入 = 另裁）。
 - **mac / Linux 无实机腿**（按文档实现 + 用户反馈迭代——实机腿 = 仅 Windows；裁决记录 ③ 判据）。
-- **不做文件传输（scp / sftp）与隧道管理（`-L`/`-R`）**——后一刀在册（需求档边界同句）。
+- **不做隧道管理**（`-L`/`-R` 的动态增删）——在册候选，非「不做」（需求档边界同句）。
+- **传输面不做（需求档 §4.8 边界逐字三项）**：递归目录同步 ∥ 断点续传 ∥ 进度条。
+- **传输面另定不做（设计另定，D-TO27）**：自动换协议重试 ∥ 远端目录列表；**参数面无目录参数**（`put` / `get` 只收文件路径，不收目录——不做递归）。
+- **不做自动建本地父目录**：`get` 的 `localPath` 父目录必须已在盘，不在 ⇒ 拒（② 硬前提行 / 失败面 / E16）——建目录本身就是项目内一笔写，绕写门；要新落点由用户先建。
+- **`put` 超时 / 中断后远端可能留半截档，本批不清理**：清远端半截档要第二条通道（同主机另起一次 exec），与本批「零新通道」相抵 ⇒ 如实交底：镜像 / 配置场景用 `overwrite:true` 重传整档，或人工删；清理判据归另批。
 - **不做跨会话存活**（agent 会话结束 = 会话灭）；**不做子代面**（depth>0 排除）。
 - **不做 `--More--` 自动翻页 / 不做危险命令文本拦截**（后者全交审批门——零文本拦截，见 §6.4）。
 - **不引本地 PTY 包装**（`script` / `winpty` / `sshpass` 皆不入）。
@@ -1603,7 +1778,7 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 
 | 键 | 换写后逐字（只列追加 / 改动分句；其余分句不动） |
 |---|---|
-| `status` | `… prose goes to the separate `note` field, which lands as a parenthetical). Writing §1 已收口 closes the record and runs the closeout-chain gate: §2 / §3 / §4 / §6 must each carry content, or §1 declares it inapplicable with `> 不适用：§N —— <reason>` (§2 / §3 / §4 only; §5 is exempt; §6 never). Reopening a frozen record = §1 → 进行中 with `note` = the reason: the tool rewrites the §1 status line and appends a 「重开记录」 line — no other existing line is touched.` |
+| `status` | `… prose goes to the separate `note` field, which lands as a parenthetical). Writing §1 已收口 closes the record and runs the closeout-chain gate: every section must carry content (§5 exempt) — the `不适用` declaration is retired, so any `> 不适用：§N` line in §1 is refused outright. Reopening a frozen record = §1 → 进行中 with `note` = the reason: the tool rewrites the §1 status line and appends a 「重开记录」 line — no other existing line is touched.` |
 | `note` | `… Omit for a plain value. On the reopen path (a frozen record, §1 → 进行中) `note` is REQUIRED and lands verbatim in the §1 reopen record instead of the status-line parenthetical (it may name the frozen keyword there).` |
 | `close` | `close (depth-0 only — freeze the record: §1 → 「已收口 <date>」, every further write is refused except the reopen conjunction; runs the same closeout-chain gate as status — an incomplete chain is refused, naming the missing sections)` |
 
@@ -1611,9 +1786,9 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 
 | # | 场景 | 逐字 |
 |---|---|---|
-| J1 | 链门（缺段非仅 §6） | `batch: 收口链未跑完（closeout chain gate）— close refuses: the record's closeout chain has not run, and closing would freeze it that way. Missing: <§2 / §3 …>. Each named section must carry content (append it) or be declared inapplicable in §1 as `> 不适用：§N —— <reason>` (§2 / §3 / §4 only). §6 must carry its verification (never declarable) and §5 is exempt (a light-channel round has no implementation section). Nothing was written.` |
+| J1 | 链门（缺段非仅 §6） | `batch: 收口链未跑完（closeout chain gate）— close refuses: the record's closeout chain has not run, and closing would freeze it that way. Missing: <§2 / §3 …>. Each named section must carry its own content — the `不适用` declaration is retired (every batch needs its design, its review and its approval). §6 must carry its verification. Nothing was written.` |
 | J2 | §6 为唯一缺段 | **旧串逐字**（`emptySectionSixError()`——零回归）：`batch: §6 收口段为空（non-empty gate）— close refuses: the closeout section (§6) has no content, and closing would freeze the record with that section permanently empty. Write the section first (append §6: the closeout / verification summary), then call close again. Nothing was written.` |
-| J3 | 声明形不合 | `batch: 「不适用」声明形不合（malformed inapplicability declaration）— one line per section: `> 不适用：§N —— <reason>` with a non-empty reason, §N ∈ {2,3,4} (§5 needs no declaration; §6 is never declarable). Offending line: <该行原文>. Nothing was written.` |
+| J3 | 声明已停用（`§1` 出现即拒） | `batch: `不适用` 声明已停用（inapplicability declaration retired）— no declaration is accepted: §2 / §3 / §4 / §6 must each carry content (§5 exempt). Offending line: <该行原文>. Nothing was written.` |
 | J4 | 重开缺理由 | `batch: 重开需理由（reopen requires a reason）— reopening a frozen record reverses a recorded decision, so the reason must be stated: pass it as `note` (it lands verbatim in the §1 reopen record). Nothing was written.` |
 
 **③ 两处行字面（逐字——工具写盘形态）**：
@@ -1622,13 +1797,12 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 |---|---|
 | 重开后的状态行 | `**状态行**：进行中（重开 <YYYY-MM-DD>）` |
 | §1 尾部追记行 | `**重开记录**：<YYYY-MM-DD> · 原收口 <旧日期> · 理由 = <note> · 操作者 = 主 agent`（**原收口 = 改写前状态行的收口日期字面**；无日期字面 ⇒ 落「未标日期」——重开后首收口时点只在此行保留） |
-| §1 段内的不适用声明（主 agent 经 append §1 落） | `> 不适用：§N —— <理由>` |
 
 **④ `edit` 动作的描述面（`thincoder-core/tool-docs/batch.md` + `batch.mjs` 的 action 枚举行）——逐字**：
 
 | 键 | 换写后逐字（只列追加 / 改动分句；其余分句不动） |
 |---|---|
-| action 枚举行 | `edit — replace one anchored range inside your own section (§2 only: the spec section, which may be rewritten in place; §1 / §3 / §5 / §6 are append-only evidence) …` |
+| action 枚举行 | `edit — replace one anchored range inside YOUR OWN section (§1–§6 alike; your identity decides which section) …` |
 | `edit` 参数说明 | `oldText must match exactly once, byte for byte (line endings included), inside the section body; newText replaces that range, and an empty newText deletes it. Refused with nothing written: a blank oldText, zero hits, two or more hits (the matching lines are named), an anchor crossing the section boundary, and any anchor or replacement that touches or introduces a `**状态行**：` line (the status line has one writer: `status`).` |
 
 **⑤ `edit` 的拒句（逐字 · 模型可见）**：
@@ -1636,11 +1810,11 @@ Fetch a URL and return its content. With a DeepSeek provider configured the URL 
 | # | 场景 | 逐字 |
 |---|---|---|
 | E1 | 空锚 | `batch: edit needs a non-empty oldText — a blank anchor cannot match exactly once. Nothing was written.` |
-| E2 | 零命中 | `batch: edit anchor not found — oldText must match the §2 body exactly once, byte for byte (line endings included). Nothing was written. Re-read the section and pass its current text verbatim.` |
-| E3 | ≥2 命中 | `batch: edit anchor is not unique — it matches <N> places inside §2 (lines <n1>, <n2>, …). Extend the anchor until it matches once. Nothing was written.` |
-| E4 | 锚越段界 | `batch: edit anchor crosses the section boundary — it starts outside the section body or reaches the next §N header, and rewriting across it would break section location. Nothing was written.` |
+| E2 | 零命中 | `batch: edit anchor not found — oldText must match the §<N> body exactly once, byte for byte (line endings included). Nothing was written. Re-read the section and pass its current text verbatim.` |
+| E3 | ≥2 命中 | `batch: edit anchor is not unique — it matches <N> places inside §<N> (lines <n1>, <n2>, …). Extend the anchor until it matches once. Nothing was written.` |
+| E4 | 锚越段界 | `batch: edit anchor crosses the §<N> section boundary — it starts outside the section body or reaches the next §N header, and rewriting across it would break section location. Nothing was written.` |
 | E5 | 触及 / 引入状态行 | `batch: edit would rewrite or introduce a **状态行** line — that line has exactly one writer: status, with a value from the section's word list. Nothing was written.` |
-| E6 | 已收口 / 段域 / 骨架保护 / 凭证 | 冻结串 · 骨架保护串 · 剥凭证**逐字同 append 面**；**骨架保护串的一句改写** = `…would break section location and the append-only guarantee.` → `…would break section location.`（两种处置下它仍成立，早先那句只对证据面成立）。**段域拒文自成一形两式**（不复用 append 串：那串对 eng-coder 说「§5 不是你的」，而 `edit` 的调用者正是能写 §5 的人 ⇒ 逐字复用即谎报）：depth-0 = `batch: §<N> is not yours to write — an in-place rewrite is allowed on §2 only (the spec section; §1 / §3 / §5 / §6 are append-only evidence — append them). Nothing was written.`；子代理 = `batch_segment: §<N> is not yours to write — this caller writes §2 only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5).` |
+| E6 | 已收口 / 段域 / 骨架保护 / 凭证 | 冻结串 · 骨架保护串 · 剥凭证**逐字同 append 面**；**骨架保护串的一句改写** = `…would break section location and the append-only guarantee.` → `…would break section location.`（段内一个写面下它仍成立；早先那句「and the append-only guarantee」只对证据面成立）。**段域拒文按场景分两族**。**族一·无写权身份 = `append` 与 `edit` 共用一条**（同一件事不各写一份串——`noSegmentError`）：工程面 `batch_segment: no segment is writable by this caller — the channel exists for eng-designer (§2), eng-coder (§5) and design reviews bound to a batch record (§3); the parent agent writes §1/§4/§6 through ordinary document writes.` ∥ 普通面同句，尾句作 `… ; in normal mode the parent agent writes §1/§2/§4/§5/§6 through ordinary document writes.`。**族二·段域不合 = `edit` 自成一形三式**（不复用 `append` 串：那串说的是「追加只到这几段」，而 `edit` 的调用者正是能改自己那一段的人 ⇒ 逐字复用即谎报）：depth-0 工程面 = `batch: §<N> is not yours to write — in engineering mode depth-0 edit rewrites §1/§4/§6 (一段一作者: §2 = eng-designer, §3 = design review, §5 = eng-coder). Nothing was written.` ∥ depth-0 普通面 = `batch: §<N> is not yours to write — in normal mode depth-0 edit rewrites §1/§2/§4/§5/§6 (一段一作者: §3 = design review only). Nothing was written.` ∥ 子代理 = `batch_segment: §<N> is not yours to write — this caller writes §<own> only (一段一作者: eng-designer → §2, design review → §3, eng-coder → §5). Nothing was written.` |
 
 **边界（本节不做）**：本批只**新增一个 action**（`edit`）与两个 schema 属性（`oldText` / `newText`）；其余 action 与参数零改（理由走既有 `note`）· 不改 `STATUS_WORDS` 词表 · 不改冻结门对已收口档 append / status / edit 的拒（串逐字）· 不改 `close` 的 §6 单段拒串（J2 逐字）· 端面零改（VSC / desktop 消费同一 tool-docs）。用例表 ∕ 验收回指 = `BATCH-RECORD.md` §4.19（本档不重述）。
 
@@ -1828,6 +2002,216 @@ export function gateDesignToken(parent, args) {
 **验收**：`docs/core/design/EDIT-HELPERS.md` §7.1 的六行判据（放行两行 / 拒四行）、§7.3 的批量帧 R1–R4、§7.2 的拒文四要素各有单测；拒文含路径、漂移量、两条下一步。
 
 **边界**：记账面 = 本进程内一张表——跨进程 / 跨实例写同一档不在护栏内（`EDIT-HELPERS.md` §7.4）。不加提示词面句子：护栏自己解释并给出下一步。不动 `write` / `apply_patch` / `hashline_edit` 的判定语义（`apply_patch` 只多落一笔清快照）。
+
+
+### 6.27 `tester` 子代理的工具面（读数角色）
+
+**面切分（本节只写这一层）**：`tester` = 第三种工具面，介于 `explore` / `plan` 的纯只读面与 `coder` 的全量面之间——它拿得到执行、拿不到写。
+
+**判据本体不在本节**：工具面公式、过滤分支、角色 enum 两处、任务书形、池位，**单源住 `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59.2**（本节不复制公式与枚举，回指即可；改动只改那一处）。
+
+**零新增工具**：本批不注册任何工具、不动任何工具 schema——`tester` 拿到的面 = 父侧工具表过一遍过滤的结果；父侧多一把只读工具，它自动跟着多一把。
+
+**描述面**：`thincoder-core/tool-docs/subagent.md` 的角色矩阵在实施轮加 `tester` 一行，逐字依据 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59.3。
+
+### 6.28 工具输出里的过程档标记（`grep` ∥ `bash` ∥ `execute`；过程档命中不可当设计依据 · FR41 §13.19 3-补）
+
+**需求坐标**：`docs/core/requirements/ENGINEERING-MODE-V2.md` §13.19 条 3-补。四裁 = 18:32 提问 ∥ 18:34 选「B（命中处打标）」∥ 18:37 选「甲（行首前缀）」并补强「必须用更明确的指示，告知不能作为设计依据」∥ 18:41 `execute` 一并做、判据与 `bash` 同套（主 agent 转达用户「两个都评审吧，然后自动跑完」并按建议执行）。
+
+**机制一句话**：`grep` ∥ `bash` ∥ `execute` 输出的每一条**行**，若能判定其来源档落在索引排除集者，**行首**加逐字前缀 `[process doc: not a design basis]`（原行整体后随）；其余行一个字节不变。**不是门**——不拦、不筛、不改命中集。
+
+三面判据分两套，但共用一份文案、一个谓词、一个 helper（见下「落点」）：`grep` 的输出是我们自己的结构形，按**这条命中的档**判；`bash` ∥ `execute` 的输出是任意文本，按**行首路径 token 反查盘上是否存在**判——这两面判据逐字同一套，只换拼装点与解析基准。
+
+**接线点五处，不是三处**：`grep`（核）· `bash` 同步（核）· `bash` 后台摘要（核）· `execute`（核）· **VSC 的 `bash`（端侧独立实现）**。
+
+- VSC 的 `bash` 不走核 `bashTool`：`thincoder-vscode/src/tools/index.mjs` 有 `import { bashTool } from "./shell.mjs"`；该档 `thincoder-vscode/src/tools/shell.mjs` 自带 `export const bashTool = {` 与 `function applyLineFilter(output, filter) {` ⇒ 核内打标在 VSC 端**不会自动生效**，漏接它 = 换个端就绕过本节的全部目的。
+- `grep` ∥ `execute` 确是同核实现（`thincoder-vscode/src/tools/index.mjs` 取核 `grepTool` 与 `executeTool`），本批无需端侧动作。
+
+| 分支 | 触发 | 输出 | 依据 |
+|---|---|---|---|
+| 标 | 所属档在排除集内 | `[process doc: not a design basis] <file>:<line>: <content>` | 需求 §13.19 3-补；用户 18:34 两例实证（整树 grep 把批档旧话当依据，其中一次重开已收口批档改正文） |
+| 不标 | 所属档在排除集外 | 与今天逐字节相同 | 同上——只加可读信息，既有面零改 |
+| 不标 | 出辖：祖先链无 manifest（场景 = 会话锚在无 manifest 的目录里跑检索：家目录 ∥ 临时目录 ∥ `execute` 的 `workdir` 指向树外） | 与今天逐字节相同 | `thincoder-core/declaration.mjs` 的 `declarationForTarget` 契约「null = 出辖」⇒ 无档类可判；保守方向 = 不改输出 |
+| 上下文行同判 | `before` ∥ `after` > 0 | 命中行 `:` 形与上下文行 `-` 形同标 | 判据是**档**不是行——不标则同一档的上下文行读起来像普通档的内容 |
+| 标（命令面：`bash` ∥ `execute`） | 行首 token 解析到盘上、且该档在排除集内 | 同行首前缀，行其余部分原样 | 用户 18:38「bash 也做」——只堵 grep 等于告诉人「用 bash 搜」；18:41 扩到 `execute`——留这一个口子，前两面白做 |
+| 不标（命令面） | 行首 token 解析不到盘上 / 预筛不过 | 一个字节不动 | 误标比不标更坏（用户 18:34 同一句判据）——判不了就不动输出 |
+
+**判据单源**：`thincoder-core/declaration.mjs` 的 `isExcludedRelPath`——面① 前缀（`index.excludePaths`）∪ 面⑥ 段序列（`docRoot.batches` 声明值 ∪ 约定段 `docs/batches`）。**零新排除名单、零新谓词、零改面⑥**。
+
+**判法逐字**（实施照抄，勿自造）：
+
+```js
+const decl = declarationForTarget(absFile)              // 最近带 manifest 祖先；null = 出辖
+const marked = decl ? isExcludedRelPath(absFile, decl, decl.root) : false
+```
+
+- `absFile` = grep 内部现成的 `h.file`（`resolveInCwd` 之后已是绝对形，`walk` 的每条命中都带它）。
+- 第三参传 `decl.root` 而非缺省：`isExcludedRelPath` 内 `resolve(base, s)` 对绝对参恒等，再由 `relative(root, …)` 换成根相对面——面① 前缀才判得住（`docs/core/design/_archive` 这类只被面① 命中，面⑥ 只管 batches 段）。传 null 会让面① 对绝对路径恒不命中，是本节唯一易错点。
+- 一次调用内按档记忆（`Map<file, boolean>`）：200 命中行 → 至多 200 次判定，`owningProject` 的祖先链走盘不比 grep 自己的 `stat` 更贵。
+- 判定只看**档**，与命中行号、命中文本无关。
+
+**落形（位置）**：前缀在行首，原行整体后随——无上下文形 `[mark] <file>:<line>: <content>`；有上下文形 `[mark] <file>:<l>: <content>` 与 `[mark] <file>-<l>- <content>` 两种分隔符都前置。
+
+**为什么是行首，不是 `file:line:` 之后**：
+
+- **消费面实读 = 零个按「行首即路径」解析的消费方**。grep 是核内单一实现（`thincoder-core/tools/search.mjs`），四处装配同一对象——`thincoder-vscode/src/tools/index.mjs` 直接 re-export、`thincoder-server/src/agent/chat-env-tools.mjs` 取 `core.grepTool`、`thincoder-core/advisor/loop.mjs` 从 `tools/index.mjs` 取。
+- 唯一读输出文本的用例 `test/integration/batch-live-batch-lock.test.mjs` 用 `/visible\.txt/` 子串与 `(no matches)` 全等判，与位置无关。
+- 先例不构成反对：`[outside]` 走行尾（`thincoder-core/browser/snapshot.mjs` 行文法 = `<ref> <role> "<name>"` + `[value=…]` + `[new]` + `[disabled]` + `[outside]`），因为它的行首 `<ref>` 是下一次动作的寻址键、必须原地不动；grep 的 `file:line` 不是寻址键（要读正文就再 `read`，路径可原样复制）。
+- 用户 18:37 选了「甲」：指令语落在最前，正是这一批的全部目的——读的人不必知道「过程档」是什么，看到就知道这行不能当依据。
+- 退路（不预置分支，留决策档）：若日后出现按行首解析的消费方，前缀移到 `<file>:<line>:` 之后、内容之前即可，判据与验收不变。
+
+**指令语逐字**：`[process doc: not a design basis]`（33 字符 · 全 ASCII · 方括号闭合）。语言取英文的理由 = 工具输出面全英文（`(no matches)` ∥ `grep error: path not found: …` ∥ `(no entries)`），同一行混中英破坏「一词一物」。`process doc` 与需求档「过程档」对位（状态档 = state doc）；`not a design basis` 即用户要求的「不能作为设计依据」。
+
+**既有面零改**：不新增参数、不改 schema、不改返回类型（`grep` ∥ `bash` ∥ `execute` 三者都返回 string）、`(no matches)` ∥ `(no output)` 逐字不变。前缀随行进出既有收敛点，不新增截断点（`grep` 面在 `truncate` 之前、`bash` ∥ `execute` 面在各自收尾文本之后）；前缀只落在过程档命中行（少数面），对输出帽的消耗可忽略。
+
+**零 console 噪声**：打标 helper 内零 `console` 调用；判据只走 `declarationForTarget` → `loadProjectDeclaration`，后者按档 `_cache` 记忆、只在**声明档不可用 ∥ 读不出**时 `console.warn`（`thincoder-core/declaration.mjs` 的降级面），进程内至多一次。
+
+验收 2 的「逐字节相同」按此口径断言：同一进程第二次起的判定零输出；首次 warn 以「声明档不合用」为前提，属既有降级面，不是本批新增的噪声点——测试夹具带合法 manifest，不进这条径。
+
+**验收（机检，逐条）**：
+
+1. 排除集内档命中 ⇒ 该行 **全等** `[process doc: not a design basis] ${abs}:${line}: ${text}`；
+2. 排除集外档命中 ⇒ 与改动前**逐字节相同**（全等断言，不是子串断言）；
+3. `_archive` 下的档（只由面① 前缀命中）⇒ 同标（专测「第三参传 root」这一点）；
+4. 上下文形：`: ` 命中行与 `- ` 上下文行同标；非排除档的上下文行零变化；
+5. `(no matches)` 逐字不变；参数面 schema 逐字不变（零新增键）；
+6. 出辖目录（无 manifest 祖先）⇒ 不标。
+7. 命令面（`bash` ∥ `execute`，同一套判据）：行首是过程档路径（相对形 ∥ 驱动绝对形 ∥ MSYS 形各一例）⇒ 该行带前缀且行其余部分逐字节不变；同一份输出里行首是状态档路径 ⇒ 零变化。
+8. 命令面**负例（最要紧）**：行首是长得像路径、但盘上不存在的 token（如一行日志里的 `config/x.yml:12:`）⇒ 零打标、零汇总行。
+9. 命令面汇总行：N > 0 ⇒ 末尾恰多一行且 N 等于实际标出的行数；N = 0 ⇒ 输出与今天逐字节相同（无空汇总行）。
+10. `bash` ∥ `execute` 的 `filter` 参数在场时，过滤按**原始行**命中（前缀不参与过滤），标在过滤后的行上。
+11. `execute` 成功径（`code`）：脚本读一份批档与一份状态档各打一行 ⇒ 前者带前缀、后者逐字节不变。
+12. `execute` 失败径：脚本非 0 退出且 `[stderr]:` 段印出过程档路径行 ⇒ 该行带前缀；`(exit code N)` 尾行零变化。
+13. `execute` 的 `workdir` 在场：输出里的相对形过程档路径 ⇒ 仍标（专测解析基准 = `baseDir`，不是 `ctx.cwd`）。
+14. VSC 端 `bash`：`terminal` 缺省（子进程径）与 `terminal: "visible"` 各跑一次同一条命令 ⇒ 两径的过程档行都带前缀；`terminal: "inject"` ⇒ 零捕获输出、无标可加（该径不经打标）。
+
+**本轮要跑的检查（改动面，不是全量套件）**：`node --test test/integration/grep-process-doc-mark.test.mjs`——1–14 条即该档逐条断言的落地，四面（`grep` ∥ `bash` ∥ `execute` ∥ VSC `bash`）各至少一条全等断言。全量套件是父侧收口门，不在本批跑。
+
+**需求侧单源**：需求档 §13.19 验收 ④ 写明「3-补 的验收单源 = 设计档验收判据表」（父侧 2026-11-02 定稿）——1–14 即那张表，本节不重述需求侧条文。
+
+**命令输出面（`bash` ∥ `execute`，判据与 grep 面不同，别混）**
+
+`bash` ∥ `execute` 的输出都是任意文本，没有「这行属哪个档」的结构，只能用**行首路径 token** 反查；`execute` 逐字复用下表六步，不另写一份：
+
+| 步 | 规则 |
+|---|---|
+| ① 取 token | 行首第一个空白分隔字段；剥两侧成对引号（`"` ∥ `'`）；空 ∥ 超 260 字符 ⇒ 该行跳过 |
+| ② 剥尾 | 剥尾部 `[:\-]\d+[:\-]?$` 与尾随 `:`——让内层 `grep` ∥ `rg` ∥ `findstr` 的 `path:12: text` 形同时可判 |
+| ③ 预筛 | token 须含 `/` ∥ `\` ∥ `.`，否则不做盘上解析 |
+| ④ 解析 | 按序试三支：驱动绝对形 → MSYS 形 → 相对基准 `base`；取**第一个在盘上存在**者。`base` = 调用方给的 cwd（`bash` = `ctx.cwd`；`execute` = `baseDir`） |
+| ⑤ 判归属 | 存在者 ⇒ `declarationForTarget` + `isExcludedRelPath(abs, decl, decl.root)`（与 grep 面同一谓词、同一判法） |
+| ⑥ 打标 | 命中 ⇒ 行首前缀，行其余部分原样；未命中 ∥ 解析不到 ⇒ **一个字节不动** |
+
+**纪律：不许按「看起来像路径」打标**——必须真解析到盘上同一处。程序自己的输出（表格、日志、代码片段）里大量 token 长得像路径，错标比不标更坏；解析不到 = 判不了 = 不动输出。这条是本面的第一判据。
+
+**成本与界**：一次调用内按 token 记忆（`Map<token, boolean>`），③ 预筛挡掉多数行（`[stdout]:` ∥ `(exit code 0)` ∥ 纯数字 ∥ 短单词）。**不设解析上限**——本仓实测三份真实输出：
+
+- `git ls-files`：2083 行 ∥ 2081 个不同 token，全部解析到盘上；
+- `git log --stat -n 40`：630 行 ∥ 290 个不同 token；
+- `git log --name-status -n 400`：7336 行 ∥ 0 个不同 token（行首是 `M` / `A` 状态字母，过不了预筛）。
+
+2081 个不同 token 只是**一份常见输出**的量 ⇒ 任何「几百」量级的帽子都会让这类输出整段静默不标，与本节目的相反。
+
+输入量级由工具自身的帽子兜住：`bash` 单流缓冲 `MAX_STREAM_BUF = 2_000_000`（`thincoder-core/tools/bash.mjs`）· `grep` 命中 ≤200 行 ⇒ 最坏数万次 `existsSync`，按 token 去重后通常几十到几千次。
+
+**Windows 三形**：驱动绝对形（`D:\teamcode\…`）`isAbsolute` 为真、直接解析；MSYS 形（`/c/teamcode/…`）在 win32 上 `isAbsolute` 也为真、但会落成当前盘的 `/c/…`——必须显式把首段 `^/([A-Za-z])/` 映射为 `X:/`；相对形（`docs/batches/x.md`）按基准 `base` 解析（`bash` = `ctx.cwd`；`execute` = `baseDir`）。UNC（`\\server\share\…`）走驱动绝对形一支。三支取第一个存在者，都不存在 ⇒ 不标。
+
+**末尾汇总行（兜底，仅命令面 `bash` ∥ `execute`）**：若本次输出有 N > 0 行被判为过程档，正文之后追加一行——
+
+`[process doc: N of this output's lines come from process docs — not a design basis]`
+
+理由 = 长输出里行级前缀会滑过去，汇总行是最后一道（用户 18:38 原话「再加一道兜底」）。N 由同一趟判定的计数直接得，不另数一趟。**grep 面不加汇总行**：用户 18:37 选「甲」= 行首前缀，明确不要「尾部汇总」那一形；grep 命中短（≤200 行），行级前缀已经处处在场。
+
+**为什么不按命令行判**：按命令行判 = 换个等价命令就绕过（`cat` ∥ `sed` ∥ `rg` ∥ `Get-Content` ∥ `type`）；而「输出里哪些行来自过程档」才是读的人真正面对的东西。判据只认**输出行**。
+
+**落点（单源，五处共用）**：新叶档 `thincoder-core/tools/process-doc-mark.mjs`，导出四件，**签名写死**（实施照抄，勿自造）：
+
+```js
+export const PROCESS_DOC_MARK = "[process doc: not a design basis]"        // 逐字文案
+export const processDocSummary = (n) =>
+  `[process doc: ${n} of this output's lines come from process docs — not a design basis]`
+export function isProcessDocPath(absFile, cache)   // → boolean；cache = Map<string, boolean>，缺省自建（一次调用内按档记忆）
+export function markProcessDocLines(text, base)    // → string；逐行打标 + N>0 时末尾追加汇总行；N=0 ⇒ 原样返回入参
+```
+
+`markProcessDocLines` 内建一份 `Map<token, boolean>`，逐行调 `isProcessDocPath`；`grep` 面不走它——grep 已有 `h.file`，直接调谓词。
+
+五处各自怎么调（接缝写死，实施席不自己拼）——**接缝按符号 ∥ 逐字代码定位，不记行号**：行号随插入行漂，符号不漂。
+
+| 面 | 怎么调 | 接缝（符号 ∥ 逐字代码） |
+|---|---|---|
+| `grep` | 一次调用一个 `const cache = new Map()`；`const mark = (f) => (isProcessDocPath(f, cache) ? `${PROCESS_DOC_MARK} ` : "")`；命中行与上下文行都在原有文案前镀 `mark(file)` | `thincoder-core/tools/search.mjs`——无上下文形拼 `` `${h.file}:${h.line}: ${h.text}` `` 那一处 ∥ 上下文形拼 `out.push(\`${file}${sep}${l}${sep} ${lines[l - 1]}\`)` 那一处；两处都在 `truncate` 之前 |
+| `bash` 同步 | `const filtered = args.filter ? applyLineFilter(result, args.filter) : result` 之后一行：`const marked = markProcessDocLines(filtered, ctx.cwd)`，后续 `guard` ∥ `hint` 改用 `marked` | `thincoder-core/tools/bash.mjs`——`applyLineFilter` 调用的下一行起（`guard` ∥ `hint` 拼装之前） |
+| `bash` 后台 | 打标落在 `renderTail` 内：`let text = …` 截帽完成后 `text = markProcessDocLines(text, entry.cwd)`，再 `return { text, truncated }`——两个消费点（`finalizeBgEntry` 的 `entry.report` ∥ `injectBgResult` 拼 body）同得标好的文本，`escapeXml` 仍只包 `injectBgResult` 那一处 | `thincoder-core/agent-tools/bash-async.mjs`——`renderTail` 内截帽之后 ∥ `entry.report` 赋值处 ∥ `injectBgResult` 拼 body 处 |
+| `execute` | `const body = ok && args.filter ? applyFilter(text, args.filter) : text`，再 `return markProcessDocLines(body, baseDir)` | `thincoder-core/tools/execute.mjs`——`runNode` 返回后的单一出口 |
+| `bash`（VSC 端） | 同一 helper，两处输出出口各镀一次：visible 径 `const final = filter ? applyLineFilter(out, filter) : out` ⇒ `markProcessDocLines(final, ctx.cwd)`；子进程径 `finish` 内同形再拼 `guard`。`inject` 径**不接线**——它返回一句固定说明、零捕获输出，没有可标的行 | `thincoder-vscode/src/tools/shell.mjs`——visible 出口（`const final = filter ? applyLineFilter(out, filter) : out` 那一处）∥ 子进程 `finish` 内的出口 ∥ `inject` 径（不接）；解析基准 = `ctx.cwd`（子进程以 `cwd: ctx.cwd` 起）；该端 `bash` 无 `workdir` 参 |
+
+五处共用同一份文案 ∥ 同一谓词 ∥ 同一 helper；不进 `shared.mjs`——那是通用表，把「排除集判据」塞进去等于把语义放错层。
+
+**后台径的解析基准从哪来**：`launchBgTask` 内已有 `const cwd = ctx?.cwd ?? parent.cwd`，它就是传给 `spawn` 的那个 `cwd`（`thincoder-core/agent-tools/bash-async.mjs` 的 `spawn` 选项里逐字 `cwd,`）。建 entry 处补记的必须是**这个局部值**，不另取 `ctx.cwd`：`ctx.cwd` 缺省时记进去的是 undefined，解析基准跟着 undefined。
+
+VSC 端取同一 helper 的位置照 `thincoder-vscode/src/tools/shell.mjs` 的既有前例写——`import { … } from "@thincoder/core/tools/process-doc-mark.mjs"`（该档已从 `@thincoder/core/tools/*` 取 `shared.mjs` ∥ `process-tree.mjs`）。
+
+**同步 ∥ 后台两面**：同步径在 `bash.mjs` 的 `applyLineFilter` 之后、`guard` ∥ `hint` 前缀之前打标——顺序写死：**过滤 → 打标 → 汇总 → 外包装**（filter 才照旧匹配原始行，前缀不吃过滤命中；`guard.notice` ∥ `hint` 包在标之外）；后台径的结算摘要同调 `markProcessDocLines`（同一实现、同一文案，零第二份），接缝坐标见上表。
+
+**`execute` 面（与 `bash` 同一套判据，只换拼装点与解析基准）**
+
+实读 `thincoder-core/tools/execute.mjs`（本批新读，三条事实）：
+
+- **输出拼装点 = `runNode` 的 `child.on("close")`**：退出码 0 ⇒ `out || "(no output)"`——**裸 stdout，无 `[stdout]:` 包裹**；非 0 ⇒ `` `${out}\n\n[stderr]:\n${err}` ``（两股都在）∥ 只 `err` ∥ `` `${out}\n(exit code ${code})` ``。`bash` 则是三段包裹（`thincoder-core/tools/bash.mjs` 的 `[stdout]:` / `[stderr]:` / `(exit code N)`）——**形不同，判据不受影响**（都是按行首 token 反查），只换拼装点。
+- **无后台形**：参数面六参 = `code` / `scriptFile` / `nodeArgs` / `workdir` / `filter` / `timeoutMs`（schema 定义处），无 `async`；全档无 `onOutput` ∥ `outputPanel` ∥ `launchBgTask` ⇒ **零摘要面**，不为它设接缝。
+- **解析基准 = `baseDir`，不是 `ctx.cwd`**：`baseDir = resolveBaseDir(ctx.cwd, args.workdir)` 即子进程 cwd；`workdir` 在场时，输出里的相对形路径只有按 `baseDir` 解才对得上。这是本面唯一易错点。
+
+接线：现为 `if (!ok) return text` 加成功径再过滤，改**单一出口**：
+
+```js
+const { text, ok } = await runNode(childArgs, baseDir, timeoutMs, ctx.signal)
+const body = ok && args.filter ? applyFilter(text, args.filter) : text
+return markProcessDocLines(body, baseDir)
+```
+
+**失败径也标**：错误文本同样是行内容（`[stderr]:` 段里照旧会印 `path:12: text`），只标成功径 = 换个失败命令就绕过。
+
+**参数面零改**：六参逐字不变；五条早退 `Error:` 直返行是工具自己的报错、不含输出行，零改动。
+
+**集成用例增量（自 `test/RTM.md` 起答）**：打破 **0** 行（12-6 的通过条件由 `test/integration/batch-live-batch-lock.test.mjs` 断言 `(no matches)` 全等与 `/visible\.txt/` 子串，与命中行的行首位置无关；其余节零涉 `grep` ∥ `bash` ∥ `execute` 的输出形）· 冗余 **0** 行 · 新增 **2** 行——CLI 端新节「31. 过程档内容在工具输出的命中处就标出不可作依据」，两行号先落 RTM 再写用例标题：
+
+| 行 | 怎么造 | 怎么算通过 | 交互组件 | 服务需求 |
+|---|---|---|---|---|
+| 31-1 | 会话里对一个词跑 `grep`、`bash grep -rn`、`execute`（`code` 里 `fs.readFileSync` 打印同两份档），VSC 端再以 `terminal` 缺省与 `"visible"` 各跑一次 `bash`，该词同时出现在一份批档与一份状态档里 | 四面各自：过程档行以 `[process doc: not a design basis]` 开头；状态档行逐字等于 `<file>:<line>: <text>`（无前缀）；`bash` ∥ `execute` 输出末尾多一行汇总且 N = 实标行数 | `grep` ∥ `bash` ∥ `execute` 的输出渲染（含 VSC 端 `bash` 两出口）× 声明谓词 `isExcludedRelPath` | FR41 §13.19 3-补 |
+| 31-2 | 同一次命令面输出里混入一行「长得像路径、盘上不存在」的日志行 | 该行零打标、不进汇总计数 | 命令面输出渲染 × 盘上解析 | 同上（误标比不标更坏的判据） |
+
+入口 = 用户在会话里让助手查一个词；证据档 = `test/integration/grep-process-doc-mark.test.mjs`。
+
+**RTM 行 31-1 / 31-2 是实现侧的完整断言集（含后台径结算文本、`_archive` 面、`filter` 按原始行命中）；本表列的是设计最小集，二者不矛盾，以 RTM 行为交付判据**。
+
+第 31 节按 RTM 体例首行写节注（其余各节同形）：
+
+```text
+> 节注：回指 = docs/core/requirements/ENGINEERING-MODE-V2.md §13.19 3-补（判据 = docs/core/design/TOOLS.md §6.28 验收 1–14）；交互组件 = grep ∥ bash ∥ execute 的输出渲染 ⟷ isExcludedRelPath 声明谓词 ⟷ 盘上路径解析；进入口 = 用户在会话里让助手查一个词；两态（行序）= 31-1 正常 · 31-2 边界。
+```
+
+**节注的两态形合 RTM 体例**：`test/RTM.md` 既有节以同一形式记两态——第 19 节逐字 `两态（行序）= 19-1 正常 · 19-2 边界`、第 25 节逐字 `两态（行序）= 25-1 正常 · 25-2 边界` ⇒ 第 31 节两行即两态，不补失败态行（三行均已实读；第 31 节落盘为 `两态（行序）= 31-1 正常 · 31-2 边界`）。
+
+**为什么 31-1 扩成四面、不新增 31-3**：四面是同一业务场景（用户让助手在一个仓里查一个词）、同一断言、同一交互（输出渲染 × 声明谓词），共用一份文案 ∥ 一个谓词 ∥ 一个 helper。差异只在拼装点（含 VSC 端的两个出口），而拼装点漏接恰好被「每处各有一次逐字全等断言」照出来——本批的风险在拼装点，不在面数。
+
+31-2 只留命令面：它验的是判定步（解析不到就不标），命令面三处拼装点（`bash` 同步 ∥ `execute` ∥ VSC 端 `bash`）共用同一 helper，一次即覆盖。
+
+**最近先例（三问式）**：`existing:` 坐标 `thincoder-core/browser/snapshot.mjs` 的 `[outside]`（名逐字 `[outside]`，消费者 = 读 snapshot 回执的模型）；对齐 = 「行级附注挂在输出行上」这一形；偏离 = 位置（行尾 → 行首），理由见上「为什么是行首」——它的行首是寻址键，grep 的不是。
+
+**调研证据行**：仓外声明源 = `index.publicRepos: []`（实读 `PROJECT-MANIFEST.json`，空 ⇒ 无仓外档可查）。仓内实读九处：
+
+- 需求 §13.19 条 3-补；
+- `thincoder-core/tools/search.mjs` —— grep 的两条输出分支；
+- `thincoder-core/tools/bash.mjs` —— 同步径接缝与 `[stdout]:` 三段包裹；
+- `thincoder-core/tools/execute.mjs` —— 输出拼装点、参数面六参、无后台形、`baseDir` 解析基准（本批新读）；
+- `thincoder-core/agent-tools/bash-async.mjs` —— `renderTail` 与 `injectBgResult` 的 body 拼接处；
+- `thincoder-core/declaration.mjs` —— `isExcludedRelPath` 与 `declarationForTarget`；
+- `thincoder-core/browser/snapshot.mjs` —— `[outside]` 行文法（先例）；
+- `test/RTM.md` —— 现有节次；
+- `test/integration/batch-live-batch-lock.test.mjs` —— 唯一读 grep 输出的断言。
+
+**边界（本节不做）**：`glob` / `ls`（输出是路径清单、无行内容，「这行不可作依据」的指向不明）· `doc_search` / `read_history`（已在声明域内检索，过程档本就不进索引）· `execute` 的后台形（实读：不存在——无 `async` 参、零摘要面）· `bash` 后台径的 `filter` 面（后台不看 `filter`，标记照旧）· 不改命中集 / 不新增门 / 不改面⑥ 判据 · 不改提示词面（提示词面归 §13.19 条 1 的既有落地，不在本节）。
 
 
 ## 9. checklist 废除

@@ -15,13 +15,14 @@
  * - 遮蔽：写入的秘密对**捕获面与日志面**做字面移除（比较面 = 同一归一 + 按不可见处切段 ≥ 4）。
  * - 失败分类族（auth ∥ unreachable ∥ hostkey）照服务端 `src/sandbox/ssh.mjs` 同源判据。
  * 模块图：→ config.mjs（configDir 缺省）· tools/shared.mjs（解码）· text-budget.mjs（截断本体）·
- * tools/node-child.mjs（nodeChildEnv）——叶子向、无环（本档不 import `ssh-session.mjs`）。
+ * tools/node-child.mjs（nodeChildEnv）· expand-home.mjs（`~` 展开单源——`identityFile` 用）——叶子向、无环
+ * （本档不 import `ssh-session.mjs`）。
  */
 import { chmodSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { spawn } from "node:child_process"
-import { homedir } from "node:os"
 import { fileURLToPath } from "node:url"
 import { configDir } from "../config.mjs"
+import { expandHome } from "../expand-home.mjs"
 import { makeDecoder } from "../tools/shared.mjs"
 import { nodeChildEnv } from "../tools/node-child.mjs"
 import { capText as capBudgetText, fillMarker } from "../text-budget.mjs"
@@ -91,13 +92,6 @@ export function buildSshEnv({ wrapper, secret }) {
   if (secret != null) env[SECRET_ENV] = secret
   else delete env[SECRET_ENV]
   return nodeChildEnv(env)
-}
-
-/** `~` 展开（`identityFile` 记录 / 参数——`~/.ssh/id_ed25519` 同式；非 `~` 开头原样）。 */
-function expandHome(file) {
-  const raw = String(file ?? "")
-  if (!/^~(?=$|[\\/])/.test(raw)) return raw
-  return `${homedir()}${raw.slice(1)}`
 }
 
 /** 会话命令形（§6.22 ⑤）：`-tt` 强制远端 PTY + 保活三件 + 单提示；`port`/`user` 未给 ⇒ 不下发。

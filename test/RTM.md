@@ -17,16 +17,6 @@
 | 1-2 | 同一轮里让助手连续调用两个工具，再继续对话 | 两个结果都回到模型，回复正常，没有 400 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
 | 1-3 | 关掉进程，重开同一会话，历史回放后继续对话 | 回复引用了上一程的工具结果，没有 400 | 通过 | 2026-10-24 | 主 agent（自动化执行） | 无 | `test/integration/anthropic-tool-roundtrip.test.mjs` |
 
-### 2. 未立项就写产品码：提醒一次，之后不再打断
-
-> 目的：提醒只在首次出现，写文档不消耗它。
-> 节注：回指 = docs/core/requirements/LIGHT-CHANNEL.md §2.6（F-LC6）；三态（行序）= 2-1 正常 · 2-2 边界 · 2-3 边界。
-
-| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
-|---|---|---|---|---|---|---|---|
-
-> **已退役（2026-10-27）**：本故事的三行由故事 12 接替——裁定 ⑤（无活批档不许改产品代码）之后，未立项写产品码**被拒**，原故事「提醒一次、之后不再打断」的前提不再成立（判据 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` 决策 8）。
-
 ### 3. 网页抓取的后端故障不外溢
 
 > 目的：单个后端故障不影响其它通路，无渠道时零变化。
@@ -72,13 +62,13 @@
 | 6-1 | 会话锚在项目内（cwd = 项目根或其子目录）时发起设计评审，`documents` 传一份非 `docRoot` 树下的仓内文档（项目根相对形，如 `thincoder-core/tool-docs/advisor.md`） | 工具层受理（回执不是 `scope-not-doc` 拒发；异步 ack 或评审输出正常），评审读得到该文档 | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
 | 6-2 | 同一入口，`documents` 传项目内的代码文件（如 `thincoder-core/agent-tools/advisor.mjs`） | 当场拒发：文案含 `criterion=scope-not-doc`、解析后路径、期望形两句；零评审实例、零 token、零 LLM | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
 | 6-3 | `documents` 传绝对路径指到项目外（工作区下无项目归属的 `.md`） | 当场拒发：`criterion=scope-not-doc` + `outside-project` 拒因 + 期望形；零评审实例 | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
-| 6-4 | 会话锚 = 工作区根（下辖两项目、根无 `PROJECT-MANIFEST.json`），`documents` 传项目根相对的 `.md` | 当场拒发：`criterion=scope-not-doc` + 拒因 `no-project-root`，文案报锚态与期望形（项目根相对例 / 绝对路径）；零评审实例、零 token | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
-| 6-5 | 会话锚 = 非项目目录（根无 `PROJECT-MANIFEST.json`、下辖 1 个项目），`documents` 传项目根相对的 `.md` | 当场拒发：`criterion=scope-not-doc` + 拒因 `no-project-root`，不把唯一下辖项目当根；文案报期望形（项目根相对例 / 绝对路径）；零评审实例、零 token | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
+| 6-4 | 会话锚 = 工作区根（下辖两项目、根无 `PROJECT-MANIFEST.json`），`documents` 传项目根相对的 `.md` | 当场拒发：`criterion=scope-not-doc` + 拒因 `ambiguous-path`，文案报锚态、候选全列与期望形（项目根相对例 / 绝对路径）；零评审实例、零 token。反证格：`cwd` 换成下辖项目 ⇒ 同调用改判 `not-doc-file`（不再拒于基根） | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
+| 6-5 | 会话锚 = 非项目目录（根无 `PROJECT-MANIFEST.json`、下辖 1 个项目），`documents` 传项目根相对的 `.md` | 当场拒发：`criterion=scope-not-doc` + 拒因 `ambiguous-path`，不把唯一下辖项目当根（该目录只作候选出现）；文案报期望形（项目根相对例 / 绝对路径）；零评审实例、零 token | 待执行 | — | — | — | `test/integration/review-doc-scope.test.mjs` |
 
 ### 7. 收口只判本批改过的档
 
 > 目的：收口门判的只是本批笔域集（含本批批档自身）——范围外的脏档不拦收口，也不进回执；两条判据不分适用面，工具描述面同样受段长约束。另有一道与本门并行的前置：**本批改面单测档仍在盘 ⇒ 拒收口**（单测零留存，判据见行 7-4）——这一道判的是「该删的删了没」，与本门判的「改过的档干净不干净」是两件事。
-> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ edit ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append ∥ §2 改写 = 设计席 `edit`，写完的 §2 段体作 `pending` 进机检门；不直调 `runBatchGate`）；十态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：锚与段两条同时拦）· 7-10 正常（§2 就地改：目标行换掉、其余行逐字节不变；锚不唯一 ⇒ 拒）。
+> 节注：回指 = docs/core/requirements/DOC-CHECK.md F9 ∥ AC-7（AC-2 为其范围面）∥ F13 ∥ AC-11（行 7-12 的判据）∥ docs/core/design/TESTING.md §3.5（行 7-4 的判据）；机制单源 = docs/core/design/DOC-DISCIPLINE.md §3.20「结构兜底」；交互组件 = `batch` 工具（append ∥ edit ∥ close）⟷ `runBatchGate`（范围 + 强制集）⟷ `doc-check` 引擎（锚 ∥ 段判据）；进入口 = 真 `batch` 工具调用（收口 = depth-0 ∥ 写段 = 子代理 append ∥ §2 改写 = 设计席 `edit`，写完的 §2 段体作 `pending` 进机检门；不直调 `runBatchGate`）；十二态（行序）= 7-1 正常 · 7-2 边界 · 7-3 错误 · 7-4 错误（本批单测档仍在盘）· 7-5 边界（段判据的围栏语义——嵌套围栏不入段；缺口来源与回指见该行）· 7-6 错误（收口面命中批档自身）· 7-7 正常（收口面含批档自身且放行）· 7-8 错误（写段面命中本次写入文本）· 7-9 错误（工具描述面：锚与段两条同时拦）· 7-10 正常（§2 就地改：目标行换掉、其余行逐字节不变；锚不唯一 ⇒ 拒）· 7-11 错误（收口面：声明一律拒 ∥ §3 状态词臂无条件）· 7-12 错误（写段面：本次写入文本里的引文与所指档不逐字一致 ⇒ 拒；改逐字后同一笔放行）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
@@ -92,6 +82,9 @@
 | 7-8 | 子代理 append §2，本次写入文本把要求档写成不带目录段的名字；随后改成全路径再 append 一次 | 第一次被拒：命中行点名 `本次写入文本`，批档字节逐字不变（零字节落盘）；第二次落盘，前文零变 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F9 ∥ AC-7 ①（写段面强制集 = 本次写入文本）；判据 = `docs/core/design/DOC-DISCIPLINE.md` §5 A-DD31 ⑥；用例号 = DD-130 | `test/integration/batch-close-gate.test.mjs` |
 | 7-9 | 夹具项目里放一档 `thincoder-core/tool-docs/x.md`（内含一段 400 字符 + 一个解析不到的裸档名），入本批笔域集，跑一次 `batch close` | 收口被拒（throw）且拒因**锚与段两条同时点名**（命中行分别指向该裸档名 ∥ 该 400 字符段）；只删裸档名后同跑仍拒（段那条）；拆成两段后放行 | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F3「判据不分适用面」· 判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.18 条 7 ∥ §5 A-DD35 判据 ①；缺口来源 = 台账 `#1847`（改工具描述档一句文案，写段与收口被段判据拦下）；用例号 = DD-137 ∥ DD-138 | `test/integration/batch-close-gate.test.mjs` |
 | 7-10 | 工程模式设计席对一本在飞批档的 §2 作一次更正（把一行已作废的判据就地换掉）：`batch({action:"edit", segment:"§2", oldText, newText})`；随后同一句在 §2 出现两处时再改一次 | 第一次：回执点名替换字符数、机检门 `PASS`；**§2 那一行被换掉、其余行逐字节不变**（行数不变、旧行不残留——不留「以本节为准」指针）。第二次：拒（锚不唯一 + 点名命中行号），档字节一字不动 | 待执行 | — | — | 回指 = `docs/core/design/BATCH-RECORD.md` §4.19 ∥ §4.8 BR-77 · BR-78 ∥ 台账 `#1990` ∥ 批次档 §1「已定决定（批档内两种东西、两种处置）」；本行起因 = `docs/batches/2026-11-02-review-requires-batch.md` §2 验收表留着已作废判据，实施席照表落笔会把已删的分支写回来 | `test/integration/batch-edit-spec-section.test.mjs` |
+| 7-11 | 夹具批档 §1 段体带一行 `> 不适用：§3 —— <理由>`（存量声明档的形态），跑一次 `batch close`；另起一份夹具，§2 / §3 / §4 / §6 各有内容但 §3 没有 `**状态行**：` 行，再跑一次 `batch close` | 前半：收口被拒（throw），拒串点名「声明已停用」+ 该行原文，§1 状态行字节不变；后半：收口被拒，拒串点名 `§3 状态行 = （无状态行）`且不提声明路——两半都成立才算过 | 待执行 | — | — | 回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.6（声明机制退役 ∥ 收口门 §3 臂无条件）∥ §4 决策 28 ∥ 批次档 §2 R-S3-1 / R-S3-2 / R-S3-5；缺口来源 = 台账 `#2000`（同一份档：收口门认声明、核销门不认，用户 16:24 裁定一律封掉） | `test/integration/batch-close-gate.test.mjs` |
+| 7-12 | 夹具项目内跑一次子代理 `batch({action:"append"})`，其**本次写入文本**里带一行 `依据 <在盘档>「<改了一个字的引文>」`——错引文写在这一次被写的正文里，不是写在别人已落盘的档里；随后把引文改成逐字再跑同一笔 | 写段被拒（throw），拒串首行逐字 `DOC-CHECK GATE: REFUSED（命中 1 条——本次写入文本（锚 1 条））` ∧ 命中行含 `✗ 锚·引缺` ∧ 批档字节逐字不变；改逐字后同一笔放行、回执行 `DOC-CHECK GATE: PASS` | 待执行 | — | — | 回指 = `docs/core/requirements/DOC-CHECK.md` F13 ∥ AC-11；判据 = `docs/core/design/DOC-DISCIPLINE.md` §3.25「集成测试差量」∥ §5 `A-DD39` ⑩；缺口来源 = 两例真实事故（把一个不存在的条文挂到档名下 ∥ 把代码注释当契约） | `test/integration/doc-check-citation.test.mjs` |
+
 
 ### 8. 批次档建在项目里（工作区锚报明、不落锚目录）
 
@@ -115,14 +108,15 @@
 ### 10. 收口即清账（批档收口即消费该批设计凭证）
 
 > 目的：收口成功即该批凭证不再放行写产品码；收口被拒即凭证仍活、状态行未变。
-> 节注：回指 = docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md F-D7 ∥ F-D8（机制 = docs/core/design/DESIGN-TOKEN-SETTLEMENT.md §10）；交互组件 = `batch-lifecycle.mjs` 收口通路 ↔ `design-slots.mjs` 消费核 ↔ 槽文件 I/O；进入口 = 父侧经 `batch` 工具收口（工程模式）；三态（行序）= 10-1 正常 · 10-2 错误 · 10-4 正常。
+> 节注：回指 = docs/core/requirements/DESIGN-TOKEN-SETTLEMENT.md F-D7 ∥ F-D8（机制 = docs/core/design/DESIGN-TOKEN-SETTLEMENT.md §10）；交互组件 = `batch-lifecycle.mjs` 收口通路 ↔ `design-slots.mjs` 消费核 ↔ 槽文件 I/O；进入口 = 父侧经 `batch` 工具收口（工程模式）；五态（行序）= 10-1 正常 · 10-2 错误 · 10-3 正常 ∥ 错误（核销机检三件 ∥ 存量声明档） · 10-4 正常 · 10-5 错误 ∥ 正常（核销只有一条边 · 认领三步全过）。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 10-1 | 工程模式夹具里，让一次设计评审以 `batchDoc` 带上批档（签发一个槽；夹具须让该评审把 §3 写进批档——轮次块 + 状态行 = `评审通过`，否则 §3 落地门挡住签发、本行断言不可达），再调 `batch close` 收该批 | close 回执含 `[design tokens]` 且点名消费 1 枚；随后同 designId 的 eng-coder spawn 被机械拒；`design-slots` 里该槽不在 | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-4 | 工程模式夹具里以 `batchDoc` 带批档跑一次设计评审（签发一个槽；夹具同上：该评审须把 §3 写进批档），再调 `subagent` `action:'design-slots'` | 该槽行 `batch=<批档 basename>`（不是 `—`）；其余列零变 | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
 | 10-2 | 同一夹具，把 `persistEngTokens` 注入为抛错后再 close | close 被拒且回执点名消费失败；§1 状态行字节不变；槽仍在盘（内存已回滚） | 待执行 | — | — | — | `test/integration/batch-close-token-consume.test.mjs` |
-| 10-3 | 工程模式夹具里造三行 `待核销`：a 行 `task_book` 指向「已收口 ∧ §3 = 评审通过」的批档（换会话核销，槽内无归属）；b 行指向「未收口」的批档；c 行指向「已收口但 §3 = 进行中」的批档。三行各跑一次 `thincoder ledger close --id <行>` | a 行核销成功（`status = 已核销`，`closed_at` 非空；槽内无归属也通过）；b / c 行被拒，回执分别点名缺 ② ∥ 缺 ③，且两行 `status` 仍 `待核销`、`closed_at` 仍空 | 待执行 | — | — | — | `test/integration/ledger-close-proof.test.mjs` |
+| 10-3 | 工程模式夹具里造四行 `待核销`：a 行 `task_book` 指向「已收口 ∧ §3 = 评审通过」的批档（换会话核销，槽内无归属）；b 行指向「未收口」的批档；c 行指向「已收口但 §3 = 进行中」的批档；d 行指向**存量声明档**（`§1` 已收口、`§1` 段体写着 `> 不适用：§3 —— …`、`§3` 未过评审）。四行各跑一次 `thincoder ledger close --id <行>` | a 行核销成功（`status = 已核销`，`closed_at` 非空；槽内无归属也通过）；b / c 行被拒，回执分别点名缺 ② ∥ 缺 ③，且两行 `status` 仍 `待核销`、`closed_at` 仍空；d 行同拒（缺 ③，拒文不提声明——读面不认它、也不因那行字抛错），行零改 | 待执行 | — | — | 回指 = 批次档 §2 R-S3-4（核销门判据与判序零改 ∥ 存量声明档读面不反射） | `test/integration/ledger-close-proof.test.mjs` |
+| 10-5 | 工程模式夹具里造一行 `待讨论`（`task_book` 在 add 时落）⇒ 核销 ⇒ 拒；`update` 到 `待设计` ⇒ 核销 ⇒ 拒；`update` 到 `在途` ⇒ 核销 ⇒ 拒；再 `update` 到 `待核销` 后 `close`；另造一行 `close` 撤回成 `已废弃` 再按 `已核销` 收口；再造一行走到 `待核销` 勾销后重按一次 `已核销` | 三次拒文的现态各自点名、出路句按现态分支（`待讨论` / `待设计` = 认领句 ∥ `在途` = 结账句、不是认领句），且每行 `status` 零变、`closed_at` 仍空；`在途 → 待核销 → 已核销` 三步全过、`closed_at` 落值；归档态两支（`已废弃` ∥ `已核销`）同拒、出路句 = 「该行已归档（<X>），不在核销面」 | 待执行 | — | — | 回指 = `docs/core/design/LEDGER.md` §3（核销只有一条边 ∥ 逐态出路句表）∥ 批次档 §2 R-S3-7；缺口来源 = 台账 `#2000`（`待讨论 / 待设计 → 已核销` 那条捷径边，用户 16:32 裁定删边） | `test/integration/ledger-close-proof.test.mjs` |
 
 ### 11. 超窗守卫与内部阶段豁免（absent 档全档同判）
 
@@ -142,19 +136,28 @@
 | 11-8 | CLI 会话里让模型主动调 `context{action:'compact'}`——用户说一句「压一下上下文」即进入该回合，且压后仍超压缩线 | 压缩仍执行恰 1——门只拦阈值面，`force` 全文豁免 | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
 | 11-9 | CLI 会话里粘一段超 `OVERSIZE_CONTENT_LIMIT` 的巨型日志发出去，且无中段可摘 | 走 `shrinkOversized`、体内出现截断标记；门不拦（零网络） | 待执行 | — | — | — | `test/integration/context-overflow-guard.test.mjs` |
 
-### 12. 无活批档不许改产品代码
+### 12. 写盘与跑命令都要报它替哪条台账行服务（不分面、不分类命令）
 
-> 目的：产品代码面 / 产品测试面的写，必须有活批档（档 §1 = 进行中 ∧ 台帐行 = 在途 ∧ 指针回指本档）；文档面 / 工程工具面 / 构建产物照写。
-> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.2 ∥ §2.3 ∥ §2.10 ∥ §2.12；六态（行序）= 12-1 错误 · 12-2 正常 · 12-3 边界 · 12-4 错误 · 12-5 边界 · 12-6 边界。
+> 目的：工程模式下父侧的每一次落盘、每一次 `bash` / `execute` 都要带 `ledger:"#N"`，且同时给出项目（`bash` ∥ `memory` 用 `project`，其余用各自的定位参数）；该号是**声明项目**台账里一条 `status = 在途` 的行；门不判批档状态，也不判命令内容——`git status` 与 `rm -rf` 同判；`init` 自举一格见 12-15。
+> 节注：回指 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.3 ∥ §2.10 ∥ §2.12；交互组件 = 写盘 / 跑命令的工具面 ↔ 笔-账绑定判定 ↔ 台账库；进入口 = 父侧工具调用（工程模式 depth-0）。十五态（行序）= 12-1 错误 · 12-2 正常 · 12-3 错误 · 12-4 错误 · 12-5 错误 · 12-6 借行（服务 R14 排除名单单源；迁出触发条件 = 该名单有独立故事节那一轮） · 12-7 错误 · 12-8 边界 · 12-9 错误 · 12-10 正常 · 12-11 错误 · 12-12 错误 · 12-13 错误 · 12-14 边界 · 12-15 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
-| 12-1 | 工程模式父侧（有活设计槽、无活批档）用 `write` 写 `thincoder-core/agent/x.mjs` | 拒：拒文含 `write refused — no live batch record: a product-code write needs a live batch`；文件零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-2 | 同一会话写 docRoot 内 `.md` 与仓根 `scripts/*.mjs` | 照写；两档字节 = 写入内容 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-3 | 造两个活批档并存，再写产品码 | 产品码照写（锁只问存在否，不要求全局唯一） | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-4 | 台账库不可读（库位是目录），再写产品码 | 拒：拒文含 `no live batch record` 与 `ledger unreadable — `（带台账原始错误）；文件零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
-| 12-5 | 无活批档时写 `thincoder-vscode/test/x.test.mjs`；再写 `node_modules/**` · `thincoder-cli/dist/**` · `test/integration/**` | 前者拒（拒文含 `a product test file needs a live batch too`，文件零改）；后三者照写 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-1 | 工程模式父侧（有活设计槽、台账有在途行 `#A`）用 `write` 写 `thincoder-core/agent/x.mjs`，不传 `ledger` | 拒：拒文含 `no ledger number on this call` 与用法句（`Pass project:` ∧ `ledger:"#N"` 两个输入都点出）；文件零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-2 | 同一会话同一目标，带 `ledger:"#A"` 写一次；再带 `ledger:"A"`（无 `#`）写一次 | 两次都照写，字节 = 写入内容——两形同判 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-3 | 带 `ledger:"#<已核销行>"` 写产品码；带 `ledger:"#999999"` 再写；带 `ledger:"#<待讨论行>"` 再写 | 三次全拒：拒文分别点名 `is "<已核销>"` / `does not exist` / `is "待讨论"`；文件零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-4 | 台账库不可读（库位是目录），再写产品码；另造一档项目根 manifest 坏 JSON 后再写 | 两态都拒：拒文含 `ledger row not bound` 与 `ledger unreadable — `（带台账原始错误）；文件零改。第二态与 12-5 成对照：有根但不可用 ≠ 没根 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-5 | 台账无在途行时写 `<仓外临时目录>/x.mjs`（不传号）；同会话再写 `<仓内路径>`（不传号）；再用 `bash` 把 `project` 指到容器根 `D:\teamcode`、带本仓在途号跑一条命令 | 仓外写拒（拒文含 `declared project is not a project`——判据点是目标路径本身，项目之外没有判据点）；仓内拒（`no ledger number on this call`），文件零改；`project` 指容器根 ⇒ 同拒——「不是项目」与「不是这个项目」是两种拒，不是两种放行 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
 | 12-6 | 在 `vendor/` · `node_modules/` · `dist/` 各放一份含标记文本的 `.mjs`，用 `grep` 搜该标记；再在普通目录放同文本 | 首次零命中（名单合并后三处都被剪）；普通目录那份命中——证明剪枝生效而非搜索坏了 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-7 | 台账无在途行时（工程模式父侧）跑 `bash` 一条只读命令（`git status`，带 `project:<本仓>`）；挂一条在途行后带同样的 `project` 与号跑同一条 | 第一次拒（拒文含 `no ledger number on this call`），命令零执行、无输出；第二次执行并回输出——只读命令与写命令同判 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-8 | 子代理（`depth > 0`）用 `write` 不传 `ledger`；同一子代理带号再写一次 | 两态都不被本门拒（拒因若现，只来自它自己的 token 门）——子代理的号来自绑定的批档档头，本门不核 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-9 | 仓库有暂存、台账无在途行时用 `git` 跑 `commit`（带 `path`）；挂一条在途行后带号重跑同笔 | 第一次拒（拒文含 `no ledger number on this call`）、`git log` 输出不变（零提交）；第二次提交生效——`git log` 出现该 commit message | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-10 | 同一会话、台账无在途行时用 `git` 跑 `status`（不传号） | 照跑回输出（读到已暂存的 1 个文件）——同一把工具在写型与只读型上答案不同 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-11 | 本仓有在途号，用 `git` 带 `workdir` 指向另一个无在途行的项目仓跑 `commit`；再把号换成那个仓的在途号重跑 | 第一次拒且拒文点该项目缺这个号（`does not exist in this project's ledger`）、目标仓零动；换成目标仓的在途号 ⇒ 提交生效 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-12 | 会话 cwd = 容器根（祖先链无 manifest）、台账无在途行：`bash` 跑 `git status` 不带 `project`；再带 `project:<本仓>` 但仍不带号；再带 `project` + 本仓在途号 | 第一次拒（含 `no project on this call`）、命令零执行；第二次拒（含 `no ledger number on this call`）；第三次执行并回输出；另：`memory({action:"put", layer:"project"})` 不带 `project` ⇒ 拒、项目内 memory 目录零写 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-13 | `bash` 的 `project` 指到容器根 `D:\teamcode`（自身无 manifest）并带本仓在途号；再声明 A 项目、号取自 B 项目 | 两条都拒：分别含 `declared project is not a project` 与 `does not exist in this project's ledger`；两条拒文都同时点出 `project` 与 `ledger` 两个输入 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-14 | 会话 cwd = `<本仓>/thincoder-cli`（项目子目录）：`bash` 带 `project:"<本仓根>"` + 本仓在途号跑一条命令；同一会话再跑同一条但不带 `project` | 第一次放行、命令执行并回输出（声明根含会话锚 ⇒ 相关）；第二次拒（含 `no project on this call`）、命令零执行 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
+| 12-15 | 工程模式父侧、台账无在途行：`manifest({action:"init", target:"<祖先链无 manifest 的新目录>"})` 不带项目不带号；同会话把 `target` 换成既有项目内子目录重跑（仍不带号），再带本仓在途号跑同一笔 | 第一次照跑：`PROJECT-MANIFEST.json` 落盘在 target（不进本门）；第二次拒（含 `no ledger number on this call`）；第三次门过后工具拒（含 `init never overwrites`——落点解析到祖先项目根，`thincoder-core/agent-tools/manifest.mjs:160`），项目 manifest 字节零改 | 待执行 | — | — | — | `test/integration/batch-live-batch-lock.test.mjs` |
 
 ### 13. 建批档就有台账
 
@@ -180,7 +183,7 @@
 | 14-3 | 换一个会话（ctx 无槽 / 无 designId）用 `ledger close` 核销一条「已收口 ∧ §3 = 评审通过」的合格行 | 核销成功（`status = 已核销`）——③ 判档面，不再看槽内归属 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-4 | `batch close` 一个含 1 行 `在途` + 1 行 `待讨论` 的批 | 分别落 `待核销` / `条件`；回执两行（在途行 / 未动行）各一行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-5 | 同上夹具再读回执三行 | 汇总行（末行）只点名「本批 2 行由重锚默认推进，父侧未显式处置：#a, #b」、不再给建议；建议句各贴其行——第一行（在途行 → 待核销）携「认领行只有两种终局」、第二行（未动行 → 条件）携「不是本批的活（点火违规）」 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
-| 14-6 | 收口后 `batch status` 重开（`§1 → 进行中` + note） | 行回 `在途`、回执第一行点名 1 行；随后产品码写当场可写（该档又是活批档） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
+| 14-6 | 收口后 `batch status` 重开（`§1 → 进行中` + note）；随后带重开那条在途号写产品码一次，再不带号写同一目标 | 行回 `在途`、回执第一行点名 1 行；带号写 ⇒ 照写（字节 = 写入内容）；不带号写同一目标 ⇒ 拒（拒文含 `no ledger number on this call`）、文件零改——断言对象不变（重开 ⇒ 后续写能不能做），判据 = 「本笔报的号在途」 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-7 | 同一批里一行 `待核销` + 一行 `已核销`，重开 | 前者 → `在途`、后者零改；回执两行（待核销行回收 / 已核销行不可回收逐 id 点名） | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 | 14-8 | 一批已 in 一轮 `pass`（§3 状态行 = `评审通过`）后，同一批判 `changes-required` 并 append `§3` 打回；随后 `append §5`；再 `status` 置 `评审通过` 后重试；最后追加一块携 `VERDICT: pass` 的 `§3` 轮次块重试 | 打回那一笔同时改 §3 状态行**字节** → `进行中（第 N 轮打回）` 并在本轮块首留痕；`append §5` 被拒（拒文含 `§3 状态行 = 进行中，须 = 评审通过`，§5 字节不变）；`status` 单写仍拒（`R-G2b`：末块仍携 `VERDICT: changes-required`）；补块 ⇒ `append §5` 放行 | 待执行 | — | — | — | `test/integration/batch-gates-reanchor.test.mjs` |
 
@@ -258,13 +261,15 @@
 ### 22. SSH 接网络设备：读得清、拿得全、判得准
 
 > 目的：接真网络设备时输出干净、长配置取得全、慢操作不误判就绪。
-> 节注：回指 = `docs/core/requirements/TOOLS.md` §4.8（S3 ∥ S4 ∥ NS2）；交互组件 = `ssh` 工具面 ⟷ 会话池 ⟷ 传输面（剥离 ∥ 帽窗 ∥ 四门）；进入口 = CLI 会话里让助手调 `ssh` 工具，用户看的是那一格工具结果回执；三态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界。
+> 节注：回指 = `docs/core/requirements/TOOLS.md` §4.8（S3 ∥ S4 ∥ NS2 ∥ S10 ∥ S11 ∥ NS8）；交互组件 = `ssh` 工具面 ⟷ 会话池 ⟷ 传输面（剥离 ∥ 帽窗 ∥ 四门）；进入口 = CLI 会话里让助手调 `ssh` 工具，用户看的是那一格工具结果回执；五态（行序）= 22-1 正常 · 22-2 正常 · 22-3 边界 · 22-4 正常 · 22-5 边界。
 
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 22-1 | CLI 会话里让助手 `ssh connect` 到脚本化假设备（`_setSshBinaryForTest` 替掉 ssh），再 `send("show run")`：设备吐 20 000 字符、夹 CSI/OSC/退格、末行 `--More--` | 工具结果回执零 `\x1b` 残留、首行与末行俱在、注记点名中段可取回；随后 `read` 取回中段，三段拼合与设备原文逐字一致；`--More--` 字面出现 1 次 | 待执行 | — | — | — | `test/integration/ssh-device-readability.test.mjs` |
 | 22-2 | 同一会话 `send("write memory")`：设备回显后静默 3 s 再出 `[OK]` 与提示符 | 结论 = 提示符命中 ∧ 未在静默窗交出（首屏从未在 800 ms 静默处返回）；`[OK]` 与提示符俱在返回文本里。用时只作旁证，不作断言 | 待执行 | — | — | — | `test/integration/ssh-device-readability.test.mjs` |
 | 22-3 | 同一会话 `send`：替身按脚本在第 N 字节后停吐（同一会话内从「会吐」切到「不再吐」，`timeoutMs: 1500`） | 硬超时内返回可读句并点名未过的门（无提示符 ∥ 仍在输出 ∥ 一个字节都没回）；会话仍在 `list` 里（不静默挂起、不崩） | 待执行 | — | — | — | `test/integration/ssh-device-readability.test.mjs` |
+| 22-4 | 会话连上只实现经典 SCP 协议的替身（收不到 `-O` 即失败），让助手 `put` 一个 1 MiB 二进制文件到 `/flash/firmware.img` | 远端副本 `sha256` 与本地相等；工具回执 = 会话冠行 + 一行状态句（含 `bytes` 与 `exit 0`）；对话里不出现文件内容（本地前 64 字节零命中） | 待执行 | — | — | — | `test/integration/ssh-file-transfer.test.mjs` |
+| 22-5 | 同一会话 `get` 一份远端配置到项目内路径（工程模式 depth-0）：无在途号 ∥ 带在途号各一笔，再对已存在的目标补一笔不给 `overwrite` | 无在途号 ⇒ 写门拒（拒文 = 门本体）且本地档不存在；带在途号 ⇒ 落盘、`sha256` 与远端相等；目标已存在且不给 `overwrite` ⇒ 拒、原档字节零改 | 待执行 | — | — | — | `test/integration/ssh-file-transfer.test.mjs` |
 
 ### 23. 配了 OpenCode Go 的会话能发出话
 
@@ -323,6 +328,38 @@
 | 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
 |---|---|---|---|---|---|---|---|
 | 28-1 | 同一会话内先一笔 `edit`（或 `insert_after`）改到第 N 行附近，再用**旧快照的行号**调 `edit` 的 `line` / `startLine`+`endLine`，目标行落在受影响区内 | 当场拒：拒文逐字含路径、上次写入行、漂移量、两条下一步（重 `read` 与改走内容锚）；**文件字节零改**（改前后内容哈希相同）；回执不出现 `Edited …` 成功句 | 待执行 | — | — | 修前红 = 旧行号照旧应用、改到相邻行而回执报成功——本行断言的就是那条已退场的旧行为 | `test/integration/edit-line-anchor.test.mjs` |
+
+### 29. 路径解析统一层
+
+> 目的：同一条相对路径在哪个面都得到同一个答案——判得出就解析出，判不出就停下要人挑（列出候选），解析无果就说清缺哪一段并列出盘上同名档；跨仓引用只判「引用写对没有」。
+> 节注：回指 = 需求 `docs/core/requirements/ENGINEERING-MODE-V2-SPEC-BATCH-SEGMENT.md`（相对路径解析序与防嵌套 F-BP1）· `docs/core/requirements/PROMPT-SYSTEM.md:125` ⑤（跨仓引用三态）· `docs/core/requirements/ADVISOR-CONVERGENCE.md` §2.3 条目 F18；机制单源 = `docs/core/design/PATH-RESOLUTION.md` §2（四态与判定算法）∥ §2.6（报明文）∥ §2.7（跨仓判据）；交互组件 = 统一解析层 `thincoder-core/path-resolve.mjs` ⟷ 七个吃路径的面（批档读 ∥ create ∥ 评审文档 ∥ 子代理 `files` ∥ 台账 `cwd` ∥ `doc_check target` ∥ 文档锚面）；进入口 = 父侧 `batch append` 一笔 / 一次 `advisor` 发起 / 一跑 `doc_check`；三态（行序）= 29-1 正常 · 29-2 错误 · 29-3 错误 · 29-4 边界 · 29-5 错误。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 29-1 | 父侧 `batch append` 写一笔 §1：批档以**裸档名**定位（档在 `docRoot.batches` 下），写入文本里再引一个裸档名 | 写入落盘（回执含 `appended`）、回执无 `DOC-CHECK GATE: REFUSED`（门不再判档缺）；追加文本在档内可读回 | 待执行 | — | — | — | `test/integration/path-resolution.test.mjs` |
+| 29-2 | 会话锚 = 工作区（下辖两项目），三面各一笔：`batch status` 传项目根相对形 ∥ `ledger count` 不带 `cwd` ∥ `doc_check({mode:"gate"})` 不带 `target` | 三面同一句报明形：拒 + 候选全列（批档面回执含 `Candidates:` 与两个项目名；台账面含「未找到项目根」+ 下辖候选；文档门首行 `DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）` + 候选行） | 待执行 | — | — | — | `test/integration/path-resolution.test.mjs` |
+| 29-3 | 文档门判一份引裸档名的档（裸名在项目根与引用方目录都不中、同名档在更深的子目录里） | 回执报「缺「<该名>」」+「盘上同名：<路径>」（「你是不是指这个」）；命中仍是 `档缺` 一条（候选不产受理） | 待执行 | — | — | — | `test/integration/path-resolution.test.mjs` |
+| 29-4 | 文档门判一份含两条跨仓引用的档：一条首段 = 已声明仓名（本机没有该仓）、一条首段 = 项目根同级目录名（未声明） | 两条均零命中（写作被放行）；已声明形出行「仓「X」的 Y（声明源引用，未校验存在性）」，未声明形出行含「须先在 index.publicRepos 声明」+ 本机仓名候选 | 待执行 | — | — | — | `test/integration/path-resolution.test.mjs` |
+| 29-5 | 文档门判一份形态错的跨仓引用（`仓名/../越界.md`）；同形改走台账面（`ledger update` 的 `task_book` 指同形路径） | 文档面仍判缺（`✗ 锚·档缺`，不落跨仓读数）；台账面硬拒（拒文含 `task_book 指向的档不存在`）——两面放宽面不同 | 待执行 | — | — | — | `test/integration/path-resolution.test.mjs` |
+
+### 30. 读数子代理：派一个 tester 跑验证
+
+> 目的：父侧派一个只跑不改的子代理去跑验证，拿回来的是读数（命令原文、跑者计数、失败用例名、摘要）——父侧据它自己重新判断，子代理不改任何东西。
+> 节注：回指 = 需求 `docs/core/requirements/AGENT-LOOP.md` §4.20（F-TT1 ∥ F-TT2 ∥ F-TT3）；机制单源 = `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59（工具面 §6.59.2 · 报告形态 §6.59.10）· 工具面一侧 = `docs/core/design/TOOLS.md` §6.27；交互组件 = 角色白名单（`thincoder-core/agent-tools/subagent.mjs`）⟷ 工具面过滤（核 `thincoder-core/agent-tools/subagent-spawn.mjs` ⟷ 端 `thincoder-vscode/src/agent/tool-table.mjs`）⟷ 提示词装配（`thincoder-core/prompt-overlays.mjs`）⟷ 子代理报告；进入口 = 父侧派单跑验证（核入口 + VS Code 端入口，同一用例内各取一次）；两态（行序）= 30-1 正常。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 30-1 | 父侧在工程模式经 `subagent` 派 `role:"tester"`（任务书五项），两条断言各一跑：必败 `node --test test/failing.test.mjs` ∥ 必过 `node --test test/passing.test.mjs`；同用例内再取一次两端工具面（同一份输入表 = 核内置表 + `verify` + `advisor`：核侧 = 真派单请求体减家族段，端侧 = 真跑 VS Code 端 `buildToolTable`，`vscode` 宿主模块桩掉） | 受理：回来的是一份子代理报告，无任何门的拒句；tester 请求体里的工具表无写面（无 `write` / `edit` / `apply_patch` / `git` / `verify` / `advisor`）且含 `bash` ∥ `execute`；必败跑报告带命令原文 + 跑者 `fail 1` + 失败用例名 + `exit code 1`，必过跑报告带 `pass 1` + `exit code 0`；核 ∥ 端基础集逐名相等，且核侧实得名集 = 公式快照（只读集 ∪ `{execute, bash}` − `{verify, advisor}`，再经 `SUBAGENT_TOOL_EXCLUSIONS`） | ✅ 通过 | 2026-11-02 | 实施席（eng-coder） | 无 | `test/integration/tester-role.test.mjs` |
+
+### 31. 过程档内容在工具输出的命中处就标出不可作依据
+
+> 目的：助手查一个词把批档旧话捞出来时，读输出的人当场看见「这行不能作为设计依据」——不靠模型记得去核状态档。
+> 节注：回指 = `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.19 3-补（判据 = `docs/core/design/TOOLS.md` §6.28 验收 1–14）；交互组件 = `grep` ∥ `bash` ∥ `execute` 的输出渲染 ⟷ `isExcludedRelPath` 声明谓词 ⟷ 盘上路径解析；进入口 = 用户在会话里让助手查一个词；两态（行序）= 31-1 正常 · 31-2 边界。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 31-1 | 会话里对一个词跑 `grep`、`bash`（脚本印同一批行：相对形 ∥ 驱动绝对形 ∥ MSYS 形）、`execute`（`code` 里 `readFileSync` 打印同两份档）、后台径再起一条 `async` 后台任务读其结算文本，VSC 端再以 `terminal` 缺省与 `"visible"` 各跑一次 `bash`；该词同时出现在一份批档、一份 `_archive` 档与一份状态档里 | 各面分别：过程档行以 `[process doc: not a design basis]` 开头且行其余部分逐字不变；状态档行逐字等于 `<file>:<line>: <text>`（无前缀）；命令面（`bash` ∥ 后台摘要 ∥ `execute` ∥ VSC 两出口）输出末尾多一行汇总且 N = 实标行数；`grep` 面零汇总行；`filter` 按原始行命中（前缀不参与过滤） | ✅ 通过 | 2026-11-02 | 实施席（eng-coder） | — | `test/integration/grep-process-doc-mark.test.mjs` |
+| 31-2 | 同一次命令面输出里只用「长得像路径、盘上不存在」的日志行；另在一个祖先链无 manifest 的目录里跑同一件事 | 该行零打标、不进汇总计数（N = 0 ⇒ 无汇总行，输出逐字节不变）；出辖目录的命中行同样零打标 | ✅ 通过 | 2026-11-02 | 实施席（eng-coder） | — | `test/integration/grep-process-doc-mark.test.mjs` |
 
 ## VS Code 端（thincoder-vscode）
 

@@ -95,6 +95,10 @@ export function formatPermission(name, args) {
       return cap(`${target} — 删除已保存的 ssh 凭据`, 300)
     }
     if (action === "close") return `${sid} — 关闭会话`
+    // 传输面（TOOLS.md §6.22 ⑬「UI / 交互决策」）：审批文案**点出传输两端**、内容不入文案
+    // （与 NS3「将发送原文」的有意偏离——载荷 = 文件字节，抄进文案等于把内容灌进对话面）。
+    if (action === "put") return cap(`${sid} — 上传 ${args.localPath ?? "(缺 localPath)"} → 远端 ${args.remotePath ?? "(缺 remotePath)"}`, 300)
+    if (action === "get") return cap(`${sid} — 下载 远端 ${args.remotePath ?? "(缺 remotePath)"} → ${args.localPath ?? "(缺 localPath)"}`, 300)
     return cap(`${action} ${sid}`, 300)
   }
   return cap(summarize(args), 300)

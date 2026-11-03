@@ -263,103 +263,44 @@ export async function connectSsh(parent, ctx, { host, user, port, label, promptP
     ].filter(Boolean).map((s) => s.replace(/^\n— /u, ""))
     return { text: `${statusLine(entry)}\n${bodyText(capWindow(entry, text, SSH_RETURN_CAP))}\n${notes.join("; ")}` }
   }
-  /** 认证类失败分类（spawn 错误 ∥ 输出判据——两径同式）。 */
-  const classify = () => (entry.spawnError
-    ? { kind: "spawn", message: `ssh client not available (${entry.spawnError}) — install system OpenSSH or check PATH` }
-    : classifyFailure(entry.buf))
-  try {
-    assertPoolKeyFree(pool, id, "ssh")
-    pool.set(String(id), entry)
-    spawn(effectiveUser, null) // 探连：全会话形 + NumberOfPasswordPrompts=0（不读保存件——铁序）
+  /** 一次尝试（探连 ∥ 带密会话同径）：起跑 + 沉降 + 分类 ⇒ 归一判定（`ok` 假时 `failure` = 可读句）。
+   *  `asUser` 缺省 = 本次有效 user（凭据窗可改）；遮蔽先注册后写入（回显面零泄）。 */
+  const attempt = async (secret = null, asUser = effectiveUser) => {
+    entry.user = asUser ?? null
+    if (secret != null) entry.mask.add(secret)
+    spawn(entry.user, secret)
     let { reason, waitedMs } = await settle()
     // 「已就绪」判据要求进程尚在（静默窗与退出同刻的竞争面——升格一条死连接不成立）。
     if ((reason === "prompt" || reason === "silence") && entry.exitInfo) reason = "exited"
-    if (reason === "aborted") {
-      hardClose(entry, "closed", "consumed")
-      return { error: `ssh connect interrupted before the session was ready (${entry.host})` }
+    if (reason === "prompt" || reason === "silence") return { ok: true, reason, waitedMs }
+    const cls = entry.spawnError
+      ? { kind: "spawn", message: `ssh client not available (${entry.spawnError}) — install system OpenSSH or check PATH` }
+      : classifyFailure(entry.buf)
+    const failure = secret == null
+      ? failureText(entry, cls)
+      : failureText(entry, cls ?? { message: "authentication rejected" }, " — the session was not established")
+    return { ok: false, reason, waitedMs, auth: reason === "exited" && cls?.kind === "auth", failure }
+  }
+  try {
+    assertPoolKeyFree(pool, id, "ssh")
+    pool.set(String(id), entry)
+    // 凭据判定单源（D-TO25）：探连 → 密文库 → 凭据窗。本档只提供「一次尝试」，顺序归 resolveSessionSecret。
+    const out = await resolveSessionSecret({
+      ctx, host, port, user: effectiveUser, sessionId: id, offerSave: vaultAvailable(), attempt,
+    })
+    if (out.state !== "ok") {
+      const r = out.r ?? {}
+      const stopped = out.state === "cancel" || out.state === "empty" || (out.phase === "probe" && (r.reason === "aborted" || r.reason === "timeout"))
+      hardClose(entry, "closed", stopped ? "consumed" : "connect-failed")
+      if (out.state === "cancel") {
+        return { error: `ssh connect to ${entry.host} cancelled — no credential was provided (no connection was attempted with one)${out.failNote ? ` (${out.failNote}; the credential window was shown)` : ""}` }
+      }
+      if (out.state === "empty") return { error: "ssh connect cancelled — an empty password is never submitted (submit a password or cancel the window)" }
+      if (r.reason === "aborted") return { error: `ssh connect interrupted before the session was ready (${entry.host})` }
+      if (r.reason === "timeout") return { error: `ssh connect did not settle within ${SSH_CONNECT_SETTLE_MS}ms (${entry.host}) — the connection is closed; retry or increase the wait${escapeNote(entry)}` }
+      return { error: r.failure }
     }
-    if (reason === "timeout") {
-      hardClose(entry, "closed", "consumed")
-      return { error: `ssh connect did not settle within ${SSH_CONNECT_SETTLE_MS}ms (${entry.host}) — the connection is closed; retry or increase the wait${escapeNote(entry)}` }
-    }
-    let auth = "key"
-    const flowNotes = []
-    if (reason === "exited") {
-      const cls = classify()
-      if (!cls || cls.kind !== "auth") {
-        const text = failureText(entry, cls)
-        hardClose(entry, "closed", "connect-failed") // 杀树收尾（finalize 只出池——活子进程会成无句柄悬挂）
-        return { error: text }
-      }
-      // 认证类失败 ⇒ **先读保存件**（⑪；有效 user 判定序缺 ⇒ 零消费零删除——直接落窗）。
-      let saved = null
-      let failNote = ""
-      if (effectiveUser) {
-        const got = await resolveSecret(host, port, effectiveUser)
-        if (got.state === "ok") saved = got
-        else if (got.state === "damaged") failNote = "the saved-credential store is damaged — it was left untouched"
-        else if (got.state === "undecryptable") failNote = "the saved credential could not be decrypted — the entry was kept"
-        else if (got.state === "unavailable") failNote = "saved credentials are not available on this platform"
-        // missing ⇒ 静默（正常首连态）
-      }
-      if (saved) {
-        entry.user = effectiveUser
-        entry.mask.add(saved.value) // 遮蔽先注册后写入（回显面零泄）
-        spawn(entry.user, saved.value) // 带密会话（PP=1）——命中保存件 ⇒ 零窗
-        ;({ reason, waitedMs } = await settle())
-        if ((reason === "prompt" || reason === "silence") && entry.exitInfo) reason = "exited"
-        if (reason === "prompt" || reason === "silence") {
-          touchEntry(host, port) // lastUsedAt = 复用成功时更新（写失败 = 增益面静默）
-          return promote(reason, waitedMs, { auth: "password", extra: ["saved credential used (no credential window)"] })
-        }
-        const clsSaved = classify()
-        // 只有**本次进程正常退出且为认证类**才算「服务端拒绝」；超时 / 中断 / 不可达 ⇒ 条目保留、硬停。
-        if (reason !== "exited" || clsSaved?.kind !== "auth") {
-          const text = failureText(entry, clsSaved ?? { message: "authentication rejected" }, " — the session was not established")
-          hardClose(entry, "closed", "connect-failed")
-          return { error: text }
-        }
-        // 条目被服务端拒 ⇒ 删该条目（拒绝即值已失效——避免每次重试旧值）+ 回落窗；删失败时注记如实。
-        const del = deleteEntry(host, port)
-        failNote = del.ok
-          ? "the saved credential was rejected by the server — the entry was deleted"
-          : "the saved credential was rejected by the server — the store could not be updated (the entry may still be there)"
-      }
-      // 凭据窗（值只走回调返回路 + 子进程环境——NS4：零入参 ∥ 零入结果 ∥ 零落盘）。
-      const input = await askCredential(ctx, { host, user: effectiveUser, port, sessionId: id, offerSave: vaultAvailable() })
-      if (!input) {
-        hardClose(entry, "closed", "consumed")
-        return { error: `ssh connect to ${entry.host} cancelled — no credential was provided (no connection was attempted with one)${failNote ? ` (${failNote}; the credential window was shown)` : ""}` }
-      }
-      if (!String(input.password ?? "").length) {
-        hardClose(entry, "closed", "consumed")
-        return { error: "ssh connect cancelled — an empty password is never submitted (submit a password or cancel the window)" }
-      }
-      entry.user = input.user || effectiveUser || null
-      entry.mask.add(input.password) // 遮蔽先注册后写入（回显面零泄）
-      spawn(entry.user, input.password) // 单次带密会话（PP=1）
-      ;({ reason, waitedMs } = await settle())
-      if ((reason === "prompt" || reason === "silence") && entry.exitInfo) reason = "exited"
-      if (reason !== "prompt" && reason !== "silence") {
-        const cls2 = entry.spawnError ? { message: "ssh client not available" } : classifyFailure(entry.buf)
-        const text = failureText(entry, cls2 ?? { message: "authentication rejected" }, " — the session was not established")
-        // 带密会话未就绪（aborted ∥ timeout）时子进程可能仍活——必走杀树径（否则出池后无句柄可收）。
-        hardClose(entry, "closed", "connect-failed")
-        return { error: text }
-      }
-      // 认证成功后才写（opt-in——严格布尔；写失败不影响连接：增益面语义）
-      if (input.save === true && entry.user) {
-        const savedRes = await saveEntry(host, port, { user: entry.user, value: input.password })
-        flowNotes.push(savedRes.ok
-          ? "the credential was saved for this host (encrypted with this Windows user account)"
-          : "the credential could not be saved (the connection is unaffected)")
-      } else if (input.save === true) {
-        flowNotes.push("the credential was not saved (no login user was given for this host)")
-      }
-      if (failNote) flowNotes.unshift(`${failNote}; the credential window was shown`)
-      auth = "password"
-    }
-    return promote(reason, waitedMs, { auth, extra: flowNotes })
+    return promote(out.r.reason, out.r.waitedMs, { auth: out.source === "key" ? "key" : "password", extra: out.notes })
   } catch (e) {
     hardClose(entry, "closed", "connect-failed") // 异常径同走杀树（子进程可能仍在飞）
     return { error: e?.noUi ? `Error: ${e.message}` : `ssh connect failed: ${e?.message ?? String(e)}` }
@@ -486,3 +427,69 @@ export { _setSshBinaryForTest, _setSshConfigDirForTest } from "./ssh-transport.m
 // 保存凭据管理面（§6.22 ⑫）：`credentials` / `forget` 实体 = `ssh-vault.mjs`（核单点——本档只转口；
 // 拆档由 = 机制档触 500 软线，§6.22 落点表候选拆分）。
 export { credentialsSsh, forgetSsh } from "./ssh-vault.mjs"
+// ─── 凭据判定单源（D-TO25：`connect` ∥ 传输面两处共用）─────────────────────────
+
+/**
+ * 凭据判定（§6.22 ⑩ / ⑪ + 裁定 A 预探路）——`connect` 与 `put` / `get` 两处共用的**顺序**：
+ * 探连（密钥 ∥ agent）→ 密文库 → 凭据窗。保存件**恒不先于探连**（S6 / N6 / B7——密钥可用则零读取）。
+ * `attempt(secret, user)` = 调方的起跑 + 沉降 + 分类，回 `{ ok:true, … }` 或 `{ ok:false, auth, failure }`
+ * （`auth` = 服务端拒绝认证 ⇒ 才继续往下一条来源；`failure` = 该来源失败的可读句）。
+ * @returns {Promise<{state:"ok", secret:string|null, user:string|null, source:"key"|"vault"|"window", r:Object, notes:string[]}
+ *   | {state:"fail", phase:"probe"|"vault"|"window", r:Object} | {state:"cancel"|"empty", failNote?:string}>}
+ */
+export async function resolveSessionSecret({ ctx, host, port, user, sessionId, offerSave = false, attempt }) {
+  const notes = []
+  let r = await attempt(null)
+  if (r.ok) return { state: "ok", secret: null, user: user ?? null, source: "key", r, notes }
+  if (!r.auth) return { state: "fail", phase: "probe", r }
+  // 认证类失败 ⇒ **先读保存件**（⑪；有效 user 缺 ⇒ 零消费零删除——直接落窗）。
+  let failNote = ""
+  if (user) {
+    const got = await resolveSecret(host, port, user)
+    if (got.state === "ok") {
+      r = await attempt(got.value, user)
+      if (r.ok) {
+        touchEntry(host, port) // lastUsedAt = 复用成功时更新（写失败 = 增益面静默）
+        return { state: "ok", secret: got.value, user, source: "vault", r, notes: ["saved credential used (no credential window)"] }
+      }
+      if (!r.auth) return { state: "fail", phase: "vault", r }
+      // 条目被服务端拒 ⇒ 删该条目（拒绝即值已失效——避免每次重试旧值）+ 回落窗；删失败时注记如实。
+      const del = deleteEntry(host, port)
+      failNote = del.ok
+        ? "the saved credential was rejected by the server — the entry was deleted"
+        : "the saved credential was rejected by the server — the store could not be updated (the entry may still be there)"
+    } else if (got.state === "damaged") failNote = "the saved-credential store is damaged — it was left untouched"
+    else if (got.state === "undecryptable") failNote = "the saved credential could not be decrypted — the entry was kept"
+    else if (got.state === "unavailable") failNote = "saved credentials are not available on this platform"
+    // missing ⇒ 静默（正常首连态）
+  }
+  // 凭据窗（值只走回调返回路 + 子进程环境——NS4：零入参 ∥ 零入结果 ∥ 零落盘）。
+  const input = await askCredential(ctx, { host, user, port, sessionId, offerSave })
+  if (!input) return { state: "cancel", failNote }
+  if (!String(input.password ?? "").length) return { state: "empty" }
+  const asUser = input.user || user || null
+  r = await attempt(input.password, asUser)
+  if (!r.ok) return { state: "fail", phase: "window", r }
+  // 认证成功后才写（opt-in——严格布尔；写失败不影响连接：增益面语义）
+  if (input.save === true && asUser) {
+    const saved = await saveEntry(host, port, { user: asUser, value: input.password })
+    notes.push(saved.ok
+      ? "the credential was saved for this host (encrypted with this Windows user account)"
+      : "the credential could not be saved (the connection is unaffected)")
+  } else if (input.save === true) {
+    notes.push("the credential was not saved (no login user was given for this host)")
+  }
+  if (failNote) notes.unshift(`${failNote}; the credential window was shown`)
+  return { state: "ok", secret: input.password, user: asUser, source: "window", r, notes }
+}
+
+/** 传输面取会话记录（§6.22 ⑬ ②：主机 / 用户 / 端口 / 身份面全取会话记录值——S10「不另填主机 / 凭据」）。
+ *  池查询本档单点（传输件不碰池）；身份面取 ⑨ 记录的 `identityFile`（与 `connect` 同一判定序）。
+ *  `header` = 回执首行的会话冠行（⑬ ③）——形单源仍是 `ssh-transport.mjs` 的 `statusLine`，本档只取一次快照。 */
+export function sessionForTransfer(parent, id) {
+  const entry = findEntry(parent, id)
+  if (!entry) return { error: missingEntry(parent, id) }
+  const rec = lookupHostRecord(entry.host, entry.port)
+  const header = statusLine(entry)
+  return { host: entry.host, user: entry.user ?? null, port: entry.port ?? null, identityFile: rec?.identityFile ?? null, header }
+}
