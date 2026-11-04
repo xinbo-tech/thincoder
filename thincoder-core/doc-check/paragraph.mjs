@@ -40,8 +40,8 @@ export const isFenceLine = (l) => fenceMark(l) !== null
 /** 引文块行谓词（行首可选空白 + `>`）——连续 `>` 行整块不计入段（引证须逐字连续、不可折，同表行理据）。 */
 export const isQuoteLine = (l) => /^\s*>/.test(String(l))
 
-/** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` + 空白）——列表项不计入段且断段。 */
-export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、])\s/.test(String(l))
+/** 列表项谓词（无序 `-` ∥ `*` ∥ `+` · 有序 `数字 + . ∥ ） ∥ 、` · 中文标记 `·` ∥ `•`——三族要求标记后有空白；圈号 `①`–`⑳` 另起一式、不要求）——列表项不计入段且断段。 */
+export const isListItem = (l) => /^\s*(?:[-*+]|\d+[.)、]|[·•])\s/.test(String(l)) || /^\s*[①-⑳]/.test(String(l))
 
 /** 提示词面谓词（`thincoder-core/prompts/**`——形态对齐 `./anchors.mjs` 的 `OPERAND_FACE`，单源住本档）：
  *  模型读原始文本，一行就是一个块（FR46 同源理由）⇒ 该面逐行裸判，无结构豁免。 */

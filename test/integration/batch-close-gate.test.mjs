@@ -1,5 +1,5 @@
 /**
- * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-6 / 7-7 / 7-8 / 7-9（RTM CLI 端故事 7「收口只判本批改过的档」；
+ * batch-close-gate.test.mjs — 集成用例 7-1 / 7-2 / 7-3 / 7-4 / 7-6 / 7-7 / 7-8 / 7-9 / 7-11 / 7-13（RTM CLI 端故事 7「收口只判本批改过的档」；
  * 判据原文 = `test/RTM.md` 第 7 节；7-1…7-3 的机制 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「② 的范围」，
  * 7-4 的机制 = `docs/core/design/TESTING.md` §3.5（零留存的收口门），
  * 7-6 / 7-7 / 7-8 的机制 = 同档 §3.20「结构兜底」（**批档自身恒在判域**：② 面命中即拒、① 面强制集 = 本次写入文本）。
@@ -12,6 +12,8 @@
  * （批档 §1 的 `批起 sha = <sha>` 记入行 ⇒ `git diff --name-only <sha> HEAD`）；这五例先实读 diff 腿自证，否则「范围 N 档」只是空转读数。
  * 7-7 不用 git 仓（笔域集只含批档自身，档数靠引擎实判数对拍）；7-8 只判写段面（不涉提交 diff 腿）；
  * 7-9 判工具描述面（两条判据同判：400 字符段 + 裸档名 ⇒ 双命中；只修锚仍拒；拆段后放行）。
+ * 7-13 判段判据的列表项符号集（中文族 `·` ∥ `•` ∥ `①`–`⑳`）：400+ 字的列表档 0 命中、收口放行；
+ * 同内容去标记的 400 字一段仍 1 条 ⇒ 照拒——认得列表项只断段、不改阈值。
  *
  * 夹具 = 系统临时域（项目根 + 真 git 仓 + 六段批档；`mkdtempSync`——零落仓、可并发）。收口后的台账重锚
  * 经测试缝 `_setLedgerDirForTest` 导向临时目录（不碰真实用户数据目录）。
@@ -386,6 +388,58 @@ test('7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸�
   const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, touched))
   assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `拆段后收口放行且落盘：${receipt}`)
   assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
+})
+
+// 7-13（本批新增）：段判据的列表项符号集认得出中文族（`·` ∥ `•` ∥ 圈号 `①`–`⑳`）。
+// 现场是写门那一侧：中文列表被并成一段、超 300 ⇒ 写入当场被拒 ⇒ 仓里留不下这种行（「盘上零处」不是「没命中」）。
+// 故本例走真收口轨：三份中文列表档入笔域集 ⇒ 放行；同内容去标记的 400 字一段 ⇒ 照拒。
+const CN_ITEM = "文".repeat(80)
+const CIRCLED5 = "①②③④⑤"
+/** 五项一项一行的中文列表档（每项 80 字 ⇒ 认不出列表项时它就是 400+ 字的长段）。 */
+const cnList = (mark) => "# 中文列表\n\n" + Array.from({ length: 5 }, (_, i) => mark(i)).join("\n") + "\n"
+
+test("7-13 正常 · 中文项目符号三族档入笔域集 ⇒ 收口放行；同内容去标记的 400 字对照档 ⇒ 收口被拒（文字太长，难于阅读）", async () => {
+  const root = makeProject("r713")
+  gitRepo(root)
+  const bullets = [
+    ["docs/notes/cn-dot.md", cnList(() => "· " + CN_ITEM)],
+    ["docs/notes/cn-bullet.md", cnList(() => "• " + CN_ITEM)],
+    ["docs/notes/cn-circled.md", cnList((i) => `${CIRCLED5[i]} ${CN_ITEM}`)],
+  ]
+  for (const [rel, text] of bullets) writeFileSync(join(root, rel), text)
+  commit(root, "中文项目符号三档")
+
+  // 前置：三份档的列表行字面确实超阈（认不出符号 ⇒ 必被并成 410 字长段），否则本例空转、什么都证不了
+  for (const [rel, text] of bullets) {
+    const merged = text.split("\n").filter((l) => l.trim() !== "" && !l.startsWith("#")).reduce((n, l) => n + [...l].length, 0)
+    assert.ok(merged > 300, `前置：${rel} 的列表行字面合计 ${merged} > 300——认不出符号就是长段`)
+  }
+  const probe = runDocCheck(root, { mode: "gate", docs: bullets.map(([rel]) => join(root, rel)), docsSource: "explicit" })
+  assert.equal(probe.paragraphHits.length, 0, `三份中文列表档应零段命中：${probe.report}`)
+
+  const receipt = await depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, []))
+  assert.equal(gateLineOf(receipt), "[doc-check gate] DOC-CHECK GATE: PASS · 范围 6 档", `三档 + 本批两档 + 批档自身 = 6 档：${receipt}`)
+  assert.match(receipt, /^batch: §1 status line → 「已收口 \d{4}-\d{2}-\d{2}」/, `收口放行且落盘：${receipt}`)
+  assert.match(statusLineOf(root), /已收口/, "§1 状态行已写「已收口」")
+
+  // 后半 = 反证，另起一份夹具（前一本批档已冻结）：同内容去标记 ⇒ 400 字一段，段判据照拦
+  const root2 = makeProject("r713b")
+  gitRepo(root2)
+  const controlRel = "docs/notes/cn-plain.md"
+  writeFileSync(join(root2, controlRel), cnList(() => CN_ITEM))
+  commit(root2, "去标记对照档")
+  const controlProbe = runDocCheck(root2, { mode: "gate", docs: [join(root2, controlRel)], docsSource: "explicit" })
+  assert.equal(controlProbe.paragraphHits.length, 1, `对照档应恰 1 条段命中（阈值没动）：${controlProbe.report}`)
+
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root2, [])),
+    (e) => {
+      assert.match(e.message, /DOC-CHECK GATE: REFUSED（命中 1 条）/, `拒串携 verdict 首行：${e.message}`)
+      assert.match(e.message, /✗ 文字太长，难于阅读 docs\/notes\/cn-plain\.md:\d+/, `拒串点名该档与段命中行：${e.message}`)
+      return true
+    },
+  )
+  assert.match(statusLineOf(root2), /进行中/, "§1 状态行仍「进行中」")
 })
 
 
