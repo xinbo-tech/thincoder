@@ -3,42 +3,30 @@
  *
  * 权威规格 = `docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.1 / §2.10；面分类的原文正源 =
  * `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.5。本档只做一件事：给一个绝对路径判「产品代码面
- * / 放行面」，判据逐步骤对应 §2.10 的七步表。
+ * / 文档面」，判据逐步骤对应 §2.10 的两值表。
  *
- * 为什么复用 `classifyPath` 而不另写一套分类：两套面判据必然漂移，漂移后「写锁拦的」和「索引收的」
- * 会各说各话（§2.10）。所以本档 = `classifyPath`（`../conventions.mjs`）+ 三处修正：
- *   ① 构建产物目录放行（`BUILD_ARTIFACTS`，10 项——里面没有一行是人写的）；
- *   ② 仓根以下 `test` / `tests` 段**拦**（产品测试与它守的代码同轮评审、同份批档）；
- *   ③ `scripts` 段**只在仓根**放行（`thincoder-core/scripts/check-syntax.mjs` 随核发布 = 产品代码）。
+ * 面**只有两值**：文档面（放行）∥ 产品面（拦）——设计门按它拦；写锁 2026-11-03 起不分面（设计档 §2.3），
+ * 面在那里只选拒文变体。四格先命中先定：
+ *   1 出辖（祖先链无 manifest）⇒ 放行（`out-of-jurisdiction`）——辖界，不是面
+ *   2 manifest `docRoot` 前缀命中 ⇒ 放行（`doc-root`，D1 写权矩阵在写面上的机判投影）
+ *   3 文件 = `PROJECT-MANIFEST.json`（项目状态档）⇒ 放行（`manifest-state`）
+ *   4 其余一切 ⇒ 产品面（`product`，fail-closed——判不出面就按产品面走全链）
  *
- * 七步先命中先定（§2.10 表）：
- *   1 出辖（祖先链无 manifest）⇒ 放行
- *   2 manifest `docRoot` 前缀命中 ⇒ 放行（文档面 = D1 写权矩阵在写面上的机判投影）
- *   3 仓根首段 = `scripts` ∥ `test` ∥ `.thincoder` ∥ `.github`，或首段 = `package-lock.json` ⇒ 放行
- *   4 任一段 ∈ `BUILD_ARTIFACTS`（精确段匹配——面判不折叠、不做前缀）⇒ 放行
- *   5 仓根以下任一段 = `scripts` ∥ `test` ∥ `tests` ⇒ 拦
- *   6 `classifyPath` = `doc` / `temp` / `aux` / `state` ⇒ 放行
- *   7 其余（含 `code` 与兜底）⇒ 拦
+ * 为什么不再复用 `classifyPath`：旧形把「构建产物 / 仓根 `scripts` ∥ `test` ∥ `.thincoder` ∥ `.github`
+ * / 锁文件 / `classifyPath` 的 temp·aux·state」当放行桶——每多一个放行桶，就多一条「这一步要不要走流程」
+ * 的自判口子（用户 2026-11-02 裁定退役）。两值之后没有第三桶、没有豁免、没有待裁格；`classifyPath` /
+ * `isCodePath` **本体零改**，它们仍是索引 / 检索 / verify 那一族的判据（七个生产消费面）。
  *
- * 两个 `test/` 不同待遇：仓根 `test/**` 是跨仓验证面（改它不开批）；包内 `thincoder-<end>/test/**` 与产品
- * 代码同生共死（拦）。两个 `scripts/` 同理（见修正③）。
- *
- * 不做什么：`conventions.mjs` / `classifyPath` / `isCodePath` **本体零改**——后者有七个生产消费面，
- * 改它会把 verify / 评审陈旧 / 索引范围一起翻面（§2.10 末段）。本档只新增判据，不替换它们。
+ * `test` 标记与面值**分离**：路径含 `test` / `tests` 段 ⇒ `test: true`，只决定写锁用测试变体拒文，
+ * 不改 `face`。
  */
 import { isAbsolute, relative, resolve } from "node:path"
 
-import { classifyPath, declarationForTarget } from "../conventions.mjs"
-import { docRootPaths, readManifest } from "../manifest.mjs"
-import { BUILD_ARTIFACTS } from "../skip-dirs.mjs"
-
-/** 文档面的 manifest 键集（`docRoot` 子键——`null` 是合法零根，`docRootPaths` 已归一）。 */
-const DOC_ROOT_KEYS = ["requirements", "specs", "design", "modules", "batches"]
-
-/** 仓根首段放行集（工程工具面——§2.10 第 3 步）。 */
-const ROOT_TOOL_SEGMENTS = new Set(["scripts", "test", ".thincoder", ".github"])
-/** 仓根单档放行（工程工具面——锁文件）。 */
-const ROOT_TOOL_FILES = new Set(["package-lock.json"])
+import { declarationForTarget } from "../conventions.mjs"
+import { docRootPaths, manifestFilePath, readManifest } from "../manifest.mjs"
+// 文档面键集**不另持字面**（单源 = `agent-tools/review-facts.mjs` 的 `REVIEW_ROOT_KEYS`——同一组 docRoot 子键，
+// 两份清单漂移就是「评审面放的 / 写面拦的」各说各话）。
+import { REVIEW_ROOT_KEYS } from "../agent-tools/review-facts.mjs"
 
 /** 比较键（绝对化 + 分隔符归一 `/` + win32 大小写归一——同 `write-gate.mjs` 的 `gateKey` 口径）。 */
 const faceKey = (p) => {
@@ -54,58 +42,54 @@ function docRootKeys(root, manifest) {
   }
   if (!man || typeof man !== "object") return []
   const out = []
-  for (const key of DOC_ROOT_KEYS) {
+  for (const key of REVIEW_ROOT_KEYS) {
     for (const abs of docRootPaths(man.docRoot?.[key], root)) out.push(faceKey(abs))
   }
   return out
 }
 
+/** 路径段里有没有 `test` / `tests`（拒文变体句的判据，与面值无关）。 */
+function hasTestSegment(relOrAbs) {
+  return String(relOrAbs).split(/[\\/]+/).filter(Boolean).some((s) => {
+    const low = s.toLowerCase()
+    return low === "test" || low === "tests"
+  })
+}
+
 /**
  * 面判定（判据本体）。返回 `{face, reason, test}`：
- *  - `face` = `"product"`（产品代码面 ⇒ 写锁拦）∥ `"pass"`（放行面）；
- *  - `reason` = 命中的那一步（`out-of-jurisdiction` / `doc-root` / `engineering-tools` / `build-artifact` /
- *    `product-test` / `package-scripts` / `classify:aux` … / `code` / `fallback`）——回执与用例的定位面；
- *  - `test` = 命中修正②（产品测试面 ⇒ 写锁换首句与尾句的那条拒文）。
+ *  - `face` = `"product"`（产品面 ⇒ 设计门拦；写锁里只选拒文变体）∥ `"pass"`（放行面）；
+ *  - `reason` = 命中的那一格——**只有四值**：`out-of-jurisdiction` / `doc-root` / `manifest-state` /
+ *    `product`（回执与用例的定位面）；
+ *  - `test` = 路径含 `test` / `tests` 段（产品测试面 ⇒ 写锁换测试变体那句拒文；不改 `face`）。
  * @param {string} absPath — 目标绝对路径（相对形由调用方先 resolve；本档不猜会话锚）
  * @param {object|null} [manifest] — 所属项目的 manifest（缺省 ⇒ 按项目根读；读不到 ⇒ 文档面空集）
- * @returns {{face: "product"|"pass", reason: string, test: boolean}}
+ * @returns {{face: "product"|"pass", reason: "out-of-jurisdiction"|"doc-root"|"manifest-state"|"product", test: boolean}}
  */
 export function faceDetail(absPath, manifest = null) {
   const abs = resolve(String(absPath ?? ""))
   const conv = declarationForTarget(abs) // 出辖 ⇒ null（祖先链无 manifest）
-  if (!conv) return { face: "pass", reason: "out-of-jurisdiction", test: false }
+  if (!conv) return { face: "pass", reason: "out-of-jurisdiction", test: hasTestSegment(abs) }
   const root = conv.root
   const rel = relative(root, abs)
   const inRoot = rel === "" || (!rel.startsWith("..") && !isAbsolute(rel))
+  const test = hasTestSegment(inRoot ? rel : abs)
   if (inRoot) {
-    const segs = rel.split(/[\\/]+/).filter(Boolean)
-    const lower = segs.map((s) => s.toLowerCase())
     const key = faceKey(abs)
     // 2 文档面（manifest docRoot）
     if (docRootKeys(root, manifest).some((d) => key === d || key.startsWith(`${d}/`))) {
-      return { face: "pass", reason: "doc-root", test: false }
+      return { face: "pass", reason: "doc-root", test }
     }
-    // 3 仓根首段 / 仓根锁文件 = 工程工具面
-    const first = lower[0] ?? ""
-    if (ROOT_TOOL_SEGMENTS.has(first) || (segs.length === 1 && ROOT_TOOL_FILES.has(first))) {
-      return { face: "pass", reason: "engineering-tools", test: false }
-    }
-    // 4 构建产物（精确段匹配——`vendor` / `target` / `out` / `obj` / `bin` 不在此集）
-    if (lower.some((s) => BUILD_ARTIFACTS.has(s))) return { face: "pass", reason: "build-artifact", test: false }
-    // 5 仓根以下 test / tests / scripts 段 = 产品代码面（首段 `test` / `scripts` 已在第 3 步放行）
-    if (lower.some((s) => s === "test" || s === "tests")) return { face: "product", reason: "product-test", test: true }
-    if (lower.some((s) => s === "scripts")) return { face: "product", reason: "package-scripts", test: false }
+    // 3 项目状态档（主 agent 的声明面——D1 写权矩阵同源）
+    if (key === faceKey(manifestFilePath(root))) return { face: "pass", reason: "manifest-state", test }
   }
-  // 6 / 7 classifyPath 余类放行，其余（含 code）拦
-  const cls = classifyPath(abs, conv)
-  if (cls === "doc" || cls === "temp" || cls === "aux" || cls === "state") {
-    return { face: "pass", reason: `classify:${cls}`, test: false }
-  }
-  return { face: "product", reason: cls === "code" ? "code" : "fallback", test: false }
+  // 4 其余一切 = 产品面（fail-closed）
+  return { face: "product", reason: "product", test }
 }
 
 /**
- * 面判定（§2.1 契约形）：`"product"` = 产品代码面（写它要活批档）；`"pass"` = 放行面。
+ * 面判定（§2.1 契约形）：`"product"` = 产品面（设计门按它拦；写锁里只选拒文变体——台账在途行才是判据），
+ * `"pass"` = 放行面（文档面 / 出辖）。
  * @param {string} absPath — 目标绝对路径
  * @param {object|null} [manifest] — 所属项目 manifest（缺省 ⇒ 按项目根读）
  * @returns {"product"|"pass"}

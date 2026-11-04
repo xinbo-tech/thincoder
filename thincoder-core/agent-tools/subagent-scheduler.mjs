@@ -10,13 +10,17 @@
  * ASYNC_POOL_LIMITS/poolLimitsFor/runningPoolCount 回引自 subagent-async.mjs（主体保有——
  * 仅调用期使用——与主体对此处调度符号的回引构成惰性环——无求值期依赖）。
  */
-import { isAbsolute, relative, resolve } from "node:path"
+import { isAbsolute, relative } from "node:path"
 import { existsSync, statSync } from "node:fs"
 // zero-block 批 P1（TUI.md §6.8.3.2②）：排队刷新 relay 异常留痕（禁静默——池状态仍不破坏）。
 import { logEvent } from "../log.mjs"
 // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.3）：files 声明面拦截谓词本体落
 // spawn-gates.mjs（纯谓词零依赖——本处只加 import 调用，无环）。
-import { rejectEngineeringFilePaths } from "./spawn-gates.mjs"
+import { rejectProcessDocPaths } from "./spawn-gates.mjs"
+// `files` 落点单源 = 统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.5 第 4 行：`kind:"none"` /
+// `order:"near-first"` ⇒ 恒解析出、只做调度、不校验存在性）。门判（目录声明 / 过程档）
+// 仍吃**原始声明形状**——判据在转绝对之前跑，顺序零改。
+import { resolvePathTarget } from "../path-resolve.mjs"
 import { poolLimitsFor, runningPoolCount, ASYNC_POOL_LIMITS } from "./subagent-async.mjs"
 // ASYNC-RESULT-CONTAINER.md D1：池 accessor——async-settle.mjs 反向 import 本模块
 // （dependentLabels）构成同款惰性环（函数级绑定——无求值期依赖）。
@@ -44,7 +48,7 @@ import { carrierField, getAsyncPool, tombstoneOf } from "./async-settle.mjs"
  *  大小写不敏感（todo.md/changelog.md 精确——路径任意层含 docs/、根、.thincoder/）——
  *  命中 → throw（fail-closed——先于调度器准入——无排队残留——错误即工具结果）；
  *  提示列出全部违规条目——英文模板逐字定稿（AGENT-LOOP-SUBAGENT.md §6.9「父侧文件拦截（R26）」）。
- *  M5 F6（2026-09-17——2026-10-15 口径随正）：黑名单随同迁入 spawn-gates.mjs（rejectEngineeringFilePaths——族 = 过程档（CHANGELOG）+ 工程工具面（`scripts/*`——层级锚定：仅仓根与直接子层；目录名在深层不携带 face 信息）；老台账 md 族随 M2 退役）——本函数只留调用（错误文案逐字保留）。 */
+ *  M5 F6（2026-09-17——2026-10-15 口径随正）：黑名单随同迁入 spawn-gates.mjs（族 = 过程档（CHANGELOG）+ 项目状态档（PROJECT-MANIFEST.json）；老台账 md 族随 M2 退役）——本函数只留调用（错误文案逐字保留）。 */
 export function normalizeFileList(files, cwd) {
   const out = []
   for (const f of Array.isArray(files) ? files : []) {
@@ -52,17 +56,19 @@ export function normalizeFileList(files, cwd) {
     if (f.trimEnd().endsWith("/") || f.trimEnd().endsWith("\\")) { // 2.7 批：尾随空格目录声明（"test/ "）同拒
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
-    const abs = resolve(cwd, f)
+    // 落点由统一解析层给（`kind:"none"` / `order:"near-first"` ⇒ 恒解析出、只做调度）；
+    // **门判仍吃原始声明 `f`**：目录声明的尾分隔符判据按声明形状判——转成绝对路径后再判会漏。
+    const abs = resolvePathTarget(cwd, f, { kind: "none", order: "near-first" }).abs
     if (existsSync(abs) && statSync(abs).isDirectory()) {
       throw new Error(`files must be file-level paths — directory declarations are not supported: ${f}`)
     }
     if (!out.includes(abs)) out.push(abs)
   }
-  // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2——2026-10-15 口径随正）：`scripts/*`（仅仓根/直接子层）+ 过程档拦截——
-  // 谓词本体落 spawn-gates.mjs（rejectEngineeringFilePaths 收集全部违规 + 抛合并错误）；
+  // M5 F6（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2——2026-10-15 口径随正）：过程档 / 项目状态档拦截——
+  // 谓词本体落 spawn-gates.mjs（收集全部违规 + 抛合并错误）；
   // 循环内目录声明先行（错误序不变——目录错误先于过程档错误）。父侧维护文件
   // basename 族（CHANGELOG——`ledger.db` 随 M2 退役）随同迁入谓词——错误文案逐字保留。
-  if (files !== undefined && files !== null) rejectEngineeringFilePaths(files)
+  if (files !== undefined && files !== null) rejectProcessDocPaths(files)
   return out
 }
 

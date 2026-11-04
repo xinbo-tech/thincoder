@@ -6,18 +6,15 @@
  * （「哪些目录不是人要读的东西」）四个答案；索引面与检索面各剪各的，同一批文件在两个面上一进一出。
  * 单源 = 本档，四个消费面只 import 名单，不各自持有副本。
  *
- * 两份集合同档而**不合并**（答的是两个问题，`docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.12）：
- * - `SKIP_DIRS`（42 项）答「索引 / 遍历 / 搜索时跳过什么」——剪掉的是噪音；
- * - `BUILD_ARTIFACTS`（10 项）答「不开批档就能写什么」（写锁的放行面）——放行的是**没有一行是人写的**
- *   构建物。第三方目录（`vendor` / `third_party` / `Pods` / `target` / `out` / `obj`）可能携带手写补丁
- *   ⇒ 在 `SKIP_DIRS` 里（索引不读），但**不在** `BUILD_ARTIFACTS` 里（写它要开批档）。
+ * **名单只此一份**：`SKIP_DIRS`（42 项）答「索引 / 遍历 / 搜索时跳过什么」——剪掉的是噪音。
+ * 面判不读任何排除名单：面只有两值（文档面放行 ∥ 其余产品面拦），「什么算产物」不参与面判定。
  *
  * 三条处置（理由写在项旁，防后人「顺手补回去」）：
  * - `bin` **不列**：`thincoder-cli/bin/` 有 2 个 `.mjs` 是 CLI 入口、产品代码；列进名单会把入口
- *   漏出写锁与索引。
+ *   漏出索引与检索面。
  * - `turbo` 并入 `.turbo`：`tools/tree.mjs` 旧名单里的 `turbo`（无点）是笔误，另三份都是 `.turbo`，
  *   工作区递归查 `*turbo*` 零命中该目录。
- * - `.thincoder` / `.vs` / `.idea` 本批补入：工具临时目录与 IDE 配置——进索引是噪音，进写锁是无谓摩擦。
+ * - `.thincoder` / `.vs` / `.idea` 本批补入：工具临时目录与 IDE 配置——进索引是噪音。
  *
  * 零依赖：本档只出常量，无 import——四处引它不成环、不加重量（`memory/schema.mjs` 引 `node:sqlite`、
  * `conventions.mjs` 的依赖链被 `declaration.mjs` → `manifest.mjs` 拖着走，两条都不适合当单源落点）。
@@ -49,11 +46,3 @@ export const SKIP_DIRS_FOLD = new Set([
 
 /** 目录名前缀族（`bazel-<workspace>` 无法枚举——workspace 名任意）。 */
 export const SKIP_DIR_PREFIXES = ["bazel-"]
-
-/** 写锁的放行集（10 项，`docs/core/design/BATCH-LEDGER-REVIEW-UNIFY.md` §2.10 修正①）：
- *  构建产物——里面没有一行是人写的，拦它只逼人给清理产物的动作开批档。
- *  严格 ⊂ `SKIP_DIRS`：逐项都在上面 42 项里（面判不折叠、不做前缀匹配）。 */
-export const BUILD_ARTIFACTS = new Set([
-  "node_modules", "dist", "build", "coverage", ".turbo",
-  "__pycache__", ".next", ".nuxt", ".svelte-kit", "bower_components",
-])

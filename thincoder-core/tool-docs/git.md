@@ -28,3 +28,9 @@ status / log / diff / show / add / rm / commit / push / tag / branch / checkout 
 - Destructive ops (checkout -- path / restore / reset --hard / stash pop / branch|tag delete / clean / rebase) auto-snapshot first; restore a snapshot via `checkpointAction=rewind`.
 - Failures come back as errors — `git <action> failed: <reason>` — nothing is silently swallowed.
 - `filter` narrows any read-only action's output (case-insensitive regex); `config` (git -c overrides, e.g. a proxy) applies to the network actions (push / fetch / pull / ls-remote / clone). Other parameter defaults and applicability live in the schema.
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it for a write action; omitted = refused.
+
+**`project`** — the project this call belongs to (absolute path of the project root). Read only when neither `path` nor `workdir` is given — those win when present. Pure declaration: it does not change where git runs (`workdir` does).
+
+Read-only actions do not need it: `diff` / `status` / `log` / `show` / `ls-remote` / `blame`, and each `*Action: "list"` (`checkpoint` `list` / `cat` included).

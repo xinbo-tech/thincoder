@@ -3,12 +3,16 @@ import {
   sanitizeOutput,
   truncate,
   makeDecoder,
-  BASH_TIMEOUT_MS,
+   BASH_TIMEOUT_MS,
+  LEDGER_PARAM_DESC,
+  PROJECT_PARAM_DESC,
 } from "./shared.mjs";
 import { spawn } from "node:child_process";
 // 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用 `./process-tree.mjs`
 // （行为逐字同：win32 `taskkill /T /F` · POSIX 组杀 + 直杀兜底）。
 import { killProcessTree } from "./process-tree.mjs";
+// 过程档标记（TOOLS.md §6.28）：输出里行首路径 token 真解析到盘上的过程档行 ⇒ 行首前缀 + 末尾汇总行。
+import { markProcessDocLines } from "./process-doc-mark.mjs";
 import { resolveShellIdentity } from "../shell-identity.mjs";
 
 /** Maximum buffer size per stream (stdout / stderr) before truncation */
@@ -247,6 +251,9 @@ export const bashTool = {
       timeout: { type: "number", description: `Timeout in ms (default ${BASH_TIMEOUT_MS} for synchronous runs; background runs have no default — an explicit timeout still applies)` },
       async: { type: "boolean", description: "Run in the background (default false): returns an ack at once (bash#<id>, log path) and the result arrives as a digest when the process exits. Depth-0 only." },
       filter: { type: "string", description: "Optional: only return output lines matching this regex (case-insensitive; synchronous runs only)" },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 项目声明面（决策 40）：`bash` 没有定位参数 ⇒ 判据点只能靠声明；纯声明，命令仍在会话 cwd 执行。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["command"],
   },
@@ -288,7 +295,10 @@ export const bashTool = {
       shell: ctx.agent?.config?.shell ?? null,
     })
     const filtered = args.filter ? applyLineFilter(result, args.filter) : result
-    const body = guard ? `${guard.notice}\n\n${filtered}` : filtered
+    // §6.28：顺序写死 = **过滤 → 打标 → 汇总 → 外包装**（filter 才照旧匹配原始行，前缀不吃
+    // 过滤命中；`guard.notice` ∥ `hint` 包在标之外）。解析基准 = 子进程 cwd（同步径 = `ctx.cwd`）。
+    const marked = markProcessDocLines(filtered, ctx.cwd)
+    const body = guard ? `${guard.notice}\n\n${marked}` : marked
     return hint ? `${hint}\n${body}` : body
   },
 }

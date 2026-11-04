@@ -37,7 +37,21 @@ import {
 import { buildAuditBlock } from "./audit-block.mjs"
 // 批次档路径解析单源（BATCH-RECORD.md §4.15 · 台账 #287）：门内解析改经叶档（读面非抛形），
 // 与 append / create 同源——门判据仍「参数在 + 路径可读」，错误文案逐字零变。
-import { resolveBatchReadPath } from "./batch-paths.mjs"
+import { resolveBatchReadPath, resolveBatchReadResult } from "./batch-paths.mjs"
+// `files` 落点单源 = 统一解析层（实调点 = `normalizeFileList`——`thincoder-core/agent-tools/subagent-scheduler.mjs`
+// 的 `const abs = resolvePathTarget(cwd, f, ...)`）：本档不再预解析（预解析会让该面的三条门判吃绝对形而漏判）。
+import { danglingSameNameHint } from "../path-resolve.mjs"
+
+/** 不可读拒文的追加提示（§2.6：既有文案逐字在前）——同名候选 ∥ 判不出唯一的候选全列；无提示 ⇒ 空串。 */
+function unreadableHint(cwd, given) {
+  const r = resolveBatchReadResult(cwd, given)
+  if (r.state === "dangling") {
+    const hint = danglingSameNameHint(r)
+    return hint ? `；${hint}` : ""
+  }
+  if (r.state === "ambiguous") return `；Candidates: ${r.candidates.join(" ∥ ")}`
+  return ""
+}
 
 /** 任务书播报文本：该角色名集拼装 + 可选 task 自由文本（拼装空 ⇒ 原 task 逐字——旧形零变）。 */
 function taskBriefOf(args, role) {
@@ -204,17 +218,18 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   let batchDocAbs = null
   if (engineeringRole) {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
+    // 「无果 ⇒ 既有文案 + 追加同名候选」（§2.6——既有拒文逐字在前，层的提示只追加）。
     const refusal = (suffix = "") => new Error(
       `batchDoc is required for role='${role}' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); spawn refused without it.` + suffix)
     if (!given) throw refusal()
     batchDocAbs = resolveBatchReadPath(parent.cwd, given)
-    if (!batchDocAbs) throw refusal(" (given path is not a readable file)")
+    if (!batchDocAbs) throw refusal(` (given path is not a readable file${unreadableHint(parent.cwd, given)})`)
   } else if (role === "coder") {
     const given = typeof args.batchDoc === "string" ? args.batchDoc.trim() : ""
     if (given) {
       batchDocAbs = resolveBatchReadPath(parent.cwd, given)
       if (!batchDocAbs) {
-        throw new Error("batchDoc for role='coder' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); when provided it must resolve to a readable file (omit batchDoc to spawn without the §5 record-write binding).")
+        throw new Error("batchDoc for role='coder' — pass the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute); when provided it must resolve to a readable file (omit batchDoc to spawn without the §5 record-write binding)." + unreadableHint(parent.cwd, given))
       }
     }
   }
@@ -240,7 +255,7 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   // M5 F2 + §6.22（2026-10-24）任务书门——按角色分流：
   //   工程角色（eng-coder / eng-designer）：零任务书文本参数——八个自由文本键命中即拒（键在场即拒）并点名
   //     （值全空白也拒）；随后 round 枚举（initial|fix）。
-  //   explore / plan / coder：四项核心 + `scope` 必带（判据三条零改：存在 ∧ string ∧ trim 非空）。
+  //   explore / plan / coder / tester：四项核心 + `scope` 必带（判据三条零改：存在 ∧ string ∧ trim 非空）。
   // 落点 = batchDoc 门之后、token 门之前（门序 = AGENT-LOOP-SUBAGENT.md §6.22.1）。
   if (engineeringRole) {
     rejectEngFreeTextParams(args, role)
@@ -260,6 +275,19 @@ export function buildSpawnChild(parent, ctx, args, role, wantAsync, files, depen
   if (role === "explore" || role === "plan") {
     const allowed = readonlyToolNames(parent.tools)
     tools = parent.tools.filter((t) => allowed.has(t.name))
+  } else if (role === "tester") {
+    // tester = the THIRD tool face (AGENT-LOOP-SUBAGENT.md §6.59.2 ④): read-only set ∪ {execute, bash},
+    // minus {verify, advisor}.
+    //   · Allowlist form (D-TT1) — a new non-readonly tool stays OUT by default (the write face is fail-closed);
+    //     a new readonly tool joins automatically through the same formula.
+    //   · Why subtract `verify` / `advisor`: both produce a VERDICT, not a reading — "I declare this delivery
+    //     good" and "open a review, produce a judgment". A tester's product is readings (F-TT3: it does not
+    //     close a judgment on the parent's behalf), and `advisor` is `readonly: true`, so leaving it in would
+    //     make 「it does not run reviews」 a sentence nobody enforces. Both subtractions are by name, explicit,
+    //     and do not depend on the tool's `readonly` flag — that flag says "writes nothing", not "concludes nothing".
+    const allowed = readonlyToolNames(parent.tools)
+    const TRIMMED = new Set(["verify", "advisor"])
+    tools = parent.tools.filter((t) => (allowed.has(t.name) && !TRIMMED.has(t.name)) || t.name === "execute" || t.name === "bash")
   } else {
     tools = parent.tools
   }

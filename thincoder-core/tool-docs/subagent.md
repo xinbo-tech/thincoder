@@ -51,8 +51,14 @@ Available roles (exposed per mode; the role is REQUIRED for action:'spawn' — a
   One batch record serves one concurrent spawn: wait for the occupant to settle, or cancel it.
 - eng-designer — engineering mode only: the SOLE author of the design documents and of the batch record's design section (requirement docs stay with the main agent). Writes no implementation code, does not edit prompts, does not fire reviews, needs NO designToken. Surveys on its own; may only spawn
   read-only explore children (sync, ≤6 per batch). REQUIRES a batchDoc (same gate as eng-coder).
+- tester — BOTH modes: the readings seat. It runs the verification commands the task book puts in `goal` and hands the readings back as they stand —
+  no verdict, no fix, no document of any kind.
 
-Task book (normal-mode roles: explore / plan / coder): four core structured parameters — goal (goal & why), knownFacts (the facts you already verified), acceptance (machine-verifiable criteria), reportFormat (delivery-report format)
+  Tool face = the read-only tools plus `execute` / `bash` (dependency installs, compiles and fixtures included), minus `verify` (a verdict tool).
+
+  Run only, never change is a role contract, not a sandbox — `bash` can write, so a tester that edits anything is treated by the parent as a defect.
+
+Task book (non-engineering roles: explore / plan / coder / tester): four core structured parameters — goal (goal & why), knownFacts (the facts you already verified), acceptance (machine-verifiable criteria), reportFormat (delivery-report format)
 
 — plus scope (scope & forbidden scope — what to read / what not to touch).
 All five are required: a missing, blank or non-string value is refused with the parameter named.
@@ -60,15 +66,17 @@ A free-text task is an optional supplement, never the whole brief.
 
 Engineering roles (eng-coder / eng-designer) take their task book from the batch record: batchDoc (the record path) and round (initial|fix), plus files / dependsOn for scheduling; the child reads §2 of that record itself — no other task text is passed.
 
-A record carries one concurrent spawn at a time: a second spawn on a record still in flight is refused, naming the occupant — sequential hand-offs (design → implementation → fix round) pass, because the previous spawn has settled first.
-
 An eng-coder spawn also carries designToken — the write credential (the exact value from the review, or copied verbatim from the action:'design-slots' row, the text after designToken=), and designId when several designs are open: missing or mismatched = the spawn is refused.
+
+A record carries one concurrent spawn at a time: a second spawn on a record still in flight is refused, naming the occupant — sequential hand-offs (design → implementation → fix round) pass, because the previous spawn has settled first.
 
 Pass one parameter per field — contents only (the runtime adds the labels):
 subagent(role="eng-coder", round="initial", batchDoc="<batch record>", designToken="…", files=[…])
 subagent(role="explore", goal="…", knownFacts="…", scope="…", acceptance="…", reportFormat="…")
 
-Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/eng-designer/eng-coder — off-mode roles are refused mechanically (enums filtered at assembly; the spawn gate re-checks).
+Mode filtering: normal mode exposes explore/plan/coder/tester (eng-coder and eng-designer are refused); engineering mode exposes explore/eng-designer/eng-coder/tester (plan and coder are refused — plan is a normal-mode role, coder is replaced by eng-coder; tester is dispatchable in both modes).
+
+The role enum is filtered per mode at assembly, and the spawn gate refuses out-of-mode roles mechanically.
 
 Async spawn: top-level spawns are async by default — never pass async:false at depth 0 (the spawn returns {id, status:"running"} immediately; the report arrives automatically; if your next step needs it, end the turn and let the digest deliver it — do not poll;
 

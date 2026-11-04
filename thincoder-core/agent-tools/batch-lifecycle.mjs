@@ -42,7 +42,7 @@ import {
 } from "./batch-skeleton.mjs"
 import { assertCloseoutGates, newDebtReasonOf, newDebtReasonReceiptLine, readCloseoutSource, reanchorReceiptLine } from "./batch-closeout.mjs"
 import { assertSingleLineNote, reclaimOnReopen, reopenReasonError, reopenReceiptLine, rewriteAsReopen, todayLocal } from "./batch-reopen.mjs"
-import { gateReceiptLine } from "./batch-gate.mjs"
+import { FRAGMENT_PREFIX, gateReceiptLine } from "./batch-gate.mjs"
 import { batchPathKey, executeConsumeDesignAction, unionBatches, unionSlots } from "./design-slots.mjs"
 
 /** 可读文件判据（存在且为文件——目录/缺失同判不可读；与主档同名 helper 同型——KD-4 单向依赖下各自持有，
@@ -71,14 +71,17 @@ function assertMainAgentOnly(ctx, action, review) {
 
 /** 递归收集目录下全部 `*.md`（#369 · KD-4：显式嵌套路径为合法 create 面 ⇒ 顶层平扫会欠计 ⇒ 复数情形
  *  漏判、默认定位可落非预期档）。只认真目录（symlink 不入，防环）；单目录读错按无候选处理（尽力面）。
- *  **转导出**（read-data-interface 批——`batch/list` 读面文件集同源复用；零行为变）。 */
+ *  **转导出**（read-data-interface 批——`batch/list` 读面文件集同源复用；零行为变）。
+ *  **片段档不入集**（`DOC-CHECK_GATE` 的两类临时档——`batch-gate.mjs` 的 `FRAGMENT_PREFIX`）：`edit` 面的
+ *  `recordView` 是**整档副本**（`## §1` 段头与 `进行中` 都在），当候选收进来就是一本假的在飞批
+ *  ——省略 `path` 的 depth-0 调用会被它顶成「2 本在飞」而假拒；进程在门内被杀时更会残留一本永久 open 的幽灵档。 */
 export function collectMarkdownFiles(dir, out = []) {
   let entries = []
   try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return out }
   for (const e of entries) {
     const abs = resolve(dir, e.name)
     if (e.isDirectory()) collectMarkdownFiles(abs, out)
-    else if (e.isFile() && e.name.endsWith(".md")) out.push(abs)
+    else if (e.isFile() && e.name.endsWith(".md") && !e.name.startsWith(FRAGMENT_PREFIX)) out.push(abs)
   }
   return out
 }
@@ -87,8 +90,8 @@ export function collectMarkdownFiles(dir, out = []) {
  * depth-0 目标定位（D-BR21）：扫描全部基底根下 `*.md`（**递归**——#369），逐档读 §1 状态行判定 open
  * （readBatchStatusLine === "open"）。0 个 ⇒ throw（无在飞批）；恰 1 个 ⇒ 返回该档绝对路径；
  * ≥2 ⇒ throw（复数在飞批——必传 path，错误消息列出候选）。
- * 多活批档合法（2026-10-27 用户裁定「当然是允许多个」）——本函数的「≥2 ⇒ 拒」是**默认定位的歧义门**
- * （D-BR21），不是禁止并存：写锁只问「存在否」，零改（设计档决策 7）。
+ * 多本在飞批并存合法（2026-10-27 用户裁定「当然是允许多个」）——本函数的「≥2 ⇒ 拒」是**默认定位的歧义门**
+ * （D-BR21），不是禁止并存：写锁只问「台账里有没有在途行」（设计档决策 7）。
  * @param {string} cwd
  * @param {string[]} bases — 已解析的批次档基底根数组
  * @returns {string} 唯一在飞批绝对路径

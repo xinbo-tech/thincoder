@@ -3,7 +3,7 @@
  *
  * 为什么拆：`ledger-cmd.mjs` 收尾 455 行，本批要新增 `ledgerBindBatch`（建档 = 建台账行的单事务）与
  * `ledgerReclaimBatch`（重开回收）。两枚都落在 `ledger-cmd` 会把它推过 500 顾问线，而设计档 §3 的
- * 预算是「≈495 行」。本档承接**逐行写核**（迁移表判 → 核销标记门 → 核销机检 → executor / evidence 语义
+ * 预算是「≈495 行」。本档承接**逐行写核**（迁移表判 → 核销机检 → executor / evidence 语义
  * → 写门 → UPDATE 的那一条链）与两个批级写点；`ledger-cmd.mjs` 反向 import 取用并 re-export，
  * 公共面（`ledger.mjs` 的导出面）逐字不变——先例 = `ledger-close-proof.mjs` / `ledger-tools.mjs`。
  *
@@ -19,7 +19,7 @@
  */
 import { resolve } from "node:path"
 
-import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES, resolveLedgerRoot, ROUND_MARKER } from "./ledger-db.mjs"
+import { ALLOWED_MIGRATIONS, nowIso, openLedger, PENDING_STATUSES, resolveLedgerRoot } from "./ledger-db.mjs"
 import { resolveDeclaredRef } from "./declaration.mjs"
 import { assertCloseOutProof, filePartOf, namesPointer } from "./ledger-close-proof.mjs"
 
@@ -55,8 +55,8 @@ export function resolveExecutorTarget(row, to, patch, executorSessionId) {
 /** `evidence` 值计算（设计档 LEDGER.md §13.9——update / close 两函数同源一处落）：追加缺省（旧值非空 ⇒
  *  `旧 + "｜" + 新`——「｜」两侧零空格直接相接；旧空（`null` ∥ 空串 ∥ 全空白）⇒ 直写，零分隔符残留）；
  *  `evidenceReplace === true` 与值同传 ⇒ 整段替换（旧文零保留）；`evidence` 缺 / `null` ≡ 略去（零变）。
- *  拒面①（旗独传——无新文可算）判于本阶段（close 侧先于追认门）；核内旗判只认 `=== true`（类型严判在
- *  工具层）。两值逐字落行（不裁 / 不判内容）。 */
+ *  拒面①（旗独传——无新文可算）判于本阶段；核内旗判只认 `=== true`（类型严判在工具层）。两值逐字落行
+ *  （不裁 / 不判内容）。 */
 export function evidenceValue(fnName, oldValue, evidence, evidenceReplace) {
   if (evidenceReplace === true && evidence == null) throw new Error(`${fnName}：evidenceReplace 须与 evidence 同传（缺新文）`)
   if (evidence == null) return oldValue
@@ -64,8 +64,8 @@ export function evidenceValue(fnName, oldValue, evidence, evidenceReplace) {
   return evidenceReplace === true || old === "" ? evidence : `${old}｜${evidence}`
 }
 
-/** 拒面②（新值全空白——追加 ∥ 覆盖两径同判）判点（§13.9 判序）：update 随值计算同拍 ∥ close 落
- *  追认门之后；`evidence` 未传（`null` / 略去）⇒ 不判。 */
+/** 拒面②（新值全空白——追加 ∥ 覆盖两径同判）判点（§13.9 判序）：update 与 close 两面皆随值计算同拍；
+ *  `evidence` 未传（`null` / 略去）⇒ 不判。 */
 export function assertEvidenceValue(fnName, evidence) {
   if (evidence != null && String(evidence).trim() === "") throw new Error(`${fnName}：evidence 为空（非空字符串）`)
 }
@@ -92,8 +92,7 @@ export function assertTaskBookGate(cwd, fnName, face, boundary) {
 
 /**
  * 单行落笔·update（**单行形 ∥ 批量形 ∥ 建档形共函数**——设计档 §3.3「逐行语义单源」）：迁移表判 →
- * 核销标记门（目标 = `已核销` ∧ 结果标题携标记 ⇒ 拒——判序 = LIGHT-CHANNEL.md §2.5）→ **核销机检**
- * （目标 = `已核销` ⇒ `assertCloseOutProof`——2026-10-27 起 ③ = 档面 §3）→ executor / evidence 值计算
+ * **核销机检**（目标 = `已核销` ⇒ `assertCloseOutProof`——2026-10-27 起 ③ = 档面 §3）→ executor / evidence 值计算
  * （含两拒面）→ 写门 → UPDATE（判序 = §13.9 逐字未变）。`to` = `patch.status ?? 行现态`——批量形纯字段
  * 补丁（不携 `status`）时 `to === row.status` ⇒ 迁移表不判、`status` 零写（§3.3）。
  * `resume_when` = 普通可空字段补丁（`patch.resume_when ?? 行值`——§3.4）。
@@ -104,10 +103,6 @@ export function applyRowUpdateTx(db, cwd, row, patch, executorSessionId, boundar
   const to = patch.status ?? row.status
   if (to !== row.status && !(ALLOWED_MIGRATIONS[row.status] ?? []).includes(to)) {
     throw new Error(`ledgerUpdate：迁移 ${row.status} → ${to} 不在允许迁移表`)
-  }
-  // 核销标记门（LIGHT-CHANNEL.md §2.5）：判**结果标题**——一笔同携清标记 title + status=已核销 ⇒ 放行
-  if (to === "已核销" && String(patch.title ?? row.title ?? "").includes(ROUND_MARKER)) {
-    throw new Error(`ledgerUpdate：行标题仍携「${ROUND_MARKER}」——收尾链未跑完，不许核销（先跑收尾全链，再由父侧清标记）`)
   }
   // 核销机检（F-LX4）：目标值 = `已核销` ⇒ 写库前三件校验（批档在盘 ∥ §1 已收口 ∥ §3 = 评审通过）
   if (to === "已核销") assertCloseOutProof("ledgerUpdate", { base: proof.base ?? baseOf(cwd, boundary), row })
@@ -145,23 +140,27 @@ export function applyRowUpdate(db, cwd, row, patch, executorSessionId, boundary,
   }
 }
 
-/** 单行落笔·close（**单行形 ∥ 批量形共函数**——设计档 §3.3「逐行语义单源」）：源态判（核销仅三源——
- *  在途不可跳）→ 核销标记门（LIGHT-CHANNEL.md §2.5——`已核销` ∧ 标题携标记 ⇒ 拒；撤回不拦）→
- *  **核销机检**（`已核销` ⇒ `assertCloseOutProof`）→ 值计算（拒面① 旗独传判于此）→ 追认口 `evidence`
- *  门 → 拒面② → UPDATE。
- *  撤回（任意态 → 已废弃——含在途直撤）同步 `executor = NULL`（LEDGER.md §3.1 ④）；核销两源（勾销 /
- *  追认）`executor` 零触碰（非在途出边）。调用方恒已开事务（`ledgerClose` / `ledgerCloseBatch`）。 */
+/** 核销拒文的出路句（设计档 §3 三行表逐字）：同一件事实（核销只自 `待核销` 出）、出路按现态分支——
+ *  对 `在途` 说「先 update 到 在途 认领」是让人重做一步已做过的事。归档态那支不是新分支：改前同一输入
+ *  也走首判并拒（旧判据本就不含归档态），行为零改，只把这句兜底话换准。 */
+function closeExitSentence(status) {
+  if (status === "在途") return "先 update 到 待核销（做完才结账），再 close 勾销"
+  if (status === "已核销" || status === "已废弃") return `该行已归档（${status}），不在核销面`
+  return "先 update 到 在途 认领，再 update 到 待核销，最后 close 勾销"
+}
+
+/** 单行落笔·close（**单行形 ∥ 批量形共函数**——设计档 §3.3「逐行语义单源」）：源态判（**核销只有一条边**——
+ *  `待核销 → 已核销`；其余现态一律拒，拒文点名现态 + 该现态的出路句）→ **核销机检**（`已核销` ⇒ `assertCloseOutProof`）→ 值计算
+ *  （拒面① 旗独传判于此）→ 拒面② → UPDATE。旧的 `待讨论 / 待设计 → 已核销` 捷径边已删（2026-11-02）：
+ *  那条边跳过的不是权限，是四个状态各自代表的事实（没设计、没认领、没验证的行不得显示为已结账）。
+ *  撤回（任意态 → 已废弃——含在途直撤）同步 `executor = NULL`（LEDGER.md §3.1 ④）；核销（`待核销 → 已核销`）
+ *  `executor` 零触碰（非在途出边）。调用方恒已开事务（`ledgerClose` / `ledgerCloseBatch`）。 */
 export function applyRowClose(db, row, status, evidence, evidenceReplace, proof = {}) {
-  if (status === "已核销" && !["待讨论", "待设计", "待核销"].includes(row.status)) throw new Error(`ledgerClose：核销仅限 待讨论 / 待设计 / 待核销（现态 ${row.status}）`)
-  // 核销标记门（LIGHT-CHANNEL.md §2.5）：勾销 ∥ 追认同判；撤回（→ 已废弃）不入本门
-  if (status === "已核销" && String(row.title ?? "").includes(ROUND_MARKER)) {
-    throw new Error(`ledgerClose：行标题仍携「${ROUND_MARKER}」——收尾链未跑完，不许核销（先跑收尾全链，再由父侧清标记）`)
-  }
-  // 核销机检（F-LX4）：判序 = 标记门之后（零成本字符串判先报）、值计算之前
+  if (status === "已核销" && row.status !== "待核销") throw new Error(`ledgerClose：核销仅限 待核销（现态 ${row.status}）：${closeExitSentence(row.status)}`)
+  // 核销机检（F-LX4）：判序 = 源态判之后、值计算之前
   if (status === "已核销") assertCloseOutProof("ledgerClose", { base: proof.base, row })
   const nextEvidence = evidenceValue("ledgerClose", row.evidence, evidence, evidenceReplace)
-  if (status === "已核销" && ["待讨论", "待设计"].includes(row.status) && (nextEvidence == null || String(nextEvidence).trim() === "")) throw new Error(`ledgerClose：追认核销须带 evidence（现态 ${row.status}）`)
-  assertEvidenceValue("ledgerClose", evidence) // 判序：拒面②（新值空白）落追认门之后 → UPDATE
+  assertEvidenceValue("ledgerClose", evidence) // 判序：拒面②（新值空白）→ UPDATE
   const now = nowIso()
   db.prepare("UPDATE items SET status = ?, closed_at = ?, updated_at = ?, executor = ?, evidence = ? WHERE id = ?").run(status, now, now, status === "已废弃" ? null : row.executor, nextEvidence, row.id)
   return { id: Number(row.id), status }
@@ -260,8 +259,8 @@ async function sameFaceScan({ cwd, boundary, face }) {
  *   `applyRowUpdateTx` 迁 `在途` + 写 `task_book`（过写门）→ `COMMIT`。接管路径同一条道理：`#N` 已知 →
  *   `writeRecord` → `applyRowUpdateTx` → `COMMIT`。
  *
- * 崩在窗口内（行已 INSERT ∥ 已改、`COMMIT` 未执行、档已落盘）：SQLite 回滚事务 ⇒ 行回原态；档在盘且无行
- * 指它 ⇒ 不是活批档（锁照拦）。清理只删**本笔所建**的档（`created` 由调用方按返回值判断——`wx` 撞已有
+ * 崩在窗口内（行已 INSERT ∥ 已改、`COMMIT` 未执行、档已落盘）：SQLite 回滚事务 ⇒ 行回原态；档留在盘上而
+ * 台账里没有它的行（写锁只问「这个项目里有没有 `在途` 行」，不读指针——设计档 §2.3）。清理只删**本笔所建**的档（`created` 由调用方按返回值判断——`wx` 撞已有
  * 同名档时抛 EEXIST，无条件 unlink 会删掉别人的档）。
  *
  * **开批同面判**（设计档 §6.3 · AC-M2-37）：省略 `ledger` ∧ 同面（本笔 `board`；未给 ⇒ `board IS NULL`）
@@ -319,7 +318,7 @@ export async function ledgerBindBatch({ cwd, ledgerNo = null, newDebt = null, ta
       }
       // 步 3：落档——必须先于步 4（写门两形都判「解析出的档在盘」）
       writeRecord(id)
-      // 步 4：行写入走同一函数体（迁移表 → 标记门 → 机检 → executor → 写门 → UPDATE），不直写 SQL
+      // 步 4：行写入走同一函数体（迁移表 → 机检 → executor → 写门 → UPDATE），不直写 SQL
       applyRowUpdateTx(db, cwd, row, { status: "在途", task_book: taskBook, trigger: "归批" }, executorSessionId, boundary, { base, agent })
       db.exec("COMMIT")
       return { id, created, tookOver: created ? "new" : row.status === "待设计" ? "designed" : "discussed", sameFace }

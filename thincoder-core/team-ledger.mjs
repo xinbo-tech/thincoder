@@ -174,7 +174,7 @@ const ACTION_SPECS = {
     properties: {
       id: { type: "number", description: "条目编号（全局）" },
       title: { type: "string", description: "标题（缺省 = 不变）" },
-      detail: { type: "string", description: "正文（缺省 = 不变；追认核销前须非空）" },
+      detail: { type: "string", description: "正文（缺省 = 不变）" },
       owner: { type: "string", description: "负责人（交接 = 换负责人；缺省 = 不变）" },
       status: { type: "string", enum: STATUSES, description: "目标状态（迁移表合法后继——非法由服务端 400）" },
     },
@@ -201,7 +201,7 @@ const UNION_PARAMETERS = {
     status: { type: "string", enum: STATUSES, description: "状态（query ∥ count 过滤——六态之一；update 目标态——迁移表合法后继；close ∈ {已核销, 已废弃}）" },
     owner: { type: "string", description: "负责人（query ∥ count 过滤——用户名精确匹配；add ∥ update 设值）" },
     title: { type: "string", description: "标题（add 必填 ∥ update 可改——trim 非空 ∥ ≤200）" },
-    detail: { type: "string", description: "正文（add ∥ update——可空 ∥ ≤4000；追认核销须非空）" },
+    detail: { type: "string", description: "正文（add ∥ update——可空 ∥ ≤4000）" },
     id: { type: "number", description: "条目编号（update ∥ close 必填——全局编号）" },
   },
   additionalProperties: false,

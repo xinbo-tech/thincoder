@@ -15,3 +15,5 @@ Notes:
 - `dest` is overwritten if it already exists. `copy` is recursive for directories.
 - To create a directory, use `write` (creates parent dirs) or `bash mkdir`.
 - Returns `Moved|Copied|Renamed <source> -> <dest>` or `Error: ...` (same-path and missing-path errors).
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.

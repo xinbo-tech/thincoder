@@ -26,9 +26,11 @@
  */
 import { spawn } from "node:child_process"
 import { resolve } from "node:path"
-import { DESC } from "./shared.mjs"
+import { DESC, LEDGER_PARAM_DESC, PROJECT_PARAM_DESC } from "./shared.mjs"
 import { killProcessTree } from "./process-tree.mjs"
 import { nodeChildEnv } from "./node-child.mjs"
+// 过程档标记（TOOLS.md §6.28）：失败径同标（错误文本也是行内容），解析基准 = 子进程 cwd `baseDir`。
+import { markProcessDocLines } from "./process-doc-mark.mjs"
 
 const MAX_SCRIPT = 50_000
 const MAX_OUTPUT = 50_000
@@ -197,6 +199,9 @@ export const executeTool = {
         maximum: 600000,
         description: `Timeout in milliseconds (default ${DEFAULT_TIMEOUT}, max 600000)`,
       },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 项目声明面（决策 40）：`workdir` 缺位时才被读（定位参数优先）；纯声明，不改执行目录。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: [],
   },
@@ -231,8 +236,9 @@ export const executeTool = {
     }
 
     const { text, ok } = await runNode(childArgs, baseDir, timeoutMs, ctx.signal)
-    // Only filter successful output — never swallow an error report behind a filter.
-    if (!ok) return text
-    return args.filter ? applyFilter(text, args.filter) : text
+    // §6.28 单一出口：`filter` 只滤成功输出（原口径），打标接在它的后面；解析基准 = `baseDir`
+    // （= 子进程 cwd），不是 `ctx.cwd`——`workdir` 在场时只有按子进程 cwd 才解得对上。
+    const body = ok && args.filter ? applyFilter(text, args.filter) : text
+    return markProcessDocLines(body, baseDir)
   },
 }

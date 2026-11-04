@@ -30,3 +30,7 @@ Key catalog — the 13 writable nodes (3 whole keys + docRoot's 6 sub-keys + ind
 - `index.codeExtensions` · `index.docExtensions` — extra code / doc extensions (unioned, add-only); change when a file type is missing from the index; wrong ⇒ that type stays out of the index (extras harmless; a missing entry = a miss).
 - `index.excludePaths` — project-root-relative path prefixes (for the index); change to keep a directory out of the index; wrong ⇒ that directory is still indexed, or another is wrongly excluded.
 - `index.publicRepos` — public-repo paths (resolvable from this repo root); change when wiring a public repo into the index or cross-repo refs; wrong ⇒ that repo is unreachable for retrieval (empty origin set / wrong path).
+
+- **`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it for `write`; for `init`, only when the target sits inside an existing project (a `PROJECT-MANIFEST.json` exists on its ancestor chain) — a bootstrap outside any project needs none; omitted when required = refused. `read` does not need it.
+
+**`project`** — the project this call belongs to (absolute path of the project root). Read only when `target` is absent — `target` wins when present. Pure declaration: it does not change the target directory (`target` does).

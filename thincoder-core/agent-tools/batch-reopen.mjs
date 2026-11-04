@@ -123,15 +123,15 @@ export async function reclaimOnReopen(abs, boundary) {
 
 /**
  * 重开回收回执（设计档 §2.13 逐字；空行不出）：`failed` 非空 ⇒ 只出第三行（替代前两行）。
- * 第三行 = 失败原文 + 后果 + 出路——「行仍 `待核销` ⇒ 该档不是活批档，产品码写仍被写锁拒，库恢复后
- * update → 在途」。
+ * 第三行 = 失败原文 + 后果 + 出路——「行仍 `待核销` ⇒ 台账里没有该档的在途行（写锁会拒每一笔写盘），
+ * 库恢复后 update → 在途」。
  * @param {{reclaimed:Array, unreclaimable:Array, failed:string|null}|null} result
  */
 export function reopenReceiptLine(result) {
   if (!result) return ""
   const face = (r) => `#${r.id} 「${r.title}」`
   if (result.failed) {
-    return `\n[ledger reopen] 回收失败：${result.failed}——台账零改；行仍 待核销 的，该档不是活批档（写锁会拒产品码写），库恢复后 update → 在途`
+    return `\n[ledger reopen] 回收失败：${result.failed}——台账零改；行仍 待核销 的，台账里没有该档的在途行（写锁会拒每一笔写盘），库恢复后 update → 在途`
   }
   const lines = []
   if ((result.reclaimed ?? []).length) lines.push(`\n[ledger reopen] 本批待核销行 → 在途 ${result.reclaimed.length} 行：${result.reclaimed.map(face).join("；")}`)

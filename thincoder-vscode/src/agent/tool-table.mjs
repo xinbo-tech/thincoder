@@ -23,7 +23,7 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
  * VSC subagent 工具面装饰（原 W13 端侧装饰 + 本批 role 面取核合并——**装饰体单点**）。
  * 面清单：
  *   ① `modeRoleField` 等价 role 面（取核拷贝——核 `assembleFamilyTools`）：模式互斥 role enum +
- *      suffix（工程模式 advertises eng-coder/eng-designer；普通模式 advertises coder）。
+ *      suffix（工程模式 advertises eng-coder/eng-designer；普通模式 advertises coder；tester 两模式都 advertises）。
  *   ② #99（CORE-UNIFICATION §2.13.4 / AGENT-LOOP-SUBAGENT.md §6.7.2 AC-P4）：核登记册的工具面含 `panel`
  *      动作（CLI TUI 面板镜像），VSC 载荷面不存在 ⇒ **装配层剔除**（端侧过滤、零核改动）——
  *      action enum 去项 + 描述去 panel 段 + view/freeze 两参数（仅 panel 消费）移除。
@@ -40,17 +40,19 @@ import { SUBAGENT_TOOL_EXCLUSIONS } from "@thincoder/core/agent/helpers.mjs"
 export function vscSubagentFace(tool, { engineering = false, consultModels = [] } = {}) {
   const { view, freeze, ...props } = tool.parameters.properties
   const actionProp = props.action
-  // ① role 面（取核拷贝）：模式互斥——普通模式 coder ∕ 工程模式 eng-coder（+ eng-designer）
+  // ① role 面（取核拷贝）：模式互斥——普通模式 coder ∕ 工程模式 eng-coder（+ eng-designer）；tester 两模式都可派
+  //    （AGENT-LOOP-SUBAGENT.md §6.59；集与 suffix 逐字对核 `assembleFamilyTools` 的 `subagentRoles`）
+  const testerSuffix = " role='tester' runs verification and reports the readings back — it never edits code or documents."
   const subagentRoles = engineering
     ? {
-        enum: ["explore", "eng-designer", "eng-coder"],
+        enum: ["explore", "eng-designer", "eng-coder", "tester"],
         description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents.",
+        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents." + testerSuffix,
       }
     : {
-        enum: ["explore", "plan", "coder"],
+        enum: ["explore", "plan", "coder", "tester"],
         description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: "",
+        suffix: testerSuffix,
       }
   // ④ escalate 候选池（取核拷贝）：池装饰挂在 action 属性描述（escalate 工程模式禁用——只对正常模式有意义）
   const action = consultModels.length && !engineering
@@ -165,10 +167,23 @@ export async function buildToolTable({ depth, role, engineering, provider, mcpSe
   wireMemoryFace(memoryTools(null, {})[0])
 
   // ── ③ 基础集：subagent role-based tool filtering —— explore/plan/consult get read-only tools only；
+  // `tester` 取第三面（AGENT-LOOP-SUBAGENT.md §6.59.2 ⑥）：只读集 ∪ `{execute, bash}` − `{verify, advisor}`；
   // depth>0 面另剔 depth-excluded 工具（核单源 `SUBAGENT_TOOL_EXCLUSIONS`——TOOLS.md §6.16）。
+  // 端侧两条成文规则（§6.59.2 ⑥「端侧只读集怎么取」——勿自择）：只读集 = `builtinTools.filter((t) => t.readonly)`
+  // （就是下面这一行的现成形，端侧不调核 `readonlyToolNames`）；`TRIMMED` 端侧自持同形字面量（§6.24
+  // 「端镜像面不 import 核常量，同集由判据锁死」）。两枚减法按名显式做，不看 `readonly` 旗标——
+  // 旗标说的是「不写盘」，不是「不产出结论」（`verify` = 宣布达标 ∥ `advisor` = 开评审出判断，都是结论）。
   const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")
+  const isTesterRole = depth > 0 && role === "tester"
+  const TESTER_TRIMMED = new Set(["verify", "advisor"])
   const baseTools = [
-    ...(isReadOnlyRole ? builtinTools.filter((t) => t.readonly) : builtinTools),
+    ...(isReadOnlyRole
+      ? builtinTools.filter((t) => t.readonly)
+      : isTesterRole
+        ? builtinTools
+            .filter((t) => t.readonly || t.name === "execute" || t.name === "bash")
+            .filter((t) => !TESTER_TRIMMED.has(t.name))
+        : builtinTools),
     // 台账统一入口（读变体）随核家族段 `assembleFamilyTools`（2026-10-05 统一入口批：端侧自持清零）
   ].filter((t) => depth === 0 || !SUBAGENT_TOOL_EXCLUSIONS.has(t.name))
   // L1 契约（VSC-TOOL-TABLE-DUP §2.1A）：`agent.tools` 绑定值 = **基础集**（不含家族段——

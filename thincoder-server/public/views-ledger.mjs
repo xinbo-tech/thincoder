@@ -6,7 +6,7 @@
  * 详情段（恒显）：编号 ∥ 仓（`repos[]` 显示名回填——缺（项目已删）⇒ 归地址）∥ 状态 ∥ 负责人 ∥ 创建者 ∥ 创建/更新时间 ∥ 正文；
  * 编辑段（仅 `canWrite` 渲）：标题 ∥ 正文 ∥ 负责人 ∥ 状态选单（= 迁移表合法后继 ∪ 当前值——表逐字对齐
  * `thincoder-server/src/ledger/items.mjs`，单测档机检两处相等；归档态 = 终态门先行 ⇒ 仅当前值）；仓不可改（只读选单——记账键）。
- * 行内动作（仅 `canWrite` 渲）：「收口」（追认核销须正文——服务端 400 人话行内就地呈）∥「撤回」（非原生 confirm + 后果句）。
+ * 行内动作（仅 `canWrite` 渲）：「收口」（核销只自 待核销——服务端 400 人话行内就地呈）∥「撤回」（非原生 confirm + 后果句）。
  * 新建弹窗：仓（选单 = `repos[]` 中 `canWrite` 者；无可写项目 ⇒ 钮禁用 + 括注「需先加入项目」）∥ 标题 ∥ 正文 ∥ 负责人（缺省 = 自己）。
  *
  * 判权全在后端：控件显隐 = `canWrite` 读数（行级 ∥ `repos[]` 级）——页面不是判据（直打端点仍 403/404；`webui/WEBUI.md` §3）；
@@ -173,7 +173,7 @@ function ledgerTable(ctx, { items, repos, open, reload }) {
       h("tbody", {}, ...rows)))
 }
 
-/** 行内动作节点（仅 `canWrite` 渲）：「收口」（400 人话行内就地呈——追认核销须正文）∥「撤回」（非原生 confirm）；其余 ⇒ 「—」。 */
+/** 行内动作节点（仅 `canWrite` 渲）：「收口」（400 人话行内就地呈——核销只自 待核销）∥「撤回」（非原生 confirm）；其余 ⇒ 「—」。 */
 function actionNodes(ctx, item, reload) {
   const { h } = ctx
   if (item.canWrite !== true) return [h("span", { text: "—" })]

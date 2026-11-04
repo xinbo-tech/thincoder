@@ -14,7 +14,7 @@
 import { existsSync, realpathSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { DOC_CHECK_BUILTINS } from "../thincoder-core/doc-check/index.mjs";
+import { DOC_CHECK_BUILTINS, PARA_DISPOSE } from "../thincoder-core/doc-check/index.mjs";
 import { checkAnchors } from "./doc-check-anchors.mjs";
 import { checkParagraphs, DOC_CLASS } from "./doc-check-paragraph.mjs";
 
@@ -70,8 +70,10 @@ export function main(argv = process.argv.slice(2), { log = console.log } = {}) {
   const paraHits = paragraphs.filter((h) => h.clazz === DOC_CLASS.para);
   const lineHits = paragraphs.filter((h) => h.clazz === DOC_CLASS.line);
   log(paraHits.length
-    ? `FAIL(${DOC_CLASS.para}): ${paraHits.length} 段——重新组织语言重写${zoneNote}。`
+    ? `FAIL(${DOC_CLASS.para}): ${paraHits.length} 段${zoneNote}。`
     : `OK(${DOC_CLASS.para}): 源域全部 .md 无该类段${zoneNote}。`);
+  // 段命中时其后同出处置块——字面单源 = 引擎导出的 `PARA_DISPOSE`（本档零字面副本；口径 = §3.18 条 6）
+  if (paraHits.length) for (const line of PARA_DISPOSE) log(line);
   log(lineHits.length
     ? `FAIL(${DOC_CLASS.line}): ${lineHits.length} 行——提示词面逐行裸判。`
     : `OK(${DOC_CLASS.line}): 提示词面无单行过长。`);

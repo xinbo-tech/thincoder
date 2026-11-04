@@ -29,6 +29,23 @@ What it checks — exactly two criteria, both built into the engine:
   ```
 ~~~
 
+- Citation check — the same criterion, one more hit class `引缺` (a line that claims its own basis).
+
+  A claim line writes `依据 <document path>「<verbatim quotation>」`, and the quoted text must appear as a contiguous substring
+  of the file that path resolves to; when it does not, the hit is `引缺` and the report names the path plus the first 40 characters.
+
+  The path is judged for existence first: a path that does not resolve reports `档缺`, never `引缺` — the fix differs
+  (check the path ∥ check the words). Both classes count into the one `锚` total: no third criterion, no new verdict word.
+
+  Between the path token and `「` only the optional separator (`:` ∥ `：` ∥ `=`) and an optional backtick may sit. Anything else
+  (a space, a prose word, a punctuation mark) means the line is not a basis marker and nothing is judged; an empty `「」` is not a marker either.
+
+  A path whose name falls in the exempt families above is not a marker path either — the same exemption decides both faces.
+
+  Existence only: no whitespace folding, no case or width folding. A verbatim quotation taken from the wrong place still passes —
+  whether it is the *right* basis (a contract rather than a comment) belongs to review, and this tool does not claim to judge it.
+
+
 - Paragraph length — on every non-prompt face, adjacent non-blank body lines merge into one paragraph whose total character
   count (CJK counts as 1) is judged against the built-in threshold; blank lines, table rows, headings, list items,
   quote-block lines and fenced code blocks do not count into a paragraph and break it, and lines inside an exempt zone
@@ -36,7 +53,11 @@ What it checks — exactly two criteria, both built into the engine:
   are excluded. No face is exempt: a tool-description file (`thincoder-core/tool-docs/**`, this file included) is judged on
   this criterion too — a long paragraph hides its later points from every reader, the model included.
 
-  Breaking a paragraph into more lines changes nothing — only splitting it into more paragraphs or writing it shorter passes.
+  Breaking a paragraph into more lines changes nothing, and clearing the length check is not the same as fixing it: splitting a
+  paragraph into more paragraphs, or writing it shorter, clears the count while the reader still faces the same packed paragraph.
+
+  What fixes it is fewer and shorter sentences, a list of named items where the paragraph holds parallel assertions, or a table
+  where it holds enumerated readings.
 - Line length — a prompt-face file (`thincoder-core/prompts/**`) is judged line by line: the model reads raw text, so
   one line is one block, and any single line over the threshold counts with no structural exemption.
 

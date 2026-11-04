@@ -12,3 +12,10 @@ Deleting project/team entries removes the local markdown file and its index row 
 
 Save bugs, conventions, and preferences here — they persist across sessions.
 Session message history (what was said in this or past sessions) is NOT in memory — search session messages with read_history.
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`.
+
+In engineering mode the parent agent must pass it for any write that lands in the project layer: either `layer: "project"`, or a single delete whose id starts with `project:` while `layer` is omitted (`personal` / `team` entries live in the user data directory, so they need no number).
+
+**`project`** — the project this call belongs to (absolute path of the project root). Needed for exactly those project-layer writes: they also refuse without it. `personal` / `team` entries need neither. Pure declaration: it changes no execution directory.
+

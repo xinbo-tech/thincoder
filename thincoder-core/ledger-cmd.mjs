@@ -15,13 +15,9 @@
  * 「档此刻在不在盘」降为读数——读面导出 `ledgerBatchRows`、收口重锚单源 `ledgerReanchorBatch`。
  * 批量面（§3.3 P1）：选行单源 `resolveBatchRows` + 逐行落笔 `applyRowUpdate` / `applyRowClose`
  * （与单行形共函数——迁移表判 / 写门 / evidence 门逐行照判）。
- * 核销标记门（LIGHT-CHANNEL.md §2.5 · 台账 #1780）：写入 `已核销` 的三径（close 单行 ∥ close 批量 ∥
- * update 迁移——均经两逐行共函数）判**结果行标题**携 `ROUND_MARKER` ⇒ 拒；判据只认标题标记
- * （不查批档 ∥ 不查评审实跑），撤回（→ 已废弃）不拦。
  * 核销机检（F-LX4 · 2026-10-26 批 §2；2026-10-27 改判 ③ = 档面）：同一两逐行共函数在写 `已核销` 前判
  * 三件（批档在盘 ∥ §1 = 已收口 ∥ §3 = 评审通过），缺一即拒、一次报全缺项、行零改；判据只有目标值一条。
- * 本体住拆分件 `ledger-close-proof.mjs`（同 `ledger-tools.mjs` 先例）；标记门在前（零成本字符串判先报），
- * 两门互不替代。
+ * 本体住拆分件 `ledger-close-proof.mjs`（同 `ledger-tools.mjs` 先例）。
  *
  * 接线（设计档 §2.2 命令面接线）：族出口 = `ledger.mjs`（re-export 两源——KD-M2-3）；查询命令 ←
  * tools/index.mjs（assembleBuiltinTools 全角色面）；写命令 ← agent/family-tools.mjs（assembleFamilyTools
@@ -175,14 +171,13 @@ export function ledgerUpdate({ cwd, id, patch, executorSessionId, boundary, agen
   } finally { db.close() }
 }
 
-/** 收口（写命令，仅主 agent）：核销两源（勾销：待核销 → 已核销；追认核销：待讨论 / 待设计 → 已核销，
- *  行 `evidence` 非空，缺 / 全空白 ⇒ 拒）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。
+/** 收口（写命令，仅主 agent）：核销（**只有一条边**——`待核销 → 已核销`：其余现态一律拒，拒文点名现态 + 该现态
+ *  的出路句）/ 撤回（任意态 → 已废弃），事务包裹；归档 = 软删除。
  *  可选 `evidence` 参：传值 = 追加缺省（§13.9——旧空直写 / 旧非空拼 `旧｜新`）、`evidenceReplace: true`
- *  同传 = 整段替换；勾销 / 追认 / 撤回三径同携（写值落行，内容不判）；两拒面（旗独传 @值计算 ∥
- *  新值空白 @追认门后）见 `evidenceValue` / `assertEvidenceValue`。
+ *  同传 = 整段替换；核销 / 撤回两径同携（写值落行，内容不判）；两拒面（旗独传 @值计算 ∥
+ *  新值空白 @值计算后）见 `evidenceValue` / `assertEvidenceValue`。
  *  判序（同函数体同层，§13.9）：目标集判 → 行取 → 源态判 → **核销机检**（`已核销` 才触）→ 值计算 →
- *  追认门（原样——判**结果值**缺 / 全空白 ⇒ 拒，文案逐字不变）→ 拒面②（新值空白）→ UPDATE（LEDGER.md §3
- *  收口两源）。**单行形**（`id`）——逐行落笔 = `applyRowClose`。 */
+ *  拒面②（新值空白）→ UPDATE（LEDGER.md §3 核销只有一条边）。**单行形**（`id`）——逐行落笔 = `applyRowClose`。 */
 export function ledgerClose({ cwd, id, status, evidence, evidenceReplace, boundary, agent }) {
   if (status !== "已核销" && status !== "已废弃") throw new Error(`ledgerClose：目标态 ${status} ∉ {已核销, 已废弃}`)
   const db = openLedger(cwd, { create: true, boundary })
@@ -228,7 +223,7 @@ export function ledgerUpdateBatch({ cwd, batch, patch = {}, executorSessionId, b
 }
 
 /** 批级批量结算（设计档 §3.3）：**只销已到 `待核销` 的行**（勾销径）；`待讨论` / `待设计` ⇒ `skipped`
- *  逐行点名（**追认核销不入批量面**——追认须逐行结账依据，统一文本会造假账；转单行面），`在途` ⇒
+ *  逐行点名（**须先 `update` 到 `在途` 认领**——无核销边可走，统一文本会造假账），`在途` ⇒
  *  `skipped` 逐行点名（不可跳）。**归档态（`已核销` / `已废弃`）行 ⇒ 静默不计**（不入 `applied`、
  *  不入 `skipped`——归档行本非结算对象，点名会让每批重跑刷屏）。`evidence` 逐行追加同一文本
  *  （`evidenceValue` 同源）。回执 `status` 恒 `已核销`（批量形缺省 = 勾销单值；携则守卫已收窄为
@@ -247,7 +242,7 @@ export function ledgerCloseBatch({ cwd, batch, evidence, evidenceReplace, bounda
       for (const row of resolveBatchRows(db, base, abs)) {
         if (row.status === "已核销" || row.status === "已废弃") continue // 归档态静默不计
         if (row.status !== "待核销") {
-          const why = row.status === "在途" ? "ledgerClose：在途不可跳（须先 待核销）" : "ledgerClose：追认核销不入批量面（转单行 close）"
+          const why = row.status === "在途" ? "ledgerClose：在途不可跳（须先 待核销）" : "ledgerClose：待认领不可核销（须先 update 到 在途）"
           skipped.push({ id: Number(row.id), from: row.status, why })
           continue
         }

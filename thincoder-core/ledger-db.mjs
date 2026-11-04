@@ -22,7 +22,9 @@ import { join, resolve } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 
 import { configDir } from "./config-io.mjs"
-import { MANIFEST_REL, owningProject, projectRootView } from "./manifest.mjs"
+import { MANIFEST_REL, owningProject } from "./manifest.mjs"
+// 无根报明面的候选来源 = 统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.3——本档不自持候选枚举）。
+import { resolvePathTarget } from "./path-resolve.mjs"
 // 归一步单源（KD-LN1——直引，不抽新 util：先例 = peer-domains.mjs / traces/trace-store.mjs）。
 import { normalizeCwd } from "./session-slots.mjs"
 
@@ -58,11 +60,11 @@ function isRegistered(dir) {
 }
 
 /** 同级枚举上限（成本有界：父目录超此规模 = 缓存 / 临时等非仓族形态 → 退化空集）。
- *  2026-10-16 批 ledger-root-derivation 自 `ledger.mjs` 随迁（同级枚举：族发现 ∥ 轻通道闸候选枚举同源）。 */
+ *  2026-10-16 批 ledger-root-derivation 自 `ledger.mjs` 随迁（同级枚举：族发现单一消费面）。 */
 export const MAX_SIBLING_SCAN = 100
 
 /** 目录下**已注册**（档在盘——§2.1 单谓词）的直接子目录（目录名升序；不可读 ∥ 超限 ⇒ 空集；
- *  **惰性枚举 + 上限**——大目录零全量扫描）。消费面 = 族发现 ∥ 轻通道闸候选枚举。
+ *  **惰性枚举 + 上限**——大目录零全量扫描）。消费面 = 族发现（`thincoder-core/ledger.mjs`）。
  *  `ledger` = 该子目录根的键控库路径（推算值 ⇒ 可能尚未在盘）。2026-10-16 批自 `ledger.mjs` 随迁。 */
 export function ledgerChildren(dir) {
   const out = []
@@ -103,14 +105,14 @@ export function resolveLedgerRoot(target, boundary) {
 /** 无根文案（单源——`openLedger` 写面 ∥ `ledgerDbPath` ∥ 工具面读面（`ledger-tools.mjs`）共用同一句）：
  *  **只陈述事实**——起点 + 上溯上界（界内无项目根），不写「祖先链无已注册项目」这类越界断言：
  *  归属根可能就在界**之上**（界外）——那一格该句为假，读它会教人误判层级。
- *  锚态 = 工作区时追报下辖候选（报明面读数 = `projectRootView` 的 `workspace` 态——
- *  **只供报明，不参与取根**：取根仍以会话锚为界）。
+ *  锚态 = 工作区时追报下辖候选（报明面读数 = 统一解析层的 `ambiguous.candidates`——
+ *  **只供报明，不参与取根**：取根仍以会话锚为界，`resolveLedgerRoot` 零改）。
  *  @param {string} start 起点（动作目标路径）
  *  @param {string} boundary 上溯上界（会话锚——**必传**）——与 `resolveLedgerRoot` 同一口径 */
 export const noRootMessage = (start, boundary) => {
-  const view = projectRootView(start)
+  const picked = resolvePathTarget(start, undefined, { kind: "dir", order: "root-first" })
   const edge = resolve(boundary)
-  const tail = view.state === "workspace" ? `；下辖候选项目：${view.candidates.join(" ∥ ")}` : ""
+  const tail = picked.state === "ambiguous" ? `；下辖候选项目：${picked.candidates.join(" ∥ ")}` : ""
   return `台账：自 ${start} 未找到项目根（向上找到 ${edge} 为止）${tail}`
 }
 
@@ -132,11 +134,6 @@ export function ledgerDbPath(cwd, boundary) {
 
 /** 未决四态（「活条目」口径 = 计数单源 WHERE 集；已核销 / 已废弃 = 归档态）。 */
 export const PENDING_STATUSES = ["待讨论", "待设计", "在途", "待核销"]
-
-/** 轻通道轮次行标记（单源——LIGHT-CHANNEL.md §2.3 开轮挂账 ∥ §2.8 闸凭据 ∥ §2.5 核销标记门
- *  判据三面同一字面；消费面 = `agent/light-round.mjs`（经 `ledger.mjs` re-export 动态解构——
- *  W8 契约②零新静态边）∥ `ledger-cmd.mjs` 核销标记门）。 */
-export const ROUND_MARKER = "收尾链待跑"
 
 /** 老化阈值（天——口径 = 需求档；消费面 = `buildScan`（展示，`days` 可覆盖）+ `ledgerQuery` 逐行
  *  `aged`（查询面，`now` 可注入））。2026-10-07 批 ledger-tool：自 `ledger.mjs` 迁入（枚举常量档单源

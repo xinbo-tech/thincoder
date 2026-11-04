@@ -38,7 +38,7 @@ export function assertCloseOutProof(fnName, { base, row }) {
   const missing = [] // 每项 = 一条拒因行（首字 = 缺项号）
   let abs = null
   if (!namesPointer(row?.task_book)) {
-    missing.push("  ① 行无 task_book 指针：追认核销须先挂批档（update 写 task_book），再跑全链")
+    missing.push("  ① 行无 task_book 指针：核销须先挂批档（update 写 task_book），再跑全链")
   } else {
     const hit = resolveDeclaredRef(base, filePartOf(row.task_book))
     if (!hit.ok) missing.push(`  ① 批档不在盘（task_book = ${row.task_book}）：先补指针，或恢复该档`)

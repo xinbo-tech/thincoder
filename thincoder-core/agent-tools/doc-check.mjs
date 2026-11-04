@@ -15,6 +15,7 @@
  */
 import { resolve } from "node:path"
 import { projectRootView } from "../manifest.mjs"
+import { resolvePathTarget } from "../path-resolve.mjs"
 import { runDocCheck } from "../doc-check/index.mjs"
 import { DESC } from "../tools/shared.mjs"
 
@@ -32,9 +33,24 @@ export const docCheckTool = {
   readonly: true,
   execute(args, ctx) {
     const anchor = ctx?.agent?.cwd ?? ctx?.cwd
-    const target = args?.target ? resolve(anchor, String(args.target)) : resolve(anchor)
     const mode = args?.mode === undefined ? "report" : String(args.mode)
     if (mode !== "report" && mode !== "gate") return `doc_check: unknown mode "${mode}" — use "report" (a report over the documents you list) or "gate" (this round's documents).`
+    // `target` 的路径判定经统一解析层（`kind:"dir"` / `order:"root-first"`）：判不出唯一根 ⇒ 报明候选（KD-5
+    // 的形），解析出 ⇒ 用。`dangling` 不阻断本面——本面判据 = 内置常量、不读声明面，任可判目录都能跑
+    // （受判档由 `docs` 给定），故无项目根时按显式目标 ∥ 会话锚照跑（受理判据归本面）。
+    const picked = resolvePathTarget(anchor, args?.target, { kind: "dir", order: "root-first" })
+    if (picked.state === "ambiguous") {
+      if (mode === "gate") {
+        return [
+          "DOC-CHECK GATE: ERROR（多项目工作区：请指名 target）",
+          `候选：${picked.candidates.join(" ∥ ")}`,
+          "处置：指名项目根（`target`）后复跑",
+        ].join("\n")
+      }
+      return `doc_check: ${anchor} is a workspace holding ${picked.candidates.length} projects — pass the project root explicitly via target:\n` +
+        picked.candidates.map((c) => `- ${c}`).join("\n")
+    }
+    const target = picked.state === "resolved" ? picked.abs : resolve(anchor, args?.target ? String(args.target) : "")
     const explicit = Array.isArray(args?.docs) ? args.docs : null
     if (args?.docs !== undefined && !Array.isArray(args.docs)) {
       return `doc_check: \`docs\` must be an array of paths (got ${typeof args.docs}) — a bare string is refused rather than read as a whole-domain request; pass ["<path>"].`

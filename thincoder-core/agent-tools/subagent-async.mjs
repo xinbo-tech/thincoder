@@ -63,8 +63,9 @@ export const ASYNC_POOL_LIMITS = { engCoder: 4, other: 4 }
 
 /**
  * Role → pool domain (single source of truth — §6.10 修正 #8): the CLI role
- * whitelist is subagent.mjs's ROLES = { explore, plan, coder, eng-coder, eng-designer }
- * (mode-filtered: normal → explore/plan/coder, engineering → explore/eng-designer/eng-coder).
+ * whitelist is subagent.mjs's ROLES = { explore, plan, coder, eng-coder, eng-designer, tester }
+ * (mode-filtered: normal → explore/plan/coder/tester, engineering → explore/eng-designer/eng-coder/tester —
+ * tester is dispatchable in both modes).
  * eng-coder → engCoder pool; every other role (including unknown roles — fail-safe)
  * → other pool. escalate spawns its expert internally (role "coder" — other pool).
  */

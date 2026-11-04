@@ -9,11 +9,15 @@
  *    既有 import 面）；`resolveReviewDocPaths` = 评审文档路径解析单源；
  *  - 2026-10-25（评审文档路径收正批）：该解析器收为**单规则**——相对形按会话项目根 / 绝对形
  *    照用 / 受理 = 项目内现存 `.md`；候选试探与歧义归一退场（判据正文 = `ADVISOR-GUARDS.md` §12）。
+ *  - 2026-11-02（path-resolution-unify 批）：路径判定改调统一解析层（`../path-resolve.mjs`）——
+ *    本面只留受理判据；拒因词 `no-project-root` 退役，拆成 `ambiguous-path`（判不出唯一基根）
+ *    ∥ `dangling-path`（无项目根）。
  */
 import { existsSync, statSync } from "node:fs"
-import { isAbsolute, join, relative, resolve, sep } from "node:path"
+import { isAbsolute, join, relative, sep } from "node:path"
 import { DEFAULT_MANIFEST, docRootPaths, readManifest } from "../manifest.mjs"
 import { owningProject, projectRootView } from "../manifest-discovery.mjs"
+import { resolvePathTarget } from "../path-resolve.mjs"
 
 /** ABS 归一（cwd 相对 → cwd 拼接）——陈旧判定 / 冻结拦截 / 评审范围键同源（ADVISOR-GUARDS.md §5 E-4）。 */
 export function normAbs(p, cwd) {
@@ -66,26 +70,40 @@ function isInside(p, root) {
 
 /**
  * **评审文档路径解析单规则**（判据正文 = `docs/core/design/ADVISOR-GUARDS.md` §12）——逐文档：
- *   ① 相对形：基面 = **会话项目根** `projectRootView(cwd).root`——`p = resolve(根, doc)`；越根 ⇒ `outside-project`；
- *   ② 相对形 ∧ 项目根解析不出（锚 = `workspace` / `none`）⇒ `no-project-root`；
- *   ③ 绝对形：照用（零根试探、零拼接）；不住在任何项目里（`owningProject` 空）⇒ `outside-project`；
- *   ④ 受理 = 现存普通文件 ∧ `.md`（大小写不敏感）；否则 `not-doc-file`。
- *   **零试探**：无候选项目根、无祖先链、无歧义归一——路径要求写对（用户 2026-10-25 11:41
- *   「为啥要试探？不能要求写对吗？」）。
+ *   ① 路径判定全部经统一解析层（`kind:"file"` / `order:"root-first"` / `bases` = 无 /
+ *      `scanBases` = `docRoot` 各键——只喂同名候选，不作受理基底；本面受理面零放宽）；
+ *   ② 判不出唯一基根（层判 `ambiguous`——工作区锚）⇒ `ambiguous-path` + 候选全列；
+ *      无项目根（层判 `dangling.level:"base"`）⇒ `dangling-path`；
+ *   ③ 相对形 ∧ 锚无项目根 ⇒ `dangling-path`（受理判据「必须在项目内」——档层无根时相对形无基可挂）；
+ *      相对形越根 ⇒ `outside-project`；
+ *   ④ 绝对形照用（零根试探、零拼接）；不住在任何项目里（`owningProject` 空）⇒ `outside-project`；
+ *   ⑤ 受理 = 现存普通文件 ∧ `.md`（大小写不敏感）；否则 `not-doc-file`。
+ *   **零试探**：层判不出唯一即停（用户 2026-10-25 11:41「为啥要试探？不能要求写对吗？」）。
  *   非字符串 / 空白串项**静默跳过**（同 docSetKey 既有过滤语义——不进 resolved / invalid）。
- * @returns {{ resolved: Map<string,string>, invalid: Array<{doc: string, resolved: string|null, reason: string}> }}
- *   `reason` ∈ `no-project-root` / `outside-project` / `not-doc-file`（标识行恒 `criterion=scope-not-doc`，
- *   三值只作 `reason=`）；`resolved` 项 = 解析后绝对路径（`no-project-root` 无基面 ⇒ `null`）。
+ * @returns {{ resolved: Map<string,string>, invalid: Array<{doc: string, resolved: string|null, reason: string,
+ *   candidates?: string[], sameName?: string[]}> }}
+ *   `reason` ∈ `ambiguous-path` / `dangling-path` / `outside-project` / `not-doc-file`（标识行恒
+ *   `criterion=scope-not-doc`，四值只作 `reason=`）；`resolved` 项 = 解析后绝对路径（无基面 ⇒ `null`）。
  */
 export function resolveReviewDocPaths(documents, cwd) {
   const view = projectRootView(cwd)
+  const scanBases = resolveReviewRootsFor(cwd)
   const resolved = new Map()
   const invalid = []
   for (const doc of (documents ?? [])) {
     if (typeof doc !== "string" || !doc.trim()) continue
     const abs = /^[a-zA-Z]:[\\/]/.test(doc) || doc.startsWith("/") || doc.startsWith("\\\\")
-    if (!abs && view.state !== "ok") { invalid.push({ doc, resolved: null, reason: "no-project-root" }); continue }
-    const p = abs ? doc : resolve(view.root, doc)
+    const r = resolvePathTarget(cwd, doc, { kind: "file", order: "root-first", crossRepo: "dangling", scanBases })
+    if (r.state === "ambiguous") { invalid.push({ doc, resolved: null, reason: "ambiguous-path", candidates: r.candidates }); continue }
+    // 相对形 ∧ 锚无项目根 ⇒ 无基可挂（受理判据「必须在项目内」）——**与盘上有没有那档无关**：
+    // 同一锚态同一个词（KD-8），否则拒因词成了磁盘状态的函数。
+    if (!abs && view.state !== "ok") { invalid.push({ doc, resolved: null, reason: "dangling-path" }); continue }
+    if (r.state === "dangling") {
+      if (r.level === "base") { invalid.push({ doc, resolved: null, reason: "dangling-path" }); continue }
+      invalid.push({ doc, resolved: r.tried?.[0] ?? null, reason: "not-doc-file", sameName: r.sameName })
+      continue
+    }
+    const p = r.abs
     if (!abs && !isInside(p, view.root)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
     if (abs && !owningProject(p, cwd)) { invalid.push({ doc, resolved: p, reason: "outside-project" }); continue }
     if (!isDocFile(p)) { invalid.push({ doc, resolved: p, reason: "not-doc-file" }); continue }

@@ -9,3 +9,5 @@ Notes:
 - Returns `Wrote N chars to <path>` + git diff + syntax-check note.
 - This overwrites the entire file — use `edit` for targeted changes
 - The file is atomic: it either writes completely or fails
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.

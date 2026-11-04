@@ -45,17 +45,21 @@ export async function assembleFamilyTools({
     return { ...tool, description: tool.description + `\nCurrently configured consultants (this tool's pool): ${list}` }
   }
 
-  // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"/"eng-designer"
+  // Role enum is mutually exclusive: normal mode has "coder", engineering mode has "eng-coder"/"eng-designer";
+  // "tester" (AGENT-LOOP-SUBAGENT.md §6.59) is dispatchable in both modes — it runs verification and returns
+  // readings; its tool table (read-only set ∪ execute/bash − {verify, advisor}) holds no write tool. Run-only is the
+  // role contract, not a sandbox (§6.59.7 边界 1 — `bash` can still write, and that is by design).
+  const testerSuffix = " role='tester' runs verification and reports the readings back — it never edits code or documents."
   const subagentRoles = (depth === 0 && engineering)
     ? {
-        enum: ["explore", "eng-designer", "eng-coder"],
+        enum: ["explore", "eng-designer", "eng-coder", "tester"],
         description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents.",
+        suffix: " In engineering mode, use role='eng-coder' for implementation (coder is disabled) and role='eng-designer' for writing the requirements/design documents." + testerSuffix,
       }
     : {
-        enum: ["explore", "plan", "coder"],
+        enum: ["explore", "plan", "coder", "tester"],
         description: "The sub-agent role — see the tool description for the role capability matrix. Exact spelling required.",
-        suffix: "",
+        suffix: testerSuffix,
       }
 
   const filteredSubagent = depth === 0 ? {

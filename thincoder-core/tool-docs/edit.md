@@ -36,3 +36,5 @@ Notes:
 - Never fabricate the old_string — copy it verbatim from the actual file using read first
 - **Line-number anchoring**: `line` / `startLine`+`endLine` are judged against the last write to that file: inside or below that write's affected range, or when the file was written after it without updating that anchor, the call is refused — naming the path, the drift (`L<startLine>`, `±shift`) and two ways on (re-read, or address the region without line numbers).
 - use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.

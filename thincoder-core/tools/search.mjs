@@ -10,6 +10,8 @@ import {
 // 排除名单单源（零依赖叶档 `../skip-dirs.mjs`——2026-10-27 四份名单合一）：旧名 `IGNORED_DIRS`
 // 退场，本档三处直接引 `SKIP_DIRS`（一词一物）。
 import { SKIP_DIRS } from "../skip-dirs.mjs";
+// 过程档标记（TOOLS.md §6.28）：命中行的**档**在索引排除集内 ⇒ 行首逐字前缀。只加可读信息，不改命中集。
+import { PROCESS_DOC_MARK, isProcessDocPath } from "./process-doc-mark.mjs";
 import { readFile, readdir, stat, lstat } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -179,9 +181,14 @@ export const grepTool = {
     await walk(base, "")
     if (hits.length === 0) return "(no matches)"
 
+    // §6.28：一次调用一个档记忆表；命中行与上下文行都在原有文案前镀前缀（判据是**档**不是行——
+    // 不标则同一档的上下文行读起来像普通档的内容）。打标在 `truncate` 之前，不新增截断点。
+    const markCache = new Map()
+    const mark = (f) => (isProcessDocPath(f, markCache) ? `${PROCESS_DOC_MARK} ` : "")
+
     // No context: keep original path:line: content format
     if (!wantCtx) {
-      return truncate(hits.map((h) => `${h.file}:${h.line}: ${h.text}`).join("\n"))
+      return truncate(hits.map((h) => `${mark(h.file)}${h.file}:${h.line}: ${h.text}`).join("\n"))
     }
 
     // With context: matching lines use ':', context lines use '-' (like ripgrep); overlapping ranges in same file are merged and de-duplicated
@@ -199,7 +206,7 @@ export const grepTool = {
       }
       for (const l of [...lineSet].sort((a, b) => a - b)) {
         const sep = matchedLines.has(l) ? ":" : "-"
-        out.push(`${file}${sep}${l}${sep} ${lines[l - 1]}`)
+        out.push(`${mark(file)}${file}${sep}${l}${sep} ${lines[l - 1]}`)
       }
     }
     return truncate(out.join("\n"))

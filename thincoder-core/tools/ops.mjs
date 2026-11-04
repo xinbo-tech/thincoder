@@ -7,7 +7,7 @@
  * wait_for 条件族 +`bash id:N done`。list ∥ 既有条件面零变。批 browser-async-fix（#1045）：kill id
  * 路由先 bg 后 browser（同一 id 命名空间）∥ wait_for 条件族 +`browser id:N done`。
  */
-import { DESC, resolveInCwd, truncate } from "./shared.mjs"
+import { DESC, resolveInCwd, truncate, LEDGER_PARAM_DESC } from "./shared.mjs"
 // 单一写路径点（编辑器编辑径注入缝——CORE-UNIFICATION §2.13.5）：路径操作也经它落盘
 // （默认径 = 既有 cp / rename / EXDEV 回退语义，零行为变）。
 import { writeThroughPath } from "./write-path.mjs"
@@ -26,6 +26,7 @@ export const fileOpsTool = {
       action: { type: "string", enum: ["move", "copy", "rename"], description: "move | copy | rename" },
       source: { type: "string", description: "Source path, relative to cwd or absolute" },
       dest: { type: "string", description: "Destination path" },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC },
     },
     required: ["action", "source", "dest"],
   },

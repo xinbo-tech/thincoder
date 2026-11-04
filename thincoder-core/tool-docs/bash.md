@@ -37,3 +37,7 @@ Notes:
 - After commands that change files (git checkout, npm install, etc.), repo_outline and code_search may be stale — re-run them to get current results.
 - Prefer read/glob/grep/ls for file operations inside the project — file tools and bash reach the same paths (no directory restriction).
 - NEVER use bash to write or modify files (echo/sed/printf > file, cat << EOF, etc.). Use write/edit/insert_after/apply_patch instead — they handle encoding, escaping, and EOL conventions correctly.
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused, and read-only commands are judged the same way (no command-line classification).
+
+**`project`** — the project this call belongs to: the absolute path of the project root (the directory carrying PROJECT-MANIFEST.json). Engineering mode: pass it together with `ledger`. Pure declaration: it does not change the execution directory.

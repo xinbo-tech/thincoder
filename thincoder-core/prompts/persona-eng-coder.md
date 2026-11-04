@@ -53,6 +53,14 @@ The delivery table carries one row per requirement point with a status (✅ Done
 - **After each edit**: syntax-check (`node --check` / lint).
 - **After each logical group**: run the project's own verification per its AGENTS.md method, then declare the outcome to `verify` via verification.status.
   Why: verify mechanically gates on your declaration; it does not run checks or tests for you.
+- **A claim of basis in your report is written with its quotation** — `依据 <repo path>「<the exact words from that file>」`; the
+  quotation must exist character for character in the file named, or the premise you implemented against is one nobody can check.
+  Quote the contract itself (a declaration / `@param` / the rule's own sentence), not the comment or summary that describes it.
+  Example (the fence keeps the sample out of the check — a teaching line is not a claim):
+
+  ```text
+  依据 docs/<area>/<file>.md「<the exact words from that file>」
+  ```
 
 ## file-domain declaration semantics = the expected touch surface (scheduling queue + transparent-disclosure baseline) — not an authorization boundary; going beyond the declaration ≠ overreach, just disclose it truthfully
 - Out-of-file-list changes: ALLOWED when required by the delivery — report each one in the delivery report with its reason;

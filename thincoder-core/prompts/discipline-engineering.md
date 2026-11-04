@@ -25,29 +25,25 @@ Why: treating an old conclusion as a standing ruling keeps a rule alive on a dea
 **Premise invalidated mid-flight**: when the premise you are executing on turns out false (the code contradicts the design / the task book), send an upstream `ask` (notify_parent).
 Why: finishing the wrong work delivers a whole round on a false premise, and the terminal report arrives too late for anyone to rule on it.
 
-## Change-face routing (doc face ∥ engineering-tools face ∥ product-code face)
+## Change-face routing (doc face ∥ product face)
 
-Judge the **change face** before acting — different faces, different authorization paths:
+Judge the **change face** before acting — two faces, two authorization paths:
 
 | Change face | Domain | Authorization path |
 |---|---|---|
-| **Doc face** | `docs/**` (requirements / design / batch / ledger) | Routing per the D1 matrix |
-| **Engineering-tools face** | `scripts/**` · `test/**`/`tests/**` · `.thincoder/tmp/**` · tool-config · CI · lockfiles | **a mechanical change** ⇒ direct edit (no spawn/designToken) + gate prevails + explicit commit; **a non-mechanical change ⇒ still goes through design** |
-| **Product-code face** | **default face** — every path not in the other two faces (fail-closed; incl. **product-text face**) | Requirements → Design → Review → eng-coder (full flow; token gate) |
+| **Doc face** | the paths declared under the manifest `docRoot` keys (requirements / specs / design / modules / batches) + the project manifest itself (`PROJECT-MANIFEST.json`, the project state file) | Routing per the D1 matrix |
+| **Product face** | **default face** — every path not in the doc face: `scripts/**` · `test/**` · `.thincoder/**` · `.github/**` · `package-lock.json` · the product-text face · everything else (fail-closed) | Requirements → Design → Review → eng-coder (full flow; token gate) |
 
 面判定机器单源 = thincoder-core/agent/write-face.mjs；本表与本行同义，冲突时以该档判据为准。
 
-- **Default classification (fills the enumeration gap)**: any path not listed under the engineering-tools and doc faces is treated as **product-code face** (fail-closed).
+- **Default classification**: any path not inside a declared document root is the **product face** — the path itself decides, with no "cannot tell which face" branch.
   Why: prefer walking the process — a misjudged direct edit skips the write gate and the review, and that round leaves no way back, while the conservative reading costs one extra process.
-- **The product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) **is singled out for a reason**.
-  Why: it is the shipped artifact, a user-visible external contract — **not** engineering-tools face.
-- **Two hard constraints on direct engineering-tools edits**: ① a mechanical change ⇒ direct edit + **actually run it and report the reading**; ② any direct edit ⇒ report it as "parent direct execution" + single-commit revertable.
-**Mechanical change** = one that does not alter judgment semantics.
-**One that alters judgment semantics still goes through design** — extracting a predicate / a threshold / what counts as a violation is not on the direct-edit face.
-- **Authorization criterion ≠ gate bypass**: the routing gives you an **authorization criterion**; the gate (token gate / product-code write gate — implementation location per project declaration) **prevails**.
+- **The product-text face** (outward-facing text inside the product repo: `README.md` / `package.json` / release manifests / product `AGENTS.md`) **is part of the product face**.
+  Why: it is the shipped artifact, a user-visible external contract — not a document root.
+- **Authorization criterion ≠ gate bypass**: the routing gives you an **authorization criterion**; the gate (token gate / product write gate — implementation location per project declaration) **prevails**.
   When they disagree ⇒ **stop and report**.
   Why: pressing the routing against the gate only turns the gate off.
-- **Judgment line**: paths not in the enumeration ⇒ full flow as product-code face (fail-closed); mechanical engineering-tools edits ⇒ direct edit + run + report "parent direct execution"; **a non-mechanical change (one that alters judgment semantics) ⇒ still goes through design**.
+- **Judgment line**: paths not in the doc face ⇒ full flow as the product face (fail-closed).
 
 ## Basic flow (four steps, in order)
 1. **Requirements** — discuss what's wanted until clear, land it in the requirements doc, confirm, then move on. The requirements doc (project requirements + function specs) is organized by **five elements**:
@@ -101,31 +97,6 @@ Judge the **change face** before acting — different faces, different authoriza
    **What testing produces**: no test-design document, and no per-user-story case.
    The **UAT report** is a **delivery-face document**.
    - **Repeated mechanical review failure**: same review face, same criterion (the failure conclusion block's `criterion=`) reaching ≥3 ⇒ stop re-running; lay the facts and candidate dispositions before the user — no auto re-run, no auto scope-narrowing, no self-rewritten criteria.
-
-## Light channel
-**Light channel (detail-face ∥ convergence-face controlled bypass — hit one of the three ⇒ put it up as a choice, the user picks; bypass ≠ cancellation)**:
-any one of the three named cases — detail / cosmetics · defect fix · problems named on the spot during a walkthrough — is put up as a choice question; it moves only after the pick.
-That means: skip the "Design → Review → Approval" chain — direct edit → live walkthrough → freeze:
-
-1. **Detail / cosmetics** — visual ∥ copy ∥ parameters (thresholds ∥ defaults ∥ lengths) ∥ existing-interaction details (order ∥ position ∥ keybindings ∥ hint texts);
-
-2. **Defect fix** — **a defect ⇒ goes up as item 2** (the implementation contradicts an existing source: requirement ∥ design ∥ record ∥ the user's words on the spot — the work = bringing the implementation back to the source, not adding semantics);
-
-3. **Problems named on the spot during a walkthrough** — routed by the first two (detail class goes up as item 1; behavior class goes up as item 2 — either way it only settles which item it is routed to; whether to walk is still the user's pick).
-
-**One-sentence boundary**: **new mechanism ∥ major change ⇒ full chain**. Everything else falls to the **closeout full chain** as the backstop — a mis-admission gets formalized ∥ caught in review at closeout (the threshold yields to "no leak").
-
-**Annotations**: diagnostics / probes = zero-chain (read-only + temp area, no classification).
-**Performance-observation class** = no structural change ∧ before/after readings provable.
-**A light-channel pen = main-agent direct edit** (the choice question carries "revertable"; big fixes still go to eng-coder).
-
-- **Round form**: a light-channel round = one batch record (per-pen entries: the choice question and the pick · change · walkthrough · freeze) + per-pen ledger rows.
-- **Start-up booking**: at round open, before the first pen, create the round batch record + the round ledger row first — the account precedes the pen; a pen without an account = not established.
-- **One full chain at closeout**: design formalization → independent review (code · record · doc reconciliation) → fixes (if any) → approval → closeout settlement, including the necessary tests.
-  **Convergence-face pens**: the red-then-green reproduction pair ∥ the before/after reading pair.
-- **Closeout not landed ⇒ no settlement** — the batch record and the round ledger row stay open.
-- **Exercise**: routing = the main agent proposes the route per pen as a choice question (both routes side by side, a recommendation allowed but not a default) and the user picks; nothing moves before the pick; subagents neither route nor invoke this channel.
-- **Boundary (each listed here is a defect)**: off-boundary content through the channel (the bypass swallows the full chain) · closeout skipping (the account goes unsettled) · substituting the full chain (the mechanism itself · major changes stay full-chain).
 
 ## Engineering judgment (verdicts ∥ sizing)
 - **Verdict ≠ attribution**: first answer "is it a defect?" — the why comes after, and an unproven cause leaves the verdict standing.

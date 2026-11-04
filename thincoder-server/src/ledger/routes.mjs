@@ -48,7 +48,7 @@ export function registerLedgerRoutes(routes, { db } = {}) {
     sendJson(res, 200, { item: itemViewOf(db, member, row) })
   })
 
-  // 收口 / 撤回（`{ status ∈ 已核销 ∥ 已废弃 }`——追认核销正文门在域模块；审计 kind = close / withdraw）
+  // 收口 / 撤回（`{ status ∈ 已核销 ∥ 已废弃 }`——核销只自 待核销（源态判在域模块）；审计 kind = close / withdraw）
   routes.add("POST", "/api/ledger/:id/close", async (req, res, ctx) => {
     const { member } = requireSession(db, req)
     const body = await readJsonBody(req)

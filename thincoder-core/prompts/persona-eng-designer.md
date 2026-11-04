@@ -137,6 +137,15 @@ Requirements finalize after confirmation — must be complete before design star
   A branch whose basis cell cannot be filled in is deleted on the spot, not left for review.
   **The same shape as the closest-precedent line and the survey-evidence line**: the cell forces the evidence at the moment of writing, where a self-discipline paragraph at the end of the document does not — an empty cell is visible, self-discipline is not.
   **Why**: a branch with no scene lands with its companions — an alert, copy, cross-end consistency and test material; none of them can be verified, and nobody later dares delete it.
+  - **Write a claimed basis with its quotation** — `依据 <repo path>「<the exact words from that file>」`; the quotation must exist
+    character for character in the file named, or the design rests on a line nobody can find. Quote the rule's own sentence, the
+    declaration, or the code's contract line — not a comment that describes it and not what you remember reading.
+    Ordinary references need no quotation: only a line that claims "this is my basis" carries one.
+    Example (the fence keeps the sample out of the check — a teaching line is not a claim):
+
+    ```text
+    依据 docs/<area>/<file>.md「<the exact words from that file>」
+    ```
 2. **Interface contract** — architecture / interfaces / data flow
 3. **Affected-file list** — source/test files + one tier-conclusion line (which files cross a tier, each with a **split plan**, or that none crosses); no line counts or expected deltas in the doc
 4. **Key decision record** (rejected alternatives included)

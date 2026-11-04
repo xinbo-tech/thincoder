@@ -4,7 +4,7 @@
  * 已实现：F2（round 枚举 + 任务书参数门/拼装）· F6（files 声明面拦截谓词）。
  * 2026-10-24（AGENT-LOOP-SUBAGENT.md §6.22）：任务书单通道 = 批次档 §2——工程角色
  *   （eng-coder / eng-designer）零任务书文本参数，八个自由文本键（键在场即拒）命中即点名拒收；
- *   非工程角色（explore / plan / coder）保持四项核心 + `scope`。
+ *   非工程角色（explore / plan / coder / tester）保持四项核心 + `scope`。
  * 裁撤（2026-09-17 主 agent 裁定——不落代码）：
  *   - F4 修复轮窄带：全量勘察散文 marker 不可机判（误拒风险不可接受）→ 由 F2 的 round 参数承载轮次语义；
  *   - F5 advisor 角色：advisor 不入 spawn 通道（评审走 advisor 工具）——enum 收正为
@@ -26,7 +26,7 @@ const TASK_BOOK_CORE_MIN = {
   reportFormat: "交付表 + 文件路径 + 验证命令与结果。",
 }
 
-/** 非工程角色样例（核心四项 + `scope`）——explore / plan / coder。 */
+/** 非工程角色样例（核心四项 + `scope`）——explore / plan / coder / tester。 */
 export const PLAIN_TASK_BOOK_MIN = { ...TASK_BOOK_CORE_MIN, scope: "只读：相关源 / 设计档；不写任何文件、不碰 bench/。" }
 
 /**
@@ -80,7 +80,7 @@ export function rejectEngFreeTextParams(args, role) {
   if (offending.length === 0) return
   const names = offending
     .map((name) => (name === "designPoints"
-      ? `${name} (designPoints is retired for every role — write §2, or scope for explore/plan/coder)`
+      ? `${name} (designPoints is retired for every role — write §2, or scope for explore/plan/coder/tester)`
       : name))
     .join(" / ")
   const required = ENG_REQUIRED_NAMES[role] ?? "role · batchDoc (readable) · round"
@@ -182,22 +182,18 @@ const PROCESS_BASENAMES = new Set(["changelog.md"])
 const MANIFEST_BASENAME = "project-manifest.json"
 
 /**
- * F6 files 声明面拦截谓词（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：
- * scripts/*（工程工具面不入域——**层级锚定：仅仓根与直接子层**——目录名在深层不携带
- * face 信息（2026-10-14 收正：#1449——`deployment/<x>/scripts/*` 类交付物放行）——内容
- * 产物 only）与过程档（父侧职责）→ 收集全部违规后抛合并错误（fail-closed——错误即工具
- * 结果 JSON——无排队残留）。目录声明不在本谓词（normalizeFileList 循环内先行拒——错误
- * 序不变）。调用点 = normalizeFileList（subagent-scheduler.mjs——本谓词在循环后跑——
- * 目录错误先于过程档错误）。
+ * F6 files 声明面拦截谓词（ENGINEERING-MODE-V2-MODULE-DELEGATION §2.2）：过程档（父侧职责）与项目状态档
+ * → 收集全部违规后抛合并错误（fail-closed——错误即工具结果 JSON——无排队残留）。目录声明不在本谓词
+ * （normalizeFileList 循环内先行拒——错误序不变）。调用点 = normalizeFileList（subagent-scheduler.mjs——
+ * 本谓词在循环后跑——目录错误先于过程档错误）。
+ * 产品面路径（含仓根 `scripts/**` · `test/**`）本就该进 `files` 声明面——工程工具面退役后不再有这一臂。
  */
-export function rejectEngineeringFilePaths(files) {
+export function rejectProcessDocPaths(files) {
   const violations = []
   for (const f of Array.isArray(files) ? files : []) {
     const segs = String(f).replace(/\\/g, "/").split("/").filter((s) => s)
     const base = (segs[segs.length - 1] ?? "").toLowerCase()
-    if (segs.slice(0, 2).some((s) => s.toLowerCase() === "scripts")) {
-      violations.push(`engineering-tools face path ${f} must not be listed in files — scripts/* at the repo root or a direct child package is the engineering-tools face, not a content product (applies to every session, not engineering-mode-scoped; files carries source/test/design-doc paths only)`)
-    } else if (PROCESS_BASENAMES.has(base)) {
+    if (PROCESS_BASENAMES.has(base)) {
       violations.push(`Parent-side maintained file ${f} must not be listed in files — reconciliation is the parent's duty; use the design-doc path if you need to edit a design doc`)
     } else if (base === MANIFEST_BASENAME) {
       violations.push(`Manifest file ${f} must not be listed in files — PROJECT-MANIFEST.json is the project state manifest and the main agent is its only writer (M1 write gate); this files-domain check is the second line of defense`)

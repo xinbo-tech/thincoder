@@ -2,7 +2,7 @@
  * doc-check/index.mjs — 文档纪律机检 · 引擎入口（两条判据 + 报面行）。
  *
  * 判据两条（起步 · 闭集——口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20 条目 S）：
- *   ① 锚（档缺 / 节缺）——实现 = `./anchors.mjs`；② 段判据（文字太长，难于阅读 ∥ 行太长）——口径 = §3.18 条目 Q，实现 = `./paragraph.mjs`。
+ *   ① 锚（档缺 / 节缺 / 引缺）——实现 = `./anchors.mjs`；② 段判据（文字太长，难于阅读 ∥ 行太长）——口径 = §3.18 条目 Q，实现 = `./paragraph.mjs`。
  * 判据参数 = **工具内置常量** `DOC_CHECK_BUILTINS`：不读任何项目的声明面，因而没有「缺参数 ⇒ 拒跑」这一层，
  *   也没有常量校验面——改判据 = 改代码、走评审。
  * 判定范围 = **调用方传入的文件清单**（判定范围 = 解析范围 = 传入的那几档；无目录遍历、无全域兜底）：
@@ -20,6 +20,8 @@ import { relative, resolve } from "node:path"
 import { checkParagraphs, DOC_CLASS } from "./paragraph.mjs"
 import { checkAnchors } from "./anchors.mjs"
 import { collectLineRefs, lineRefsBlock } from "./line-refs.mjs"
+// 跨仓引用一行读数的文案骨架（单源 = 统一解析层；本档只把它摆进报面）。
+import { crossRepoNote } from "../path-resolve.mjs"
 
 /** 判据参数（内置常量 · 冻结）：阈值 300 字符（一段 ∥ 一行同值——§3.18 ④）；两项空列表 = 区带类 / 豁免类默认值且恒空
  *  ——豁免谓词（表行 / 围栏 / 列表项 / 引文）住代码，没有「登记后放过」的写入口（空列表 ≠ 可登记豁免）。 */
@@ -29,6 +31,26 @@ export const DOC_CHECK_BUILTINS = Object.freeze({
   paragraphExemptZones: Object.freeze([]),
   exemptions: Object.freeze([]),
 })
+
+/** 命中类名单源再出口（`./paragraph.mjs` 的 `DOC_CLASS`）：`agent-tools/batch-gate.mjs` 要判「处置块何时出」，
+ *  而它按判据链纪律只 import 本档（引擎 import 只指向 `../doc-check/index.mjs`）⇒ 类名由本档再出口，
+ *  消费面不抄字面类名——抄一次就是「改报面忘改过滤」那类字面漂移（`paragraph.mjs` 头注记着 2026-10-26 实发过一次）。 */
+export { DOC_CLASS }
+
+/** 段命中的处置块（五行 · 逐字单源）：口径单源 = `docs/core/design/DOC-DISCIPLINE.md` §3.20「报面（固定句形 · 交付门 gate）」尾行。
+ *  三处消费面（本档 `gateReport` ∥ `agent-tools/batch-gate.mjs` 的报面组装与拒串 ∥ `scripts/doc-check.mjs` 的段报告段）
+ *  只 import 本数组、零字面复制——同一句话抄三遍，改一处漏两处是必然。
+ *  **为什么住本档**：报面尾行本来就住这里，`batch-gate.mjs` 已 import 本档 ⇒ 字面随报面同源，不新增第三个 import 面。
+ *  **为什么是五行而不是一句命令口吻的单条出路**：被拒的人当场只读得到这一面——旧句只说「你该怎么改」且只给一条出路；
+ *  规则面本有三条，且「过机检」与「是处置」是两件事（切段 ∥ 缩短能过计数，读者拿到的还是同一堵墙）。
+ *  **何时出**：只跟「文字太长，难于阅读」类命中走；仅锚 ∥ 仅行命中 ⇒ 零处置块（叫人对段落动手而问题不在此 = 指错方向）。 */
+export const PARA_DISPOSE = Object.freeze([
+  "处置：上面这些段落，读者一口气读不完——不是字符数超了，是这一段装的事太多。",
+  "出路三条：① 重组结构——无标记的续行逐条添标记、逐条起名，拆成带名的列表项（逐字不改）∥ ② 重写文字——把长句拆成几句短的（意思不变，句子变少）∥ ③ 改写成表格行——内容本是逐条读数 / 映射 / 清单时成立。",
+  "① ∥ ③ 只对能逐条起名的并列断言成立——一条因果链拆成带名条目还是同一条因果链，读者拿到的只有断点；讲因果的长段走 ②。",
+  "折行连机检都过不了——句子中间插换行，读者拿到的还是同一堵墙；切段 ∥ 缩短能过机检，但不是处置——机检绿了不等于读者读得动。",
+  "同轮修正后复跑；不转台账。",
+])
 
 /** 相对路径显示形（正斜杠——跨平台同形）。 */
 const rel = (root, p) => relative(root, p).replace(/\\/g, "/")
@@ -68,6 +90,30 @@ function resolveRange(base, docs) {
 /** 段判据命中行（报面单源——两类命中同形，按 `clazz` 分词）。**不报字符数**：用户 2026-10-26 11:16「不能表述成超长多少个字符，要表述成为文字太长难于阅读」。 */
 const paragraphHitLine = (base, h) => `✗ ${h.clazz} ${rel(base, h.file)}:${h.line}`
 
+/** 跨仓引用读数行（零命中、只入回执——文案骨架单源 = `path-resolve.mjs` 的 `crossRepoNote`）。 */
+const crossRepoLine = (h) => `跨仓引用：${crossRepoNote(h.token, h)}`
+
+/** `档缺` 命中行的追加提示（§2.6：缺的那一段 + 盘上同名——候选只提示，不改判态）。 */
+const missingHint = (base, h) => {
+  const seg = typeof h.missing === "string" && h.missing !== "" ? `缺「${h.missing}」` : ""
+  const same = Array.isArray(h.sameName) && h.sameName.length > 0 ? `盘上同名：${h.sameName.map((p) => rel(base, p)).join(" ∥ ")}` : ""
+  const parts = [seg, same].filter(Boolean)
+  return parts.length > 0 ? `（${parts.join("；")}）` : ""
+}
+
+/** 锚命中的类名词（报面标签——类名由引擎定，本档只配显示形；三属同一条判据、同计「锚 N 条」）。 */
+const ANCHOR_LABELS = { 档缺: "锚·档缺", 节缺: "锚·节缺", 引缺: "锚·引缺" }
+
+/** 锚命中行（报面单源——三命中类同形，按 `clazz` 分词）：`档缺` 追加缺哪一段与盘上同名，
+ *  `节缺` 点名目标档，`引缺` 点名引文前 40 字（读者不必回目标档自己找哪一段不对）。
+ *  两处消费（`gate` 报面 ∥ 报告态报面）只调本函数——各写一份三元式改一处必漏一处。 */
+const anchorHitLine = (base, h) => {
+  const head = `✗ ${ANCHOR_LABELS[h.clazz] ?? `锚·${h.clazz}`} ${rel(base, h.file)}:${h.line} \`${h.token}\``
+  if (h.clazz === "引缺") return `${head}（引文不在该档内：「${String(h.quote ?? "").slice(0, 40)}…」）`
+  if (h.clazz === "节缺") return `${head}（目标 ${rel(base, h.target)} 无 §${h.section}）`
+  return head + missingHint(base, h)
+}
+
 /** gate 报面（固定句形——§3.20「报面（固定句形 · 交付门 gate）」）：首行 verdict = 唯一机判串。 */
 function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs }) {
   const total = anchors.hits.length + paragraphs.length
@@ -94,6 +140,9 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
   ]
   if (skipped.missing.length) out.push(`跳过 ${skipped.missing.length} 档（已不在盘，未检）：${skipped.missing.map((p) => rel(base, p)).join(" ∥ ")}`)
   if (skipped.notMarkdown.length) out.push(`跳过 ${skipped.notMarkdown.length} 档（非 markdown 档，未检）：${skipped.notMarkdown.map((p) => rel(base, p)).join(" ∥ ")}`)
+  // 跨仓引用读数（零命中类——不进 `total`、不改 verdict，只让作者看到「这一处没保证」）；
+  // 位置 = 命中区之前，末行仍留给结论 / 处置块。
+  for (const h of anchors.crossRepo ?? []) out.push(crossRepoLine(h))
   if (checkFiles.length === 0) {
     // 空范围不静默当通过（K6）——照实说明 + 给出补充通道（两侧都不得读成「已检」）。
     // 措辞按「有没有跳过行」分流：无跳过行时不得写「见上方跳过行」。
@@ -108,14 +157,10 @@ function gateReport({ base, docsSource, checkFiles, skipped, anchors, paragraphs
   } else if (total === 0) {
     out.push(`结论：0 段有问题（${checkFiles.length} 档全清）`)
   } else {
-    for (const h of anchors.hits) {
-      out.push(h.clazz === "档缺"
-        ? `✗ 锚·档缺 ${rel(base, h.file)}:${h.line} \`${h.token}\``
-        : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
-    }
+    for (const h of anchors.hits) out.push(anchorHitLine(base, h))
     for (const w of paragraphs) out.push(paragraphHitLine(base, w))
-    // 处置句只跟「段」命中走：仅有行太长时不得叫人对段落重写
-    if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push("处置：上面这些段落，重新组织语言重写；同轮修正后复跑；不转台账")
+    // 处置块只跟「段」命中走：仅有行太长时不得叫人对段落重写；字面单源 = `PARA_DISPOSE`（三处消费面同一份）
+    if (paragraphs.some((h) => h.clazz === DOC_CLASS.para)) out.push(...PARA_DISPOSE)
   }
   return out.join("\n")
 }
@@ -185,12 +230,10 @@ export function runDocCheck(root, { docs, mode = "report", docsSource } = {}) {
     `范围：传入清单 ${checkFiles.length} 档（整档入判 · 判定范围 = 解析范围）`,
     `命中 ${hits.total} 条（锚 ${anchors.hits.length} · ${DOC_CLASS.para} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.para).length} · ${DOC_CLASS.line} ${paragraphs.filter((h) => h.clazz === DOC_CLASS.line).length}）`,
   ]
-  for (const h of anchors.hits) {
-    out.push(h.clazz === "档缺"
-      ? `✗ 锚·档缺 ${rel(base, h.file)}:${h.line} \`${h.token}\``
-      : `✗ 锚·节缺 ${rel(base, h.file)}:${h.line} \`${h.token}\`（目标 ${rel(base, h.target)} 无 §${h.section}）`)
-  }
+  for (const h of anchors.hits) out.push(anchorHitLine(base, h))
   for (const w of paragraphs) out.push(paragraphHitLine(base, w))
+  // 跨仓引用读数（零命中类——只报不拦，位置 = 命中区之后、清单块之前）
+  for (const h of anchors.crossRepo ?? []) out.push(crossRepoLine(h))
   // 清单块位置 = 命中区之后、末行 `结论：…` 之前（报面的末行恒是结论句，清单不抢它的位）。
   out.push(...lineRefsBlock({ base, files: checkFiles, refs: lineRefs }))
   out.push(hits.total ? `结论：${hits.total} 条命中——报告态，不作拒执行的理由` : `结论：0 条命中（锚 ∥ ${DOC_CLASS.para} ∥ ${DOC_CLASS.line} 均清）`)

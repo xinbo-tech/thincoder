@@ -15,11 +15,9 @@ import { manifestFilePath } from "../manifest.mjs"
 import { faceOf } from "./write-face.mjs"
 import { resolve, relative } from "node:path"
 import { anyLiveDesignSlot } from "../token-ttl.mjs"
-// F-LC5（LIGHT-CHANNEL §2.8 · 2026-10-09）：轻通道轮在盘谓词（代码笔通路——两件双在盘 ⇒ 父侧代码笔放行）。
-import { lightRoundOpen } from "./light-round.mjs"
 // M4 写权门禁（模块设计 §2.1#2）：冻结窗口判据组装（被审文件集 = 声明文档集 + 批次档
 // 的合流点）落 write-gate.mjs 单一权威源——本档只 import 消费（KD-M4-4 拆分点）。
-import { freezeWindowConflict, batchRecordWriteConflict, productCodeWriteConflict } from "./write-gate.mjs"
+import { freezeWindowConflict, batchRecordWriteConflict, ledgerBindWriteConflict } from "./write-gate.mjs"
 // 门面谓词 ∕ 记账（2026-09-28 拆分外提——见头注）：动作级四谓词 + logToolError 住 ./dispatch-gates.mjs。
 import {
   logToolError, isSubagentConsumeDesignAction, isSubagentEscalateAction,
@@ -80,30 +78,23 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
       continue
     }
 
-    // Engineering mode PARENT gate: the parent agent must not touch code files
+    // Engineering mode PARENT gate: the parent agent must not touch the product face
     // before the design review passed. Signaled by a live design slot (design-review
     // approval — persists in the session slot, survives across turns; _engDesignReviewed
-    // is eng-coder-only and reset per run). Exemptions = the non-code classes of
-    // thincoder-core/conventions.mjs (documentation and temp scratch files) — writing a design
-    // document IS the design step. Anything inside a declared code segment (default:
-    // src — incl. src/prompts/*.md) is product code, not documentation, and needs a
-    // design token. The project can declare its own code paths (the manifest's
-    // `codePaths`) so a non-src layout is not silently exempted. Mechanically
-    // blocks "talk then code".
-    // F-LC5（LIGHT-CHANNEL §2.8 · 2026-10-09）：轻通道轮在盘 = 机械开路——轮次台账行（在途 · title 携「收尾链
-    // 待跑」· 携指针）与所指轮档（§1 状态行「进行中」）双在盘期间父侧代码笔放行（谓词 fail-closed）。
-    // 查找面 = 会话锚 + 其直接子目录一层（纯向下——工作区锚会话同判）。
+    // is eng-coder-only and reset per run). Exemption = the doc face only (manifest
+    // `docRoot` paths + the project manifest itself); every other path is the product
+    // face and needs a design token — writing a design document IS the design step.
+    // Mechanically blocks "talk then code".
     // F11（#1104 · PORTABILITY §3.9 / D20）：辖域 = 目标所属项目——逐目标沿祖先链取最近带档
     // 目录（`declarationForTarget`——nearest wins ∥ 纯向上 ∥ 发现梯不参与）；出辖（祖先链无档）
     // ⇒ 放行（门只管 manifest 树以内的内容）。相对形先按会话 cwd 解析（cwd 只是相对基，非声明源）；
-    // 在辖目标按所属项目装载声明，项目内判定（code 段 ∥ 兜底 fail-closed ∥ doc·temp·aux·state 豁免）零改。
+    // 在辖目标按两值面判（`write-face.mjs`）——文档面放行 ∥ 其余一切产品面（fail-closed）。
     // DESIGN-TOKEN-SETTLEMENT D3（2026-09-08）：资格判据 = 权威槽"任一活槽存在"
     // （anyLiveDesignSlot——查内存 Map，miss 回读槽文件——单值镜像 `_engDesignToken`
     // 已退役，门禁不再读镜像——AC4）。
     if (agent.config?.agent?.engineering && depth === 0
         && !anyLiveDesignSlot(agent)
-        && FILE_MUTATORS.has(toolCall.name)
-        && !(await lightRoundOpen(agent))) {
+        && FILE_MUTATORS.has(toolCall.name)) {
       const paths = toolTouchPaths(tool, args)
       // Unknown/missing paths (non-string / empty — nothing to judge) block conservatively.
       // Known paths are judged per target: resolve against the session cwd first, then
@@ -117,7 +108,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         const abs = resolve(agent.cwd, p)
         const conv = declarationForTarget(abs)
         if (!conv) continue // 出辖（祖先链无档）⇒ 放行（零改）
-        if (faceOf(abs) !== "product") continue // 面判单源（`write-face.mjs`）——产物目录 / 文档面 / 工具面皆放行
+        if (faceOf(abs) !== "product") continue // 面判单源（`write-face.mjs`）——文档面 / 出辖放行
         blocked = true
         if (!noteConv && !conv.declared) noteConv = conv
       }
@@ -129,8 +120,7 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         prepared.push({
           toolCall, tool, denied: true,
           reason: "engineering design gate",
-          hint: `Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote} ` +
-            `If this is a light-channel code pen: the gate looks for the round from the session anchor and its direct subdirectories — book the round first (an in-flight batch record plus a 在途 ledger row carrying 「收尾链待跑」 pointing at the record); code pens pass once that is on disk.`,
+          hint: `Engineering mode: write the design document first（location per your project's document conventions）, then call advisor with type='design' to review it, and wait for user approval. Implementation is done by eng-coder subagents.${convNote}`,
         })
         continue
       }
@@ -167,14 +157,19 @@ export async function executeToolCalls(agent, toolByName, toolCalls, callbacks, 
         })
         continue
       }
-      // 写锁（第三道 · 2026-10-27 三链统一批 · 设计档 §2.3）：产品代码面 ∧ 无活批档 ⇒ 拒。
-      // 位次 = 既有两道之后（既有拒因先报）；面判先行——放行面不读台账；台账读不到 ⇒ 拒（业务门）。
-      // 只在工程模式生效（`agent.config.agent.engineering`）∥ 只在 depth 0（子代理走既有 token 门）。
-      const noLiveBatch = await productCodeWriteConflict(agent, depth, absPaths)
-      if (noLiveBatch) {
-        prepared.push({ toolCall, tool, denied: true, reason: "no live batch record", hint: noLiveBatch.message })
-        continue
-      }
+    }
+
+    // 写锁（第三道 · 2026-11-03 笔-账绑定批 · 设计档 §2.3）：本笔报的 `ledger:"#N"` 必须是**目标所属项目**
+    // 台账里一条 `status = 在途` 的行。位次 = 既有两道之后（既有拒因先报）；判序 = 先判目标所属项目
+    // （出辖 ⇒ 门不管），再按号查该根台账；台账读不到 ⇒ 拒（业务门）。
+    // 入口集 = 十三把（写盘七件 + `bash` ∥ `execute` + `git` + `manifest` ∥ `memory` + `ssh`）——`bash` ∥ `execute`
+    // 与写盘工具同一判据、不按命令内容分类（决策 36）；`git` 只对写型 action 要号（决策 37）；`ssh` 只对 `get` 要号。
+    // 只在工程模式生效（`agent.config.agent.engineering`）∥ 只在 depth 0（子代理走既有 token 门）。
+    // 路径集与 `args.ledger` 由判据函数自己取（调形只传 tool + toolName + args）。
+    const ledgerConflict = await ledgerBindWriteConflict(agent, depth, tool, toolCall.name, args)
+    if (ledgerConflict) {
+      prepared.push({ toolCall, tool, denied: true, reason: "ledger binding", hint: ledgerConflict.message })
+      continue
     }
 
     // Readonly tools (and autoApprove — the short-circuit, unchanged for the

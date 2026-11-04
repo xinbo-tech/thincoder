@@ -19,6 +19,7 @@ const SLOT_CONTENTS = {
   "persona-explore.md": loadSlot("persona-explore.md"),
   "persona-coder.md": loadSlot("persona-coder.md"),
   "persona-plan.md": loadSlot("persona-plan.md"),
+  "persona-tester.md": loadSlot("persona-tester.md"),
   "common.md": loadSlot("common.md"),
   "discipline-engineering.md": loadSlot("discipline-engineering.md"),
   "discipline-normal.md": loadSlot("discipline-normal.md"),
@@ -46,6 +47,10 @@ export const SCENARIO_SLOT_FILES = {
   explore: ["persona-explore.md", "common.md", "discipline-normal.md", "subagent-base.md"],
   coder: ["persona-coder.md", "common.md", "discipline-normal.md", "subagent-base.md"],
   plan: ["persona-plan.md", "common.md", "discipline-normal.md", "subagent-base.md"],
+  // AGENT-LOOP-SUBAGENT.md §6.59.2 ③：tester 的 scenario 名取自 `agent._role`（setup.mjs 装配面）——
+  // 不登记 = 静默落到 consult 基底（assemblePrompt 未命中即返 CONSULT_BASE、零警告）。
+  // 纪律槽取普通纪律（D-TT6）：工程纪律装的是四步流程与 §2 账，tester 不写账、不推流程。
+  tester: ["persona-tester.md", "common.md", "discipline-normal.md", "subagent-base.md"],
   consult: null, // §3.3 特殊模块——consult-base.md 自含基底，不入主装配链（CONSULT_BASE 直出）
 }
 

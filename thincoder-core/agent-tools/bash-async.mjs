@@ -38,6 +38,8 @@ import { cleanupOldToolResults, escapeXml } from "../agent/helpers.mjs"
 import { pushReal } from "../context.mjs"
 import { makeDecoder, sanitizeOutput } from "../tools/shared.mjs"
 import { killProcessTree } from "../tools/process-tree.mjs"
+// 过程档标记（TOOLS.md §6.28）：后台径的结算摘要也是输出行——解析基准 = entry 记下的 spawn 局部 `cwd`。
+import { markProcessDocLines } from "../tools/process-doc-mark.mjs"
 import { buildBashEnv } from "../tools/bash.mjs"
 import {
   bindChildController, buildChildSignal, carrierField, getAsyncPool, parkAsyncPending,
@@ -132,6 +134,8 @@ export async function launchBgTask(parent, ctx, { command, timeout = null, shell
   })
   const entry = {
     id, role: "bg", command, child, logPath,
+    // 解析基准 = 传给 spawn 的那个局部值（`ctx.cwd` 缺省时它跟着 undefined，另取就错位）
+    cwd,
     status: "running", done: false, cancelled: false, discarded: false,
     startedAt: Date.now(), endedAt: null, exit: null, killed: null, error: null,
     report: null, tail: "", tailDropped: false, bytes: 0,
@@ -211,7 +215,7 @@ function finalizeBgEntry(parent, entry, { code = null, signal = null, background
   wakeAsyncWaiters(parent)
 }
 
-/** 注入面尾截（双帽 + 截尾判据：行帽/字符帽/环形缓冲丢头三径合一）。 */
+/** 注入面尾截（双帽 + 截尾判据：行帽/字符帽/环形缓冲丢头三径合一），截帽完成后接过程档打标。 */
 function renderTail(entry) {
   let text = String(entry.tail ?? "")
   let truncated = entry.tailDropped === true
@@ -224,6 +228,8 @@ function renderTail(entry) {
     text = text.slice(-DIGEST_TAIL_MAX_CHARS)
     truncated = true
   }
+  // §6.28：两个消费点（`finalizeBgEntry` 的 `entry.report` ∥ `injectBgResult` 拼 body）同得标好的文本
+  text = markProcessDocLines(text, entry.cwd)
   return { text, truncated }
 }
 

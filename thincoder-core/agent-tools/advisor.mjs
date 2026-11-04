@@ -225,12 +225,14 @@ export const advisorTool = {
       const { invalid } = resolveReviewDocPaths(documents, agent.cwd)
       if (invalid.length > 0) {
         if (ctx._toolCallId !== undefined) (agent._advisorRefusals ??= new Set()).add(ctx._toolCallId)
-        // 拒发文案：既有稳定前缀逐字（行首）+ 逐文档「输入 → 解析后绝对路径 ∥ 拒因」+ 锚态（仅无项目根）+ 期望形两句。
-        const lines = invalid.map((v) => `- ${v.doc} → ${v.resolved ?? "(no base)"} ∥ reason=${v.reason}`)
-        if (invalid.some((v) => v.reason === "no-project-root")) {
+        // 拒发文案：既有稳定前缀逐字（行首）+ 逐文档「输入 → 解析后绝对路径 ∥ 拒因」+ 锚态（仅无唯一基根）+ 候选全列 + 期望形两句。
+        const lines = invalid.map((v) => `- ${v.doc} → ${v.resolved ?? "(no base)"} ∥ reason=${v.reason}${Array.isArray(v.sameName) && v.sameName.length > 0 ? `（盘上同名：${v.sameName.join(" ∥ ")}）` : ""}`)
+        if (invalid.some((v) => v.reason === "ambiguous-path" || v.reason === "dangling-path")) {
           const view = projectRootView(agent.cwd)
           const where = view.state === "workspace" ? `workspace (${view.candidates.join(", ")})` : "none (no PROJECT-MANIFEST.json here or above)"
-          lines.push(`Session anchor is ${where} — no project root, so a relative path has no base to resolve against.`)
+          lines.push(`Session anchor is ${where} — no single project root, so a relative path has no base to resolve against.`)
+          const cands = [...new Set(invalid.flatMap((v) => v.candidates ?? []))]
+          if (cands.length > 0) lines.push(`Candidates: ${cands.join(" ∥ ")} — pass one explicitly (an absolute path is the surest form).`)
         }
         lines.push("Expected form 1 — project-root-relative: docs/core/design/ADVISOR-GUARDS.md (resolved against the session project root).", "Expected form 2 — absolute: D:\\repo\\docs\\core\\design\\ADVISOR-GUARDS.md (used as-is).")
         return withIdentityLine(

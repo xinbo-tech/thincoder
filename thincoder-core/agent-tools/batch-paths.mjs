@@ -18,6 +18,8 @@ import { existsSync, statSync } from "node:fs"
 import { isAbsolute, parse, relative, resolve, sep } from "node:path"
 
 import { docRootBase, docRootPaths, owningProject, projectRootView, readManifest, resolveProjectRoot } from "../manifest.mjs"
+// 候选序单源 = 统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.2）；本档只留本面参数与落位判据。
+import { danglingSameNameHint, resolvePathTarget } from "../path-resolve.mjs"
 
 /** 可读文件判据（存在且为文件——目录 / 缺失同判不可读）。 */
 function readableFile(abs) {
@@ -103,43 +105,43 @@ const anchoredEscapeError = (raw) => new Error(`batch: create path is anchored a
 const workspaceCreateError = (raw, candidates) => new Error(`batch: create target "${raw}" belongs to no project — the session anchor holds ${candidates.length} project(s) below it: ${candidates.join(", ")}. Pass an explicit path under a project (e.g. "${candidates[0]}/docs/batches/<file>.md").`)
 const ambiguousLandingError = (raw, landings) => new Error(`batch: create path resolves under more than one declared batch-record base — refusing to pick one (fail-closed); pass an explicit path (absolute preferred). Path: ${raw}. Candidates: ${landings.join(", ")}`)
 
-/** 工作区锚读面候选分支（条 5）：逐候选项目——项目根形（`resolve(candidate, p)`）∥ 声明基底形
- *  （候选按名排序、并集保序——「首个可读」在此即为确定判读）。 */
-function workspaceReadLegs(cwd, p) {
-  const ws = workspaceCandidates(cwd)
-  if (!ws) return []
-  const out = []
-  for (const c of ws) {
-    out.push(resolve(c, p))
-    for (const b of declaredBases(c)) out.push(resolve(b, p))
+/**
+ * **读面**解析的四态本体（候选序 + 判态全部经统一解析层——本面只声明自己的参数：
+ * `order:"near-first"`（近基根 = cwd / 会话锚 先）+ `kind:"file"` + `crossRepo:"dangling"`，
+ * `bases` = `docRoot.batches` 声明面（读面无 manifest ⇒ 无这一级））。锚定串只解析项目根形
+ * （不二次拼接——§4.15 判据，见 `resolveBatchReadPath`）。
+ * 导出面供 spawn 门拼「追加同名候选」（§2.6：既有文案逐字在前，新信息追加在后）。
+ * @returns {object} 统一解析层的四态结果（`docs/core/design/PATH-RESOLUTION.md` §2.1）
+ */
+export function resolveBatchReadResult(cwd, given) {
+  const base = cwd
+  const raw = typeof given === "string" ? given.trim() : ""
+  if (!raw) return { state: "dangling", missing: String(given ?? ""), sameName: [], level: "path", tried: [] }
+  const p = raw.replace(/\\/g, "/")
+  if (anchoredPrefix(p, basePrefixes(base, batchDocBases(base)))) {
+    // 锚定形：只解析项目根形（已含基底相对前缀者不再二次拼接）
+    const root = batchProjectRoot(base)
+    return resolvePathTarget(root, p, { kind: "file", order: "root-first", bases: [root] })
   }
-  return out
+  return resolvePathTarget(base, raw, { kind: "file", order: "near-first", bases: declaredBases(base) })
 }
 
 /**
- * **读面**解析（append / status / close 与评审门 / spawn 门共用）：首个**可读**候选胜；无 ⇒ null
- * （调用方各自抛既有文案）。锚定串只解析项目根形（跳过 ①③——已含基底相对前缀者不再二次拼接）。
+ * **读面**解析（append / status / close 与评审门 / spawn 门共用）：解析出唯一落点且可读 ⇒ 该绝对路径；
+ * 其余（无果 / 判不出唯一）⇒ null（调用方各自抛既有文案）。
  * @param {string} cwd 会话锚
  * @param {string} given 参数原值（相对 / 绝对、`\` 与 `/` 混写均可）
  * @returns {string|null} 可读文件的绝对路径 / null
  */
 export function resolveBatchReadPath(cwd, given) {
-  const base = cwd
-  const raw = typeof given === "string" ? given.trim() : ""
-  if (!raw) return null
-  const p = raw.replace(/\\/g, "/")
-  if (anchoredPrefix(p, basePrefixes(base, batchDocBases(base)))) {
-    const abs = resolve(batchProjectRoot(base), p)
-    return readableFile(abs) ? abs : null
-  }
-  const candidates = [resolve(base, p), resolve(batchProjectRoot(base), p), ...declaredBases(base).map((b) => resolve(b, p)), ...workspaceReadLegs(base, p)]
-  for (const abs of candidates) if (readableFile(abs)) return abs
-  return null
+  const r = resolveBatchReadResult(cwd, given)
+  return r.state === "resolved" && readableFile(r.abs) ? r.abs : null
 }
 
 /**
  * 批次档路径门禁（评审侧 `BATCH-RECORD.md` §4.2 口径 = **「若传则须可读」**）：空 / 非字符串 / 不可读 → throw。
- * 非空且可读 → 返回绝对路径（`\` 归一——照 `files` / `batchDoc` spawn 门先例）。错误文案逐字零变（零回归硬约束）。
+ * 非空且可读 → 返回绝对路径（`\` 归一——照 `files` / `batchDoc` spawn 门先例）。既有文案逐字在前，
+ * 层的同名候选 / 候选全列**追加在后**（§2.6：新信息只追加）。
  */
 export function resolveBatchDocPath(cwd, given) {
   const base = cwd
@@ -147,9 +149,12 @@ export function resolveBatchDocPath(cwd, given) {
   if (!raw) {
     throw new Error("batchDoc must be a non-empty path to the batch record — pass the batch record currently in flight, or omit the parameter entirely when no batch record is in flight.")
   }
-  const abs = resolveBatchReadPath(base, raw)
-  if (abs) return abs
-  throw new Error(`batchDoc is not a readable file: ${raw} — pass the path of the batch record currently in flight (a path that resolves to an existing file), or omit the parameter when no batch record is in flight.`)
+  const r = resolveBatchReadResult(base, raw)
+  if (r.state === "resolved" && readableFile(r.abs)) return r.abs
+  const hint = r.state === "dangling"
+    ? (danglingSameNameHint(r) ? ` ${danglingSameNameHint(r)}` : "")
+    : r.state === "ambiguous" ? ` Candidates: ${r.candidates.join(" ∥ ")}` : ""
+  throw new Error(`batchDoc is not a readable file: ${raw} — pass the path of the batch record currently in flight (a path that resolves to an existing file), or omit the parameter when no batch record is in flight.${hint ? `；${hint.trim()}` : ""}`)
 }
 
 /**
@@ -183,8 +188,10 @@ export function resolveBatchCreatePath(cwd, given, bases) {
     if (!insideBases(abs, roots)) throw anchoredEscapeError(raw)
     return abs
   }
-  for (const abs of [resolve(base, p), resolve(batchProjectRoot(base), p)]) {
-    if (insideBases(abs, roots)) return abs
+  // 候选序由统一解析层给（① 近基根 cwd/会话锚 → ② 项目根）；落位判据（落基底内）在原地判
+  for (const anchor of [base, batchProjectRoot(base)]) {
+    const r = resolvePathTarget(anchor, p, { kind: "none", order: "near-first", bases: roots })
+    if (r.state === "resolved" && insideBases(r.abs, roots)) return r.abs
   }
   // ③ 基底自有项目根形（#942 条 6）：owningProject 可判者逐基底取值；distinct 落点 ≥2 ⇒ 拒
   const owned = []
@@ -199,10 +206,8 @@ export function resolveBatchCreatePath(cwd, given, bases) {
   // ④ 基底相对形收窄单段（归一后无 `/` 才走原基底分支——多段串不二次拼接）
   const leafRel = roots.length ? relative(roots[0], resolve(roots[0], p)) : ""
   if (leafRel && !leafRel.startsWith("..") && !leafRel.includes(sep)) {
-    for (const b of roots) {
-      const abs = resolve(b, p)
-      if (insideBases(abs, roots)) return abs
-    }
+    const r = resolvePathTarget(roots[0], p, { kind: "none", order: "near-first", bases: roots })
+    if (r.state === "resolved" && insideBases(r.abs, roots)) return r.abs
   }
   throw outsideBasesError(raw)
 }

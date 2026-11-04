@@ -4,11 +4,11 @@
  * W14（2026-09-15 · S2 · `docs/batches/2026-09-15-vsc-core-wiring.md` §2 W14）：端侧
  * 自持工具实现面退场——12 同路径镜像档 + 7 M 档删除，工具实现经 `@thincoder/core/tools/*`
  * 单源引用（核内零改动）；本档保留 = VSC 登记表（宿主工具 `ide/focus/shell/code` +
- * 自持 `builtinTools` 清单）+ **两处端壳增量**（同一份登记面，不另立档）：
- *   ① `gitTool` 动作级只读分类装饰（`isReadonlyAction`——核动作级分类消费 =
- *      `isSubagentEscalateAction` 谓词 + `dispatch.mjs` 两门禁位（权限短路 ∕ planMode）；核 git 工具无此概念）；
- *   ② LSP 宿主语言服务桥（`configureLspHost` 供值：VS Code 语言服务直用，零自起进程——
+ * 自持 `builtinTools` 清单）+ **一处端壳增量**（同一份登记面，不另立档）：
+ *   ① LSP 宿主语言服务桥（`configureLspHost` 供值：VS Code 语言服务直用，零自起进程——
  *      原 `src/tools/lsp.mjs` 端实现随删旧迁入本档）。
+ * `gitTool` 的动作级只读分类端覆写已退场（2026-11-03 笔-账绑定批 · 决策 37）：名单落核
+ * `thincoder-core/tools/git.mjs` 的 `isReadonlyAction`（单源），端侧不再持第二份拷贝。
  */
 import * as vscode from "vscode"
 import { existsSync } from "node:fs"
@@ -40,27 +40,13 @@ import { focusTool } from "./focus.mjs"
 import { peerInstancesTool } from "../extension/peer-instances.mjs" // R10 L2（MULTI-INSTANCE-COLLAB D-L2b）只读工具
 
 /**
- * git 工具 + 端只读分类装饰（迁自删除档 `src/tools/git.mjs`，逐字同语义）。
- * 核动作级分类消费（`isSubagentEscalateAction` 谓词 + `dispatch.mjs` 两门禁位：权限短路 ∕
- * planMode 门）按 `tool.isReadonlyAction(args)` 判动作级只读——核 git 工具无该钩子（核内零端名/零端概念），
- * 故端侧以装饰面承载：只读动作免审批免拦，写动作（commit/push/rm/reset…）照常询问。
+ * git 工具登记行（2026-11-03 笔-账绑定批 · 决策 37：**端覆写已删**）。
+ * 改前本档持有一份 `isReadonlyAction` 装饰（六项平铺 + 六条子动作分支）；核 `thincoder-core/tools/git.mjs`
+ * 补上同形钩子后，端覆写就是同一份名单的第二份拷贝，而 `tool?.isReadonlyAction?.(args) ?? …` 的优先级
+ * 让端覆写吃掉核答案 ⇒ 两份必然漂移。删后 CLI ∥ desktop ∥ vscode 三面同答案，单源 = 核钩子。
+ * 仍保留 `...coreGitTool` 展开（登记行留在端装配面，便于宿主侧后续加装饰面）。
  */
-export const gitTool = {
-  ...coreGitTool,
-  isReadonlyAction(args) {
-    if (!args || typeof args.action !== "string") return false
-    if (["diff", "status", "log", "show", "ls-remote", "blame"].includes(args.action)) return true
-    // checkpoint list 有 F6 清理副作用（lazyClearIfCommitted 可能删除整个 checkpoint 目录），
-    // 但清的是 commit 后已失去意义的过期快照——保留只读分类免审批（CHECKPOINT.md F6/D3 设计意图）
-    if (args.action === "checkpoint") return ["list", "cat"].includes(args.checkpointAction)
-    if (args.action === "tag") return args.tagAction === "list"
-    if (args.action === "branch") return args.branchAction === "list"
-    if (args.action === "stash") return args.stashAction === "list"
-    if (args.action === "remote") return args.remoteAction === "list"
-    if (args.action === "worktree") return args.worktreeAction === "list"
-    return false // add/rm/commit/push/fetch/pull/reset/revert/merge/cherry-pick/checkout/restore + tag/branch/stash 写操作
-  },
-}
+export const gitTool = { ...coreGitTool }
 
 // ── LSP 宿主语言服务桥（#66 缝供值；迁自删除档 `src/tools/lsp.mjs`）──────
 // 端差异（TOOLS.md §6.11）：语言服务直用 VS Code 原生实现——`executeDefinitionProvider` 等

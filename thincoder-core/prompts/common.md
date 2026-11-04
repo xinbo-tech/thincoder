@@ -29,6 +29,15 @@ Once the user has stated one, it is a fact like any other — asking again spend
 A pointer alone leaves "I checked it" and "I remember it" reading the same.
 Where the check found nothing relevant, write "checked, nothing relevant" and name the surface you checked — a query that missed and a surface with nothing on it otherwise read the same.
 **The checked-evidence line and the survey-evidence line share one shape** — both record "what was checked"; the setting differs: one in a question, one in a doc.
+**A claimed basis is written with its quotation** — `依据 <repo path>「<the exact words from that file>」`; the quotation must
+exist character for character in the file named, or the line is not evidence at all. A paraphrase, an abbreviation and a line recalled
+from memory read the same from outside — the quotation is what makes the claim checkable, and it is what a machine check reads.
+The keyword and the quotes keep that literal Chinese form even inside an English text (the check reads them verbatim). Example
+(the fence keeps the sample out of the check — a teaching line is not a claim):
+
+```text
+依据 docs/<area>/<file>.md「<the exact words from that file>」
+```
 
 ## Check the docs before you act
 **Before you act, look at how this thing already works**: the interfaces, the conventions, the decisions made earlier. The user's words say what is wanted; the docs and the code say how it currently works.

@@ -11,10 +11,13 @@
 
 import { exec } from "node:child_process"
 import * as vscode from "vscode"
-import { DESC, BASH_TIMEOUT_MS, makeDecoder, sanitizeOutput, truncate } from "@thincoder/core/tools/shared.mjs"
+import { DESC, BASH_TIMEOUT_MS, LEDGER_PARAM_DESC, PROJECT_PARAM_DESC, makeDecoder, sanitizeOutput, truncate } from "@thincoder/core/tools/shared.mjs"
 // 树杀单源（台账 #208② · TOOLS.md §6.14 落位表行 2）：本地副本删除——改用核单源
 // `process-tree.mjs`（静态闭包仅 `node:child_process`——engine-floor 守卫契约②零影响）。
 import { killProcessTree } from "@thincoder/core/tools/process-tree.mjs"
+// 过程档标记（TOOLS.md §6.28）：端侧 `bash` 是独立实现（≠ 核 `bashTool`）——两处输出出口各接一次，
+// 同一 helper ∥ 同一文案（否则换个端就绕过本节的目的）。
+import { markProcessDocLines } from "@thincoder/core/tools/process-doc-mark.mjs"
 import { MAX_STREAM_BUF } from "./shared.mjs" // W14 拆壳薄壳（端壳常量——核内无此值）
 
 // ─── Terminal modes (A: visible / B: inject) ─────────────────
@@ -170,6 +173,10 @@ export const bashTool = {
       timeout: { type: "number", description: "Timeout in ms" },
       filter: { type: "string", description: "Optional — only return output lines matching this regex (case-insensitive)" },
       terminal: { type: "string", enum: ["visible", "inject"], description: "Run in / inject into the user's terminal" },
+      // 写门参数（决策 36：`bash` 不按命令内容分类，端面同判）。描述文本单源 = 核 `tools/shared.mjs`。
+      ledger: { type: "string", description: LEDGER_PARAM_DESC },
+      // 项目声明面（决策 40）：端 `bash` 无定位参数 ⇒ 判据点只能靠声明；纯声明，命令仍在会话 cwd 执行。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["command"],
   },
@@ -192,7 +199,8 @@ export const bashTool = {
       const out = await runInVisibleTerminal(command, timeout, ctx)
       if (out != null) {
         const final = filter ? applyLineFilter(out, filter) : out
-        return guard ? `${guard.notice}\n\n${final}` : final
+        const marked = markProcessDocLines(final, ctx.cwd) // §6.28 visible 出口
+        return guard ? `${guard.notice}\n\n${marked}` : marked
       }
       // null = shell integration unavailable → fall through to child process
     }
@@ -206,7 +214,8 @@ export const bashTool = {
         // it) — NOT the side tool panel (that duplication read as an intrusive
         // overlay; reported as jarring).
         const final = filter ? applyLineFilter(out, filter) : out
-        resolve(guard ? `${guard.notice}\n\n${final}` : final)
+        const marked = markProcessDocLines(final, ctx.cwd) // §6.28 子进程出口
+        resolve(guard ? `${guard.notice}\n\n${marked}` : marked)
       }
       // Shell override from config (CLI parity). Windows + default cmd: force UTF-8
       // code page for this child — cmd emits GBK bytes otherwise, which the UTF-8

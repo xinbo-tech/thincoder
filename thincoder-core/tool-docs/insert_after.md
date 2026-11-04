@@ -13,3 +13,5 @@ Notes:
 - Returns a diff of the change.
 - **Read-before-insert guard**: `after_line` is judged against the last write to that file — a line at or above that write's write point is allowed; inside or below it, or when the file was written after it without updating that anchor, the call is refused with the path, the drift and two ways on (re-read, or address the region without line numbers).
 - use the most recent read of the file as the source of old_string / line numbers / hashes — re-read after the file changed
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.

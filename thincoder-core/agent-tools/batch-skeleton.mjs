@@ -363,15 +363,19 @@ export function statusPassPlan(src, seg, body, date) {
 }
 
 /**
- * 「不适用」声明行形态单源（§4.18-A——**一行一档**）：`> 不适用：§N —— <理由>`，§N ∈ {2,3,4}、
- * 理由非空（`\S.*` = 至少一个非空白字符起头）。识别域 = §1 段体内（声明住 §1——D-BR30：工程模式
- * 主 agent 的 append 域 = §1/§4/§6，写不进 §2/§3，而声明恰发生在 designer / 评审本轮不跑时 ⇒
- * 段内声明形在需要的场合不可写）。声明 = 链门（`sectionContentState`）的合法满足面。
+ * 「不适用」声明行形态（**声明机制已退役**——2026-11-02 用户裁定封掉这条口子）：形 = `> 不适用：§N —— <理由>`，
+ * 理由非空（`\S.*` = 至少一个非空白字符起头）；识别域 = §1 段体。退役后本正则只服务**痕迹检测**
+ * （`malformedInapplicableLine`）：`§1` 里还写着声明行的人当场被拒并读到「这条路没有了」，而不是静默当作没写。
+ * 删掉它，残留的声明行就成了一句无人过问的散文——写它的人不会知道自己抄的是一条已停用的路。
  */
 const INAPPLICABLE_RE = /^>\s*不适用[：:]\s*§(\d+)\s*——\s*(\S.*)$/
-/** 可声明的段号集（§5 段号豁免——免声明；§6 不可声明——收口段必须带验证内容）。 */
-export const INAPPLICABLE_SEGMENTS = [2, 3, 4]
-/** §1 声明行的识别前缀（形不合扫描的宽网——行首命中它而完整形不合 ⇒ 拒，不静默当作无声明）。 */
+/** 可声明的段号集 = **空集**（声明机制退役）：任何段都不得声明不适用——§2 设计 / §3 评审 / §4 批准 /
+ *  §6 验证各段一律要有内容，§5 段号豁免不参与链门。清空这一个常量即达成判据：窄网（`INAPPLICABLE_RE`）
+ *  与宽网（`INAPPLICABLE_PREFIX_RE`）之下，凡 `§1` 出现声明行都是非法行；段内容判据只剩「有内容 / 没内容」
+ *  两态。旧的可读面函数与 `not-applicable` 分支已随本批删除——不另立「恒 false 的插座」，插座留着就会被
+ *  重新接上。 */
+export const INAPPLICABLE_SEGMENTS = []
+/** §1 声明行的识别前缀（痕迹扫描的宽网——行首命中它即违规，不再区分形合规与否）。 */
 const INAPPLICABLE_PREFIX_RE = /^>\s*不适用/
 
 /** §N 段体行集（段头缺失 ⇒ null——create 是骨架唯一权威入口；行切分 = /\r?\n/——EOL 形态无关）。 */
@@ -397,41 +401,22 @@ function sectionHeaderZoneLines(src, seg) {
 /**
  * 段内容判据**单源**（§4.18-A closeout chain gate 的判空口径；D-BR30 判据单源——**不许两套**；
  * §4.13 的 §6 旧判据 `sectionSixHasContent` 改由本谓词承担——§6 为唯一缺段时拒串仍取旧函数）。
- * 返回三态：`content`（段体至少一行非排除类）∥ `not-applicable`（§1 声明该段不适用且理由非空——
- * 仅 §2/§3/§4）∥ `empty`。排除类（判空依据——「标题在、正文零行」判空）：空行 ∥ 标题行
- * （`^#{1,6}\s`）∥ `**状态行**：` 行 ∥ `<§N 模板占位：…>` 行 ∥ 「不适用」声明行。
+ * 返回**两态**：`content`（段体至少一行非排除类）∥ `empty`。旧第三态 `not-applicable` 随声明机制退役
+ * （2026-11-02：任何段都不得声明不适用 ⇒ 这条事实没有第二个满足面，判据只剩「有内容 / 没内容」）。
+ * 排除类（判空依据——「标题在、正文零行」判空）：空行 ∥ 标题行（`^#{1,6}\s`）∥ `**状态行**：` 行 ∥
+ * `<§N 模板占位：…>` 行 ∥ 「不适用」声明行（判空口径零改——那类行是停用机制的痕迹，本来就不算内容）。
  * 口径收正注：旧 `sectionSixHasContent` 对「只有子标题（`### …`）」判非空；本谓词按 §4.18-A 判空
  * （子标题属排除类标题行）——设计档 §4.18-A 明文收窄。
  * @param {string} src — 档全文
  * @param {number|string} seg — 段号（§1–§6；§1 恒 `content`——主 agent 自述段不设前置）
- * @returns {"content"|"not-applicable"|"empty"} 段内容三态
+ * @returns {"content"|"empty"} 段内容两态
  */
 export function sectionContentState(src, seg) {
   const n = Number(seg)
   if (n === 1) return "content"
   const lines = sectionBodyLines(src, n)
   if (lines === null) return "empty" // 段头缺失 = 空（骨架由 create 一次预写；缺失即无内容）
-  if (lines.some((l) => NONEMPTY_RE.test(l) && !EXCLUDED_LINE_RE.test(l))) return "content"
-  if (sectionInapplicable(src, n)) return "not-applicable"
-  return "empty"
-}
-
-/**
- * §N 是否由 `§1` 声明**不适用**（`> 不适用：§N —— <理由>`；可声明段 = §2/§3/§4，§5 豁免、§6 不可声明）。
- * 与 `sectionContentState` 共用同一条声明判据（本函数是它的可读面——收口门 / §5 段序门两处都判
- * 「§1 声明 §3 不适用 ⇒ 放行」）。声明形不合由 `malformedInapplicableLine` 先拒，本函数只认合法形。
- * @param {string} src — 档全文
- * @param {number|string} seg — 段号
- * @returns {boolean}
- */
-export function sectionInapplicable(src, seg) {
-  const n = Number(seg)
-  if (!INAPPLICABLE_SEGMENTS.includes(n)) return false
-  for (const l of sectionBodyLines(src, 1) ?? []) {
-    const m = INAPPLICABLE_RE.exec(l)
-    if (m && Number(m[1]) === n) return true
-  }
-  return false
+  return lines.some((l) => NONEMPTY_RE.test(l) && !EXCLUDED_LINE_RE.test(l)) ? "content" : "empty"
 }
 
 /** 非空白行谓词（空行排除）。 */
@@ -441,24 +426,24 @@ const NONEMPTY_RE = /\S/
 const EXCLUDED_LINE_RE = /^#{1,6}\s|^\s*\*\*状态行\*\*[：:]|^<§\d+ 模板占位[：:]|^>\s*不适用/
 
 /**
- * 声明形不合拒绝句（§4.18-A J3——形不合 ⇒ 拒，**不静默当作无声明**）：行首命中
- * `^>\s*不适用` 却不满足完整形（缺 `——` ∥ 缺理由 ∥ § 号 ∉ {2,3,4}）。
- * 逐字文本 = `TOOLS.md` §6.24 J3。
+ * 声明行拒绝句（§4.18-A J3——**声明机制已退役**：`§1` 段体出现任何 `> 不适用` 行 ⇒ 拒）：
+ * 拒文说清三件——声明这条路没有了 ∥ 每段各自要有内容（§5 豁免）∥ 点名违规行。
+ * 措辞不再给「合法声明形」——给形 = 给一条可照抄的路，而本批封的正是这条路。
  * @param {string} line — 违规行原文
  * @returns {string} 完整拒绝句（调用方 throw new Error(...)）
  */
 export function inapplicableDeclarationError(line) {
-  return "batch: 「不适用」声明形不合（malformed inapplicability declaration）— one line per section: " +
-    "`> 不适用：§N —— <reason>` with a non-empty reason, §N ∈ {2,3,4} (§5 needs no declaration; §6 is never declarable). " +
+  return "batch: `不适用` 声明已停用（inapplicability declaration retired）— no declaration is accepted: " +
+    "§2 / §3 / §4 / §6 must each carry content (§5 exempt). " +
     `Offending line: ${line}. Nothing was written.`
 }
 
 /**
- * §1 声明行机械扫描（链门前置判据——形不合 ⇒ 拒，不静默）：识别域 = §1 段体。行首命中
- * `^>\s*不适用` 而完整形不合（INAPPLICABLE_RE 不中 ∥ § 号 ∉ {2,3,4}）⇒ 返回违规行原文；
- * § 号 ∈ {2,3,4} 且理由非空 ⇒ 合法。无违规 ⇒ null。
+ * §1 声明行机械扫描（链门前置判据——**出现即拒**，不静默）：识别域 = §1 段体。
+ * 段号集 `INAPPLICABLE_SEGMENTS` 已清空 ⇒ `includes` 恒 false ⇒ 行首命中 `^>\s*不适用` 的每一行
+ * （形合规与否一律）都是违规行，返回首个。本函数现在是**停用机制的痕迹检测器**，不是合法形校验器。
  * @param {string} src — 档全文
- * @returns {string|null} 首个形不合声明行原文 / null
+ * @returns {string|null} 首个声明行原文 / null
  */
 export function malformedInapplicableLine(src) {
   for (const l of sectionBodyLines(src, 1) ?? []) {
@@ -489,7 +474,7 @@ export function sectionHasStatusLine(src, seg) {
 
 /**
  * create 骨架模板（BATCH-RECORD.md §4.10 行为规格的**代码单源**——红线：模板只覆盖骨架与占位，不模板化内容）：
- * `## §1–§6` 段头（含职责署名）+ 档头 boilerplate（**两句形**：六段一段一作者句 + 两种处置句（§4.10「档头两句」），加编制行 + 台账/前情指针行）+ §1 段内
+ * `## §1–§6` 段头（含职责署名）+ 档头 boilerplate（**两句形**：六段一段一作者句 + 每段只有一个作者句（作者对本段可 `append` 加内容 ∥ 可 `edit` 就地改，§4.10「档头两句」/ §4.19），加编制行 + 台账/前情指针行）+ §1 段内
  * **占位状态行**（含 gate 合法关键字「进行中」——建档即过 gate；整行不含「已收口」——gate 已收口优先，占位
  * 行不得携带冻结词）+ 各段模板子标题占位。已知实参替换：date / topic / **source** / prev（§4.11 参数面 +
  * F11-B——source 必填、prev 入值过幂等剥前缀，归一化在 lifecycle 面）；`ledger` = **必填**（2026-10-27 起建档
@@ -505,7 +490,7 @@ export function batchSkeleton({ date, topic, source, prev, ledger = null, board 
   return [
     `# ${date} · ${topic}`,
     `> 六段，一段一作者：§1 讨论（主 agent）· §2 批次任务与设计（${designerSeat}）· §3 设计评审（评审子代理）· §4 用户批准（主 agent）· §5 实施记录（${implementerSeat}）· §6 验证与收口（父代理）。`,
-    `> §2 = 现在要做什么 —— 本条可就地改（\`edit\`，§4.19）；§1 / §3 / §5 / §6 = 当时说了什么 —— 只追加，不回改。`,
+    `> 每段只有一个作者：作者的段可 \`append\` 加内容、可就地改（\`edit\`，§4.19）；非作者一概拒。`,
     `> 编制：主 agent · ${date} · 来源 = ${source}。`,
     `> 台账 = ${ledger ?? "#<编号>"}（${board ?? (ledger ? "—" : "<板块>")} · 归批）。前情 = ${prev}。`,
     "## §1 讨论（主 agent）",

@@ -121,7 +121,9 @@ export function buildSyncStoppedReport(role, capturedOutput, designId) {
  *   (suitable for codebase exploration); "coder" — full tool set, self-contained
  *   implementation tasks; "plan" — read-only planning; "eng-coder" —
  *   engineering-mode implementation (design-token gated); "eng-designer" —
- *   engineering-mode design writing (requirements + design docs, batchDoc gated).
+ *   engineering-mode design writing (requirements + design docs, batchDoc gated);
+ *   "tester" — verification runs and readings (read-only set ∪ execute/bash; no write tool in the table —
+ *   run-only is the role contract, not a sandbox).
  * - no role specified — invalid by design since the 2026-08-25 fail-closed gate
  *   (role is mandatory; "no role → same tool set as parent" was removed with the
  *   coder-leak fix and the header text above predates it)
@@ -139,9 +141,9 @@ export const subagentTool = {
       action: { type: "string", enum: ["spawn", "status", "escalate", "cancel", "panel", "consume-design", "observe", "send", "design-slots"], description: "Which action — spawn (default) / status / observe / send / escalate / cancel / panel / consume-design / design-slots; semantics per action in the tool description." },
       view: { type: "boolean", description: "action:'panel' only: true (default) = the live panel blocks as the user sees them; false without freeze = error. Mutually exclusive with freeze (freeze wins)." },
       freeze: { type: "string", description: "action:'panel' only: block key of a digested-stuck block — reclaims it into the conversation; refused for running/done/unknown blocks or a still-pending report; works on the CLI TUI panel and on the desktop renderer panel (live readback of the blocks as the user sees them)." },
-      task: { type: "string", description: "For action:'spawn': normal-mode roles (explore/plan/coder) — OPTIONAL free-text supplement; the brief itself is the four core parameters (goal / knownFacts / acceptance / reportFormat) + scope. Engineering roles (eng-coder / eng-designer) take NO task-book text parameters — their task book is batch record §2 (batchDoc), read by the child itself. For action:'escalate': the brief (goal, constraints, entry files, acceptance criteria)." },
-      context: { type: "string", description: "Optional background for normal-mode spawns (explore/plan/coder) only; action:'spawn' only." },
-      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder", "eng-designer"], description: "The sub-agent role — see the role matrix in the tool description. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
+      task: { type: "string", description: "For action:'spawn': non-engineering roles (explore / plan / coder / tester) — OPTIONAL free-text supplement; the brief itself is the four core parameters (goal / knownFacts / acceptance / reportFormat) + scope. Engineering roles (eng-coder / eng-designer) take NO task-book text parameters — their task book is batch record §2 (batchDoc), read by the child itself. For action:'escalate': the brief (goal, constraints, entry files, acceptance criteria)." },
+      context: { type: "string", description: "Optional background for non-engineering spawns (explore / plan / coder / tester) only; action:'spawn' only." },
+      role: { type: "string", enum: ["explore", "plan", "coder", "eng-coder", "eng-designer", "tester"], description: "The sub-agent role — see the role matrix in the tool description. Exact spelling required. action:'spawn' only (escalate spawns its own expert internally)." },
       model: { type: "string", description: "action:'spawn': provider/model override ('provider:model', a provider, or a model name on the parent's provider) — defaults config.agent.subagentModels[role] → config.agent.subagentModel → the parent's provider; \"default\" inherits. action:'escalate': a consult candidate (default = the first)." },
       designToken: { type: "string", description: "REQUIRED for role='eng-coder': the exact token issued by advisor(type='design') after the review passed — copy it verbatim from the design-slots row (the text after designToken=). missing or mismatched = the spawn is refused; an expired token is refused with expired named. Pass it on every eng-coder spawn, fix rounds included (they reuse the same token)." },
       designId: { type: "string", description: "role='eng-coder': the designId echoed with the approved token — required to pick between concurrent designs (optional for one). action:'consume-design': the single-slot selector (required to pick between several; the gate refuses to guess); see designIds / expired / olderThanDays for batch consumption. action:'design-slots': filter the inventory to one slot (trimmed exact match; an empty string means no filter; an unknown id is refused with the held id list)." },
@@ -150,11 +152,11 @@ export const subagentTool = {
       olderThanDays: { type: "number", description: "action:'consume-design' (batch): close out every slot older than N days (age > N; exactly ONE selector per call)." },
       batchDoc: { type: "string", description: "REQUIRED for role='eng-coder'/'eng-designer': the batch record path (e.g. <repo>/docs/batches/<batch>-<topic>.md; relative paths resolve against the session cwd first, then candidate project roots — or absolute) — the task book this spawn implements/writes. This IS the task book for engineering roles — batch record §2, read by the child itself. Refused when absent, when the path does not resolve to a readable file, or when that record already has an in-flight spawn — one batch record serves one concurrent spawn: wait for the occupant to settle (or cancel it) before spawning again. The content is never validated. role='coder' (normal mode): optional — binds this spawn's §5 record-write channel (unbound ⇒ the main agent records §5 on its behalf); when provided the path must resolve to a readable file." },
       round: { type: "string", enum: ROUND_VALUES, description: "REQUIRED for role='eng-coder'/'eng-designer': initial (first round for this design) or fix (a correction round reusing the same designId+designToken; docs FIRST). No default — missing = refused." },
-      goal: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book): the task book's goal & why — the problem this solves and the cost chain (content only, no label — the runtime composes the labels)." },
-      knownFacts: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book): the facts and file paths the parent already verified — the child must not re-explore them." },
-      scope: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book, the fifth parameter): scope & forbidden scope — what to read / search and what not to touch." },
-      acceptance: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book): acceptance criteria — machine-verifiable (commands / thresholds / assertion counts)." },
-      reportFormat: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book): the delivery-report format the child must produce." },
+      goal: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book): the task book's goal & why — the problem this solves and the cost chain (content only, no label — the runtime composes the labels)." },
+      knownFacts: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book): the facts and file paths the parent already verified — the child must not re-explore them." },
+      scope: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book, the fifth parameter): scope & forbidden scope — what to read / search and what not to touch." },
+      acceptance: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book): acceptance criteria — machine-verifiable (commands / thresholds / assertion counts)." },
+      reportFormat: { type: "string", description: "REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book): the delivery-report format the child must produce." },
       async: { type: "boolean", description: "action:'spawn'/'escalate': default at depth 0 = true (async; the report arrives automatically); depth>0 always sync. async:false forces the blocking flight." },
       files: { type: "array", items: { type: "string" }, description: "action:'spawn' only: the file write-domain this task declares — file-level paths only (cwd-relative or absolute; directories rejected — they bypass the conflict detector). Overlapping-file tasks serialize automatically. Omit = no conflict detection." },
       dependsOn: { type: "array", items: { type: "string" }, description: "action:'spawn' only: ids from prior async returns whose outcome this task needs — queues until every dependency settles, then starts. Consumed ids count as satisfied; a cancelled/failed dependency stays queued marked 'dependency cancelled' until you decide (AUTO sessions auto-start). Unknown ids error." },
@@ -225,7 +227,7 @@ export const subagentTool = {
     // 工程角色 = 无任务书文本参数（任务书 = 批次档 §2）：此处不判——自由文本键由
     // buildSpawnChild 的任务书门键在场即拒并点名（空集拼装不得误报「缺任务书」）。
     if (!isEngineeringRole(args.role) && !composeTaskBookBrief(args, args.role) && (typeof args.task !== "string" || !args.task.trim())) {
-      throw new Error("subagent action:'spawn' requires the structured task-book parameters for normal-mode roles (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief. Engineering roles take no task-book text parameters: their task book is batch record §2.")
+      throw new Error("subagent action:'spawn' requires the structured task-book parameters for non-engineering roles (explore / plan / coder / tester) (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief. Engineering roles take no task-book text parameters: their task book is batch record §2.")
     }
     // §18 D-E1a depth-gated async default (2026-09-06 需求池 R12): depth-0 spawns
     // default to async for EVERY role (the old role-level default — eng-coder only —
@@ -238,9 +240,9 @@ export const subagentTool = {
     // variant roles ("Coder", " coder") bypass BOTH mode gates and fall through to
     // full tools / no overlay — a full-write coder without design review. Schema enums are
     // advisory; providers don't enforce them. Fail closed on unknown roles.
-    const ROLES = new Set(["explore", "plan", "coder", "eng-coder", "eng-designer"])
+    const ROLES = new Set(["explore", "plan", "coder", "eng-coder", "eng-designer", "tester"])
     if (!ROLES.has(role)) {
-      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder, eng-designer (exact spelling).`)
+      throw new Error(`Unknown subagent role: ${JSON.stringify(role)}. Valid roles: explore, plan, coder, eng-coder, eng-designer, tester (exact spelling).`)
     }
     // AGENT-LOOP-SUBAGENT.md §6.7.6 D-E3 internal-spawn gate: an eng-coder sub-agent may only spawn sync
     // explore (audit) children — non-explore roles and async are refused here
@@ -254,7 +256,7 @@ export const subagentTool = {
     throw new Error("Engineering mode: role='coder' is disabled — use role='eng-coder' for implementation tasks (or role='eng-designer' for design writing).")
   }
   if (parent.config?.agent?.engineering && role === "plan") {
-    throw new Error("Engineering mode: role='plan' is disabled — the engineering-mode enum is explore / eng-designer / eng-coder (plan is a normal-mode role).")
+    throw new Error("Engineering mode: role='plan' is disabled — the engineering-mode enum is explore / eng-designer / eng-coder / tester (plan is a normal-mode role).")
   }
     if (!parent.config?.agent?.engineering && role === "eng-coder") {
       throw new Error("Engineering mode is not active — use role='coder' for implementation tasks.")

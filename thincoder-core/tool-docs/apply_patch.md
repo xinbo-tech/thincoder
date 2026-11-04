@@ -13,3 +13,5 @@ Notes:
 - If a hunk's context matches multiple locations it is rejected — add more surrounding context lines
 - Deleting files is not supported — use the delete tool
 - For single-file edits, edit is simpler; for full rewrites, write is simpler
+
+**`ledger`** — the in-flight ledger row this call serves: `"#N"` or `"N"`. In engineering mode the parent agent must pass it — a call that does not say which row it serves is refused.

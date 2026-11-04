@@ -15,9 +15,13 @@
  *
  * **批档自身恒在判域（两 scope 同）**：批档生于此轮、冻结于此轮（`close` 之后整档冻结）⇒ 其全文字面
  * 即本轮的笔面，档内没有「别轮写的存量」可排；存量 = 别批的档，已由单集规则排除。于是：
- *   · ① 面已落段命中**只入回执、不阻本次写**——证据面（append-only）下别人的段落字面改不动，拒一个改不动的人
- *     只会让这一段永远写不进（无账之笔）；§2 规范面可就地改（§4.19），但同一时刻只有段白名单那一个作者，
- *     「拒一个改不动的人」在 §2 上仍成立；收口面 fail-closed 当场拦，那里收口人改得动。
+ *   · ① 面**已落段命中**的处置按动作分两种（判集 = `docs/core/design/BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
+ *     `append` ⇒ 只入回执、不阻本次写——追加不碰既有行，拒一个改不动的人只会让这一段永远写不进
+ *     （无账之笔）；本次追加文（片段档）与触达账命中当场拒。
+ *     `edit`（携 `pending.recordView` = **改写后的整档**）⇒ **判集两类**：段长类（段落过长 · 行过长）只判
+ *     `newText`（片段档）——一条早先就在的超长段不拦本段的无关改动；**锚类判整档、当场拒**——引用完整性
+ *     是档级属性，且这一段的作者改得动那一行。盘上旧字节不参判（拿改写前的档判，#2021 那条死引文
+ *     永远过不去）；
  *   · ② 面命中即 K，且命中落在批档内时逐条带 `§N（作者：<角色>）`（答「谁该改」；作者取自档头
  *     「一段一作者」映射，取不到 ⇒ 只出 `§N`，不猜）。
  *
@@ -37,7 +41,7 @@ import { readFileSync, readdirSync, unlinkSync, writeFileSync } from "node:fs"
 import { dirname, join, relative, resolve } from "node:path"
 
 import { owningProject, readManifest } from "../manifest.mjs"
-import { runDocCheck } from "../doc-check/index.mjs"
+import { runDocCheck, PARA_DISPOSE, DOC_CLASS } from "../doc-check/index.mjs"
 import { sectionHeaderRe } from "./batch-skeleton.mjs"
 import { batchProjectRoot } from "./batch-paths.mjs"
 
@@ -52,11 +56,14 @@ function docPaths(list, base) {
   return out
 }
 
-/** 锚类命中（引擎两大类中的锚面；其余 clazz = 段判据命中）。类名由引擎产出，本档只作切分。 */
-const ANCHOR_CLASSES = new Set(["档缺", "节缺"])
+/** 锚类命中（引擎大类中的锚面；其余 clazz = 段判据命中）。类名由引擎产出，本档只作切分。
+ *  三属同计「锚 N 条」：`档缺` / `节缺` / `引缺`（引文不在所指档内——同属锚判据，不是段类）。 */
+const ANCHOR_CLASSES = new Set(["档缺", "节缺", "引缺"])
 
-/** 片段档名前缀（与批档同目录的隐藏档——锚解析序 ② 与批档本体同源）。 */
-const FRAGMENT_PREFIX = ".gate-"
+/** 片段档名前缀（与批档同目录的隐藏档——锚解析序 ② 与批档本体同源）。**导出面**：`batch-lifecycle.mjs` 的在飞
+ *  扫描要靠它把两类片段档排除在外——`edit` 面的 `recordView` 是**整档副本**（`## §1` 段头 + `进行中` 都在），
+ *  不排除就会被当成第二本在飞批（假拒），进程被杀则残留一本永久 open 的幽灵档。 */
+export const FRAGMENT_PREFIX = ".gate-"
 
 /** 片段档路径（每次一个随机名：并发两次门不撞名，也不互删）。 */
 function fragmentPathOf(abs) {
@@ -185,29 +192,34 @@ function hitEntries(res, root, translate) {
   return { aligned, entries }
 }
 
-/** 报面组装：首行 verdict + 强制集命中行 + 明示集命中行 + 附注行 + 处置句（段命中才叫人对段重写）。 */
-function composeReport({ first, forcedLines, disclosedLines, notes, disposePara }) {
+/** 报面组装：首行 verdict + 强制集命中行 + 明示集命中行 + 附注行 + 处置块（只跟段命中走——仅锚 ∥ 仅行命中不得叫人对段落动手；
+ *  字面单源 = 引擎导出的 `PARA_DISPOSE`，本档零字面副本）。明示集标题按面取形（`append` = 已落段命中；
+ *  `edit` = 档内段长类命中——段长类判集是本次写入文本，两件事在回执里不得叫同一个名字）。 */
+function composeReport({ first, forcedLines, disclosedLines, disclosedHeader, notes, disposePara }) {
   const out = [first, ...forcedLines]
   if (disclosedLines.length) {
-    out.push("—— 批档已落段命中（只明示、不阻本次写；收口面 fail-closed 当场拦）：", ...disclosedLines)
+    out.push(disclosedHeader ?? "—— 批档已落段命中（只明示、不阻本次写；收口面 fail-closed 当场拦）：", ...disclosedLines)
   }
   out.push(...notes)
-  if (disposePara) out.push("处置：上面这些段落，重新组织语言重写；同轮修正后复跑；不转台账")
+  if (disposePara) out.push(...PARA_DISPOSE)
   return out.join("\n")
 }
 
 /** 空范围返回形（`range` 恒在场——回执要读 `范围 N 档`）。 */
 const emptyRange = (basis) => ({ count: 0, k: 0, basis })
-const errorState = (first, range = emptyRange("none")) => ({ state: "error", first, report: first, hitLines: [], noteLines: [], range })
+const errorState = (first, range = emptyRange("none")) => ({ state: "error", first, report: first, hitLines: [], noteLines: [], disposePara: false, range })
 
 /**
  * 跑一次门（**非抛错**：两因之外的门自身异常收为 `error` 态，由调用面按 `scope` 消费）。
- * @param {{abs:string, cwd?:string, agent?:object, scope?:'writer'|'close', pending?:{section?:number, body?:string}|null}} o
+ * @param {{abs:string, cwd?:string, agent?:object, scope?:'writer'|'close', pending?:{section?:number, body?:string, recordView?:string}|null}} o
  *   `abs` = 目标批次档绝对路径（根解析用；**同时恒是判域一员**）；`agent._touchedFiles` = 触达记账；
- *   `pending` = 本次 append 的段号与文本（`writer` 面强制集；缺省 ⇒ 无本次文本腿，`close` 面恒缺省）。
+ *   `pending` = 本次写入的段号与文本（`writer` 面强制集；缺省 ⇒ 无本次文本腿，`close` 面恒缺省）：
+ *   `body` = 本次写进来的文本（append = 追加文 ∥ edit = `newText`——片段档判）；
+ *   `recordView` = **改写后的整档全文**（仅 `edit` 面传：锚类判这个视图，盘上旧字节不参判）。
  * @returns {{state:'pass'|'refused'|'error'|'not-applicable', first:string|null, report:string,
- *   hitLines:string[], noteLines:string[], range:{count:number, k:number, basis:string}}}
- *   `first` = 唯一机判串（首行 `DOC-CHECK GATE:`）；`not-applicable` ⇒ `first = null` + 固定回执行。
+ *   hitLines:string[], noteLines:string[], disposePara:boolean, range:{count:number, k:number, basis:string}}}
+ *   `first` = 唯一机判串（首行 `DOC-CHECK GATE:`）；`not-applicable` ⇒ `first = null` + 固定回执行；
+ *   `disposePara` = 判域内存在「文字太长，难于阅读」类命中（拒串据此选「空行 + 五行块」还是照旧一句处置）。
  */
 export function runBatchGate({ abs, cwd, agent = {}, scope = "writer", pending = null } = {}) {
   // `scope` 两取值、无第三值（设计「`scope` 语义」）——未知值不静默降级（降级即 ② 变 fail-open）
@@ -228,7 +240,6 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
   const selfAbs = resolve(abs)
   const root = owningProject(selfAbs, base) ?? batchProjectRoot(base)
   const close = scope === "close"
-  const batchKey = pathKey(selfAbs)
 
   let read
   try { read = readManifest(root) } catch (e) {
@@ -236,7 +247,7 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
   }
   // 适用面（声明面驱动）：无 manifest ⇒ 不适用 + 回执明示；**不是豁免清单**——判据参数 = 引擎内置常量。
   if (!read.ok && read.reason === "missing") {
-    return { state: "not-applicable", first: null, report: "[doc-check gate] 未跑（本项目无声明面）", hitLines: [], noteLines: [], range: emptyRange("none") }
+    return { state: "not-applicable", first: null, report: "[doc-check gate] 未跑（本项目无声明面）", hitLines: [], noteLines: [], disposePara: false, range: emptyRange("none") }
   }
 
   // 范围（判谁）：writer = 写者触达账 ∪ 本次写入文本 ∪ 批档自身；
@@ -249,41 +260,58 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
   const strays = strayFragmentsOf(dirname(selfAbs), null)
   const pendingBody = !close && pending && typeof pending.body === "string" && pending.body.trim() ? pending.body : null
   const fragAbs = pendingBody ? fragmentPathOf(selfAbs) : null
+  // 改写后的整档视图（`edit` 面——锚类判它，不判盘上旧字节：本批要消的正是「死引文那行改不动」那个死锁）。
+  const viewBody = !close && pending && typeof pending.recordView === "string" ? pending.recordView : null
+  const viewAbs = viewBody === null ? null : fragmentPathOf(selfAbs)
+  // 判域内「哪一档是批档本体」：有视图时 = 视图（同目录、同骨架、同引用解析序）；判据与属性标注都读它。
+  const selfKey = pathKey(viewAbs ?? selfAbs)
 
   try {
     // 片段档写在 try 内：写失败也走同一条 finally（不存在就 unlink 失败无害）
     if (fragAbs) writeFileSync(fragAbs, pendingBody.endsWith("\n") ? pendingBody : `${pendingBody}\n`)
-    const docs = close ? [...touched, ...diffDocs, selfAbs] : [...touched, selfAbs, ...(fragAbs ? [fragAbs] : [])]
+    if (viewAbs) writeFileSync(viewAbs, viewBody)
+    const docs = close ? [...touched, ...diffDocs, selfAbs] : [...touched, viewAbs ?? selfAbs, ...(fragAbs ? [fragAbs] : [])]
     const res = runDocCheck(root, { mode: "gate", docs, docsSource: close ? "explicit" : "session" })
     const basis = !close
       ? (pendingBody ? "pending+touched" : "touched")
       : diff.ok ? "touched+diff" : "touched（基 sha 未定）"
 
-    // 批档自身恒在判域（在盘即入）⇒ 判域恒非空，「0 档」这一形不可达。不成立 = 构造异常 ⇒ fail-closed，不产 PASS。
-    if (!res.checkFiles.some((p) => pathKey(p) === batchKey)) {
+    // 批档自身（或它的改写后视图）恒在判域（在盘即入）⇒ 判域恒非空，「0 档」这一形不可达。不成立 = 构造异常 ⇒ fail-closed，不产 PASS。
+    if (!res.checkFiles.some((p) => pathKey(p) === selfKey)) {
       return errorState("DOC-CHECK GATE: ERROR（判域为空——批档自身应恒在判域）", { count: res.checkFiles.length, k: 0, basis })
     }
 
+    const selfRel = relative(root, selfAbs).replace(/\\/g, "/")
     const fragRel = fragAbs ? relative(root, fragAbs).replace(/\\/g, "/") : null
-    const translate = (text) => (fragRel ? text.split(fragRel).join("本次写入文本") : text)
+    const viewRel = viewAbs ? relative(root, viewAbs).replace(/\\/g, "/") : null
+    const translate = (text) => {
+      let out = fragRel ? text.split(fragRel).join("本次写入文本") : text
+      return viewRel ? out.split(viewRel).join(selfRel) : out // 视图档显示成批档自身的相对路径（读者不必知道临时档名）
+    }
     const { aligned, entries } = hitEntries(res, root, translate)
 
-    const selfSrc = safeRead(selfAbs)
+    const selfSrc = viewBody ?? safeRead(selfAbs)
     const authors = authorMapOf(selfSrc)
     const labeled = entries.map((e) => {
-      const inSelf = pathKey(e.file) === batchKey
+      const inSelf = pathKey(e.file) === selfKey
       return { ...e, inSelf, text: inSelf ? `${e.text}${attributionOf(selfSrc, e.line, authors)}` : e.text }
     })
-    // ① 面：批档已落段命中只明示、不阻写；其余（本次文本 / 触达账）当场拒。② 面：范围内全部命中即 K。
-    const disclosed = close ? [] : labeled.filter((e) => e.inSelf)
-    const forced = close ? labeled : labeled.filter((e) => !e.inSelf)
+    // ① 面（**按动作分两种**——判集单源 = `BATCH-RECORD.md` §4.9 门 ④ 判集两句）：
+    //   append（无视图）⇒ 批档已落段命中只明示、不阻写（追加不碰既有行，拒一个改不动的人 = 无账之笔）；其余当场拒。
+    //   edit（有视图）⇒ **判集两类**：档内**锚类**命中当场拒（引用完整性是档级属性）；档内**段长类**命中只明示
+    //     （段长类只判 `newText`——那条在片段档里判，不在这里）。
+    // ② 面：范围内全部命中即 K。
+    const blocks = (e) => !e.inSelf || (viewAbs !== null && ANCHOR_CLASSES.has(e.clazz))
+    const disclosed = close ? [] : labeled.filter((e) => !blocks(e))
+    const forced = close ? labeled : labeled.filter(blocks)
     const k = forced.length
     const forcedLines = forced.map((e) => e.text)
     const disclosedLines = disclosed.map((e) => e.text)
 
     const inFrag = (e) => !!fragAbs && pathKey(e.file) === pathKey(fragAbs)
     const textHits = forced.filter(inFrag)
-    const touchHits = forced.filter((e) => !inFrag(e))
+    const recordHits = forced.filter((e) => e.inSelf) // 仅 edit 面可达：整档锚类命中
+    const touchHits = forced.filter((e) => !inFrag(e) && !e.inSelf)
     let first = "DOC-CHECK GATE: PASS"
     if (k >= 1) {
       if (close) {
@@ -291,6 +319,7 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       } else {
         const parts = []
         if (textHits.length) parts.push(`本次写入文本（${classifyCounts(textHits)}）`)
+        if (recordHits.length) parts.push(`批档整档（${classifyCounts(recordHits)}）`)
         if (touchHits.length) parts.push(`触达账（${classifyCounts(touchHits)}）`)
         first = `DOC-CHECK GATE: REFUSED（命中 ${k} 条——${parts.join(" · ")}）`
       }
@@ -306,10 +335,16 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
     }
     if (!close && k === 0 && pendingBody) {
       const segLabel = Number.isInteger(pending?.section) ? `§${pending.section}` : "本段"
-      notes.push(`本次写入文本（${segLabel}）${pendingBody.split("\n").length} 行已判——强制集只有这一段（别人的段字面改不动，不进你的拒面）`)
+      const lineCount = pendingBody.split("\n").length
+      notes.push(viewAbs !== null
+        ? `本次写入文本（${segLabel}）${lineCount} 行已判——段长类只判这一段（档内既有超长段不进你的拒面）；锚类判整档（引用完整性是档级属性）`
+        : `本次写入文本（${segLabel}）${lineCount} 行已判——强制集只有这一段（别人的段字面改不动，不进你的拒面）`)
     }
     if (disclosed.length) {
-      notes.push(`已落段命中 ${disclosed.length} 条：${disclosed.map((e) => landedSummary(selfSrc, e, authors)).join(" · ")}—— 不属本次笔面，不阻本次写；收口面 fail-closed 会拦`)
+      const list = disclosed.map((e) => landedSummary(selfSrc, e, authors)).join(" · ")
+      notes.push(viewAbs !== null
+        ? `档内段长类命中 ${disclosed.length} 条：${list}—— 段长类判集 = 本次写入文本，档级旧段不入判、不阻本次写；收口面 fail-closed 会拦`
+        : `已落段命中 ${disclosed.length} 条：${list}—— 不属本次笔面，不阻本次写；收口面 fail-closed 会拦`)
     }
     if (strays.length) {
       notes.push(`\`.gate-*\` 残留 ${strays.length} 档（异常退出的片段档）—— 手工删除后再提交`)
@@ -321,16 +356,25 @@ function evaluate({ abs, cwd, agent, scope, pending }) {
       notes.push("声明面不可解析（`PROJECT-MANIFEST.json` 非法 JSON）—— 判据参数为引擎内置常量，本轮仍已判")
     }
 
-    const disposePara = forced.some((e) => !ANCHOR_CLASSES.has(e.clazz))
+    // 处置块只看**段**类命中——设计口径是「只要存在该类命中就出」，没按「谁写的」切；
+    // 仅锚 ∥ 仅行命中不得叫人对段落动手（叫错方向比不给方向贵）——类名单源 = 引擎的 `DOC_CLASS`。
+    // edit 面只看**强制集**：档内段长类命中不入本次判集，把它们摆进拒面 = 把写者叫去改一段与本笔无关的文字。
+    const disposePara = (viewAbs !== null ? forced : labeled).some((e) => e.clazz === DOC_CLASS.para)
     return {
       state: k >= 1 ? "refused" : "pass",
       first,
-      report: composeReport({ first, forcedLines, disclosedLines, notes, disposePara }),
+      report: composeReport({
+        first, forcedLines, disclosedLines, notes, disposePara,
+        disclosedHeader: viewAbs !== null ? "—— 档内段长类命中（只明示、不阻本次写；段长类判集 = 本次写入文本）：" : undefined,
+      }),
       hitLines: forcedLines,
       noteLines: notes,
+      // 处置面分形用（拒串读它：段命中 ⇒ 五行块 ∥ 仅锚·仅行 ⇒ 照旧一句处置）
+      disposePara,
       range: { count: res.checkFiles.length, k, basis },
     }
   } finally {
+    if (viewAbs) { try { unlinkSync(viewAbs) } catch { /* 清理失败不覆盖判定结果——残留由下一次门明示 */ } }
     if (fragAbs) { try { unlinkSync(fragAbs) } catch { /* 清理失败不覆盖判定结果——残留由下一次门明示 */ } }
   }
 }
@@ -346,19 +390,30 @@ export function gateReceiptLine(gate) {
 }
 
 /**
- * 拒绝串（throw 载荷；两机械点同源措辞）：`batch:` 前缀 + verdict 首行 + 逐条 `✗` 行 + 处置句；
- * ① 写盘面两路（`append` 段尾 ∥ `edit §2` 区间）同路既有句「失败 ⇒ 勿 close」（字面同 append 既有拒因，不新造措辞）。
+ * 拒绝串（throw 载荷；两机械点同源措辞）：`batch:` 前缀 + verdict 首行 + 逐条 `✗` 行 + 附注行 + 处置面。
+ * **处置面按命中类分形**（本批裁定）：
+ *   · 段命中 ⇒ **空行 + 五行处置块**（字面单源 = 引擎的 `PARA_DISPOSE`）。块末行逐字就是「同轮修正后复跑；不转台账」，
+ *     故旧尾句那一截删去——留着就是两句「处置：」+ 一句重复；收尾的裁决指引与「Nothing was written」两句不重复，随原因面照出。
+ *   · 仅锚 ∥ 仅行命中 ⇒ **照旧一句**（那五条出路是给「段」的，对错误的面对动手比不给方向更贵）。
+ * ① 写盘面两路（`append` 段尾 ∥ `edit` 段内区间）同路既有句「失败 ⇒ 勿 close」（字面同 append 既有拒因，不新造措辞）。
  */
 export function gateRefusalMessage(gate, action = "append") {
-  const writeFace = action === "append" || action === "edit" // 写盘面两路：段尾追加 ∥ §2 段体区间改写
+  const writeFace = action === "append" || action === "edit" // 写盘面两路：段尾追加 ∥ 段内区间改写
   const lead = action === "edit"
-    ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次 §2 就地改未落盘，档字节不变。"
+    ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次段内就地改未落盘，档字节不变。"
     : writeFace
       ? "batch: 文档机检门拒写（doc-check gate · 结构兜底 ①）—— 本次段写入未落盘，档字节不变。"
       : `batch: 文档机检门拒收口（doc-check gate · 结构兜底 ②）—— ${action === "close" ? "close" : "status → 已收口"} 被拒绝，§1 状态行字节不变。`
   const detail = gate.state === "error" ? String(gate.report ?? "").split("\n").slice(1) : gate.hitLines
-  const tail = writeFace
-    ? "处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）。Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close)."
-    : "处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）。Nothing was written."
-  return [lead, gate.first, ...(detail ?? []), ...(gate.noteLines ?? []), tail].join("\n")
+  const routing = "拿不准 ⇒ 上抛主 agent 裁决（主 agent 拿不准 ⇒ 转呈用户）。"
+  // 尾句按动作取形：`edit` 拒后段里本就有内容，劝「勿 close」把两件事说成一件（那句防的是收口冻结一个空段）。
+  const noBytes = writeFace
+    ? action === "edit"
+      ? "Nothing was written — the target range and every other byte of the record are unchanged."
+      : "Nothing was written. Do NOT close the record after a refused append — nothing landed, and closing freezes the missing section for good (失败 ⇒ 勿 close)."
+    : "Nothing was written."
+  const head = [lead, gate.first, ...(detail ?? []), ...(gate.noteLines ?? [])]
+  // 段命中：原因面 + 空行 + 五行块（处置面 = 块，不再另起一句「处置：同轮修正后复跑…」）
+  if (gate.disposePara) return [...head, `${routing}${noBytes}`, "", ...PARA_DISPOSE].join("\n")
+  return [...head, `处置：同轮修正后复跑（改文档 ∥ 修引擎）；不转台账；${routing}${noBytes}`].join("\n")
 }

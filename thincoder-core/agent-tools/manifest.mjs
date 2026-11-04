@@ -39,7 +39,7 @@
 import { existsSync } from "node:fs"
 import { join, resolve } from "node:path"
 import { MANIFEST_REL, MANIFEST_SCHEMA, initManifest, projectRootView, projectView, readManifest, writeManifest } from "../manifest.mjs"
-import { DESC } from "../tools/shared.mjs"
+import { DESC, LEDGER_PARAM_DESC_MANIFEST, PROJECT_PARAM_DESC } from "../tools/shared.mjs"
 import { clearDeclarationCache } from "../conventions.mjs" // #1367 面⑦：写档成功 ⇒ 缓存失效（fix 轮接线）
 
 /** 拒面统一前缀（设计 §2.10：`manifest <action>: refused — …`）——盘零变类拒绝一律经此抛错。 */
@@ -134,6 +134,9 @@ export const manifestTool = {
       target: { type: "string", description: "Explicit target directory — defaults to the session anchor; relative paths resolve against it. A workspace target (several projects below it) is refused with the full project list — pass the project root you mean." },
       key: { type: "string", description: "(write) Dot path of the node to set — version / phase / codePaths, or a sub-key of docRoot / index (e.g. docRoot.design / index.publicRepos); whole-object writes of those two families are refused", },
       value: { type: "string", description: "(write) New value — parsed as JSON first (null / true / 5 / [\"a\"]), otherwise kept as a literal string; \"null\" is the explicit no-such-face for docRoot.<key>" },
+      ledger: { type: "string", description: LEDGER_PARAM_DESC_MANIFEST },
+      // 项目声明面（决策 40）：`target` 缺位时才被读（定位参数优先）；纯声明，不改查/建的目标目录。
+      project: { type: "string", description: PROJECT_PARAM_DESC },
     },
     required: ["action"],
   },

@@ -10,7 +10,7 @@ import { put, search, putMarkdown, clearPersonal } from "./core.mjs"
 import { deleteByUid, matchMemoryRows, deleteWhere } from "./delete.mjs"
 import { commitAndPush } from "../git/gitmem.mjs"
 import { formatMaintainReport, maintainMemory } from "./maintain.mjs" // F-S13：同一单点（自愈轮 §6.14 面⑤）
-import { DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/memory.md
+import { DESC, LEDGER_PARAM_DESC_MEMORY, PROJECT_PARAM_DESC } from "../tools/shared.mjs" // #15 描述外置：文本单点 = tool-docs/memory.md
 
 // ---------------------------------------------------------------- agent tools
 
@@ -71,6 +71,9 @@ export function memoryTools(memory, opts = {}) {
           id: { type: "string", description: "delete single: the entry id from put/search/list output" },
           limit: { type: "number", description: "Max rows: list 50 by default, search 5 by default" },
           confirm: { type: "boolean", description: "delete batch/clear: must be true — without it the tool refuses; maintain: true executes the maintenance run (omitted = dry-run)" },
+          ledger: { type: "string", description: LEDGER_PARAM_DESC_MEMORY },
+          // 项目声明面（决策 40）：本工具无定位参数 ⇒ 落 project 层的写型 action 只能靠声明。
+          project: { type: "string", description: PROJECT_PARAM_DESC },
         },
         required: ["action"],
       },

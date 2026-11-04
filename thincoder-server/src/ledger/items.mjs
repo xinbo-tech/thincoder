@@ -75,7 +75,7 @@ function normalizeTitle(raw) {
   return title
 }
 
-/** 正文归一（可空 ∥ ≤4000；缺省 / `null` / 空串 ⇒ `null`——「未提供」与「清空」同判，追认门按结果值判空）。 */
+/** 正文归一（可空 ∥ ≤4000；缺省 / `null` / 空串 ⇒ `null`——「未提供」与「清空」同判）。 */
 function normalizeDetail(raw) {
   if (raw === undefined || raw === null) return null
   const detail = String(raw)
@@ -270,8 +270,9 @@ export function updateItem(db, { member, id, input = {}, now = Date.now() } = {}
 }
 
 /**
- * 收口 / 撤回（§4）：`{ status ∈ 已核销 ∥ 已废弃 }`——`已核销` 自 `待核销`（勾销）∥ 自 `待讨论` / `待设计`
- * （**追认核销**，判结果值正文非空，缺 / 全空白 ⇒ 400）；`已废弃` = 任意未归档态（软删除——行保留）。
+ * 收口 / 撤回（§4）：`{ status ∈ 已核销 ∥ 已废弃 }`——`已核销` **只自 `待核销`**（勾销）；其余现态
+ * （`待讨论` / `待设计` / `在途`）⇒ 400 人话（点名现态 + 出路句）。本面无 `待讨论 → 在途` 边，故出路统一写作
+ * 「先 PATCH 推进到 待核销」——三态都成立，不另造一句。`已废弃` = 任意未归档态（软删除——行保留）。
  * 归档行 ⇒ 400（终态）。出 = 行（raw）。
  */
 export function closeItem(db, { member, id, input = {}, now = Date.now() } = {}) {
@@ -283,13 +284,8 @@ export function closeItem(db, { member, id, input = {}, now = Date.now() } = {})
   const { row, caps } = itemOr404(db, member, id)
   requireWrite(caps)
   if (ARCHIVED_STATUSES.includes(row.status)) throw new HttpError("invalid_request_error", `条目已归档（${row.status}）——不可再动（行保留）`)
-  if (target === "已核销") {
-    if (!["待讨论", "待设计", "待核销"].includes(row.status)) {
-      throw new HttpError("invalid_request_error", `核销仅限 待讨论 / 待设计 / 待核销（现态 ${row.status}；在途须先过 待核销）`)
-    }
-    if (["待讨论", "待设计"].includes(row.status) && (row.detail == null || String(row.detail).trim() === "")) {
-      throw new HttpError("invalid_request_error", `追认核销须正文（detail）非空（现态 ${row.status}）`)
-    }
+  if (target === "已核销" && row.status !== "待核销") {
+    throw new HttpError("invalid_request_error", `核销仅限 待核销（现态 ${row.status}）：先 PATCH 推进到 待核销，再收口`)
   }
   const at = new Date(now).toISOString()
   db.prepare("UPDATE team_ledger_items SET status = ?, updated_at = ?, closed_at = ? WHERE id = ?").run(target, at, at, row.id)
