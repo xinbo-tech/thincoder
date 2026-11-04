@@ -1,6 +1,6 @@
 # ThinCoder 架构总览（ARCHITECTURE）
 
-> 板块 = **架构总览**（横切薄枢纽）；本档 = 合并仓的**模块地图 + 硬约束 + 设计原则 + 模块级接口速览**的唯一权威处（**符号级**接口索引 = `docs/core/design/API-CONTRACT.md`——D2：本档只留模块级速览）。
+> 板块 = **架构总览**（横切薄枢纽）；本档 = 合并仓的**模块地图 + 硬约束 + 设计原则 + 模块级接口速览**的唯一权威处（D2：本档只留模块级速览）。
 > 逐板块机制正文各归其档（`docs/core/design/<板块>.md`）——本档**只留速览与指针，不复制**（D2 单一权威源）。
 > 需求侧 = `docs/core/requirements/PHILOSOPHY.md`（三观——最高层需求）；产品级定性 = `docs/core/requirements/PROJECT.md`；VSC 专有面 = `docs/vsc/requirements/PROJECT.md`。
 > 桌面端（第四端）专有面 = 需求 `docs/desktop/requirements/PROJECT.md` + 设计**五档**（`docs/desktop/design/PROJECT.md` 总览 · `docs/desktop/design/SHELL.md` 宿主适配层 · `docs/desktop/design/IPC.md` 通道契约 · `docs/desktop/design/UI.md` 界面形态 · `docs/desktop/design/RENDERER.md` 渲染工艺）。
@@ -41,7 +41,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 │   ├── TODO.md · TODO-archive.md   ← 项目级台账（单仓单账）
 │   └── batches/                    ← 批次档
 ├── scripts/                        ← 仓根统一机检族（单引擎四档：doc-check.mjs 入口 + doc-check-anchors.mjs 锚 / doc-check-targets.mjs 采集 / doc-check-width.mjs 行宽；判据全读 manifest 声明面）
-│                                   ← **报告态两档（不入闸）**：api-contract.mjs（接口索引——生成 ∥ --check）· tool-schema-size.mjs（schema 体量读数——拟新增）
+│                                   ← **报告态一档（不入闸）**：tool-schema-size.mjs（schema 体量读数——拟新增）
 │
 ├── thincoder-core/                 ← 核包（@thincoder/core——共享机制实现 + 共享提示词与工具描述）
 │   ├── agent.mjs                   主循环（createAgent / runAgent）——见 AGENT-LOOP
@@ -110,7 +110,7 @@ thincoder/                          ← 合并仓根（git 仓 · 默认分支 m
 
 ## 4. 模块接口速览
 
-> 本表 = **模块级**速览（模块 → 关键导出 → 一句话 → 指针）；**符号级**接口索引（符号 ∥ 签名 ∥ 返回值 ∥ 副作用——按需查阅）= `docs/core/design/API-CONTRACT.md`（两区制：生成区 ∥ 语义区）。
+> 本表 = **模块级**速览（模块 → 关键导出 → 一句话 → 指针）；符号级细节（签名 ∥ 返回值 ∥ 副作用）按需 `grep` ∥ `code_search` ∥ `lsp` 读源码。
 
 | 模块 | 关键导出 | 一句话 | 详细设计 |
 |---|---|---|---|

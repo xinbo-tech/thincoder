@@ -88,9 +88,13 @@ ThinCoder 产品族 = **三个独立产品**（终端 CLI + VS Code 扩展 + 桌
 | 是什么 | 你说要什么，我就直接干——改 bug、加功能、写脚本、查问题，边做边交代；有规模的工作按批落地（批次档 + 台账），收口一次走文档规范化 + 独立评审。质量靠纪律和自查 | 动手前先把「打算怎么做」写成文档——独立评审挑毛病、你点头，才允许改代码；交付前再评审一遍、跑完验证才算完。慢，但每一步都有据可查 |
 | 质量靠什么 | 纪律提示词 + 自查 + 收口一次独立评审（无机械拦截） | 机械拦截 + 独立评审 + 凭证链（先批准、后动手） |
 | 什么时候用 | 默认；日常绝大多数任务 | 改动有规模、要留痕、值得先想清楚再动手的任务（多文件 / 跳模块 / 需评审） |
-| 什么时候不用 | —— | 小探索、即改即验的小修——**流程开销大过收益**，用普通模式 |
+| 什么时候不用 | —— | 工程模式里没有「小修直改」这一档：想先改后走流程 ⇒ **换普通模式**（不在工程模式里开旁路）。 |
 
 两模式的**差别只在约束强度**（机械门的有无）；**管理工作的逻辑同一套**——批次档 + 台账 + 收口（详细 = `docs/core/requirements/NORMAL-MODE.md` §5.6）。
+
+**分工的总纲（用户 2026-11-02 23:54 逐字）**：「以后的逻辑是如果想先改后走流程，就直接用普通模式，工程模式就严格执行纪律，把决策权收回给人。」
+
+⇒ **工程模式内不再有「这个算不算小改 / 这一步要不要走流程」的裁量**：判断权归人（换不换模式由你定），执行者只有两条路——走全链，或换普通模式。**为什么**：留给执行者解释的那部分，就是被用成豁免的那部分（本档 §5.5 与 `docs/core/requirements/ENGINEERING-MODE-V2.md` §13.5 同源）。
 
 **详细需求**：工程模式 → `docs/core/requirements/ENGINEERING-MODE-V2.md`；普通模式 → `docs/core/requirements/NORMAL-MODE.md` §5–§6。
 
@@ -102,12 +106,21 @@ v1 不需要团队记忆、先把 agent 主干做薄做扎实；存储 / 记忆�
 - **v1 功能范围**：Agent 主循环、基础工具集、上下文压缩、TUI、三层记忆体系（超原计划）、
   Agent 自律工具链（task / plan / goal / verify / recent_changes / question / checkpoint）、子 agent 并行 / MCP / checkpoint 断点恢复；
   明确不做（留 v2+）：工作流引擎。
-- **v2 团队记忆（远期——核心原则：存储 / 同步与检索性能分层解耦）**：真相源 = Git 仓库（markdown 条目）；本地索引 = SQLite（`node:sqlite`，可重建易失品）；
-  全文检索 = SQLite FTS5（BM25）；语义检索 = embedding 向量存 sqlite BLOB + JS 余弦；混合排序 = FTS5 + 向量 RRF；远期升级位 = pgvector / 中心化服务端（接口预留）。
-  架构方向细化 = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`（v2 未启动，以其为输入）。
-  **已细化的需求决策**：共享内容范围全都要（项目知识 / 架构决策 / 调试经验 / 代码规范）；沉淀双轨制（手动立规矩 + 自动萃取调试经验）；
-  embedding = SiliconFlow BAAI/bge-m3（Ollama 本地为离线备选）；git 同步层 A+B 分层且 B 可选（Team 层可选独立仓库 `~/.thincoder/teams/` + Project 层 `.thincoder/memory/`）；
-  条目格式 = Markdown + frontmatter；冲突策略 = 结构规避 + 诚实报错；索引重建 = 增量为主、重建兜底；自动提取 = 手动触发、自动候选、人工把关（`thincoder distill` / TUI `/distill`）。
+- **v2 团队记忆（远期——核心原则：存储 / 同步与检索性能分层解耦）**：
+  - **真相源** = Git 仓库（markdown 条目）
+  - **本地索引** = SQLite（`node:sqlite`，可重建易失品）
+  - **全文检索** = SQLite FTS5（BM25）
+  - **语义检索** = embedding 向量存 sqlite BLOB + JS 余弦
+  - **混合排序** = FTS5 + 向量 RRF
+  - **远期升级位** = pgvector / 中心化服务端（接口预留）
+  - **架构方向细化** = `thincoder-cli/docs/design/_archive/ARCHITECTURE-v2.md`（v2 未启动，以其为输入）
+  - **已细化的需求决策**：
+    - 共享内容范围：全都要（项目知识 / 架构决策 / 调试经验 / 代码规范）
+    - 沉淀双轨制：手动立规矩 + 自动萃取调试经验
+    - embedding：SiliconFlow BAAI/bge-m3（Ollama 本地为离线备选）
+    - git 同步层：A+B 分层且 B 可选（Team 层可选独立仓库 `~/.thincoder/teams/` + Project 层 `.thincoder/memory/`）
+    - 条目格式：Markdown + frontmatter；冲突策略：结构规避 + 诚实报错
+    - 索引重建：增量为主、重建兜底；自动提取：手动触发、自动候选、人工把关（`thincoder distill` / TUI `/distill`）
 
 ### 5.7 技术与质量约束
 

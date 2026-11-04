@@ -229,7 +229,6 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 | R9 | `:525-527` §11.3 id 命名空间段 | 改述为**统一现态**：id = 持久槽位号（G5 已收正——load/new 同命名空间）；同 id 重载替换；fork 角如实注 |
 | R10 | `:619` / `:620` / `:631` §11.9 | G5 行删、G6 行删（无效化表述即删）；`:631` 登记项 3 改述：resource_link 已接；余多块 text 合流待立批 |
 
-- **API-CONTRACT 再生**（导出面变动：`CONFIG_OPTIONS` 撤、`sessionConfigOptions` / `createSlotReleaser` / `resolveResourceLink` 增）：`node scripts/api-contract.mjs --write`（生成区机械笔）。
 
 ## 6. #862 裁定：拆批（含后续批 scope 草案）
 
@@ -314,7 +313,7 @@ SessionUpdate — oneOf 判别键 sessionUpdate（含 current_mode_update / conf
 ## 12. 落定与实施注意
 
 3. 单元测试档先红后绿；`node scripts/doc-check.mjs --root .` 复跑 exit 0 为验收项。
-4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）+ `node scripts/api-contract.mjs --write`（生成区再生）。
+4. 同拍收正 `docs/cli/design/ACP-CLIENT.md`（§5 表十处）。
 5. 需求面补笔 = 主 agent 笔（§1.3 / §7 表末行）——实施轮零触需求档。
 6. 边界登记（§11 各项）随收口入台账（父侧）。
 7. **修正轮实施令（交付登记 号 1 ∥ 号 2 收正——本档定形）**：① `session/new` 同键处置（§2.4——处置点 = `sessions.set` 直前；认领释放随 `sessions.set`/`committed` 之后）；② `session/list` `updatedAt` 值域钳（§2.2）；单元测试档随补 T5 超域用例 + T12 delete→new 用例（先红后绿）。

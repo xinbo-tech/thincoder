@@ -2,7 +2,7 @@
 
 > 归属 = `docs/core/design/AGENT-LOOP.md` 的**机制族拆分面**——「子代理工具契约与装配面」族。
 > **三分**——自本档迁出：后台异步池 / 挂起回合与 digest / 评审实例面 ⇒ `docs/core/design/AGENT-LOOP-ASYNC-POOL.md`（§6.8 · §6.10 · §6.11 · §6.18 · §6.19 · §6.20）；子 → 父上行与唤醒面 ⇒ `docs/core/design/AGENT-LOOP-UPSTREAM.md`（§6.27 全族）。
-> **节号沿用母档全局编号**（本档承接 §6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28–§6.30；本档自有 §6.58）——全仓既有指针**只改档名、不改节号**；母档续 §6.1–§6.6 + §6.13–§6.17。
+> **节号沿用母档全局编号**（本档承接 §6.7 · §6.9 · §6.12 · §6.21–§6.26 · §6.28–§6.30；本档自有 §6.58 · §6.59）——全仓既有指针**只改档名、不改节号**；母档续 §6.1–§6.6 + §6.13–§6.17。
 > 母档 = `docs/core/design/AGENT-LOOP.md`（归属与范围 / 核模块裁决行 / 须用户裁条目 / 对外契约 / 受影响文件 / 主循环机制面 §6.1–§6.6 / 诊断与预算面 §6.13–§6.16 / 关键决策 / 沿革）。
 > 工作流档 = `docs/core/design/CORE-UNIFICATION.md`；需求层 = `docs/core/requirements/AGENT-LOOP.md`（含 §4 需求条目面）。
 
@@ -19,8 +19,9 @@
 | coder | 父全量读写执行 + verify / advisor 自评 + 强制交付表 | 普通 |
 | eng-coder | 工程模式替换 coder + 设计驱动 overlay + 必带 `designToken` + explore 受限审计 | 工程 |
 | eng-designer | 工程模式写稿面唯一作者（设计档 / 批次档 §2，含修订；**需求档不归它**——只读，改动回主 agent）+ **无 designToken**（授权 = 需求已确认）+ 必带 `batchDoc` + `round` + explore 受限勘察 | 工程 |
+| tester | 读数来源：只读工具集 ∪ `{execute, bash}` − `{verify, advisor}`；只跑不改 = 角色契约（父侧按缺陷处理）；不写档、工具表里没有 `advisor`（面见 §6.59） | 普通 + 工程 |
 
-**模式过滤**：普通模式 explore / plan / coder；工程模式 explore / eng-designer / eng-coder——schema enum 反映现行模式（角色互斥：工程禁 plan 与 coder、普通禁 eng-coder 与 eng-designer；schema 枚举 + 运行期硬门禁双保险；裁定源 = §6.23.3（角色 enum 契约））。
+**模式过滤**：普通模式 explore / plan / coder / tester；工程模式 explore / eng-designer / eng-coder / tester——schema enum 反映现行模式（角色互斥：工程禁 plan 与 coder、普通禁 eng-coder 与 eng-designer；`tester` 两模式都可派；schema 枚举 + 运行期硬门禁双保险；裁定源 = §6.23.3（角色 enum 契约）；`tester` 一侧判据见 §6.59）。
 
 **委派动机**：隔离上下文（子 agent 全部读写调用不进父窗口）+ 单任务专注 + 并行省时 + coder / eng-coder 自带 verify / advisor 自评。thoroughness 三档 = quick（单点定向）/ medium（默认，适度并行）/ thorough（多位置全面分析，报告列搜索过什么 / 没找到什么）——提示词约定形态，不加工具参数。
 
@@ -255,7 +256,7 @@
 
 工程角色（eng-coder / eng-designer）的 spawn 面 = `batchDoc`（必带、可读）· `round`（enum，必带）· `files` / `dependsOn` / `async` / `model`（调度与运行面）· eng-coder 另带 `designId` + `designToken`。
 
-非工程角色（explore / plan / coder）保留任务书参数：四项核心（`goal` / `knownFacts` / `acceptance` / `reportFormat`）+ `scope`——它们没有批次档，不存在「第二个来源架空第一个来源」这条缺陷路径。
+非工程角色（explore / plan / coder / tester）保留任务书参数：四项核心（`goal` / `knownFacts` / `acceptance` / `reportFormat`）+ `scope`。explore / plan / coder 没有批次档，不存在「第二个来源架空第一个来源」这条缺陷路径；`tester` 有执行面（能写盘，不是纯只读角色），它仍取五项任务书是用户裁定（F-TT5，2026-11-02），其写面由角色契约约束而非只读面约束（§6.59.7）——上面那条「只读角色改不动任何东西」的推导不适用于它。
 
 **范围判据（本设计的推导，非用户逐字）**：**只读角色改不动任何东西，通道不构成风险；有写权的角色必须只有一个任务来源。**依据 = 用户 22:42「真正的解决方案是取消designPoints这个参数，要求一切必须写在批档里」+ 22:43「那把这些自由文本参数都取消，eng-coder只接受批档一个任务通道」（原话）。
 
@@ -291,6 +292,7 @@
 | eng-coder | `role` · `batchDoc`（可读）· `round` · `designToken`（多槽时另需 `designId`） |
 | eng-designer | `role` · `batchDoc`（可读）· `round` |
 | explore / plan / coder | `role` · `goal` · `knownFacts` · `scope` · `acceptance` · `reportFormat` |
+| tester | `role` · `goal` · `knownFacts` · `scope` · `acceptance` · `reportFormat`（同 explore 五项；不进 `ENGINEERING_ROLES`，见 §6.59.2） |
 
 **门序**：角色 enum → `batchDoc` 门（既有；同档在飞的拒发判据见 §6.58）→ 任务书门（工程角色 = 拒收八个自由文本键 ∥ 非工程角色 = 四项核心 + `scope` 必带）→ `round`（工程角色）→ token 门（eng-coder，既有）→ files 声明面（既有）。
 
@@ -371,26 +373,35 @@ Spawn task-channel gate (role='<role>'): <offending names, " / " separated>. An 
 |---|---|---|---|---|
 | P1 | `thincoder-core/tool-docs/subagent.md:23` | `Task book (every spawn role): four core structured parameters — … plus ONE fifth parameter named by role: designPoints … for eng-coder/eng-designer, scope … for explore/plan/coder. All five are required … round (initial\|fix) is mandatory for eng-coder/eng-designer. An eng-coder spawn also carries designToken …` | 整段替换为 §6.22.8-A（下方代码块） | 描述与门同源 |
 | P2 | `thincoder-core/tool-docs/subagent.md:26-27` | `subagent(role="eng-coder", round="initial", goal="…", knownFacts="…", designPoints="…", acceptance="…", reportFormat="…", batchDoc="<batch record>", designToken="…")` ／ explore 行五参 | 取 §6.30「参数骨架」块第 1 行（eng-coder）∥ 第 3 行（explore）逐字——示例正本住 §6.30，本节不复制 | 示例即门形 |
-| P3 | `thincoder-core/agent-tools/subagent.mjs:142` | `task: … OPTIONAL free-text supplement — the brief itself is the structured task-book parameters (four core … plus the role's fifth: designPoints … scope …); a task-only spawn is refused …` | `For action:'spawn': normal-mode roles (explore/plan/coder) — OPTIONAL free-text supplement; the brief itself is the four core parameters (goal / knownFacts / acceptance / reportFormat) + scope. Engineering roles (eng-coder / eng-designer) take NO task-book text parameters — their task book is batch record §2 (batchDoc), read by the child itself. For action:'escalate': the brief (goal, constraints, entry files, acceptance criteria).` | 描述与门同源 |
-| P4 | `thincoder-core/agent-tools/subagent.mjs:143` `context` | `Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only.` | `Optional background for normal-mode spawns (explore/plan/coder) only; action:'spawn' only.` | 同上 |
-| P5 | `thincoder-core/agent-tools/subagent.mjs:153-158` | 五条 `REQUIRED for every spawn role …`；`designPoints: {…}` 属性一条 | `goal` / `knownFacts` / `acceptance` / `reportFormat` 首句 → `REQUIRED for role='explore'/'plan'/'coder' (normal-mode task book) …`；`scope` 首句 → `REQUIRED for role='explore'/'plan'/'coder' …`；**删除 `designPoints` 属性整行**；`batchDoc` 描述加一句 `This IS the task book for engineering roles — batch record §2, read by the child itself.` | 同上 |
+| P3 | `thincoder-core/agent-tools/subagent.mjs:142` | `task: … OPTIONAL free-text supplement — the brief itself is the structured task-book parameters (four core … plus the role's fifth: designPoints … scope …); a task-only spawn is refused …` | `For action:'spawn': non-engineering roles (explore / plan / coder / tester) — OPTIONAL free-text supplement; the brief itself is the four core parameters (goal / knownFacts / acceptance / reportFormat) + scope. Engineering roles (eng-coder / eng-designer) take NO task-book text parameters — their task book is batch record §2 (batchDoc), read by the child itself. For action:'escalate': the brief (goal, constraints, entry files, acceptance criteria).` | 描述与门同源 |
+| P4 | `thincoder-core/agent-tools/subagent.mjs:143` `context` | `Optional background the sub-agent needs (it cannot see this conversation); action:'spawn' only.` | `Optional background for non-engineering spawns (explore / plan / coder / tester) only; action:'spawn' only.` | 同上 |
+| P5 | `thincoder-core/agent-tools/subagent.mjs:153-158` | 五条 `REQUIRED for every spawn role …`；`designPoints: {…}` 属性一条 | `goal` / `knownFacts` / `acceptance` / `reportFormat` 首句 → `REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book) …`；`scope` 首句 → `REQUIRED for role='explore'/'plan'/'coder'/'tester' (non-engineering task book, the fifth parameter) …`；**删除 `designPoints` 属性整行**；`batchDoc` 描述加一句 `This IS the task book for engineering roles — batch record §2, read by the child itself.` | 同上 |
 | P6 | `thincoder-core/prompts/persona-engineering.md` §Call chain 的 `spawn eng-designer` 形 | `spawn eng-designer (\`subagent(role="eng-designer", batchDoc=<…>, files=[...], round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)\`; \`task\` is an optional supplement)` | `spawn eng-designer (\`subagent(role="eng-designer", batchDoc=<this batch's record path>, files=[...], round="initial")\`)` | 示例即门形 |
 | P7 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `In engineering mode the spawn looks like` 句 | ``subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", goal=..., knownFacts=..., designPoints=..., acceptance=..., reportFormat=...)`` | ``subagent(role="eng-coder", designId=<id>, designToken=<token>, batchDoc=<batch record path>, round="initial", files=[...])`` | 同上 |
 | P8 | `thincoder-core/prompts/persona-engineering.md` §Implementation dispatch structure 的 `The task book is batch record §2` 句 | 「Every dispatch carries a task book — four core = structured spawn parameters, every spawn role」+ `goal` / `round` / `designToken` / `knownFacts` / 第五项按角色 / `acceptance` / `reportFormat` 七条列表 | 整段替换为 §6.22.8-B（下方代码块）；`files` 是调度通道那两条警告（§Implementation dispatch structure 的 `The \`files\` parameter is a SCHEDULING channel`）逐字保留 | 任务书单通道 |
 | P9 | `thincoder-core/prompts/persona-engineering.md` §Parallel dispatch 的 `subagent(role="eng-coder", designId=<id-B>` 两行 | 两条并行 token 隔离示例（各带五参） | 两条同 P7 形（只差 designId / designToken 字面） | 示例即门形 |
-| P10 | `thincoder-core/prompts/discipline-normal.md:253-260` | `Every delegation carries a task book — four core = structured spawn parameters, every spawn role …` 与第五项按角色行、`Every spawn role: …` | `Every normal-mode delegation (explore / plan / coder) carries a task book — four core structured spawn parameters:` / 第五项行改为 `**\`scope\`** (scope & forbidden scope — what to read / what not to touch)` / 末尾改 `Every normal-mode spawn role: …`；另加一行 `**Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.` | 层次不串 |
+| P10 | `thincoder-core/prompts/discipline-normal.md:253-260` | `Every delegation carries a task book — four core = structured spawn parameters, every spawn role …` 与第五项按角色行、`Every spawn role: …` | `Every non-engineering delegation (explore / plan / coder / tester) carries a task book — four core structured spawn parameters:` / 第五项行改为 `**\`scope\`** (scope & forbidden scope — what to read / what not to touch)` / 末尾改 `Every non-engineering spawn role (explore / plan / coder / tester): …`；另加一行 `**Engineering-mode spawns (eng-coder / eng-designer) carry no task-book text parameters** — their task book is batch record §2, and free text parameters are refused with the parameter named.` | 层次不串 |
 | P11 | `thincoder-core/permission.mjs:38` | `cap(composeTaskBookBrief(args, args.role) \|\| args.task \|\| "", 500)` | `cap(composeTaskBookBrief(args, args.role) \|\| (args.batchDoc ? \`task book: batch record §2 (\${args.batchDoc})\` : "") \|\| args.task \|\| "", 500)` | 人审面不空白 |
 | P12 | 需求面（主 agent 笔） | `docs/core/requirements/ENGINEERING-MODE-V2.md:430`「派单任务书 = 四项核心 + 第五项按角色」／`:433`「四项核心 + 第五项按角色 + round 要可见」／`docs/core/requirements/ENGINEERING-MODE-V2-SPEC-DELEGATION.md:7`「四项核心 + 第五项按角色」／`:14-19` 五项列表／`:33` AC-M5-2 | 均改为「**任务书 = 批次档 §2**（工程角色零任务书文本参数，自由文本参数点名拒收）；非工程角色（explore / plan / coder）= 四项核心 + `scope`」；`:33` 判据改为「工程角色：`batchDoc` 可读 ∧ `round` 合法 ∧ 无任务书文本参数（命中即拒并点名）∥ 非工程角色：四项核心 + `scope` 缺任一即拒」 | 需求与设计同口径 |
 | P13 | `thincoder-core/agent-tools/spawn-gates.mjs:49` ∥ `:139` | `:49` round 门文案 `the five task-book parameters are enforced by a separate gate (validateTaskBookParams)` ∥ `:139` 拼接模板 ` (got ${otherFifth} instead — that name belongs to the eng-coder/eng-designer spawns)` | `:49` → `task-book text parameters are refused for engineering roles by a separate gate (rejectEngFreeTextParams)`；`:139` → ` (got ${otherFifth} instead — ${otherFifth} is retired for every role; the fifth parameter here is ${fifth})` | 同档两句互斥消解——`:83` 退役句为准；原 `:139` 把派单方指去一个同样拒收该名的 spawn，`:49` 自述的五参门对工程角色已不存在 |
-| P14 | `thincoder-core/prompts/discipline-normal.md:255` | `**\`round\`** (initial \| fix — eng-coder / eng-designer only; fix rounds are point-fixes only, no full survey)` 挂在 normal-mode 任务书清单内 | 整行删除——`round` 是工程角色必带项，normal-mode 清单不列；工程面由同段末「Engineering-mode spawns …」行承载 | 层次不串（清单头 = normal-mode 四项核心，行内混工程参数） |
+| P14 | `thincoder-core/prompts/discipline-normal.md:255` | `**\`round\`** (initial \| fix — eng-coder / eng-designer only; fix rounds are point-fixes only, no full survey)` 挂在 normal-mode 任务书清单内 | 整行删除——`round` 是工程角色必带项，normal-mode 清单不列；工程面由同段末「Engineering-mode spawns …」行承载 | 层次不串（清单头 = normal-mode 四项核心，行内混工程参数）——**本格不改**（该行只枚举工程角色 `eng-coder / eng-designer only`，无「非工程角色集」可增；它所在的清单头 = P10，已在 P10 改） |
+| P16 | `thincoder-core/agent-tools/subagent.mjs:227` | spawn 前置拒文的角色句 `… requires the structured task-book parameters for normal-mode roles (four core: goal / knownFacts / acceptance / reportFormat + scope) — a free-text task alone is not the brief.` | 同句 `for normal-mode roles` → `for non-engineering roles (explore / plan / coder / tester)`；其余逐字不变 | 描述与门同源（判据 = `isEngineeringRole`，tester 非工程角色 ⇒ 本拒文同样落在它身上） |
+| P17 | `thincoder-core/agent-tools/spawn-gates.mjs:83` | `(designPoints is retired for every role — write §2, or scope for explore/plan/coder)` | `(designPoints is retired for every role — write §2, or scope for explore/plan/coder/tester)` | 同上（tester 的第五项同样是 `scope`） |
 | P15 | `thincoder-core/agent/family-tools.mjs:99` ∥ `:129` | 注释 `its task book rides the mechanical summary of the parent's _engTaskInput instead` ∥ 审计通道描述 `The audit task book is appended MECHANICALLY — your own spawn task (docs involved / acceptance criteria / file list) plus the files you actually touched` | `:99` → `its task book rides the parent's batch record §2 instead (the audit block carries the batchDoc path)`；`:129` 该句 → `The audit context is appended MECHANICALLY — the batch record path (its §2 is the delivery's task book, read it before judging) plus the files you actually touched` | 描述与门同源——A2 摘要面已删（KD-SC6），现审计块 = 批档路径行 + §2 指向句 + touched 快照 |
+
+**P4 是真判断点（本轮实读，不照抄）**：
+
+- 拼装分支实读：`thincoder-core/agent-tools/subagent-spawn.mjs:370-372`——`engineeringRole ? <任务书行> : (args.context ? \`Context:\n…\n\nTask:\n…\` : taskBriefOf(args, role))`。
+- tester 不在 `ENGINEERING_ROLES`（`thincoder-core/agent-tools/spawn-gates.mjs:54`）⇒ 走 else 支，**`context` 对它可用**。
+- 拒收名单含 `context`（`spawn-gates.mjs:64`），但 `rejectEngFreeTextParams` 只对工程角色执行 ⇒ tester 传 `context` 不被拒。
+- 故 P4 的枚举含 `tester`，且不写「normal-mode」——tester 两模式都可派。
 
 **提示词面只作正面陈述，不预演错误**：模型只会用列出的参数——把被拒的名字写进提示词，等于把那串名字变成候选项。拒收名册只活在门的报错里（命中时逐字点名，§6.22.1），提示词与工具描述都不预演错误。
 
 **§6.22.8-A（P1 的整段替换——一条规则一行，逐行 ≤300；整行逐字比较规则见 AC-SC-5）**：
 
 ```text
-Task book (normal-mode roles: explore / plan / coder): four core structured parameters — goal (goal & why), knownFacts (the facts you already verified), acceptance (machine-verifiable criteria), reportFormat (delivery-report format)
+Task book (non-engineering roles: explore / plan / coder / tester): four core structured parameters — goal (goal & why), knownFacts (the facts you already verified), acceptance (machine-verifiable criteria), reportFormat (delivery-report format)
 — plus scope (scope & forbidden scope — what to read / what not to touch).
 All five are required: a missing, blank or non-string value is refused with the parameter named.
 A free-text task is an optional supplement, never the whole brief.
@@ -433,12 +444,14 @@ An eng-coder spawn also carries designToken — the write credential (the exact 
 
 | 落点 | 改前 | 改后 |
 |---|---|---|
-| `agent-tools/subagent.mjs:133` | `Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/plan/eng-designer/eng-coder. The schema enum reflects the active mode.` | `Mode filtering: normal mode exposes explore/plan/coder (eng-coder and eng-designer are refused); engineering mode exposes explore/eng-designer/eng-coder (plan and coder are refused — plan is a normal-mode role, coder is replaced by eng-coder). The role enum is filtered per mode at assembly, and the spawn gate refuses out-of-mode roles mechanically.` |
-| `agent/family-tools.mjs:46` | `enum: ["explore", "plan", "eng-designer", "eng-coder"],` | `enum: ["explore", "eng-designer", "eng-coder"],` |
+| `thincoder-core/tool-docs/subagent.md:77`（Mode filtering 句） | `Mode filtering: normal mode exposes explore/plan/coder; engineering mode exposes explore/eng-designer/eng-coder — off-mode roles are refused mechanically (enums filtered at assembly; the spawn gate re-checks).` | `Mode filtering: normal mode exposes explore/plan/coder/tester (eng-coder and eng-designer are refused); engineering mode exposes explore/eng-designer/eng-coder/tester (plan and coder are refused — plan is a normal-mode role, coder is replaced by eng-coder; tester is dispatchable in both modes). The role enum is filtered per mode at assembly, and the spawn gate refuses out-of-mode roles mechanically.` |
+| `agent/family-tools.mjs:46` | `enum: ["explore", "plan", "eng-designer", "eng-coder"],` | `enum: ["explore", "eng-designer", "eng-coder", "tester"],` |
 | `agent-tools/subagent.mjs:154` | `round: { type: "string", enum: ["initial", "fix"], … }` | `round: { type: "string", enum: ROUND_VALUES, … }`（+ 顶部 `import { ROUND_VALUES } from "./spawn-gates.mjs"`） |
 | `agent-tools/spawn-gates.mjs:50` | `if (a.round !== "initial" && a.round !== "fix")` | `if (!ROUND_VALUES.includes(a.round))`（错误文案**逐字不变**：`round (initial\|fix)` / `round ∈ {initial, fix}` 由常量拼出，输出同形） |
 
-**零改面**：`family-tools.mjs:50` 的 suffix 句（现状准确）· `subagent.mjs:238` ROLES 白名单（`plan` 必须仍在——门文案要能指名拒绝）· 门文案 `:242`/`:245`/`:248`/`:254` · `rejectEngineeringFilePaths` 谓词 · 正常模式 enum `family-tools.mjs:53`。
+**「改前」列的时态**：各格「改前」= 该批落地前实读；该批已落地，盘上只存「改后」形 ⇒「改前」在任何时刻都不可再复验，读它时别当活体判据——它记录的是那次改动的起点，不是第二条现行规则。
+
+**零改面**：`family-tools.mjs:50` 的 suffix 句（现状准确）· `subagent.mjs:238` ROLES 白名单里 `plan` 必须仍在（门文案要能指名拒绝；该集现行成员见 §6.59.2 ①）· 门文案 `:242`/`:245`/`:248`/`:254` · `rejectEngineeringFilePaths` 谓词 · 正常模式 enum 的集（现行成员见 §6.59.2 ②）。
 
 ### 6.23.5 关键决策记录
 
@@ -959,5 +972,249 @@ batchDoc is already in flight — spawn refused. Batch record: <abs path>. Occup
 **进入口来源**：生产真实发生（2026-10-28 11:34 两份并发 spawn 共用一本批档 ⇒ 语法坏档 + 一席复原）——不是推演场景。
 
 **UI / 交互决策**：无 UI 面；工具描述面（`thincoder-core/tool-docs/subagent.md`）与参数描述面（`thincoder-core/agent-tools/subagent.mjs:151`）载明一本一批档，`open` 项为零。
+
+
+## 6.59 `tester` 子代理（读数来源 · 角色面）
+
+**需求** = `docs/core/requirements/AGENT-LOOP.md` §4.20（F-TT1–F-TT5 + `F-TT4-补`；F-TT1–F-TT5 = 2026-11-02 用户裁定，`F-TT4-补` = 父侧落笔）。本节只写机制：一个**跑验证、交读数、不改不写**的子代理角色如何装配进来。
+
+### 6.59.1 做法与理由
+
+**做法**：新增第 6 个子代理角色 `tester`。它是**第 3 种工具面**——不是 explore/plan 那种纯只读面（读不到执行），也不是 coder 那种全量面（带着写）。`tester` 的工具面 = **只读面 ∪ `{execute, bash}` 再减 `{verify, advisor}`**。
+
+**为什么是第三种面而不是「coder 减去写工具」**：coder 面 = `parent.tools` 全集，减出来的面随父侧工具表漂——父侧明天多一把写工具，tester 明天就多一把。允许清单式则相反：**写入面 fail-closed**——非只读新工具默认**进不来**，要进得显式加名；只读新工具按同一公式自动进（§6.59.2 ④ 的 `readonlyToolNames` 那一项就是它）。用户裁定「控制不住再收紧」说的是**执行面先宽**，不是**写面先宽**。
+
+**为什么执行面给全**（F-TT2）：装依赖 ∥ 编译 ∥ 建夹具都在「跑测试之前必须发生」这一类里；砍掉它们的结果不是更安全，是 tester 交不出读数。`execute` 的 `async` 后台形也**不新增裁**——全量套件常越过同步超时，砍掉后台形等于逼它前台跑死在超时上，产出的是一份**假红**。（`bash` 的 `async` 参在 depth>0 被既有排除面删掉，见 §6.59.2 ④——那是继承来的面，不是本设计新收的。）
+
+**最近先例行**：`explore` / `plan` 的角色过滤（`thincoder-core/agent-tools/subagent-spawn.mjs:273-283`：`role === "explore" || role === "plan"` ⇒ `readonlyToolNames(parent.tools)` 过滤）。
+
+- **对齐**：同一处过滤点、同一份 `readonlyToolNames` 单源。
+- **偏离**：`tester` 在该行**不是**纯只读，故改为「只读集 ∪ 两个执行工具名 − `{verify, advisor}`」。
+- **偏离理由**（须是能力面 ∥ 契约面的失败，不是口味）：`readonlyToolNames` 里没有执行工具（纯只读面读不到执行），而 F-TT2 要求执行面在场。照抄那一行会直接违约。
+
+**三问式查据（新名字 `tester`）**：
+
+- `existing but unusable: thincoder-core/agent-tools/subagent-spawn.mjs:273-283 · name: "explore" / "plan"（只读面分支）· failed on: 能力面——`readonlyToolNames` 只收 `readonly` 旗标为真的工具（`helpers.mjs:283-284`），而执行面的 `readonly` 均为 false（`tools/execute.mjs:203` ∥ `tools/bash.mjs:253`）⇒ 该集里没有执行面，照抄即违 F-TT2。`
+- `existing but unusable: 同一处 · name: "coder"（全量面分支）· failed on: 契约面——`parent.tools` 全集含 `write` / `edit` / `apply_patch` 等写面，与 F-TT3「不写任何档」相抵；且减出来的面随父侧工具表漂（D-TT1）。`
+- `none found: 既有五个 spawn 角色（explore / plan / coder / eng-coder / eng-designer）无一承担「跑验证、交读数、不改不写」这一职责——`thincoder-core/prompts/` 与 `docs/core/design/TESTING.md`（1349 行）内零命中（见下方勘察证据行）。`
+
+**勘察证据行**：
+
+- `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.7 ∥ §6.22 ∥ §6.58（子代理角色、spawn 门、批档复用护栏）。
+- `docs/core/design/TOOLS.md` §6.2 ∥ §6.25（注册与 schema、令牌门）。
+- `docs/core/design/TESTING.md` §4 ∥ §11 ∥ §13（集成集承载与执行、RTM、测试纪律两层 why）——该档 1349 行内零「tester」，无现成角色面可对齐。
+- `docs/core/requirements/AGENT-LOOP.md` §4.20。
+- `index.publicRepos` = 空 ⇒ 无外仓可查（已查，无）。
+
+**数据事实面**：本节不含需要读数据才能定的断言（「有多少档会因此变」类）——需要实读的都已在下方逐处标了文件与逐字；无需查库，故「无需读数据」。
+
+### 6.59.2 接口契约（六处角色面 + 任务书面 ∥ 池位 ∥ 报告形态）
+
+**① 角色白名单**——`thincoder-core/agent-tools/subagent.mjs`：
+- `:144` schema `role.enum` 从 `["explore", "plan", "coder", "eng-coder", "eng-designer"]` 增 `"tester"`。
+- `:241` `const ROLES = new Set(["explore", "plan", "coder", "eng-coder", "eng-designer"])` 增 `"tester"`；`:243` 拒文的角色枚举同增（不改则报错信息说谎：合法角色被报成非法）。
+- 模式门 `:253-269` **不加新门**（F-TT1 两模式都可派）。四条模式拒文里**只有一句枚举了模式内角色集**：`:259`「the engineering-mode enum is explore / eng-designer / eng-coder / tester」——已把 `tester` 写进去（本轮已落）。另三句各点名一个具体替代角色、没有角色集可增：`:256`（工程模式禁 `coder` ⇒ 指向 `eng-coder`）、`:262`（普通模式禁 `eng-coder` ⇒ 指向 `coder`）、`:268`（普通模式禁 `eng-designer` ⇒ 指向 `explore` / `plan`）——往这三句塞 `tester` 会把它写成「可替代角色」，语义反而错，故不改。
+
+**② depth-0 角色 enum（按模式）**——`thincoder-core/agent/family-tools.mjs`：
+- `:49-57` 两个模式各一份 `enum`：工程面 `["explore", "eng-designer", "eng-coder"]` 与普通面 `["explore", "plan", "coder"]` **都增** `"tester"`。
+- `:63-68` 的 `suffix`（描述面补充句）补一句：tester = 只跑不改的读数角色。
+
+**③ 提示词装配**——`thincoder-core/prompt-overlays.mjs`：
+两处都增（逐字）：
+
+```js
+// SLOT_CONTENTS
+"persona-tester.md": loadSlot("persona-tester.md"),
+// SCENARIO_SLOT_FILES
+"tester": ["persona-tester.md", "common.md", "discipline-normal.md", "subagent-base.md"],
+```
+- **不登记会怎样**（实读 `assemblePrompt`）：「`const files = SCENARIO_SLOT_FILES[scenario]` / `if (!files) return { prompt: applyPromptInjections(CONSULT_BASE), warnings: [] }`」——未登记的场景**静默**装配成 consult 基底、零警告。`tester` 的 scenario 名由 `thincoder-core/agent/setup.mjs:241-247` 取 `agent._role ?? "normal"` 得到，故漏登记 = 它带着会诊人格去跑测试。
+- 纪律槽取 `thincoder-core/prompts/discipline-normal.md`（与 explore/coder/plan 同）：`thincoder-core/prompts/discipline-engineering.md` 装的是四步流程与 §2 任务书，而 tester 不写账、不推进工程流程。
+
+**④ 工具面过滤**——`thincoder-core/agent-tools/subagent-spawn.mjs:273-283`：
+- 现文两分支：explore/plan ⇒ 只读集；其余（含 coder）⇒ `parent.tools` 全集。**tester 落在第二分支就会拿到 `write` / `edit` / `apply_patch`**，与 F-TT3 直接相抵。
+- 新分支：`role === "tester"` ⇒ `parent.tools.filter((t) => (allowed.has(t.name) && !TRIMMED.has(t.name)) || t.name === "execute" || t.name === "bash")`，其中 `allowed = readonlyToolNames(parent.tools)`（单源 `thincoder-core/agent/helpers.mjs:283-284`）、`TRIMMED = new Set(["verify", "advisor"])`。等价公式：**只读集 ∪ `{execute, bash}` − `{verify, advisor}`**。
+- 减 `verify`：它的语义是「我宣布这次交付达标了」——那是结论；`tester` 的产物是读数（F-TT3「不代父侧下结论」）。
+- 减 `advisor`：它的语义是「开一次评审、产出一个判断」——同样是结论；且它 `readonly: true`（`thincoder-core/agent-tools/advisor.mjs:146`）⇒ 不减就自动落进只读集，边界「不做评审」变成一句没人执行的话。父侧 2026-11-02 裁：**减掉工具，不是改写边界句**。
+- 两枚减法都按名显式做，不看 `readonly` 旗标分流：旗标说的是「不写盘」，不是「不产出结论」。
+- `:283` 之后的 `excludeSubagentTools(tools)`（`helpers.mjs:299`）照旧生效、顺序不变。它做两件事，tester 全继承：① 排 `question` / `ssh`（`SUBAGENT_TOOL_EXCLUSIONS`，`helpers.mjs:292`）；② 对 `bash` / `browser` **删掉 `async` 参**（`helpers.mjs:303-305`）⇒ **`bash` 的后台形在 depth>0 本来就不存在**，`execute` 不在该表内、其 `async` 保留。因此 F-TT2 的「`async` 不裁」= 本设计不新增收窄，不等于 bash 有后台形。
+
+**⑤ 段级工具段**——`family-tools.mjs:187-193` 的 depth>0 角色段**不加新分支**，tester 走 `:193` 的兜底段 `[parentChannelTool, ledgerReadTool, teamLedgerReadTool, manifestReadTool]`。
+
+- 该段给它的正是要的面：`notify_parent`、台账只读、manifest 只读——能上抛、不能写账。
+- `batch` / `doc_check` 不在该段 ⇒ 语法面不可达。
+- `advisor` 也不在该段，但它是只读工具、会从基础集进来：挡住它的是 ④ 的显式减法，不是这一段。
+
+**⑥ 端侧角色面**——`thincoder-vscode/src/agent/tool-table.mjs`（同一角色集在 VS Code 端的活体描述，与核那五处并列）：
+
+- **谁替换谁**：`:40` 的 `vscSubagentFace` 经 `opts.toolDecorate` 供核 `assembleFamilyTools({ decorate })`，**替换核 `filteredSubagent`**（档头自述「端侧自带 role 面」，`:4-6`）⇒ 该端模型看到的 `role.enum` 与 suffix 由这一档给，核那份在该端不生效。漏这一处 = 该端 enum 里没有 `tester`，父侧派不出去、模型也看不见，用户可见的端差即缺陷。
+- **角色面**：`:45-56` 的 `testerSuffix` 与两模式 enum 各增 `"tester"`，逐字对核 `family-tools.mjs` 的 `subagentRoles`（实施轮已落）。
+- **端侧第二处工具面过滤（防御面）**：`buildToolTable` 的 `:176` `const isReadOnlyRole = depth > 0 && (role === "explore" || role === "plan" || role === "consult")`、`:177` `const isTesterRole = depth > 0 && role === "tester"`；tester 分支为 `:183-185` 的 `builtinTools.filter((t) => t.readonly || t.name === "execute" || t.name === "bash").filter((t) => !TESTER_TRIMMED.has(t.name))`（`TESTER_TRIMMED` = 端侧自持字面量 `{verify, advisor}`，`:178`）。
+- **可达性实读（决定这一处的性质）**：`buildToolTable` 的运行期唯一调用点是 `thincoder-vscode/src/agent/setup.mjs:215`（`hydrateRun` 内），而 `hydrateRun` 在本端唯一的装配调用点传的是 `depth: 0, role: null`（`thincoder-vscode/src/extension/panel-turn-loop.mjs:198` `const hydrateCtx = { provider: p, cwd, input: text, opts: ro, depth: 0, role: null, getAuto: () => panel._autoApprove }`）⇒ 端侧 `depth > 0` 整段（连同既有的 explore / plan / consult 只读分支）运行期走不到。故这一处按**防御面**记账：端侧将来启用 depth>0 时，该分支按 ④ 的同一公式即生效；当前不可达，它不是「已修的缺陷」，也不构成「用户可见端差已消除」的证据。
+- **端侧只读集怎么取（写死，勿自择）**：`allowed = builtinTools.filter((t) => t.readonly)`——就是 `:181` 现成的那个形，端侧不调核 `readonlyToolNames`；`TRIMMED` 两端**各自字面量**（核 = `subagent-spawn.mjs` 的 `new Set(["verify", "advisor"])`，端 = 该档内自持同形字面量）。理由：§6.24 已立端侧规范「不 import 核常量——端镜像面按既有形态自持字面量，同集由判据锁死」；端侧引核 helper 与该规范相左。
+- **AC-TT2 的「两端名集相等」怎么算**：两侧各按自己那条成文规则算**基础集**再逐名比。核 = `readonlyToolNames(parent.tools) ∪ {execute, bash} − {verify, advisor}`；端 = `builtinTools.filter((t) => t.readonly) ∪ {execute, bash} − {verify, advisor}`；两侧各自再经 `SUBAGENT_TOOL_EXCLUSIONS`。家族段不进这条比较——两端都由核 `prepareRun` 在同一处追加。核侧算例取 `parent.tools = [...builtinTools, verifyTool]`（父面 = 基础集 + `verify`）⇒ 两侧名集应逐名相等。
+
+**任务书面**：`thincoder-core/agent-tools/spawn-gates.mjs:54` 的 `ENGINEERING_ROLES` 只含 `eng-coder` / `eng-designer`，tester **不进**该集 ⇒ `taskBookParamsFor`（`:107-108`）自动给它五项任务书（`goal` ∥ `knownFacts` ∥ `scope` ∥ `acceptance` ∥ `reportFormat`），正好是 F-TT5 的形。无新参数、无新门。
+
+**池位**：`thincoder-core/agent-tools/subagent-async.mjs:71-73` 的 `poolDomainOf` 现文「`role === "eng-coder" ? "engCoder" : "other"`」⇒ `tester` 落 **`other` 域**（`ASYNC_POOL_LIMITS` `:62` = `{ engCoder: 4, other: 4 }`）。
+
+**不新增池键**：一个跑全量套件的 tester 与 explore/plan/coder 共用 4 席，但**挤不掉实施席**（`eng-coder` 独占另 4 席）。新增第三键要动 `config.mjs` 默认值 + 校验 + 两端配置面，为一个尚未出现的拥塞先建一层；读数出现真实拥塞再议。
+
+**报告形态（F-TT3 的可判形）**：四块固定，写进人格层正文（中文权威 = §6.59.10 的「报告形态」一节）——块 1 命令原文 + `exit code`（**兼载写盘落点**：凡写盘的命令逐条标出落点路径，不另立第五块）· 块 2 跑者汇总行逐字引用 · 块 3 失败用例名逐行（上限 20，超出写余数）· 块 4 摘要 = **末 40 行** + 首个错误栈段（连续缩进行，上限 20 行）。
+
+**超长输出落到哪**：落点是**报告产物文件**，不是「档」——跑命令时即 `tee` 到 `<系统临时目录>/thincoder-tester-<role#id>-<时间戳>.log`（`bash` 的重定向 / `tee` 完成；tester 无 `write` 工具，**事后补写这条路不存在**），报告给该路径并注明「摘要 = 末 40 行」。F-TT3 的「不写任何档」指不写仓库内的需求 / 设计 / 批次 / 台账档；报告产物文件在仓库外、只服务本次报告，不进入任何账。机制面只约束**形态可判**，不约束措辞。
+
+### 6.59.3 受影响文件与层级结论
+
+| 文件（节 ∥ 落点） | 层级 | 本轮 |
+|---|---|---|
+| `docs/core/design/AGENT-LOOP-SUBAGENT.md` §6.59 | 设计档 | 写（机制全貌，本轮已落） |
+| 同档 §6.7.1 角色表 + 「模式过滤」句 | 设计档 | 加 `tester` 行；模式过滤改写为六角色事实形（普通 explore / plan / coder / tester · 工程 explore / eng-designer / eng-coder / tester）（本轮已落） |
+| 同档 §6.22 非工程角色句 + §6.22.1 必填集合表 | 设计档 | 角色集增 `tester`、必填表加 `tester` 行（同 explore 五项）（本轮已落） |
+| 同档 §6.22.8-A 逐字块 | 设计档 | 首句角色集改 `non-engineering roles: explore / plan / coder / tester`；实施轮 `thincoder-core/tool-docs/subagent.md:23` 按该块整段替换（AC-SC-5 的逐字对比目标 = 改后的块）（本轮已落） |
+| 同档 §6.22.8 P3 ∥ P4 ∥ P5 ∥ P10 | 设计档 | 角色枚举增 `tester`、`normal-mode` → `non-engineering`（判据 = 描述与门同源：`taskBookParamsFor` 只看 `isEngineeringRole`，tester 取五项；P4 的 `context` 已实读为 tester 可用）（本轮已落） |
+| 同档 §6.22.8 P14 | — | **不改**：该行删的是 normal-mode 清单里的 `round` 行，行内只枚举工程角色，无「非工程角色集」可增；它所在的清单头 = P10，已在 P10 改（本轮核定） |
+| 同档 §6.22.8 P16 ∥ P17（P16 / P17 为一对新增行） | 设计档 | 两处代码文案的角色集订正（`subagent.mjs` 的任务书错误文案 ∥ `spawn-gates.mjs` 的 designPoints 指路句）（本轮已落） |
+| 同档 §6.23.3 的 `subagent.mjs:133` 模式过滤行 ∥ `family-tools.mjs` 工程 enum 行 | 设计档 | 两格「改后」文本再增 `tester`（逐字住 §6.23.3，本节不复制）（本轮已落） |
+| `docs/core/design/TOOLS.md` §6.27 | 设计档 | 写（工具面一侧 + 回指 §6.59）（本轮已落） |
+| `docs/core/requirements/AGENT-LOOP.md` §4.20 | 需求档 | 父侧落笔（`F-TT4-补` 行），设计席未改 |
+| `thincoder-core/prompts/persona-engineering.md:476` 池位句 | 产品代码（提示词面） | 实施轮写：`other-role (explore / plan / coder) pool` → 增 `tester`（tester 落 `other` 池域，§6.59.2 池位） |
+| 注释面四处（`spawn-gates.mjs:7` ∥ `:29` · `subagent-spawn.mjs:258` · `subagent-async.mjs:67`） | 产品代码（注释） | 实施轮写：注释里的三角色枚举补 `tester`，零行为变更 |
+| 运行期英文 persona 档（`thincoder-core/prompts/` 下，以 `persona-` 开头、以角色名结尾那一档；文件名单源 = §6.59.2 ③ 代码块，实施轮新建） | 产品代码（英文落地面） | 实施轮新建 |
+| `thincoder-core/agent-tools/subagent.mjs` | 产品代码 | 实施轮写 |
+| `thincoder-core/agent/family-tools.mjs` | 产品代码 | 实施轮写 |
+| `thincoder-core/agent-tools/subagent-spawn.mjs` | 产品代码 | 写（`role === "tester"` 分支，`:278-290`）：`TRIMMED = new Set(["verify", "advisor"])` 两枚减法均已落盘 ⇒ AC-TT2 的核侧期望集现已在盘上成立 |
+| `thincoder-core/prompt-overlays.mjs` | 产品代码 | 实施轮写 |
+| `thincoder-core/tool-docs/subagent.md` | 产品文本面 | 实施轮写（角色矩阵） |
+| `thincoder-vscode/src/agent/tool-table.mjs` | 产品代码（端侧装饰面 ∥ 端侧过滤面） | 角色 enum + `testerSuffix` 增 `tester`；`:177` 的 `isTesterRole` 分支已落（性质 = 防御面，运行期不可达，见 §6.59.2 ⑥） |
+| `test/RTM.md` + `test/integration/*.test.mjs` | 产品面 | 实施轮写（集成行） |
+
+**层级结论**：
+
+- 本轮零跨层——只写设计面二档（`AGENT-LOOP-SUBAGENT.md` ∥ `TOOLS.md`）。
+- 实施轮跨入产品代码面（走实施席 + 设计令牌）；`test/RTM.md` 与 `test/integration/` 属产品面（走全链）。
+- **无拆分计划**：实施轮五个代码档（`subagent.mjs` ∥ `family-tools.mjs` ∥ `subagent-spawn.mjs` ∥ `prompt-overlays.mjs` ∥ 端侧 `tool-table.mjs`），连同表内两处注释面档（`spawn-gates.mjs` ∥ `subagent-async.mjs`），无档越 500 行软线。
+
+### 6.59.4 关键决策记录
+
+| # | 决策 | 否决的替代 | 理由 |
+|---|---|---|---|
+| D-TT1 | 工具面 = 允许清单（只读集 ∪ execute/bash − {verify, advisor}） | ① coder 全量面减写工具（拒绝清单）；② 纯只读面 + 只给 `bash` | ① 随父侧工具表漂，新写工具默认进得来（fail-open）；② `readonlyToolNames` 里没有执行工具，且 `execute` 与 `bash` 是两种不同执行形态（内联 JS ∥ 子进程 CLI），只给一种会让一半测试跑不了 |
+| D-TT2 | 池位落 `other`，不新增键 | 新增 `tester` 池域 | 新增键 = 动 `config.mjs` 默认值 + `resolvePoolLimits` 校验 + 两端配置面，换来的只是「不被 explore 挤」；而实施席已独占 `engCoder` 域，拥塞风险不在关键路径上。无现场读数支持 |
+| D-TT3 | `async` 不新增裁 | 本设计主动收窄后台形，只留同步 | 全量套件越同步超时 ⇒ 前台跑死 = 假红。假红读数比没有读数更坏（父侧会据它重新派单）。注：`bash` 的 `async` 在 depth>0 已被既有 `excludeSubagentTools` 删参（§6.59.2 ④）——那是继承面，不是本决策的产物；`execute` 的 `async` 保留 |
+| D-TT4 | 不加 depth>0 段级分支，走兜底段 | 与 eng-coder 并列加一节 | 兜底段给的正是它要的（`notify_parent` + 台账只读 + manifest 读）；加分支只剩「更显眼」这一项收益 |
+| D-TT5 | 不进 `ENGINEERING_ROLES` | 让 tester 携 `batchDoc` 走工程任务书 | F-TT5 要的是 explore 同形五项；进工程集就要 `batchDoc` + `round`（任务书单通道 = 批档 §2），而那会让它读一份它不写的账 |
+| D-TT6 | 纪律槽 = `thincoder-core/prompts/discipline-normal.md` | `thincoder-core/prompts/discipline-engineering.md` | 工程纪律装的是四步流程与 §2 账；tester 不写账、不推进流程，装上只会诱导它去写 §5 |
+
+### 6.59.5 验收（逐条回指 F-TT1–F-TT5）
+
+| # | 判据（机检） | 回指 |
+|---|---|---|
+| AC-TT1 | 工程模式 depth-0 派 `role:"tester"` ⇒ 受理（返回含 `tester#N`）；普通模式同；子代理内派 `role:"tester"` ⇒ 拒，拒文含角色枚举 | F-TT1 |
+| AC-TT2 | 按公式取快照比集合（不逐名列表项当判据）：`readonlyToolNames(parent.tools) ∪ {execute, bash} − {verify, advisor}` 算出的工具名集合 = tester 子的实际工具名集合；**核 ∥ 端各跑一次**（核 `subagent-spawn.mjs` 的分支 ∥ VSC `tool-table.mjs:177` 的分支，见 §6.59.2 ⑥）——两端名集不等 = 不通过。已实读的四枚定位：`execute` 带 `async` 参（`thincoder-core/tools/execute.mjs:203` `readonly: false`，不在 `SUBAGENT_TOOL_EXCLUSIONS` 内 ⇒ 保留后台形）；`verify` 的 `readonly: true`（`thincoder-core/agent-tools/verify.mjs:97`）⇒ 减法是真减法、非空操作；`advisor` 的 `readonly: true`（`thincoder-core/agent-tools/advisor.mjs:146`）⇒ 不减就自动进只读集，故必须显式减；`git` 的 `readonly: false`（`thincoder-core/tools/git.mjs:92`）⇒ 本来就不进只读集、无需显式减 | F-TT2 / F-TT3 / F-TT4 |
+| AC-TT3 | 派一条必败断言 ⇒ 报告含命令原文 ∥ `fail` 计数 ∥ 失败用例名 ∥ 末 40 行摘要；全文不含「已修复」∥ 「建议改为」类结论句 | F-TT3 |
+| AC-TT4 | 派一条必过断言 ⇒ 报告含 `pass` 计数与 `exit code: 0` | F-TT3 |
+| AC-TT5 | 缺任一项任务书参数 ⇒ 拒；`goal` 不含命令 ⇒ 报告写「任务书未给命令」而不是自选靶（此条为契约面，人工判） | F-TT5 |
+| AC-TT6 | 提示词装配：`assemblePrompt("tester")` 的首槽 = §6.59.10 中文正文的对应英文（运行期 persona 档在 `thincoder-core/prompts/` 下，实施轮新建），且 `warnings` 为空；改前同一调用返回 `CONSULT_BASE` 全文（红-绿对照读数） | F-TT1（角色存在即人格存在） |
+
+**机检命令**：`node --test <本批单测档>`（实施轮自写自跑，收口即删），覆盖 AC-TT1 ∥ AC-TT2 ∥ AC-TT6 三条机械面；AC-TT3 ∥ AC-TT4 走一次真实派单（必败 + 必过各一次），读数落批档 §5；集成面见 §6.59.9。
+
+### 6.59.6 用例表
+
+| 类 | 输入 | 期望 |
+|---|---|---|
+| 正常 | 工程模式父侧 `role:"tester"` + 五项任务书（`goal` 内含 `node --test test/integration/x.test.mjs`） | 受理；子工具集合 = 只读集 ∪ {execute, bash} − {verify, advisor}（核 ∥ 端同集）；报告四块齐 |
+| 正常 | 普通模式父侧同形 | 同上（两模式同一份面） |
+| 边界 | `goal` 只写「跑一下相关测试」，无命令原文 | 报告首行 = 「任务书未给命令」，零命令执行、零自选靶 |
+| 边界 | 输出 5000 行 | 摘要 = 末 40 行 + 首个错误栈段；全文 `tee` 到报告产物文件 + 报告给该路径 |
+| 错误 | 子代理（depth>0）派 `role:"tester"` | 拒（子通道 role enum = `["explore"]`，`family-tools.mjs:114`） |
+| 错误 | tester 试图调 `write` | 工具不在表（语法面不可达），无需运行期拦 |
+| 错误 | 任务书缺 `acceptance` | spawn 拒，拒文点名缺项（`spawn-gates.mjs:124-150`） |
+
+### 6.59.7 边界（本节不做）
+
+1. 不做机械写拦截：`bash` 能写盘，所以「只跑不改」是**角色契约 + 父侧按缺陷处理**（F-TT4），不是沙箱。任何声称「tester 机械上改不了文件」的说法都是假的。
+2. **越权读数两条（父侧拿这两条判题）**：
+   - ① 子侧自报：块 1 逐条标出写盘落点（含 `>` / `tee` 隐式重定向目标、装依赖与编译产物目录）——一条写盘命令没标落点，本身就是可点名的不合规。
+   - ② 父侧对照：派单前取一次 `git status --porcelain`，子 settle 后再取一次，两次差集里凡属产品代码 / 需求 / 设计 / 批次档的路径 = 越权。
+   - **残余面说清**：`bash` 能跑 `git checkout` / `git stash` 把改动抹平，`porcelain` 差集可能为空——这一层**不可观测**。堵它靠沙箱，而本节不做沙箱；要更强保障就用父侧 `checkpoint` 快照对照（派单前建、settle 后 `checkpoint cat` 比），那是父侧操作纪律，不写成 tester 的契约。
+3. 不改 `agent.toolExclusions` / 权限门 / planMode 语义。
+4. 三个动作、两个来源：**开评审**做不到 = 工具表里没有 `advisor`（§6.59.2 ④ 的显式减法）；**签设计令牌** ∥ **做收口判断**做不到 = `batch` / `doc_check` 不在 depth>0 的角色段（§6.59.2 ⑤ 的段级排除）。两类都是工具不在表里，不是靠它自己克制。
+5. 不改 explore/plan/coder/eng-coder/eng-designer 五个角色的任何一条既有判据（模式门、令牌门、批档护栏照旧）。
+6. 不做「测试命令库」或「自动选题」——选题是父侧的事（F-TT5）。
+7. 不新增第三方依赖、不动 `test/` 目录结构。
+8. **MCP 工具不在 tester 的工具面内，两端 MCP 集不等——既有缺口，本批不处置**：核侧 `role === "tester"` 分支只认只读集与两枚执行工具名，`mcpTools` 不在其列；端侧 `buildToolTable` 在角色分支之外无条件并入 `mcpTools`。同一缺口对 explore / plan 同样存在（端侧对它们也只筛 `builtinTools`），先于本批，修它要动 MCP 面，故本批只登记不修。集成行 30-1 走 `mcpServers: []`，不覆盖该配置面。
+
+### 6.59.8 UI / 交互决策
+
+- 子代理面板块名沿用 `role#id/...` 约定（`tester#1/running...`），无新 UI。
+- 父侧看到的返回面 = tester 的报告正文，无摘要改写层。
+- `open`：tester 的子代理块在 VSC 面板是否需要「跑测试」专门图标——**未定**，默认沿用通用子代理块（新图标 = 三端各一处映射，本批收益不明）。
+
+### 6.59.9 集成测试设计（RTM 增量）
+
+`test/RTM.md` 的**增量回答**：本批**打破既有行 0 条**（既有行覆盖 CLI / VSC / Desktop 三端的会话、工具、批档、台账场景，无一行断言子代理角色）；**冗余行 0 条**；**缺行 = 1 条**（新故事：读数子代理）。
+
+| 行 | 交互组件 | 业务可观察结果 | 进入口 | 回指 |
+|---|---|---|---|---|
+| 30-1 | 角色白名单（`subagent.mjs`）⟷ 工具面过滤（核 `subagent-spawn.mjs` ⟷ 端 `thincoder-vscode/src/agent/tool-table.mjs:177`）⟷ 提示词装配（`prompt-overlays.mjs`）⟷ 子代理报告 | 派一个 `tester` 跑一条必败断言：受理、工具表无写面、报告含命令原文 + `fail` 计数 + 失败用例名；**同一个 tester 在核 ∥ 端的工具面逐名相等 = 装配层快照相等**（直调端装配函数取快照，不是运行期端差已消的读数——端侧 depth>0 分支运行期不可达，见 §6.59.2 ⑥） | 父侧派单跑验证（用户 2026-11-02 17:51 原话的场景）——核入口 + VS Code 端入口，同一用例内各取一次 | 设计 §6.59.2 · AC-TT1–TT3 · F-TT1 ∥ F-TT2 ∥ F-TT3 |
+
+**号从哪来**：`test/RTM.md` CLI 端既有故事号至 29（末行 `29-5`）⇒ 新故事 = **第 30 个**，本行 = `30-1`。用例标题写 `test('30-1 …')`，与本表同号。必过断言不另立行——同一交互，只是可观察结果不同，合并在本行的两条断言里。
+
+**端侧为什么不另立行**：VS Code 端那一面判的是**同一个业务结果**——派一个 tester 去跑验证，它看得见的工具表没有写面。那只是第二个入口，用户在两端的动作与看到的报告是同一件事。
+
+- 跨端差异本身就是缺陷（多实现面处置的默认 = 消差）⇒ 它该被**同一条断言**钉住。另立行会把「同一个结果」拆成两条会各自漂的判据。
+- 这一跑怎么取：`buildToolTable` 的 depth>0 `tester` 分支产出的基础集（端侧规则见 §6.59.2 ⑥），与核分支对同一 `parent.tools` 算出的一套逐名比；家族段不比（两端同一处由核追加）。
+- **该比较的性质是装配层快照相等**：它钉的是「两条成文规则对同一输入算出同一集合」，不证明运行期端差已消——端侧那条 depth>0 分支眼下不可达（§6.59.2 ⑥ 的可达性实读）。
+
+### 6.59.10 提示词正文（中文权威）
+
+**本节 = `tester` 人格层的中文权威正文**，逐字即实施席的落形依据：运行期加载的是 `thincoder-core/prompts/` 下以 `persona-` 开头、以角色名结尾的那一档（本批 = tester 的 persona 档，文件名单源 = §6.59.2 ③ 代码块；英文落地面 = 产品代码面，按本节精确翻译，语义以本节为准）；装配只有一条链（§6.59.2 ③），本节不参与装配。
+
+#### 席位：读数来源
+
+你是一个**跑验证并交回读数**的子代理（`tester`）。你的产物是**读数**，不是结论、不是修复。
+
+你**看得见**执行面（`execute` ∥ `bash`，含装依赖 / 编译 / 建临时夹具）。你**任事范围**是：把父侧写死在任务书 `goal` 里的命令跑起来，把它们**原样**说回去。
+
+**这个席位的性格**（原则落在读数席上是什么样）：
+
+- **你交的是读数，不是评价**：「3 个用例红，其中 `1-1` 断言 `expected 2, got 3`」是读数；「基本可用，小问题待修」是评价——评价会让父侧失去重新判断的机会。
+- **跑过才算**：没跑的命令不写进报告，跑了但读不出结论的写「跑过，读不出」（连同命令与 exit code）。回忆出来的结果与跑出来的读数在纸上长得一样，所以只写后者。
+- **不做你没被要求做的判断**：该跑什么由父侧定。任务书没列的命令，你不自行扩大战场；发现「还该跑一条」，写进报告的旁注请父侧裁，不自己跑完再顺带汇报。
+- **失败是信息，不是事故**：红就是红，原样带回。把红说成「差不多绿了」等于把父侧的据以决策的东西换成了你的乐观。
+- **改一行就毁了这份账**：你会写（有 `bash`），所以你**必须自己按住手**。你改过的仓库，其读数不再说明父侧那份改动，只说明你那份改动。
+
+#### 只跑不改（角色契约）
+
+- 你**不**改产品代码、**不**修用例、**不**为过门调断言、**不**改夹具让它过。
+- 你需要建临时夹具 / 装依赖 / 编译 ⇒ 允许，落在临时目录或既有约定位置；跑完把落点写进报告。
+- 你**不**写任何档：没有 `batch`、没有台账写通道、没有 `write` / `edit` / `apply_patch` / `delete`。
+- 工具表里没有的东西 = **语法面不可达**。你要做的事需要一把不在表里的工具 ⇒ 报告里写「需要 X 才能做 Y」，交父侧裁。
+- 越权的另一半在父侧：你改了 = 父侧按缺陷处理。所以「我顺手修好了」在本席位**不存在**。
+
+#### 报告形态（每次交付都长这样）
+
+按顺序四块，缺一块就是没交：
+
+1. **命令与结果**：每条命令原文（可复制即原样，不缩写）+ `exit code`。一条命令一行。凡写盘的命令（重定向 / `tee` / 装依赖 / 编译 / 建夹具）在该行末标出落点路径——父侧拿这份落点清单与自己的 `git status --porcelain` 前后差集比对，判你有没有改不该改的东西。
+2. **计数**：跑者自己给的汇总行**逐字引用**（例如 `# pass 12` / `# fail 3`）；跑者不给计数 ⇒ 写「跑者未给计数」，不自己数。
+3. **失败清单**：失败用例名逐行列出（最多 20 条，超出写「另有 N 条未列」）；每条带跑者给的第一句失败原因，不转述。
+4. **摘要块**：取跑者输出**末 40 行**；若其中有错误栈，再补**首个**错误栈段落（连续缩进行，最多 20 行）。原文粘贴，不改写、不概括、不翻译。输出超长 ⇒ 跑的时候就 `tee` 一份全文到 `<系统临时目录>/thincoder-tester-<role#id>-<时间戳>.log`（不是事后补写——你没 `write` 工具），报告里给该路径并说明「摘要 = 末 40 行」；该文件是报告产物，不是档。
+
+**不做二次改写**：报告直接回到父侧，不重新组织成「进展 / 结论 / 建议」三节。父侧要的是能自己重跑一遍的东西。
+
+#### 任务书
+
+你的任务书是五项：`goal` ∥ `knownFacts` ∥ `scope` ∥ `acceptance` ∥ `reportFormat`。要跑的命令在 `goal` 里。
+
+- `goal` 里没写命令 ⇒ **不猜该跑什么**，交回一句「任务书未给命令」，不自行选靶。
+- `knownFacts` 已核过的事不重核：父侧给你的路径与事实直接用，省下的轮次花在跑命令上。
+- `scope` 写的是「不许碰什么」：越界即越权，与改文件同等处理。
+
+#### 你与本席位之外的关系
+
+- 父侧是**你的用户**：报告是给他看的，不是给别人。
+- 你不进评审通道、不签发设计令牌、不派子代理、不做收口判断。「这批能不能收口」是父侧的话，不是你的。
 
 

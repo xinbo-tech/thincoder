@@ -65,8 +65,8 @@ async function freshRecord(tag, { s3Body = true } = {}) {
 }
 const review = (root) => batchTool(REC, { review: true })
 const writeToolMap = new Map([["write", writeTool]])
-const runWrite = async (agent, rel) => {
-  const [res] = await executeToolCalls(agent, writeToolMap, [{ name: "write", id: "1", arguments: JSON.stringify({ path: rel, content: "x\n" }) }], {}, 0)
+const runWrite = async (agent, rel, extra = {}) => {
+  const [res] = await executeToolCalls(agent, writeToolMap, [{ name: "write", id: "1", arguments: JSON.stringify({ path: rel, content: "x\n", ...extra }) }], {}, 0)
   return res
 }
 
@@ -157,7 +157,7 @@ test("14-5 兜底点名：汇总行只点名，建议句各贴其行", async () 
   assert.match(lines[1], /本批未动行 → 条件 1 行：.*—— 这些行不是本批的活（未认领却被绑在本档 = 点火违规）；已落 trigger = 条件 \+ 复启句，由下一批接手，本批不再处置$/, "未认领行的建议贴在第二行")
 })
 
-test("14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写当场可写", async () => {
+test("14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写分辨在号（带号照写 ∥ 不带号拒）", async () => {
   const root = await freshRecord("14-6")
   await review(root).execute({ action: "status", value: "评审通过" }, { agent: agentOf(root) })
   await parent.execute({ action: "close", path: recOf(root) }, ctx0(root))
@@ -166,8 +166,13 @@ test("14-6 收口后重开 ⇒ 行回 在途、回执点名 1 行；产品码写
   const msg = await parent.execute({ action: "status", path: recOf(root), segment: "§1", value: "进行中", note: "同一件事继续做" }, ctx0(root))
   assert.match(msg, /\[ledger reopen\] 本批待核销行 → 在途 1 行/)
   assert.equal(rowsOf(root).find((r) => r.id === work.id).status, "在途")
-  const res = await runWrite(agentOf(root, { designSlot: true }), "thincoder-core/agent/w.mjs")
-  assert.equal(res.ok, true, "重开后该档又是活批档 ⇒ 产品码可写")
+  // 新判据（笔-账绑定）：行回 `在途` 只说明可带的号存在；写盘还得把号报出来
+  const agent = agentOf(root, { designSlot: true })
+  const noNumber = await runWrite(agent, "thincoder-core/agent/w.mjs")
+  assert.equal(noNumber.ok, false, "不带号写产品码 ⇒ 拒（有在途行不再自动放行）")
+  assert.match(noNumber.result, /no ledger number on this call/)
+  const numbered = await runWrite(agent, "thincoder-core/agent/w.mjs", { ledger: `#${work.id}` })
+  assert.equal(numbered.ok, true, `带重开那条在途号 ⇒ 产品码写照写 — ${numbered.result}`)
 })
 
 test("14-7 核销后重开 ⇒ 行零改、逐 id 点名；两种重开并存 ⇒ 两行回执各一行", async () => {

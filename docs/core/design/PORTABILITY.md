@@ -20,9 +20,11 @@
 
 ## 2. 实现单一权威（现状路径）
 
-**分类裁判单源**：`thincoder-core/conventions.mjs` = 全产品唯一的代码 / 文档 / 临时 / 辅助面（aux）/ 项目状态档（state）分类裁判（五值闭集与优先级 = §3.2 单一权威）；门禁与守卫一律经它判定（**不设 re-export**——只留一个导入路径）。
-（**射程区分**：本句纪律的对象 = **权威迁移**面（谓词换源——只留一个导入路径）；**结构重构**面（纯搬迁拆分）**保留转口 re-export**——对照 §2「接线语义」条；
-先例 = `declaration.mjs` ∥ `context-push` ∥ `context-echo` ∥ `context-degrade` ∥ `memory/file-list` ∥ `memory/code-search` ∥ `memory/memory-tool`——全部经原档转口，消费面零改。）
+**分类裁判单源**：`thincoder-core/conventions.mjs` = 全产品唯一的分类裁判——代码 / 文档 / 临时 / 辅助面（aux）/ 项目状态档（state），五值闭集与优先级 = §3.2 单一权威。门禁与守卫一律经它判定；**不设 re-export**，只留一个导入路径。
+
+（**射程区分**：本句纪律的对象 = **权威迁移**面——谓词换源，只留一个导入路径。**结构重构**面（纯搬迁拆分）保留转口 re-export，对照 §2「接线语义」条。）
+
+（先例 = `declaration.mjs` ∥ `context-push` ∥ `context-echo` ∥ `context-degrade` ∥ `memory/file-list` ∥ `memory/code-search` ∥ `memory/memory-tool`——全部经原档转口，消费面零改。）
 
 | 面 | 落点 | 状态 |
 |---|---|---|
@@ -74,8 +76,12 @@
 | 7 | `thincoder-core/conventions.mjs`（新增） `isStatePath(p, conv)` | 项目状态档谓词（`classifyPath === "state"`——门禁豁免面可读性 / 用例；生产门经 `isCodePath` 派生消费） |
 | 8 | `thincoder-core/declaration.mjs` `declarationForTarget(targetAbs)`（经 `conventions.mjs` 转口；F11 新增 · `declaration.mjs:230`） | **辖域单点**：目标**绝对路径** ⇒ 沿祖先链取最近带档目录（`owningProject`——nearest wins ∕ 纯 fs ∕ 发现梯不参与）⇒ 该项目的声明对象（行 1 同载）；祖先链无档 ⇒ `null` = **出辖**（不在任何 manifest 树内——父侧门不判不拦）。相对形由消费面按会话 cwd 先解析（判据 = 目标所属项目，非会话 cwd——§3.9） |
 
-**声明对象形状（全体落点共用）**：`{ declared, codePaths, index, root }`——`root` = 该声明所属**项目根绝对路径**（`dirname(manifestFilePath(cwd))`——段匹配面所依，见下「段匹配面」条）。
-`declared` = 两族任一偏离缺省（**值比较**——`root` 非声明值，不入此判；§3.1；门禁 hint 据它决定是否指路）；`codePaths` = 归一后段名数组 · `index` = `{ codeExtensions, docExtensions }`。
+**声明对象形状（全体落点共用）**：`{ declared, codePaths, index, root }`。`root` = 该声明所属**项目根绝对路径**（`dirname(manifestFilePath(cwd))`——段匹配面所依，见下「段匹配面」条）。
+
+- `declared` = 两族任一偏离缺省（**值比较**——`root` 非声明值，不入此判；§3.1；门禁 hint 据它决定是否指路）。
+- `codePaths` = 归一后段名数组。
+- `index` = `{ codeExtensions, docExtensions }`。
+
 `DEFAULT_DECLARATION` 与声明面返回**同形**（全缺省 ⇒ `declared:false`；`DEFAULT_DECLARATION.root = null` = 根未知）。
 
 **分类语义**（默认约定，可被声明覆盖；F9 辅助面）：
@@ -295,4 +301,4 @@
 1. **B / C 家族剩余**（P11–P13、P16–P28 与 🔵 项）——CLI 侧后续；其中 `thincoder-core/prompts/discipline-normal.md` 的地图引用属已登记 P11。
 2. **FR10–FR15 正文搬迁归位**（CLI 侧 `thincoder-cli/docs/_archive/design/ENGINEERING-MODE.md` 旧文 → 需求档）——父侧裁决项。
 3. **本仓自指面**（`AGENTS.md` 的检查声明）——父侧落笔。
-4. **F9 缺省射程外**：CI 配置（`.github/**`）与 `.thincoder/**` 非 `tmp` 面（如 `.thincoder/memory/**`）仍判 code——如需父侧直放 = 另裁（历史「工程工具面被拦」类残余）。
+4. **F9 缺省射程外**：CI 配置（`.github/**`）与 `.thincoder/**` 非 `tmp` 面（如 `.thincoder/memory/**`）仍判 code——那两族同属产品面，要改就走全链。

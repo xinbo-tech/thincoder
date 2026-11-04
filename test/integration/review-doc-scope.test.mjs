@@ -191,7 +191,7 @@ test('6-3 项目外绝对路径 ⇒ 当场拒发（outside-project），零实�
   assert.equal(s.endpoint.requests.length, 0, "零 LLM")
 })
 
-test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（no-project-root）；反证格：基面存在则不再此拒', { timeout: 60_000 }, async (t) => {
+test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（ambiguous-path）；反证格：基面存在则不再此拒', { timeout: 60_000 }, async (t) => {
   const ws = mkdtempSync(join(tmpdir(), "tc-int-ws-"))
   t.after(() => rmSync(ws, { recursive: true, force: true }))
   for (const name of ["p1", "p2"]) {
@@ -204,22 +204,23 @@ test('6-4 workspace 锚 + 项目根相对形 ⇒ 当场拒发（no-project-root�
   const receipt = String(await review(s.agent, ["docs/a.md"], "t4", s.batchDoc))
 
   assert.match(receipt, /criterion=scope-not-doc/)
-  assert.match(receipt, /reason=no-project-root/, `实际：${receipt}`)
+  assert.match(receipt, /reason=ambiguous-path/, `实际：${receipt}`)
   assert.match(receipt, /Session anchor is workspace \(/, "文案报锚态")
+  assert.match(receipt, /Candidates: .*p1.*p2/, "文案报候选全列（下辖项目按名排序）")
   assert.match(receipt, /Expected form 1 — project-root-relative:/, "期望形第 1 句")
   assert.match(receipt, /Expected form 2 — absolute:/, "期望形第 2 句")
   assert.equal(s.agent._advisorRefusals.has("t4"), true, "拒发登记")
   assert.equal((s.agent._advisorRuns?.size ?? 0), 0, "零评审实例")
   assert.equal(s.endpoint.requests.length, 0, "零 token / 零 LLM")
 
-  // 反证格：cwd 换成 p1（基面已存在）⇒ 同一调用不再以 no-project-root 拒（改为「文件不存在」这一档）。
+  // 反证格：cwd 换成 p1（基面已存在）⇒ 同一调用不再以 ambiguous-path 拒（改为「文件不存在」这一档）。
   const counter = String(await review({ ...s.agent, cwd: join(ws, "p1") }, ["docs/a.md"], "t4b", s.batchDoc))
-  assert.doesNotMatch(counter, /no-project-root/, `基面存在 ⇒ 不再报锚态，实际：${counter}`)
+  assert.doesNotMatch(counter, /ambiguous-path/, `基面存在 ⇒ 不再报锚态，实际：${counter}`)
   assert.match(counter, /reason=not-doc-file/)
   assert.equal(s.endpoint.requests.length, 0, "反证格同样零 LLM")
 })
 
-test('6-5 会话锚 = 非项目目录（根无档、下辖 1 个项目）⇒ 当场拒发（no-project-root），不把下辖项目当根', { timeout: 60_000 }, async (t) => {
+test('6-5 会话锚 = 非项目目录（根无档、下辖 1 个项目）⇒ 当场拒发（ambiguous-path），不把下辖项目当根', { timeout: 60_000 }, async (t) => {
   const box = mkdtempSync(join(tmpdir(), "tc-int-box-"))
   t.after(() => rmSync(box, { recursive: true, force: true }))
   mkdirSync(join(box, "only"), { recursive: true })
@@ -230,9 +231,10 @@ test('6-5 会话锚 = 非项目目录（根无档、下辖 1 个项目）⇒ 当
   const receipt = String(await review(s.agent, ["docs/a.md"], "t5", s.batchDoc))
 
   assert.match(receipt, /criterion=scope-not-doc/)
-  assert.match(receipt, /reason=no-project-root/, `实际：${receipt}`)
-  assert.match(receipt, /→ \(no base\) ∥ reason=no-project-root/, "无基面：不拿下辖项目当根（未解析成该项目的路径）")
+  assert.match(receipt, /reason=ambiguous-path/, `实际：${receipt}`)
+  assert.match(receipt, /→ \(no base\) ∥ reason=ambiguous-path/, "无基面：不拿下辖项目当根（未解析成该项目的路径）")
   assert.match(receipt, /Session anchor is workspace \(/, `文案报锚态 = 多根工作区（下辖 1 个项目），实际：${receipt}`)
+  assert.match(receipt, /Candidates: .*only/, "唯一下辖项目也只作候选，不作基面")
   assert.ok(!receipt.includes(resolve(join(box, "only"), "docs", "a.md")), `不以该下辖项目为基面解析，实际：${receipt}`)
   assert.match(receipt, /Expected form 1 — project-root-relative:/, "期望形第 1 句")
   assert.match(receipt, /Expected form 2 — absolute:/, "期望形第 2 句")

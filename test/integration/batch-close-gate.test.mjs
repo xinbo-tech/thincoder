@@ -309,6 +309,41 @@ test('7-8 错误 · 子代理 append §2：本次写入文本含裸档名 ⇒ �
   assert.ok(after.includes(landed), "本次文本已落盘")
 })
 
+test('7-11 错误 · 批档 §1 写「> 不适用：§3」声明 ⇒ 收口被拒（声明机制已停用，逐字点名该行）；§3 无状态行 ⇒ 收口被拒（`§3 状态行 = （无状态行）`）——两半都成立才算过', async () => {
+  // 前半：存量声明档的形态（§1 段体带一行 `> 不适用：§3 —— …`）⇒ 链门前置扫描当场拒，不提「形不合」而是说「这条路没有了」
+  const root = makeProject("r711")
+  const sha = gitRepo(root, { sec1: "夹具讨论。\n\n> 不适用：§3 —— 本批纯措辞纠正、无设计变更。" })
+  assertBatchCommitted(root, sha)
+  const before = readFileSync(join(root, BATCH_REL), "utf8")
+
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root, [])),
+    (e) => {
+      assert.match(e.message, /`不适用` 声明已停用（inapplicability declaration retired）/, `拒串点名机制已停用：${e.message}`)
+      assert.match(e.message, /no declaration is accepted: §2 \/ §3 \/ §4 \/ §6 must each carry content \(§5 exempt\)/, `拒串说清每段各自要有内容：${e.message}`)
+      assert.match(e.message, /Offending line: > 不适用：§3 —— 本批纯措辞纠正、无设计变更。/, `拒串点名该行原文：${e.message}`)
+      assert.match(e.message, /Nothing was written\./, `拒串收尾句：${e.message}`)
+      return true
+    },
+  )
+  assert.equal(readFileSync(join(root, BATCH_REL), "utf8"), before, "拒收口 ⇒ 档全文逐字不变（§1 状态行字节不变）")
+  assert.match(statusLineOf(root), /进行中/, "§1 状态行仍「进行中」")
+
+  // 后半：§3 状态词臂无条件——§2/§3/§4/§6 各有内容但 §3 无状态行 ⇒ 仍拒（没有「声明不适用」那条旁路）
+  const root2 = makeProject("r711b")
+  writeFileSync(join(root2, BATCH_REL), record("0".repeat(40)).replace("**状态行**：评审通过\n\n", ""))
+  await assert.rejects(
+    () => depth0.execute({ action: "close", path: BATCH_REL }, parentCtx(root2, [])),
+    (e) => {
+      assert.match(e.message, /§3 状态行 = （无状态行），须 = 评审通过/, `拒串点名 §3 状态行缺失：${e.message}`)
+      assert.match(e.message, /Missing: §3\. Nothing was written\./, `拒串只点名真正缺的那一段：${e.message}`)
+      assert.doesNotMatch(e.message, /声明不适用/, `拒串零声明路：${e.message}`)
+      return true
+    },
+  )
+  assert.match(statusLineOf(root2), /进行中/, "§1 状态行仍「进行中」")
+})
+
 // 工具描述面（`thincoder-core/tool-docs/**`）与其余面同判（撤面豁免）——400 字符段在该面照判段判据、
 // 裸档名照判锚判据：两条同时点名；只修锚仍拒（段那条独立成立）；拆段后同一条门放行。
 test('7-9 错误 · 笔域集内一档在工具描述面（400 字符段 + 裸档名）⇒ 收口被拒且锚与段两条同时点名', async () => {

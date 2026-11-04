@@ -69,34 +69,33 @@
 - `cli/` **14 档**——设计 9 住 `cli/design/`（其中 `cli/design/CLI-DEBT.md` 与 `cli/design/CLI-ENTRY.md` 为 2026-09-25 新建的非迁移档，载体收口 = 台账 #340 ∥ #350）；需求 5 住 `cli/requirements/`（P2——2026-09-15 首迁 2 档后历批续迁；`RELEASE.md` 已随三端合一迁根 = `docs/RELEASE.md`——2026-09-20）。**逐名清单见目录列举**；
 - `vsc/` **10 档**：`design/` = `vsc/design/VSC-MIGRATION.md` · `vsc/design/SETTINGS.md` · `vsc/design/PROJECT-SWITCHER.md` · `vsc/design/WEBVIEW.md` · `vsc/design/WEBVIEW-PROTOCOL.md` · `vsc/design/WEBVIEW-INPUT.md` · `vsc/design/VSC-DEBT.md`；`requirements/` = `vsc/requirements/VSC-MIGRATION.md` · `vsc/requirements/WEBVIEW.md` · `vsc/requirements/PROJECT.md`。
 
-**`core/design/` 其余 42 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 2026-10-10 补登记一档 · 2026-10-13 补登记一档（`core/design/TEAM-LEDGER.md`——团队客户端面） · 判据 = `core/design/DOC-SYSTEM.md` §5.1（P1–P5 归属判据） · 计数随批收正 2026-10-13）**：
+**`core/design/` 其余 40 档（工具 · 机制 · 流程面——批 11 补登 · 2026-10-07 补登记一档 · 2026-10-10 补登记一档 · 2026-10-13 补登记一档（`core/design/TEAM-LEDGER.md`——团队客户端面） · 判据 = `core/design/DOC-SYSTEM.md` §5.1（P1–P5 归属判据） · 计数随批收正 2026-11-03）**：
 - 文件 / 编辑 / 执行工具面 **8 档**：`core/design/APPLY-PATCH.md` · `core/design/EDIT.md` · `core/design/EDIT-HELPERS.md` · `core/design/HASHLINE-EDIT.md` · `core/design/INSERT-AFTER.md` · `core/design/TOOL-OUTPUT-LIMITS.md` · `core/design/WRITE.md` · `core/design/BASH-EXECUTOR-FACE.md`（bash 执行器语义面——运行时探测与声明单源；2026-10-04 建档，2026-10-07 补登记）；
 - 浏览器工具面 **1 档**：`core/design/BROWSER-TOOL.md`（浏览器工具——自启浏览器驱动面：十六动作契约（基线八 + 输入域八：press/hover/wheel/mouse/drag/touch/insert/clipboard）∥ 引用 / 几何机制 ∥ 会话模型 ∥ 写闸 ∥ 剪贴板面；2026-10-07 建档）；
 - 顾问 / 协作 / 子代理面 **9 档**：`core/design/ADVISOR-CONVERGENCE.md` · `core/design/ADVISOR-GUARDS.md` · `core/design/AGENT-LOOP-ASYNC-POOL.md` · `core/design/AGENT-LOOP-SUBAGENT.md` · `core/design/AGENT-LOOP-UPSTREAM.md` · `core/design/ESCALATE.md` · `core/design/MULTI-INSTANCE-COLLAB.md` · `core/design/PROXY.md` · `core/design/SEND-STALL-DISTILL.md`；
 - 令牌 / 参数 / 设置面 **5 档**：`core/design/AGENT-PARAMS.md` · `core/design/DESIGN-TOKEN-SETTLEMENT.md` · `core/design/ENG-TOKEN-BINDING.md` · `core/design/SETTINGS-TOOL.md` · `core/design/VERIFY-REDESIGN.md`；
-- 流程 / 文档机制面 **12 档**：`core/design/ANCHOR-DEBT-REPAIR.md` · `core/design/BATCH-RECORD.md` · `core/design/DOC-CODE-RECONCILE.md` · `core/design/DOC-DISCIPLINE.md` · `core/design/ENGINEERING-MODE-V2.md` · `core/design/LEDGER.md` · `core/design/LEDGER-SELF-CONTAINED.md` · `core/design/LIGHT-CHANNEL.md`（轻通道机制——细节面 ∥ 收敛面受控旁路设计；2026-09-30 建档 · 2026-10-02 扩容）·
-  `core/design/MANIFEST.md` · `core/design/TESTING.md` · `core/design/TURN-CAP-CONTINUE.md` · `core/design/API-CONTRACT.md`（核接口按需索引——生成区 ∥ 语义区两区制；2026-09-29 建档）；
+- 流程 / 文档机制面 **10 档**：`core/design/ANCHOR-DEBT-REPAIR.md` · `core/design/BATCH-RECORD.md` · `core/design/DOC-CODE-RECONCILE.md` · `core/design/DOC-DISCIPLINE.md` · `core/design/ENGINEERING-MODE-V2.md` · `core/design/LEDGER.md` · `core/design/LEDGER-SELF-CONTAINED.md` ·
+  `core/design/MANIFEST.md` · `core/design/TESTING.md` · `core/design/TURN-CAP-CONTINUE.md`；
 - 基准测试 **2 档**：`core/design/MODEL-BENCH.md`（模型基准测试套件——独立评估面的设计档：对外部 provider 做性能评估，产物 = `bench/results/` 评估报告 = 产品输出，不打包进三端；2026-09-23 建档）· `core/design/MODEL-SPECS.md`（模型规格表设计档——bench 名单面规格行承载；2026-09-24 建行）；
 - 团队客户端面 **2 档**：`core/design/TEAM.md`（团队客户端——登录与接入：`team` 段 ∥ 派生 provider 条目 ∥ 三端同构 ∥ 决策 D-TM1–6；2026-10-10 B1 建档）· `core/design/TEAM-LEDGER.md`（团队台账客户端面——核工具 `team_ledger` 端侧面单源；2026-10-13 建档）；
 - 会话可观测 · 超时投递面 **2 档**：`core/design/SESSION-OBSERVABILITY.md`（槽事件 · 设计凭证丢弃报明 · 状态栏标题单行化——批档 `docs/batches/2026-10-24-session-events-and-title.md`）· `core/design/TIMEOUT-DIGEST.md`（超时旋钮与投递兜底——body 空闲可配 ∥ 子代理报告无条件落盘 ∥ 完成门认池；2026-10-24 建档，批档 `docs/batches/2026-10-24-timeout-and-digest.md`）；
 - 提示词效果夹具 **1 档**：`core/design/PROMPT-FIXTURE.md`（副本 A/B 夹具——改前/改后副本跑同一批场景出读数与差异；不内置「有效」门槛；2026-10-26 建档，批档 `docs/batches/2026-10-26-prompt-fixture.md`）；
-- **计数核对（复跑 as-of 2026-10-13 · 按名对账）**：`core/design/` 实档 **64** = 本图登记 **64** + **待补登 0**（逐名相等；2026-10-10 基线 60 ⇒ + `core/design/TEAM-LEDGER.md`（2026-10-13）⇒ + `core/design/SESSION-OBSERVABILITY.md` · `core/design/TIMEOUT-DIGEST.md`（2026-10-26 补登）⇒ + `core/design/PROMPT-FIXTURE.md`（2026-10-26 本批建档））。
-  （前值 **51 = 51** 为 as-of 2026-09-17 读数；此后实增五档：`core/design/MODEL-SPECS.md`（他批）+ `core/design/AGENT-LOOP-ASYNC-POOL.md` · `core/design/AGENT-LOOP-UPSTREAM.md`（structure-debt 同批登记）+ `core/design/MODEL-BENCH.md`（model-bench 同批登记）+ `core/design/LIGHT-CHANNEL.md`（轻通道机制 · 2026-09-30）。）
+- **计数核对（按名对账）**：`core/design/` 实档 **63** = 本图登记 **63** + **待补登 0**（逐名相等）。
 
 **工作流档** = `core/design/CORE-UNIFICATION.md`（注册表 · 事实基线 · 核形态 · 选型 · 分段执行 · 决策 · 验收 · 契约策略 · 测试——**计入上条实档计数**）——子系统档由它索引、**不复制**其内容（D2 单一权威源）；裁决行的**列定义**亦住该档 §2.5。
 
 **两产品旧子系统档的处置（建议 · 未代裁）**：按本层 §2 迁移政策「**旧档不批量搬 · 保留原地作参照 · 被触碰时随批迁**」——各子系统于 **S2 迁移该子系统时**逐档 `git mv` 入本层（一次一档 + 引用改写 + 机检），并在产品地图撤登记行。
 
-**`core/requirements/` 登记（逐档 · 49）**：与 design 侧同形，分五组逐档列名（全 49 档）：
+**`core/requirements/` 登记（逐档 · 48）**：与 design 侧同形，分五组逐档列名（全 48 档）：
 
 - 子系统档（与 design 侧同名成对）**15**：`core/requirements/AGENT-LOOP.md` · `core/requirements/CHECKPOINT.md` · `core/requirements/CONFIG.md` · `core/requirements/CONSULTATION.md` · `core/requirements/CONTEXT-COMPACTION.md` · `core/requirements/I18N.md` · `core/requirements/LOGGING.md` · `core/requirements/MCP.md` · `core/requirements/MEMORY.md` · `core/requirements/PROMPT-SYSTEM.md` · `core/requirements/PROVIDER.md` · `core/requirements/SESSION.md` · `core/requirements/TOOLS.md` · `core/requirements/TRACES.md` · `core/requirements/WORKSPACE.md`；
 - 其它板块 / 迁入档 **3**：`core/requirements/DOC-SYSTEM.md` · `core/requirements/PHILOSOPHY.md` · `core/requirements/TWO-REPO-MERGE.md`；
 - 工作流档 **1**：`core/requirements/CORE-UNIFICATION.md`（登记表 · 事实基线 —— 计入实档计数）；
 - 工程模式 V2 面 **11**：`core/requirements/ENGINEERING-MODE-V2.md` + `ENGINEERING-MODE-V2-SPEC-{BATCH-SEGMENT,CHECKLIST-REMOVAL,DELEGATION,LEDGER,MACHINE-CHECK,MANIFEST,PROMPT-PIPELINE,REVIEW-CREDENTIAL,TEST-DISCIPLINE,WRITE-GATE}.md`；
-- 其余机制 / 流程 / 文档面 **19**：`core/requirements/ADVISOR-CONVERGENCE.md` · `core/requirements/AGENT-PARAMS.md` · `core/requirements/BROWSER-TOOL.md` · `core/requirements/DESIGN-TOKEN-SETTLEMENT.md` · `core/requirements/DOC-CHECK.md` · `core/requirements/ENG-TOKEN-BINDING.md` · `core/requirements/ESCALATE.md` · `core/requirements/LIGHT-CHANNEL.md` · `core/requirements/METHODOLOGY.md` · `core/requirements/MULTI-INSTANCE-COLLAB.md`
+- 其余机制 / 流程 / 文档面 **18**：`core/requirements/ADVISOR-CONVERGENCE.md` · `core/requirements/AGENT-PARAMS.md` · `core/requirements/BROWSER-TOOL.md` · `core/requirements/DESIGN-TOKEN-SETTLEMENT.md` · `core/requirements/DOC-CHECK.md` · `core/requirements/ENG-TOKEN-BINDING.md` · `core/requirements/ESCALATE.md` · `core/requirements/METHODOLOGY.md` · `core/requirements/MULTI-INSTANCE-COLLAB.md`
   余 9 档（`NORMAL-MODE` · `PORTABILITY` · `PROJECT` · `SEND-STALL-DISTILL` · `SETTINGS-TOOL` · `STRUCTURE-DEBT` · `TESTING` · `TURN-CAP-CONTINUE` · `VERIFY-REDESIGN`）同住 `core/requirements/`（档名见目录列举）。
 
-**计数核对（复跑 as-of 2026-10-18 · 按名对账）**：`core/requirements/` 实档 **49** = 本图登记 **49** + **待补登 0**（逐名相等）。
+**计数核对（按名对账）**：`core/requirements/` 实档 **48** = 本图登记 **48** + **待补登 0**（逐名相等）。
 
 ## 5. 与产品文档地图的关系
 

@@ -529,7 +529,7 @@ CREATE TABLE IF NOT EXISTS team_ledger_items (
   repo       TEXT NOT NULL,                     -- 仓标记（归一形 `host[:port]/path`；非 FK——项目删除不级联，KD-SV-147）
   status     TEXT NOT NULL CHECK(status IN ('待讨论','待设计','在途','待核销','已核销','已废弃')),
   title      TEXT NOT NULL,                     -- 标题（≤200——应用层校验）
-  detail     TEXT,                              -- 正文/说明（≤4000；追认核销须非空）
+   detail     TEXT,                              -- 正文/说明（≤4000；追认核销须非空）
   owner      TEXT NOT NULL,                     -- 负责人（统一用户名键——不要求现存账号）
   created_by TEXT NOT NULL,                     -- 写入者（用户名）
   created_at TEXT NOT NULL,

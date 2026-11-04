@@ -789,7 +789,6 @@ v2 简化为**一条 `test` 全绿**——**测试是开发期工具，不是库
 
 仓根 `scripts/prompt-refs-check.mjs`（`:15` ∥ `:34` ∥ `:39`）· `thincoder-core/tool-docs/doc_check.md`（`:16`）。
 
-命中而判零改 = `docs/core/design/API-CONTRACT.md:1176`（常量登记行：只记 const 名 ∥ 位置 ∥ 类型，无名单 ∥ 无计数词，扩表后仍真）。
 
 同形不同指（不属本族，零改）= 「六名」另四义：菜单组名（`docs/desktop/design/IPC.md:40` ∥ `docs/desktop/design/MENU.md:12`）· 跳过目录族（`docs/core/design/MEMORY.md:542`）· 模型名（`docs/core/design/MODEL-SPECS.md:1347`）· 事件名（`docs/cli/design/ACP-CLIENT.md:361`）。
 
@@ -1135,7 +1134,7 @@ console.log('bad-column-rows', badColumnRows);
 ### 12.8 设计档指针随正清单（一致性面，同批落）
 
 - 本档：§1 头行 ∥ §4.2 ∥ §4.3 ∥ §5.1 ∥ §10.3 ∥ §11.2–§11.6 ∥ §11.15 ∥ §11.16 建表结构句 ∥ §11.17（已随正——本批设计笔）。
-- 他档（设计席笔，2026-10-25 修正轮全落）：`docs/core/design/AGENT-PARAMS.md:89` ∥ `BROWSER-TOOL.md:582` ∥ `PROVIDER.md:1175` ∥ `LIGHT-CHANNEL.md:95` `:256` `:372` `:376` `:386` `:388` `:390` ∥ `PROMPT-SYSTEM.md:204` `:3591` `:4322` ∥ `API-CONTRACT.md:4467`（`thincoder-cli/test/…` ⇒ 仓根位；vsc 已删 `test/integration/files.mjs` 的死指针清除；操作数族旧串（cli 包内 RTM 路径形）删除——提示词面实无此串，豁免由 `thincoder-core/prompts/common.md:132` 的 path forms 泛形承载）。
+- 他档（设计席笔，2026-10-25 修正轮全落）：`docs/core/design/AGENT-PARAMS.md:89` ∥ `BROWSER-TOOL.md:582` ∥ `PROVIDER.md:1175` ∥ `PROMPT-SYSTEM.md:204` `:3591` `:4322`（`thincoder-cli/test/…` ⇒ 仓根位；vsc 已删 `test/integration/files.mjs` 的死指针清除；操作数族旧串（cli 包内 RTM 路径形）删除——提示词面实无此串，豁免由 `thincoder-core/prompts/common.md:132` 的 path forms 泛形承载）。
 - 父侧路由：`docs/RELEASE.md:110` ∕ `:220`。
 
 ### 12.9 集成测试设计（RTM delta——§11.15 三问）

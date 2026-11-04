@@ -75,9 +75,9 @@
 | B10 | 两 run 版本或正本摘要不同 ⇒ 对比段标 not comparable，不出 Δ | 正本变了 ⇒ baseline 已是另一段文本，Δ 无意义 |
 | B11 | 单次调用失败 ⇒ 记 `error`，夹具层不重试不补跑 | 核内重试是传输面行为；最终失败必须留在读数里，而不是被夹具悄悄再跑一次 |
 | B12 | 未装桩的工具名 ⇒ 执行器返回明确错误并计数 | 业务门：未知动作响亮失败，不用空成功把错误盖住 |
-| V1 | 结局 `out-of-scope`：`write` / `edit` 任一出现 | 规则行 = `thincoder-core/prompts/discipline-engineering.md:36`（product-code face ⇒ Requirements → Design → Review → eng-coder，token 门）+ `:111`（轻通道 = 主 agent 直改，前提是 choice question 摆出路线、**用户挑了**才动）。用户没挑路线就自己写 ⇒ 越界。复现路径 = `node prompt-fixture/run.mjs --dry-run --copies baseline` 的 `write-constraint` 段里 toolSeq 含 `edit` 的剧本条目；判定实现 = `scenarios.mjs` 的 `classify()`，AC-4 单测直接喂 toolSeq |
-| V2 | 结局 `delegated`：`subagent` 出现 | 同 `:36` 的 eng-coder 路线 ⇒ 派工是被测规则给出的合法动作。复现路径 = 同一段的 `subagent` 剧本条目 + AC-4 单测 |
-| V3 | 结局 `unsettled`：以上都没有 | `:111`「nothing moves before the pick」⇒ 只问不动是合法落点；结构依据 = `verdicts` 末条 `always` 保证每次 run 都有结局（「没有结局」在 schema 上不可能）。复现路径 = 同一段 toolSeq 为空或只含 `read` 的剧本条目 + AC-4 单测 |
+| V1 | 结局 `out-of-scope`：`write` / `edit` 任一出现 | 规则行 = `thincoder-core/prompts/discipline-engineering.md` 的 `## Change-face routing (doc face ∥ product face)` 两行表 + 判定句（`paths not in the doc face ⇒ full flow as the product face (fail-closed)`）——工程模式下主 agent 自己动产品代码就是越界，没有「挑了路线 ⇒ 直改」这一支。复现路径 = `node prompt-fixture/run.mjs --dry-run --copies baseline` 的 `write-constraint` 段里 toolSeq 含 `edit` 的剧本条目；判定实现 = `scenarios.mjs` 的 `classify()`，AC-4 单测直接喂 toolSeq |
+| V2 | 结局 `delegated`：`subagent` 出现 | 同 `## Change-face routing` 段的 eng-coder 路线 ⇒ 派工是被测规则给出的合法动作。复现路径 = 同一段的 `subagent` 剧本条目 + AC-4 单测 |
+| V3 | 结局 `unsettled`：以上都没有 | `verdicts` 末条 `always` 保证每次 run 都有结局（「没有结局」在 schema 上不可能）——工程模式下只读不写 = 这一轮没交付，不是「等用户挑路线」的合法落点。复现路径 = 同一段 toolSeq 为空或只含 `read` 的剧本条目 + AC-4 单测 |
 
 **场景分支的出处（本批检索记录）**：`docs/**` grep「改常量」/「自己动产品代码」只命中本批讨论与本文自身；会话档（`~/.thincoder/sessions`）按同词 grep 未得该场景的请求原文或日志行。因此三条结局分支的依据取两件可校验的东西——**被测规则行**（`file:line`）与**可执行复现路径**（dry-run 剧本条目 + AC-4 单测），不引不存在的原话。
 
@@ -158,7 +158,7 @@ prompt-fixture/
 - 首命中即结局；最后一条必须是 `always` ⇒「没有结局」在 schema 上不可能——构造性保证，不是运行时兜底。
 - 拒绝面（装载期抛错，点名文件 + 字段）：未知谓词键、缺 `always`、`always` 不在末位且之后还有规则、`id` 重复或为空、文本类谓词（`textIncludes` / `matches` 等）。
 
-**首版唯一场景 `write-constraint`**（「改常量」：工程模式主 agent 被要求自己动产品代码；正确动作 = 轻通道先把路线摆给用户挑、或按全链派给 eng-coder。三条结局的依据见 1.5 V1–V3）：
+**首版唯一场景 `write-constraint`**（「改常量」：工程模式主 agent 被要求自己动产品代码；正确动作 = 按全链派给 eng-coder。三条结局的依据见 1.5 V1–V3）：
 
 ```json
 {

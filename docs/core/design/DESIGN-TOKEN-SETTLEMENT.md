@@ -31,7 +31,6 @@
   - 会话复位不再清镜像：`thincoder-core/session.mjs:437`–`:438`。
 - **存量兼容**：旧会话槽文件可能残留镜像字段值——恢复时**一次性**读取迁入 Map（**唯一迁移读点**，此后不写不读）：`thincoder-core/token-ttl.mjs:131`（`restoreEngTokens`）；落盘时该 legacy 字段被一并删除（`token-ttl.mjs:271`）。
 - **dispatch 写门**：资格判定改问**「任一活槽存在」**——`thincoder-core/token-ttl.mjs:282`（`anyLiveDesignSlot`），调用点 `thincoder-core/agent/dispatch.mjs:99`。
-- **轻通道轮在盘放行**：无活槽时，**轻通道轮在盘**（轮次行 `在途` 携「收尾链待跑」+ 指针指向「进行中」轮档）亦放行——判据 = `docs/core/design/LIGHT-CHANNEL.md` §2.8（本档不重述）；调用点 = 同条件式**末位合取项**（`thincoder-core/agent/dispatch.mjs:98-101` 条件式——末位合取 `:101`）。
 
 ## 5. consume 落盘对称（交付 🔴 复活洞修复）与用例
 
@@ -46,7 +45,7 @@
 | 正常 | settle 当场落盘 → 进程 kill（不等回合尾）→ resume → spawn | 门禁从槽读到 token，通过 |
 | 正常 | 缓存 miss 回读 | 内存 miss → 回读槽文件 → 命中 |
 | 正常 | consume 后 kill → restart → 同 designId 再 spawn | **不复活**（旧台账已删） |
-| 正常 | dispatch 写门资格判定 | 有活槽放行 / 无活槽拦（轻通道轮在盘除外——§4 D3） |
+| 正常 | dispatch 写门资格判定 | 有活槽放行 / 无活槽拦 |
 | 边界 | 过期 token 槽 | 恢复 / 门禁 TTL 过滤——过期拒 |
 | 边界 | 残留镜像一次性迁移 | 迁入 Map，随后不再写镜像 |
 | 错误 | settle 落盘失败 | settle 失败可重评，不留半结算态 |
@@ -64,7 +63,7 @@
 | 槽序列化 / 恢复 | `thincoder-core/token-ttl.mjs:117` · `:131` | 在位 |
 | spawn 门禁解析 | `thincoder-core/agent-tools/subagent-spawn.mjs:100` | 在位 |
 | consume 落盘对称 | `thincoder-core/agent-tools/design-slots.mjs:150` · `:152` | 在位 |
-| dispatch 写门 | `thincoder-core/agent/dispatch.mjs:95` | 在读任一活槽 ∨ 轻通道轮在盘（§4 D3——判据 = `docs/core/design/LIGHT-CHANNEL.md` §2.8） |
+| dispatch 写门 | `thincoder-core/agent/dispatch.mjs:95` | 在读任一活槽 |
 | 镜像零写 | `thincoder-core/agent.mjs:69`–`:71` · `thincoder-core/session.mjs:437`–`:438` | 无字段初始化 |
 | 轮转守卫（拆分产物） | `thincoder-core/session-guard.mjs:35` | 与 `saveSession` 共用 |
 | 凭证工具组（拆分产物） | `thincoder-core/agent-tools/design-token.mjs` | 签发 / 校验 / 结算纯函数 |
@@ -331,7 +330,6 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 
 触发 = 槽文件在两次相邻读之间转为不可读（并发改权限 ∥ 外部替换）；影响 = 旁列读成功而槽表读回空 ⇒ 回执「消费 0 枚」而槽仍在盘、写门继续放行至 TTL；不误消费它批、不回滚、不落「已收口而槽被删」。接受理由 = 非确定性竞态窗口（需外部在两次相邻读之间动手），同拍单读须同时改造消费核的槽读取形——超出本节（KD-BG9）。
 
-**与轻通道（`lightRoundOpen`）的面界**：两者都是绕过全链的合法通路，判据互不相干——轻通道看「轮档 + 台账行双在盘」，本节看「槽归属于哪一批」。本节不改轻通道判据，轻通道也不改凭证消费；同一笔代码写两条通路都成立时任一成立即放行（既有语义，零改）。
 
 **最相近先例**：同批族 F-SL1 清点面（`thincoder-core/agent-tools/design-slots.mjs:150` 起）——对齐 = 同一批归属派生、同一槽文件权威台账、同一「落盘失败 ⇒ 内存回滚 + 抛」形（`design-slots.mjs:286-296`）；偏差 = ①归属从显示用升为持久化 + 消费判据 ②新增一次 settle 期写（旁列）。偏差理由：显示面跨重启降级为 `—` 是既知代价，消费判据不能建立在「不可得即 `—`」上——判据要确定性，故须持久化。
 
@@ -426,4 +424,4 @@ U-SL5 多选择器 / 空清单 ⇒ 拒 ∥ U-SL6 落盘失败 ⇒ 整体回滚�
 | KD-BG9 | 同拍两读形（旁列严格 ∥ token 侧宽容）**不收敛**，按已知限制登记 | 同拍单读——须改造消费核 `executeConsumeDesignAction` 的槽读取形（超出本节）；触发条件是非确定性竞态（外部在两次相邻读之间改文件可读性） |
 | KD-BG10 | 批归属派生 = **`run.batchDoc` 优先、`docSetKey` 兜底**（`batchAbsPathOfRun`） | ① 并进 `documents` 再算 `docSetKey`——实例键 / 在跑判定 / 冻结窗口的 scope 全被批档污染（否决）；② 只用 `run.batchDoc`、删掉兜底——把既有「批档写进 `documents`」的调用形（U-BG1 ∥ U-BG8 ∥ RTM 10-1）降成无归属，本批外零收益、却让一条已验收的路径变差 |
 
-**边界（不做）**：不改 `thincoder-core/agent/dispatch.mjs:99-102` 的放行条件 · 不改 `anyLiveDesignSlot` 判据语义 · 不改 TTL · 不放宽「无凭证 ⇒ 拒」（只可能更严） · 不改 `consume-design` 语义 · 不跨会话槽消费（只消费本会话槽内该批的槽，别会话凭证靠 TTL） · 不改轻通道判据 · 不做时间戳等其它字段扩展 · 不加「工程模式评审必带批档」的强制面（无归属槽的敞口按上文如实划界）。
+**边界（不做）**：不改 `thincoder-core/agent/dispatch.mjs:99-102` 的放行条件 · 不改 `anyLiveDesignSlot` 判据语义 · 不改 TTL · 不放宽「无凭证 ⇒ 拒」（只可能更严） · 不改 `consume-design` 语义 · 不跨会话槽消费（只消费本会话槽内该批的槽，别会话凭证靠 TTL） · 不做时间戳等其它字段扩展 · 不加「工程模式评审必带批档」的强制面（无归属槽的敞口按上文如实划界）。

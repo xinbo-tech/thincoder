@@ -367,7 +367,7 @@ Nothing was sent: no review instance, no round consumed, no design token minted,
 
 偏差 = 判据从「参数在不在」进到「账在不在」，因此拒文多一行 `Record:` 读数值（让下一步可判：是行丢了，还是挂错了档）；并且判据面多一次台账读（第 6 条只读参数与文件系统）。两门的模式射程相同——都没有模式位。
 
-**reason 为什么另立三值而不另立 criterion**：先例 = 本档 §12（`criterion=scope-not-doc` 恒定，`no-project-root` ∥ `outside-project` ∥ `not-doc-file` 三个 `reason` 值）——同一个拒发口、同一个修法面，差别只在「哪条前提没满足」时，用 reason 分叉而不是造三个 criterion。
+**reason 为什么另立三值而不另立 criterion**：先例 = 本档 §12（`criterion=scope-not-doc` 恒定，`ambiguous-path` / `dangling-path` ∥ `outside-project` ∥ `not-doc-file` 四个 `reason` 值）——同一个拒发口、同一个修法面，差别只在「哪条前提没满足」时，用 reason 分叉而不是造三个 criterion。
 
 **台账侧的最近先例** = `assertCloseOutProof`（`thincoder-core/ledger-close-proof.mjs:37-62`）——同为「写之前拿批档事实对一次账」，方向相反（它在结账口读批档，本门在发证口读台账）。
 
@@ -681,7 +681,7 @@ export function outputReserve(provider, spec) {
 | A-AG16 | 引证形状分类：省略号引文（**候选全未中**——A-AG18）⇒ 非连续引文类（含改法），不再报 content mismatch；非省略号不匹配 ⇒ mismatch 照旧；报告头行零改（命中判据 = A-AG18 增量）；四面禁则 + 示例替形在位（`setTimeout(...)` 示例零残留） | 引文解析 |
 | A-AG17 | 归宿面：未验证引用不支撑打回（既有断言零改）；「不得静默丢条目」收尾句在位；不完整 ⇒ 失败结论块（A-AG9 覆盖） | 引文解析 / 失败结论 |
 | A-AG18 | 引文**装饰剥离候选集**：包裹引号 ∥ 行内注记装饰的引文 ⇒ 候选（c1 原捕获 ∥ c2 反复剥引号族 + 空白 ∥ c3 首个引号字符后段 ∥ c4 首个成对引号段内层文本；派生候选下限 2 字符）任一为所引行连续子串即 matched（零模糊、零内容级归一）；候选命中先于省略号分类（引号外语义省略形 ⇒ matched；引号内省略形 ⇒ 非连续引文类照判）；失败四类 / 报告头行 / 围栏零改 | 引文解析 |
-| A-AG19 | 文档路径解析单一规则（§12）：相对形按会话项目根解析（子目录锚同判）；绝对形照用；锚为 `workspace` / `none` 且传相对形 ⇒ 拒（`criterion=scope-not-doc` ∥ `reason=no-project-root`）；相对形 `..` 越根 ⇒ 拒（同 criterion ∥ `reason=outside-project`） | 路径解析 |
+| A-AG19 | 文档路径解析单一规则（§12）：相对形按会话项目根解析（子目录锚同判）；绝对形照用；锚为 `workspace` 且传相对形 ⇒ 拒（`criterion=scope-not-doc` ∥ `reason=ambiguous-path`）∥ 锚为 `none` ⇒ 拒（同 criterion ∥ `reason=dangling-path`）；相对形 `..` 越根 ⇒ 拒（同 criterion ∥ `reason=outside-project`） | 路径解析 |
 | A-AG20 | 受理面 = 项目内现存 `.md`：仓根级文档与 `docRoot` 树外仓内文档均受理；项目外 / 非 `.md` / 不存在 ⇒ 拒（`criterion=scope-not-doc` ∥ `reason=outside-project` ∥ `not-doc-file`），文案载「解析后路径 ∥ 拒因」+ 期望形两句，零实例 / 零 token / 零 LLM | 收面放宽 |
 | A-AG21 | 零试探残留：`thincoder-core/**` 源内 `candidateRoots` / `sessionReviewRoots` / `scope-doc-ambiguous` 零命中；返回形属性访问 `\.attempted\b` 零命中（口径命令见 §12「消费点与编辑点」）；返回形无 `ambiguous` / `candidates` 键；冻结窗 `docAbs` 仍取 `resolved`（放宽受理的文档在冻结面内） | 路径解析 |
 | A-AG22 | §3 落地门（F-A13）：绑 `batchDoc` 且结算已过回显闸 ⇒ ① **无条件**判 §3 轮次块数 > 点火基线（changes-required 轮同判）② 走签发路径时判段级状态行 = `评审通过`；不满足 ⇒ `{passed:false}` + 恒定标记（`no-section3-block` ∥ `status-not-passed`），槽零写、实例不翻 open、补写 §3 块（携 `VERDICT: pass`——状态行随块由工具置位）后同实例可重评 | F-A13 |
@@ -711,19 +711,25 @@ export function outputReserve(provider, spec) {
 
 偏差 = 分支③候选试探 ∥ 分支④歧义归一 ∥ `scope-doc-ambiguous` 判据整条删除——用户 2026-10-25 11:41「为啥要试探？不能要求写对吗？」：路径要求写对，试探面无存在理由。
 
+**解析面归口**：相对形的解析序改调统一解析层（`docs/core/design/PATH-RESOLUTION.md` §2.2，`order:"root-first"`——项目根先、引用方目录后，与旧序同序）；本表分支 1 / 2 的判据由该层的 `resolved` / `ambiguous` / `dangling` 结果态给出，本面不另判。跨仓形（`crossRepo`）**不进入本面**——本面受理面仍是「项目内现存 `.md`」，跨仓引用只开在文档锚面。
+
 **公开源核查**：项目声明 `PROJECT-MANIFEST.json:35` 的 `index.publicRepos` = `[]` ⇒ 无公开源档可查；已查无。
 
 | # | 分支 | 判据 | 依据 |
 |---|---|---|---|
 | 1 | 相对形 | 基面 = **会话项目根** `projectRootView(cwd).root`（`thincoder-core/manifest-discovery.mjs:142`——`projectRootView` 的 `root` = `owningProject` 归属形的薄委托，`:108`；**仅归属命中**——发现读数只供 `workspace` 报明、不进 `root`）；`p = resolve(根, doc)`；`p` 越出根（`..` 逃逸）⇒ 拒（`outside-project`） | 用户 2026-10-25 11:41「不能要求写对吗？」——相对形只有唯一含义 = 项目根相对；根是基面不是起点 |
-| 2 | 相对形 ∧ 项目根解析不出 | `projectRootView` = `workspace` / `none` ⇒ 拒（`no-project-root`，文案报锚态 + 期望形） | 实景：本工作区锚 `D:\teamcode` 下辖两项目（`manifest read` 读数 `state=workspace`）——无唯一项目根，相对形确实无解，只能要求写对 |
+| 2 | 相对形 ∧ 判不出唯一基根 | `projectRootView` = `workspace` ⇒ 拒（`ambiguous-path`，文案报候选全列 + 期望形）∥ = `none` ⇒ 拒（`dangling-path`，文案报锚态 + 期望形） | 实景：本工作区锚 `D:\teamcode` 下辖两项目（`manifest read` 读数 `state=workspace`）——无唯一项目根，相对形确实无解，只能要求写对 |
 | 3 | 绝对形 | 照用（零根试探、零拼接）；**归属判定以会话锚为界**——`owningProject(p, cwd)` 出界 ⇒ `null` ⇒ 拒（`outside-project`） | `docs/core/requirements/ADVISOR-CONVERGENCE.md:48` F18「绝对形照用」+ **「不受理工作目录以外的文档」**（用户 2026-10-25 19:18「评审怎么可能受理别的项目的文档？」）——绝对形自带基面，但不取消「必须在当前项目内」这一条 |
 | 4 | 受理判据 | ① 现存普通文件；② 扩展名 `.md`（大小写不敏感）；③ 绝对形：`owningProject(p, cwd)` 非空（住在**当前项目**里）；相对形：分支 1 已限定在会话项目根内 | `criterion=scope-not-doc` 的指义 =「评审对象必须是文档」；本批放宽的是**位置**（`docRoot` 树内 → 项目内任意位置）——F18 边界句「不放开文件种类（非 `.md` 不受理——`scope-not-doc` 仍可达）」 |
 | 5 | 不受理 | fail-closed 拒发：`criterion=scope-not-doc`，逐文档列「解析后绝对路径 ∥ 拒因」+ 期望形（项目根相对例 ∥ 绝对路径）；零实例 / 零 token / 零 LLM | F18 判定句「解析不出即拒并说清期望形」+ 同族既有拒发语义（§2.5 载面 ②） |
 
-**拒因三值**（标识行恒 `criterion=scope-not-doc`——三值只作 `reason=`，不进 criterion 枚举）：`no-project-root`（相对形 ∧ 项目根解析不出）· `outside-project`（相对形越根 ∥ 绝对形不住在任何项目里）· `not-doc-file`（非现存普通文件 ∥ 非 `.md`）。
+**拒因四值**（标识行恒 `criterion=scope-not-doc`——四值只作 `reason=`，不进 criterion 枚举）：`ambiguous-path`（相对形 ∧ 判不出唯一基根：工作区锚下辖 ≥1 项目）· `dangling-path`（相对形 ∧ 无项目根且零候选：`none` 态）· `outside-project`（相对形越根 ∥ 绝对形不住在任何项目里）· `not-doc-file`（有基根、档不存在 ∥ 非 `.md`）。
 
-**拒因命名三问**：`no-project-root` vs 既有态码 `'no-project'`（`docs/core/design/MANIFEST.md:124` 入口决策树）= **有意区分**——`no-project` 说「决策树无项目可落」（写 / 建档面），`no-project-root` 说「相对形的基面 = 会话项目根解析不出」（评审读面）；场景与处置不同，合并会让两种拒因共用一个出口。
+**词汇契约变更（旧 → 新）**：`no-project-root` 退役，按层的两个结果态拆成 `ambiguous-path`（有候选、判不出唯一）与 `dangling-path`（无根、零候选）。
+
+受影响 = 本表分支 2 ∥ 拒因值集 ∥ A-AG19 ∥ 判别实现（`thincoder-core/agent-tools/review-facts.mjs`）∥ 拒发文案（`thincoder-core/agent-tools/advisor.mjs`）∥ 集成行 6-4 ∥ 6-5 的断言（`reason=no-project-root` 改 `reason=ambiguous-path`）。全表与变更理由 = `docs/core/design/PATH-RESOLUTION.md` §4 KD-8。
+
+**拒因命名三问**：`ambiguous-path` / `dangling-path` 直接取统一解析层的两个结果态名（`docs/core/design/PATH-RESOLUTION.md` §2.1）——本面透传，不另造第三个词集。与既有态码 `'no-project'`（`docs/core/design/MANIFEST.md:124` 入口决策树）= **仍有意区分**——`no-project` 说「决策树无项目可落」（写 / 建档面），两个 `*-path` 词说「相对形判不出基根 ∥ 无基根可判」（评审读面）。
 
 `outside-project` / `not-doc-file`：查过 `thincoder-core/**` 与 `MANIFEST.md` 态码表，**none found**（无同义既有名可复用）。
 
@@ -754,13 +760,13 @@ export function outputReserve(provider, spec) {
 | 6-1 | 工具层 `documents` 解析 ⟷ 评审实例点火 | 仓内非 `docRoot` 树下文档被受理，评审读得到该文档 | 会话内发起设计评审（depth-0） | F18 · A-AG20 |
 | 6-2 | 解析 ⟷ 拒发通道 | 项目内代码文件 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=not-doc-file` + 解析后路径 + 期望形），零实例 / 零 token | 同上 | F18 · A-AG20 |
 | 6-3 | 解析 ⟷ 拒发通道 | 项目外绝对路径 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=outside-project`） | 同上 | F18 · A-AG19 |
-| 6-4 | 解析 ⟷ 拒发通道（分支 2） | workspace 锚 + 项目根相对形 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=no-project-root`），文案报锚态 + 期望形 | 同上 | F18 · A-AG19 |
+| 6-4 | 解析 ⟷ 拒发通道（分支 2） | workspace 锚 + 项目根相对形 ⇒ 当场拒发（`criterion=scope-not-doc` ∥ `reason=ambiguous-path`），文案报候选全列 + 期望形 | 同上 | F18 · A-AG19 |
 
 - **破行（改写）**：6-1——原行未写锚态，而分支 2 让锚态决定成败（workspace 锚下相对形一律拒）⇒ 改写为「会话锚在项目内（cwd = 项目根或其子目录）」，否则同一行在 workspace 锚下假红。
-- **破行（夹具——准入门带来的拒因优先级）**：6-1 ∥ 6-2 ∥ 6-3 ∥ 6-4（所在档 `test/integration/review-doc-scope.test.mjs`，同档 6-5 同形）——四例的驱动面 `advisorTool.execute({ type: "design", async: false, documents }, …)` 不携 `batchDoc`，而准入门（§2 第 6 条）位于文档范围解析之前 ⇒ 回执先得 `criterion=batchdoc-missing`：6-1 的「回执非拒」与 6-2 ∥ 6-3 ∥ 6-4 的 `criterion=scope-not-doc` ∥ `reason=no-project-root` 均不可达。处置 = **夹具补可读 `batchDoc`**（四例断言逐字不变）；拒因优先级事实同档登记：`batchdoc-missing` → `batchdoc-no-ledger` → `scope-not-doc` ∥ `no-project-root`，顺序即判据位置（§2 第 7 条顺序表：类型门之后、范围解析之前）。
+- **破行（夹具——准入门带来的拒因优先级）**：6-1 ∥ 6-2 ∥ 6-3 ∥ 6-4（所在档 `test/integration/review-doc-scope.test.mjs`，同档 6-5 同形）——四例的驱动面 `advisorTool.execute({ type: "design", async: false, documents }, …)` 不携 `batchDoc`，而准入门（§2 第 6 条）位于文档范围解析之前 ⇒ 回执先得 `criterion=batchdoc-missing`：6-1 的「回执非拒」与 6-2 ∥ 6-3 ∥ 6-4 的 `criterion=scope-not-doc` ∥ `reason=ambiguous-path` 均不可达。处置 = **夹具补可读 `batchDoc`**（四例断言逐字不变）；拒因优先级事实同档登记：`batchdoc-missing` → `batchdoc-no-ledger` → `scope-not-doc` ∥ `ambiguous-path` / `dangling-path`，顺序即判据位置（§2 第 7 条顺序表：类型门之后、范围解析之前）。
 - **破行（夹具——账链门带来的第二道前提，本批）**：6-1 ∥ 6-2 ∥ 6-3 ∥ 6-4 ∥ 6-5 五例。现夹具批档建在 `mkdtempSync(join(tmpdir(), …))`（同档 `batchRecordFixture`）——不在任何项目内 ⇒ `resolveLedgerRoot` 无根 ⇒ 五例全被 `reason=no-ledger-root` 拒，6-1 的「回执非拒」与 6-2 ∥ 6-3 ∥ 6-4 ∥ 6-5 的范围判据全部不可达。处置见下「夹具处置」（断言逐字不变）。
 - **冗余**：无——6-1 ∥ 6-2 ∥ 6-3 ∥ 6-4 各判一类（受理 ∥ 非 `.md` ∥ 项目外 ∥ 锚无根），两两不重叠。
-- **缺失**：6-4（`no-project-root`——分支 2 此前无行）；编号已先落 `test/RTM.md` 故事 6，用例标题照 `test('6-4 …')`。
+- **缺失**：6-4（`ambiguous-path`——分支 2 此前无行）；编号已先落 `test/RTM.md` 故事 6，用例标题照 `test('6-4 …')`。
 - **不在本批变更面的两处**：§2.4 类型门本批零代码改动 ⇒ 不立行；§5 冻结窗本批零新增代码（`docAbs` 取同一 `resolved`），判据 / 文案 / 业务可观察结果均不改——放宽受理的文档只是进入既有冻结面，故不新立行。
 
 **用例设计（实现面——四条用例怎么搭）**
@@ -790,6 +796,6 @@ export function outputReserve(provider, spec) {
 | 6-1 | 真仓 = 本仓（`cwd` = 仓根，`PROJECT-MANIFEST.json` 恒在） | `documents = ["thincoder-core/tool-docs/advisor.md"]`（`docRoot` 树外、真实存在） | ① 回执非拒（无 `scope-not-doc`）；② 假端点收 **1** 个请求，请求体含该文档条目或解析后路径 ⇒ 判据「评审读得到」= 评审消息携带该文档；③ 回执含假端点固定文本（评审跑完，不是半途拒发） |
 | 6-2 | 同 6-1 | `documents = ["thincoder-core/agent-tools/advisor.mjs"]` | 回执含 `criterion=scope-not-doc` ∧ `reason=not-doc-file` ∧ 解析后路径 ∧ 期望形两句；`_advisorRefusals.has("t2")`；假端点 `requests.length === 0`（零实例 / 零 token） |
 | 6-3 | 临时根 `outside/x.md`（无 manifest / 无 `.git`）；项目侧同 6-1 | `documents = [<临时根>/outside/x.md]`（绝对形） | 同 6-2 形态，`reason=outside-project`；`requests.length === 0` |
-| 6-4 | 临时根：无 manifest、无 `.git`；下辖 `p1/` ∥ `p2/` 各写一份最小 `PROJECT-MANIFEST.json`（五键 + `codePaths` + `index`，形同 `DEFAULT_MANIFEST`）；`cwd` = 临时根 | `documents = ["docs/a.md"]`（相对形） | `reason=no-project-root`；文案含锚态（workspace）∧ 期望形两句；`requests.length === 0`；**反证格**：`cwd` 换成 `p1/` 同调用 ⇒ 不再以 `no-project-root` 拒（基面已存在） |
+| 6-4 | 临时根：无 manifest、无 `.git`；下辖 `p1/` ∥ `p2/` 各写一份最小 `PROJECT-MANIFEST.json`（五键 + `codePaths` + `index`，形同 `DEFAULT_MANIFEST`）；`cwd` = 临时根 | `documents = ["docs/a.md"]`（相对形） | `reason=ambiguous-path`；文案含候选全列 ∧ 期望形两句；`requests.length === 0`；**反证格**：`cwd` 换成 `p1/` 同调用 ⇒ 不再以 `ambiguous-path` 拒（基面已存在） |
 
 **边界**：不改 `resolveBatchDocPath` / `batchDocBases`（batchDoc = 另一机制，`BATCH-RECORD.md` §4.15）· 不改 `docSetKey` · 不引入候选试探 ∥ 歧义归一 ∥ 新配置键 ∥ `index.docExtensions` 消费 · 不动轮次 / 陈旧判定 / 结算语义 · 零 UI 面。
