@@ -1,6 +1,6 @@
 # Advisor 评审链边缘守卫（ADVISOR-GUARDS）· 设计
 
-> 板块：advisor 评审链——**边缘守卫族**：不完整判定族 · 凭证链启动/全程守卫 · 类型门（顶层 `type` 必填 + 声明一致性）· 对象标识行（文案单源）· 引文解析候选链 · 预算硬墙与提示 · 冻结窗口 · 同步面记账 · 失败结算结论 · 预算跟随模型窗口 · 估算加权 · 设计评审准入门（`batchDoc` 必填）。
+> 板块：advisor 评审链——**边缘守卫族**：不完整判定族 · 凭证链启动/全程守卫 · 类型门（顶层 `type` 必填 + 声明一致性）· 对象标识行（文案单源）· 引文解析候选链 · 参照形态判据（提示词第 13 条）· 预算硬墙与提示 · 冻结窗口 · 同步面记账 · 失败结算结论 · 预算跟随模型窗口 · 估算加权 · 设计评审准入门（`batchDoc` 必填）。
 > 收敛协议本体（轮次 / 会话隔离 / prior / citations / guard / 响应表 / 需求契合 / 行数核查）= `docs/core/design/ADVISOR-CONVERGENCE.md`——本档不重述（D2 单一权威源）。
 > 需求层指针 = `docs/core/requirements/ADVISOR-CONVERGENCE.md`（该板块需求档——现状绝对路径）。
 > 判据指针：归属与命名 = `docs/core/design/DOC-SYSTEM.md` §5.1 / §6。
@@ -425,6 +425,94 @@ run.mjs:180: timeoutId = setTimeout(...)  ⇒  run.mjs:180: timeoutId = setTimeo
 **归宿面（不可验证 ⇒ 有结论——F28/F29 邻域，零新判定族）**：未通过机械核验的引用**不能支撑打回**（本体零改）；其条目不得悬置——每轮以明列 Status 收束（`Unfixed` 携状态 ∥ 经争议窗收口；`docs/core/design/ADVISOR-CONVERGENCE.md` §2.5），评审收尾时未验证条目逐一明列、**不得静默丢条目**；评审**不完整**（宿主截断族）⇒ 失败结论块逐次产出（§7——零改复核）。
 
 **取舍**：只按“声明范围 + 内容判据”扩充候选根——命中内容仍须**逐字连续子串**（候选仅剥外层装饰 / 取引号内文——**零模糊、零内容级归一**；不会因同名文件误命中：内容必须逐字包含）；残余如实报告：引用声明范围外、且其仓根不在声明范围时仍判 unreadable。
+### 3.1 参照形态判据（设计评审提示词第 13 条——行号不作引用）
+
+**权威链（单向）**：规则本体 = `docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则（人读权威，本节不重述、不改其语义）；
+执行面 = 设计评审提示词 `thincoder-core/prompts/advisor-design.md` 的 `## Review Criteria` 第 13 条（模型读）；
+机械面 = §3 的候选链——宿主仍只核「引文是否为所引行的**连续子串**」，**不判形态**：形态由评审席按第 13 条判。
+
+**判据（逐字——规范单源 = 本节；批档 §1 的定稿块是同一份的一次性转载，批档收口可整档删除，不成第二真源；落笔面 = 产品代码面，eng-coder 照落：不改写措辞、不合并成一行）**：
+
+```text
+13. **Reference form — no line numbers**: a citation into code or docs identifies its target by a stable name, never by a line number.
+    `path:123` and `line 123` both drift the moment a line is inserted above, and the drift is silent — the reader lands on an unrelated line and cannot tell.
+    Name the symbol (function / constant / field / message / section heading); when no symbol exists, name the file together with the section heading that owns it.
+```
+
+**写成三行、不写成一行**：提示词面逐行判据（每行 ≤300 字符）——一整段写下来必然超宽被交付门拒；拆点落在句边界，每一行自身是一个完整句，句内文字逐字不动。
+
+**一个问句，不分档**：评级只问「被审文档里有没有行号引用」——**没有**「本轮新增 / 存量」两档，**没有**「存量只报计数」的汇总行。
+依据 `docs/core/design/DOC-DISCIPLINE.md`「行号一律不作引用形态（强制 · 无例外）」∥ 同档「存量同属违规」——判据面上没有可申请豁免的存量；清账快慢是**排期**，不是判据的分档。
+
+**一处一行，不另立判据句**：发现表的行形已由同一提示词的 `## Output Format` 规定（一行一条发现）——第 13 条只给「什么算发现」，不重述输出形。
+
+**提示词不带例外清单**：第 13 条只讲通用原理——项目自己的路径、目录约定与档名不进产品提示词（提示词随产品走，规则随使用者的仓而定）。
+
+**无例外——被审档一律同判**：第 13 条不给任何一档开口子，项目归档档（`**/_archive/**`）里有行号引用照报。判据面上没有第二处答案：`docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则给的是**清账口径**（域 ∥ 围栏），不是免判口径 ⇒ 不拿它当例外依据。
+
+**围栏里的命令字面**：评审席引一段当次命令输出、其中打印了 `file:line`——那枚号是引文的字面（D4「引文内坐标照引」：逐字不动）；清账面上它不计入（D4「围栏内不计入清账面」），但**不是免判**：它仍是行号引用，按第 13 条照报一行发现。
+
+**与既有两句不同轴（不复制措辞）**：同一提示词 `## Your role` 第 2 条的「Never cite a line number」与 `## Citation Discipline` 的「A line number is not a citation」管评审席**自己**怎么写引用；第 13 条管**被审文档**里的引用形态（判据面）。同一件事的两个面——既有两句一字不动，第 13 条不重述它们的理由，只给判红形态。
+
+**落点（实现面单值）**：`thincoder-core/prompts/advisor-design.md` 的 `## Review Criteria` 节末——第 12 条之后、`## Output Format` 之前，编号 `13.`，条目内续行 **4 空格**、与 10–12 条同形（2–9 条是一位数编号，`N. ` 之后的对齐位本就不同；实读 2026-11-04：该档第 10–12 条的续行行首均为 4 空格）。
+
+**严重度不新造**：第 13 条不指定 🔴/🟡 档位，沿用提示词既有的严重度定义表——判据说「是发现、一处一行」，档位照既有体系判。
+
+**关联（约定面回潮源）**：`docs/vsc/design/VSC-MIGRATION.md` §1.3 引-3 现把「仓根相对路径 + `:行`」写成**规定形**——不改它，第 13 条立了也会被下一个照约定写作的人写回来。该行的替换形本批一并落（设计见批档 §2），本节不重述。
+
+**最相近先例**：本档 §3 的「引证形状写作禁则（评审提示词面——逐字建议）」——同一面（评审提示词的引用形态）、同一写法（规范单源住设计面 + 逐字围栏块 + 实施席照落）。对齐 = 两处同形。
+
+偏离 = **不取** `docs/core/design/ADVISOR-CONVERGENCE.md` §17 那一族的「`## N. xxx（设计评审维度）`」节形（§9 ∥ §14 ∥ §15 ∥ §16 ∥ §17 同形）。理由 = 那一族的权威链都指向一条**义务**（设计档须含某段 ∥ 某行：先例行、勘察证据行、分支出处、集成测试段、尺寸档位），而第 13 条不新增任何义务——它禁的是一种引用形态，规则本体已在 D4 细则里。放进义务族会让读者以为设计档多了一个必填段。
+
+**既有件三问**：`existing: docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则 · `name: "行号一律不作引用形态（强制 · 无例外）"` · `consumers: 文档作者 / 设计评审席 / 设计席` ⇒ 判据本体逐字沿用，零新造。
+
+**勘察证据行（本席实读 · 2026-11-04）**：
+
+- 落点档实读：`thincoder-core/prompts/advisor-design.md` 的 `## Review Criteria` 节现 12 个整数编号条目（1–6 ∥ 7–12）加 `6b.` 一条字母后缀条目；节后即时 `## Output Format`。
+- 判据本体实读：`docs/core/design/DOC-DISCIPLINE.md` 的 D4 细则含上述两句逐字。
+- 注入面实读：`thincoder-core/advisor/history.mjs` 的 `loadAdvisorMd(cwd)` 读 `cwd/.thincoder/advisor.md`，读不到才回落 `DEFAULT_CRITERIA`（一份五条代码评审清单）；`thincoder-core/advisor/messages.mjs` 把该值作为 `## Review Criteria` 块推进**用户消息**。⇒ 工作区根 `D:\teamcode\.thincoder\advisor.md` 实存，但它是用户消息里的附加块，**不取代**提示词（系统面）⇒ 改提示词在该 cwd 同样生效。
+- 公共源：本仓 `PROJECT-MANIFEST.json` 的 `index.publicRepos` = `[]`（实读 2026-11-04：该键值为空数组）⇒ 无仓外声明源可查（已查无）；口径与 §2 第 7 条同——两处同为实读。
+- 近面涉否：`test/` 下无档引用 `advisor-design` 的判据条数 ⇒ 本笔不破既有用例的夹具。
+
+**验收（AC13-1 … AC13-6 · 每条写清跑什么、期望什么）**：
+
+| # | 判据 | 量法 |
+|---|---|---|
+| AC13-1 | 落笔块逐行相等 | `node` 逐行 `===`：`thincoder-core/prompts/advisor-design.md` 落地块与本节围栏块整行相等（首末行含） |
+| AC13-2 | 编号与位置 | 节切（`## Review Criteria` 至下一个 `^## `）内 `^[0-9]+\. \*\*` 计数 = **13**（`6b.` 不占整数编号）；第 13 条在 `## Output Format` 之前 |
+| AC13-3 | 分档未回来 | 落地块扫 `pre-existing` ∥ `one count line` ∥ `the round did not touch` ⇒ **0** |
+| AC13-4 | 行宽 | 落地块逐行 ≤300；该档 `>300` 行数**不增加**（基线 = 实施轮首动作前复测，读数记 §5） |
+| AC13-5 | 提示词不带项目细则 | 落地块扫 `docs/` ∥ `_archive` ∥ `thincoder-` ⇒ **0** |
+| AC13-6 | 交付门 | `doc_check(mode:"gate")` 首行 `PASS` |
+
+**用例表（正常 / 边界 / 错误）**：
+
+| # | 场景 | 输入 / 动作 | 期望 |
+|---|---|---|---|
+| C1 | 正常 · 被审文档用行号定位代码 | 设计档写「路径 + `:行`」形的坐标 | 出一行发现：路径 + 该坐标逐字 + 应改用的符号名 |
+| C2 | 正常 · 无符号可指 | 被引对象是一个整段规则 | 判据给的第二形：文件路径 + 所属节标题；仍不带行号 |
+| C3 | 边界 · 一次文档十二处 | 同一份设计档十二处行号引用 | **十二行**发现，不折成一行计数 |
+| C4 | 边界 · 归档档 | 被审档是项目归档档，档内有行号引用 | 无例外、同判：出一行发现；提示词面零字（不列业务归档例外清单） |
+| C5 | 边界 · 围栏里的命令字面 | 评审席引一段命令输出，其中打印了 `file:line` | 引文字面逐字不动（D4「引文内坐标照引」）；不计入清账面（D4「围栏内不计入清账面」）但不是免判——照报一行发现 |
+| C6 | 错误 · 拿旧分档读 | 只报新增处、存量报一个数 | 判违规：分档已删，AC13-3 红 |
+
+**集成测试差量（起点 = `test/RTM.md`）**：**破 0 行 · 冗余 0 行 · 缺 0 行**。理由（两条入口逐条核）：① 不改任何既有用例断言的业务可观察结果——第 13 条是评审席读的判据文本，产出是模型写的发现表，无业务入口可机判；② 未新增业务上真需要的场景——用户报告的问题是真的（行号漂移，本仓已发生），但它的可观察结果落在评审输出文本上，不在业务结果上。近面无涉：故事 7「收口只判本批改过的档」∥ 故事 17「评审没写进批档就不算过」（本笔不新增门、不动评审席的 §3 写入行为）。
+
+**受影响档与分层结论**：`thincoder-core/prompts/advisor-design.md`（提示词档 = 产品代码面的 `.md` 文本档，评审维度 8 对纯 `.md` 豁免分层判）· 本节自身（设计档）· 测试档 **0** ⇒ **无档跨层，无拆单**。
+
+**数据事实**：本设计对数据无断言（不涉行数 / 枚举 / 字段）。唯一量 = 落笔后`## Review Criteria` 节的整数编号条数，由 AC13-2 实跑量取，非纸面推演。
+
+**分支依据**：本笔不新增输入 / 状态分支（纯文本判据 + 一处约定行改写）⇒ 无分支表。
+
+**UI / 交互决策**：无界面面——本笔只改模型读的提示词文本与设计档文字。
+
+**边界（本节不做）**：
+
+- 不改 `docs/core/design/DOC-DISCIPLINE.md` §1 D4 细则的语义；不新造严重度（沿用提示词的既有定义表）。
+- 不改 `## Your role` 与 `## Citation Discipline` 的既有句（不同轴，见上）。
+- 不新增机检门——宿主校验仍只核内容、不判形态。
+- 不动 `thincoder-core/prompts/advisor-round1.md` ∥ `thincoder-core/prompts/advisor-round2.md` ∥ `thincoder-core/prompts/advisor-round3.md` ∥ `thincoder-core/prompts/consult-base.md`（第 13 条只进设计评审）。
+- 判据只判、不排期（清账节奏归用户的会话排期）；本节与落笔块零行号坐标。
 
 ## 4. 预算硬墙 + 提示 + 结构化收尾（D 族）
 
@@ -690,6 +778,7 @@ export function outputReserve(provider, spec) {
 | A-AG25 | 批归属「批」列派生（`thincoder-core/agent-tools/design-slots.mjs:61` 的 `batchOf`）：旁列有值 ⇒ 取该批档绝对路径的 basename；旁列缺失（旁列启用前签发的旧槽）⇒ 会话内评审实例注册表按 designId 命中的 run 逆序取最近一个能派生出批档的（`run.batchDoc` 优先、`docSetKey` 段档兜底）；皆不可得（跨重启 ∥ 模式重进 ∥ 注册表回收）⇒ `—`（如实降级，不猜一个批名）；与 settle 写旁列同一派生 `batchAbsPathOfRun`——清点面不拿另一个派生读同一事实 | 批归属 · 清点显名（U-7 ∥ U-8） |
 | A-AG27 | 账链门（§2 第 7 条）：`type="design"` ∧ `batchDoc` 可读 ⇒ 本档须有 ≥1 行 ∈ `PENDING_STATUSES`（选行 = `resolveBatchRows` 同址，台账 `thincoder-core/ledger-write-ops.mjs:185`；未决 = `thincoder-core/ledger-db.mjs:134`）；不满足 ⇒ 拒发（`criterion=batchdoc-no-ledger`，`reason` 三值 `no-pending-row` ∥ `no-ledger-root` ∥ `ledger-unreadable`）+ `_advisorRefusals` 登记，零实例 / 零 token / 零槽 / 零 LLM；**失败路径全落拒、零路径落放行**（`if (!db)` 放行与 throw 外逸都不算答案）；**零模式位**（新增代码对 `agent.engineering` 零命中）⇒ 普通模式同判；结算面（`settleDesignReview`）零台账读 | E1 / E2 / E3 / E4 |
 | A-AG26 | 设计评审准入门（AC-M6-6）：`advisor(type="design")` 未携 `batchDoc`（缺失 / `null` / 空串 / 纯空白）⇒ 拒发串（前缀 + `batchDoc` 必填句 + Why + 两种期望形 + 「先建档」下一步 + `Nothing was sent` 行 + 标识行 `criterion=batchdoc-missing`），登记 `agent._advisorRefusals`，零实例 / 零 token / 零槽 / 零轮次 / 零 LLM；携了但不可读 ⇒ 既有 `resolveBatchDocPath` 文案逐字（不改）；`type="code"` 不受本门约束；携了可读的设计评审零回归；**槽数读面单源 = `agent._engDesignTokens`**（槽存储本体；`subagent(action:'design-slots')` 清点读同一 Map——`thincoder-core/agent-tools/design-slots.mjs:38` 实读） | AC-M6-6 |
+| A-AG28 | 参照形态判据（提示词第 13 条）：落地块与本节围栏块逐行相等；节内整数编号 = 13 ∧ 第 13 条在 `## Output Format` 之前；落地块零分档串、零项目细则字面、逐行 ≤300，该档 `>300` 行数不增加；无例外——归档档同判（判据 = 本节 AC13-1 … AC13-5） | 参照形态判据（提示词第 13 条） |
 
 ## 11. 边界
 

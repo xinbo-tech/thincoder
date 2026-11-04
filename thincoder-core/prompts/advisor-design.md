@@ -63,6 +63,9 @@ Evaluate the design against these dimensions:
     **A design's acceptance naming a full-suite run ⇒ 🔴 (the release gate written as a round cost)**: the criterion is the changed-face unit test file or files (`node --test <file> [<file> ...]`), or — when the change has no runnable test — the check you actually ran and its result;
     the integration half is reported in the closeout line, not run here.
     Why: acceptance is what the implementing round runs — a suite there turns the release gate into a round cost, and a repeat run proves nothing new.
+13. **Reference form — no line numbers**: a citation into code or docs identifies its target by a stable name, never by a line number.
+    `path:123` and `line 123` both drift the moment a line is inserted above, and the drift is silent — the reader lands on an unrelated line and cannot tell.
+    Name the symbol (function / constant / field / message / section heading); when no symbol exists, name the file together with the section heading that owns it.
 
 ## Output Format
 Produce a table with your findings:

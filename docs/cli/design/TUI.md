@@ -426,7 +426,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 `livePoolHas(state, key)`（活池查询面与 key 映射见 §6.8.3.3）——**存活判据（逐字）**：**条目在池 ∧ `entry.done !== true` ∧ `entry.cancelled !== true`（running/queued）**
 
-〔判据先例 = `thincoder-core/agent-tools/async-discard.mjs:55`——零新谓词；仅「键在池内」会违 `subagent-blocks.mjs:81` 守卫原意〕；
+〔判据先例 = `thincoder-core/agent-tools/async-discard.mjs` 的 `discardable`——零新谓词；仅「键在池内」会违 `thincoder-cli/src/tui/subagent-blocks.mjs` 的 `ensureSubTaskKey` 守卫原意〕；
 
 命中存活 ⇒ ① `_frozenSubKeys.delete(key)`；② **摘旧冻结载体行**（见下）；③ 照常建块（model / async 由后续
 `⟦ev⟧async` / `[model]` 重填）+ 留痕；**否则维持现状丢弃**。
@@ -452,7 +452,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 **每次复活记一条（无去重状态）**——墓碑删后可再次命中复活，逐次留痕；若要「同 key 去重」须新增载体 = 第二份存活账，
 否决（D-ZB3 同源）。
 
-② `refreshQueuedTokens` 的 `catch {}`（`subagent-scheduler.mjs:357-359`）保持不破坏池状态，
+② `refreshQueuedTokens` 的 `catch {}`（`subagent-scheduler.mjs`）保持不破坏池状态，
 补 `logEvent("ev:queued-paint-failed")` 留痕。
 
 **UI 决策（已定——不悬空）**：本档**不新增**会话流提示行与面板形态——用户的可见证据 = **块回归本身**
@@ -701,7 +701,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 
 **不动位**：触发落流行 `[System reminder: ⏰ timer — <message>]` 逐字保持——模型可见的契约文本（机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）。
 
-- **该行同时进会话流（用户可见）**：回合尾镜像分支按 `last.content.startsWith("[System reminder:")` 以 `C.warn` 推入会话流（`thincoder-cli/src/tui/tool-events.mjs:448`）。
+- **该行同时进会话流（用户可见）**：回合尾镜像分支按 `last.content.startsWith("[System reminder:")` 以 `C.warn` 推入会话流（`thincoder-cli/src/tui/tool-events.mjs` 的 `onTurnEnd` 回调）。
 - **后果**：Linux 终端缺 U+23F0 字形时，此行同样呈豆腐块——状态行 ∥ `/timers` 两处换文字形不消这一处。
 - **归属**：改这行即改模型历史文本，归机制档单源（`docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30）处置，本面不改。
 
@@ -716,7 +716,7 @@ spawn 撞域 → ⟦ev⟧queued → routeSubToken → ensureSubTaskKey 建 waiti
 - **`/timers`（只读列表——最薄）**：逐条 dim 行 `timer <i> · <kind> · 剩余 <dur> · <message 首行（截断）>`（`<i>` = 1 起序号；kind 段仅非一次性项插入：`每 <N>m`（`every` 整分）∕ `每 <N>s`（非整分——秒形）∥ `每天 <HH:MM>` ∥ `于 <YYYY-MM-DD HH:MM>`；`<dur>` = `<mm:ss>`（< 1h）∥ `<h:mm:ss>`（≥ 1h——与模型 `list` 的 `next` 同形）；一次性行逐字零变）；零在途 ⇒ 一行 `无在途 timer`。
   **取消 = 模型工具 `timer` 的 `cancel` 动作**（四端同得——核件在途表移除；`/timers` 保持只读；停轮 = Ctrl+C，停机制 = `agent.timerWake` 关）；机制 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30.18。
 
-**宽度（段落加宽的账）**：文字形宽于符号形 **5 显示列**（实测 `stringWidth`：` │ timer 2` = 10 列 ∥ ` │ ⏰2` = 5 列）——整行 ≤ `cols − 1` 仍由既有 `statusMax` 截断保证（`thincoder-cli/src/tui/status-line.mjs:63-64`），窄终端下先让位的是行尾键位组，本批**不新增机制 ∥ 不新增分支**。`/timers` 逐行同样宽 5 列——会话行按既有 `wrapText` 折行，无行宽不变式（message 首行仍按 `headText` 60 列封顶）。
+**宽度（段落加宽的账）**：文字形宽于符号形 **5 显示列**（实测 `stringWidth`：` │ timer 2` = 10 列 ∥ ` │ ⏰2` = 5 列）——整行 ≤ `cols − 1` 仍由既有 `statusMax` 截断保证（`thincoder-cli/src/tui/status-line.mjs`），窄终端下先让位的是行尾键位组，本批**不新增机制 ∥ 不新增分支**。`/timers` 逐行同样宽 5 列——会话行按既有 `wrapText` 折行，无行宽不变式（message 首行仍按 `headText` 60 列封顶）。
 
 **负向锁（可机判）**：
 
