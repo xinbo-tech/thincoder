@@ -171,7 +171,7 @@ function buildStatusLine(state, agent, { cols, slashCommands }) {
   // titleHint 前）——取值 = `agent._pendingTimers` 活读（每帧 recompute / 零缓存副本 / 不显倒计时）；
   // 零在途 ⇒ 零注入（负向锁——半态逐字节等价）；到期态（任一在途项已过期未送达）⇒ 同段警示色。
   const timers = agent._pendingTimers ?? []
-  const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}⏰${timers.length}${ansi.reset}${ansi.dim}` : `⏰${timers.length}`}`
+  const timerHint = timers.length === 0 ? "" : ` │ ${timers.some((t) => t.expiresAt <= Date.now()) ? `${ansi.reset}${C.warn}timer ${timers.length}${ansi.reset}${ansi.dim}` : `timer ${timers.length}`}`
   // D8（2026-09-21 块标题行对齐批——会话标题常显 · `docs/cli/design/TUI.md` §7.4）：状态段簇尾
   // （ledgerHint 后、键位组前）；取值 = `agent.title` 活读（每帧 recompute）· 40 列截断。
   // B6 消（#677）：空白 ⇒ 回退链值（对位 VSC 顶栏——生成前 ∕ 失败期两端同值；值逐字，行级超宽走 statusMax）。

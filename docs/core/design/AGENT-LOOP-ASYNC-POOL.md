@@ -457,9 +457,9 @@ I1 → 集成用例（扩）。
 | T-TW7 | 错误·在途帽 | 在途 8 条 ⇒ 第 9 次设 timer | 工具显式抛错（可读文本）；在途保持 8（不静默丢 / 不静默清） |
 | T-TW8 | 正常·挂起窗第三兑现态 | `suspensionSession` 直驱（池 live + 在途一项 + 假 timer） | 等待含 deadline；兑现 ⇒ timer 轮开启（`runTurn` 桩收 `{autoTurn:true, timerTurn:true}`）+ 注入在场；池空窗退后零重复投递 |
 | T-TW9 | 正常·域文本 | `runAgent`（`autoTurn + timerTurn`，手动档） | 选中 `TIMER_TURN_DOMAIN`（单行 · `[System reminder:` 起 · `]` 收）；AUTO 档零注入（既有口径）；`upstreamTurn` 优先不回归 |
-| T-TW10 | 正常·状态行标记 | `renderStatus` 纯函数直驱——在途 2 / 含过期项 / 空 | 含 `⏰2`；含过期 ⇒ 含警示色序列；空 ⇒ 零 `⏰` + 逐字节等价 |
+| T-TW10 | 正常·状态行标记 | `renderStatus` 纯函数直驱——在途 2 / 含过期项 / 空 | 含 `timer 2`；含过期 ⇒ 含警示色序列；空 ⇒ 零 `timer` 段 + 逐字节等价 |
 | T-TW11 | 正常·`/timers` 列表 | 命令直驱——在途两条 / 零条 | 逐条行（剩余 mm:ss + message 首行）；零条 ⇒ 空态行 |
-| T-TW12 | 边界·子代理隔离 | depth-1 agent 在途两条 · 主 agent 在途零条 ⇒ 主标记 | 零 `⏰`（读对象 = 主 agent 单对象——构造性零泄漏） |
+| T-TW12 | 边界·子代理隔离 | depth-1 agent 在途两条 · 主 agent 在途零条 ⇒ 主标记 | 零 `timer` 段（读对象 = 主 agent 单对象——构造性零泄漏） |
 | T-TW13 | 边界·attention 除外 | 主 agent 在途 timer 一项——`userNeededAtTurnEnd` 直驱（两档：`agent.timerWake` 开 / 关） | 开 ⇒ `false`（不计 awaiting——自动续跑在途）；关 ⇒ `true`（照常置位）；零在途 ⇒ 既有语义不回归 |
 
 **用例宿主**（评审轮 1 #7 收正——先例 = 同档 §6.20.6 落点行）：T-TW1 / T-TW2 / T-TW7 = 该批开发期用例（随批收口删除，无留存宿主）；
@@ -680,13 +680,17 @@ VSC 自持点 = `thincoder-vscode/src/extension/timer-watch.mjs:33-35`（判据�
 - **描述面（`thincoder-core/tool-docs/timer.md` · 6 行）**：扩述三式 ＋ 下限 ＋ `cancel`/`list`；**逐字文本 = 机制文档定稿**（D-TW8 同口径；草稿位 = 本节，落 = 实施轮 · eng-coder）。
   **预算读数（评审轮 1 #10）**：扩档 ⇒ **收口轮复跑 `node scripts/tool-schema-size.mjs` 登记读数随动**（先例 = 读数随动入 §5；预算表唯一权威处 = `docs/core/design/PROMPT-SYSTEM.md` §6.11——链 = `docs/core/design/TOOLS.md` §6.9）。
 
-**可见面 ∥ 取消面（功能点 45⑤ 承载）**：模型面 = `list` 动作（四端同得）。`/timers`（CLI）逐条行**插入 kind 段**——`⏰<i> · <kind> · 剩余 <dur> · <message 首行>`（kind = `每 <N>m`（整分）∕ `每 <N>s`（非整分）∥ `每天 <HH:MM>` ∕ `于 <YYYY-MM-DD HH:MM>`；
+**可见面 ∥ 取消面（功能点 45⑤ 承载）**：模型面 = `list` 动作（四端同得）。`/timers`（CLI）逐条行**插入 kind 段**——`timer <i> · <kind> · 剩余 <dur> · <message 首行>`（kind = `每 <N>m`（整分）∕ `每 <N>s`（非整分）∥ `每天 <HH:MM>` ∕ `于 <YYYY-MM-DD HH:MM>`；
 
 判形 = `at` 在场 ⇒ `于` 段；`everyMs` ⇒ `每` 段；`daily` ⇒ `每天` 段；三者皆无 = 一次性 ⇒ 零段；`<dur>` = `<mm:ss>`（< 1h）∥ `<h:mm:ss>`（≥ 1h）；**一次性行零变**——段仅非一次性项插入）；
 
   档 = `thincoder-cli/src/tui/cmd-timers.mjs`（33 行）。
 
-取消面 = **模型工具面**（`cancel` 动作——四端同得）；**不设端专属取消 UI**（CLI `/timers cancel` 子命令等 = 新跨端差异 = 不许）；`/timers` 保持**只读**（其档头 ∥ `docs/cli/design/TUI.md` §7.6「取消面不做」句按此收正为「取消 = 模型 `cancel`」）。状态行 `⏰N` ∥ VSC ∥ 桌面投影 `{ count, expired }` = **零改**（计数式——周期项同计，读 `expiresAt` 单字段不动）。
+**取消面** = 模型工具面（`cancel` 动作——四端同得）；**不设端专属取消 UI**（CLI `/timers cancel` 子命令等 = 新跨端差异 = 不许）。
+
+**`/timers` 保持只读**——其档头 ∥ `docs/cli/design/TUI.md` §7.6「取消面不做」句按此收正为「取消 = 模型 `cancel`」。
+
+**状态行计数段** ∥ VSC ∥ 桌面投影 `{ count, expired }` = 零改（计数式——周期项同计，读 `expiresAt` 单字段不动；字面形（CLI 文字形 ∥ 桌面 ∥ VSC 符号形）= `docs/cli/design/TUI.md` §7.6 单源）。
 
 **attention 面口径（周期项 × awaiting 除外——评审轮 1 #3 收正）**：周期项在途 ⇒ `_pendingTimers` 恒非空 ⇒ `docs/cli/design/TUI.md` §7.1 表 awaiting 行除外（在途 timer ∧ 唤醒会武装）**恒生效**——「不计 awaiting」由一次性瞬态变会话常态。
 

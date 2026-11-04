@@ -246,7 +246,7 @@ webview：agentSettings 快照 → mode-buttons.js 的 `_engOn` → `#eng-btn` �
 | 输入提示 / 键位串 | enterHint + 键位串 | 无（按钮 / 占位符承载） | **实证例外（行为证据——提示功能两端在位：CLI 文本提示串 ∥ 本端占位符 + 钮承载）** |
 | 横幅 | PLAN / AUTO / ADVISOR / ENG + attention chip | 工具条按钮 active + plan 徽标（`:23`） | **实证例外（行为证据——模式可见面两端在位：CLI 横幅 ∥ 本端工具条态 + plan 徽标）**；attention chip = 范围决定（非端差——权限 / 提问卡流内可见） |
 | 后台段 | `后台 N 子代理运行中 · M 完成待消化` | `⏳ …`（`:51-60`——running+queued / pending+done 两段） | 等价 |
-| 计时器段（⏰N——timer-wake 阶段 2） | ` │ ⏰N`（状态段簇尾——`thincoder-cli/src/tui/render-frame.mjs:422`；含过期项 ⇒ 警示色） | （已落——`thincoder-vscode/webview/status-bar.js` `⏰N` 段（`:62` 起）；源 = `usage` 载荷 `timers { count, expired }`——本档 §3.2 行 18） | 等价 |
+| 计时器段（timer-wake 阶段 2） | ` │ timer N`（状态段簇尾——`thincoder-cli/src/tui/status-line.mjs:174`（`buildStatusLine` `:84`）；含过期项 ⇒ 警示色） | （已落——`thincoder-vscode/webview/status-bar.js` `⏰N` 段（`:62` 起）；源 = `usage` 载荷 `timers { count, expired }`——本档 §3.2 行 18） | **实证例外（宿主能力面证据——Linux 终端缺 U+23F0 字形：CLI 文字形 `timer N` ∥ 本端符号形 `⏰N`；回指 = `docs/cli/design/TUI.md` §7.6「端差（登记 · 宿主能力例外）」）** |
 | 静默段（`quiet`） | ` Quiet Xs`（耗时之后——`thincoder-cli/src/tui/render-frame.mjs:406-407` 邻位；zh 值 =「已静默 Xs」——键面单源 = 核字典 `status.quiet`） | `Quiet Xs` 段（`status-bar.js:59-60` 邻位——纯 webview 自算：`running` ∧ 静默 ≥ 10s ⇒ 段在场；**无消息面**〔无协议行 ∕ 无载荷改〕） | |
 | | |  | 对齐（语义单源 = `docs/cli/design/TUI.md` §7.7；实现面 = `docs/vsc/design/WEBVIEW.md` §4.7） |
 

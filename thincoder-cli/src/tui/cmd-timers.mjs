@@ -2,7 +2,7 @@
  * cmd-timers.mjs — `/timers`：在途 timer 只读列表（最薄）。
  *
  * 机制单源 = `docs/core/design/AGENT-LOOP-ASYNC-POOL.md` §6.30；显示形态单源 = `docs/cli/design/TUI.md`
- * §7.6（逐条 dim 行 `⏰<i> · <kind> · 剩余 <dur> · <message 首行（截断）>`；零在途 ⇒ 一行 `无在途 timer`）。
+ * §7.6（逐条 dim 行 `timer <i> · <kind> · 剩余 <dur> · <message 首行（截断）>`；零在途 ⇒ 一行 `无在途 timer`）。
  * **取消 = 模型工具 `timer` 的 `cancel` 动作**（§6.30.18——四端同得；`/timers` 保持只读；停轮 = Ctrl+C，
  * 停机制 = `agent.timerWake` 关）；不设端专属取消 UI。
  * 取值 = `agent._pendingTimers` 活读（每次调用现算——零缓存）；剩余按 `expiresAt - now` 现算。
@@ -65,6 +65,6 @@ export async function handleTimersCommand(ctx) {
   const now = ctx.now ?? Date.now() // 时钟缝单点（§6.30.18）——生产 ctx 不携 now ⇒ 缺省回落 = 现行为零变
   timers.forEach((t, i) => {
     const kind = kindText(t)
-    pushLine(`⏰${i + 1}${kind === null ? "" : ` · ${kind}`} · 剩余 ${remainText(t.expiresAt, now)} · ${headText(t.message)}`, C.dim)
+    pushLine(`timer ${i + 1}${kind === null ? "" : ` · ${kind}`} · 剩余 ${remainText(t.expiresAt, now)} · ${headText(t.message)}`, C.dim)
   })
 }
