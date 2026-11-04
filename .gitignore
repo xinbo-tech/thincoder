@@ -15,6 +15,10 @@ coverage/
 .env
 .env.*
 
+# 本机账号信息（私有——永不入库）
+ACCOUNTS.local.md
+*.local.md
+
 # Auto-generated agent state
 .thincoder/index/
 .thincoder/tmp/
