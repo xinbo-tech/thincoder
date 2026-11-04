@@ -1,3 +1,22 @@
+# Changelog
+
+All notable changes to ThinCoder VS Code are documented here.
+
+## [0.11.1] — 2026-11-04
+
+### Added
+
+- **`ssh` 两动作进入工具表**：核 `0.11.1` 的 `ssh` 工具提供 `put` / `get`（单文件传输），本端 `src/tools/index.mjs` 已装配该工具，凭据窗经既有 `onSecretInput` 应答径。
+
+### Changed
+
+- **升级核到 `0.11.1`**：承载「写门射程含 `ssh`（只 `get` 要号）」「派单动作表四列（加原因）」「SSE 首 chunk 与流中途分窗」「台账契约五面同口径」等。
+- **上下文窗口展示串统一由核出词**：声明 `1024`（= 1M）此前显示 `1024K`，现显示 `1M`；`128` 仍是 `128K`。三端同源，端侧不再自拼单位。
+
+### Fixed
+
+- 删死函数 `ctxPercentForModel`。
+
 ## [0.10.13] — 2026-10-26
 
 ### Changed
@@ -24,16 +43,6 @@
 ### Changed
 
 - **渠道行窗口值改读已声明值**：不取 `providerSpec().context`（渠道条目不携模型，该值在渠道粒度上只会落到兜底，写 128 会显示 125K）。展示与桥接同源，端侧零 ×1024。
-
-# Changelog
-
-All notable changes to ThinCoder VS Code are documented here.
-
-### Changed
-
-- **上下文窗口展示串统一由核出词**：声明 `1024`（= 1M）此前显示 `1024K`，现显示 `1M`；`128` 仍是 `128K`。三端（CLI / VSC / 桌面）同源，端侧不再自拼单位。
-
-## [Unreleased]
 
 ## [0.10.10] — 2026-10-22
 
@@ -265,7 +274,7 @@ All notable changes to ThinCoder VS Code are documented here.
 - **对端仓不可达口径 = 域外标记、不阻断**（用户裁定 B′）：缺仓 ⇒ 对端面不可判者逐处记「域外」（独立计数项，不入阈值、不阻断）；**自指（配置错）仍 fail-closed**。两端口径自此一致。
 - **发布门四环**：`vscode:prepublish` = lint → **doc:check（`--strict`）** → test:full → test:integration（发布 = 唯一门禁）。
 - **文档体系各仓自持**：需求档 / 设计档 / 批次档 / 台账各仓记各仓；跨仓引用统一「名称（仓别）§N」形态。
-- **台账归档制**：活文件只留未决四态，已决逐条移入 `TODO-archive.md`。
+- **台账归档制**：活文件只留未决四态，已决逐条移入 `docs/TODO-archive.md`。
 
 ### Removed
 
@@ -296,59 +305,59 @@ All notable changes to ThinCoder VS Code are documented here.
 
 ### Changed
 
-- **R22 子 agent 显示趋同 CLI：底部活动面板 + 冻结入流（2026-09-07——ARCHITECTURE.md R22 节）**：活动块从 #messages 迁独立固定底部面板（`webview/activity.js`——新模块：建块/块头/⏹/elapsed ticker/终态冻结）——布局四层垂直序 header/messages/#panels/#subagent-activity/toolbar，面板空时隐藏不占高、内部自滚、消息流滚动钉底不动面板；块头升级 `[▶/✓/⏹ key · async/sync · model · Ns · turn n/m] 当前工具/状态词` + 折叠 tail-3 dim（elapsed = 本地事件管理 1s ticker——CLI 同式不空转——测试假定时器 seam）；终态冻结入流（完成/stopped/error → 面板移除 + #messages 尾冻结折叠块——身份头 + 内容保留可展开 + report preview ≤8 行 dim 落流——escalate/stopped 无 preview——CLI parity）；§17 挂起例外保持（settled 驻留面板 + awaiting digestion 头部——digest done 补发/会话退出 freeze 才冻结）；行面板 #subagent-panel 保留（裁定在案）；150 裁裁定：冻结块计入 #messages 裁剪、活动面板无独立上限（池并发天然有界）。turn 降级口径实测落地（D-R22b：现有 onSubagent/状态事件不携 turn——池条目终态通知顺带 final turn/maxTurns（subagent.mjs）——冻结身份头显示；逐轮跳动需新通道不擅建——已报告）。webview 端零桥新增（subagent/toolPanel 消息面不变）。测试：ui.test.mjs R22 组 + 既有 subagent 描述改 R22 形态（38 绿）+ suspension T-S14 R22 断言 + chat-panel/advisor-webview 零回归。L0+ 验证绿——L2 全量由父侧链终验跑。
+- **R22 子 agent 显示趋同 CLI：底部活动面板 + 冻结入流（2026-09-07——docs/core/design/ARCHITECTURE.md R22 节）**：活动块从 #messages 迁独立固定底部面板（`webview/activity.js`——新模块：建块/块头/⏹/elapsed ticker/终态冻结）——布局四层垂直序 header/messages/#panels/#subagent-activity/toolbar，面板空时隐藏不占高、内部自滚、消息流滚动钉底不动面板；块头升级 `[▶/✓/⏹ key · async/sync · model · Ns · turn n/m] 当前工具/状态词` + 折叠 tail-3 dim（elapsed = 本地事件管理 1s ticker——CLI 同式不空转——测试假定时器 seam）；终态冻结入流（完成/stopped/error → 面板移除 + #messages 尾冻结折叠块——身份头 + 内容保留可展开 + report preview ≤8 行 dim 落流——escalate/stopped 无 preview——CLI parity）；§17 挂起例外保持（settled 驻留面板 + awaiting digestion 头部——digest done 补发/会话退出 freeze 才冻结）；行面板 #subagent-panel 保留（裁定在案）；150 裁裁定：冻结块计入 #messages 裁剪、活动面板无独立上限（池并发天然有界）。turn 降级口径实测落地（D-R22b：现有 onSubagent/状态事件不携 turn——池条目终态通知顺带 final turn/maxTurns（subagent.mjs）——冻结身份头显示；逐轮跳动需新通道不擅建——已报告）。webview 端零桥新增（subagent/toolPanel 消息面不变）。测试：ui.test.mjs R22 组 + 既有 subagent 描述改 R22 形态（38 绿）+ suspension T-S14 R22 断言 + chat-panel/advisor-webview 零回归。L0+ 验证绿——L2 全量由父侧链终验跑。
 
-- **R17 会诊/飞刀完全异步化（AGENT-LOOP.md §25 VS Code 镜像——2026-09-06/07）**：consult_check 退役（digest 自动注入）；escalate async 化（subagent-escalate-async.mjs——other 池——async:false 保留）；T-R17a..r 镜像全绿（VS L2 1301/1301）
+- **R17 会诊/飞刀完全异步化（docs/core/design/AGENT-LOOP.md VS Code 镜像——2026-09-06/07）**：consult_check 退役（digest 自动注入）；escalate async 化（subagent-escalate-async.mjs——other 池——async:false 保留）；T-R17a..r 镜像全绿（VS L2 1301/1301）
 - **记账路径 join→resolve 双前缀修复（R-bug VS 镜像——2026-09-07）**：同款记账点 resolve 化（若镜像端存在——实测同修）
-- **R19 跨会话历史检索 + 检索族消歧（2026-09-06——SESSION.md §13 双端同批——VS Code 面）**：`agent-tools/read-history.mjs` 加 `path` 参数（缺省 = 本会话零变化）：path = 完整会话文件路径 → 读目标文件 history 线 + 同 filter 面（role/keyword/tool/since/until/limit/direction——共享 queryMessages）；path = `cwd:<目录>` → 发现面（会话文件 = `~/.thincoder/sessions/<sha1(cwd)>.json.N`，与 CLI 互通——**含历史 12/16 位短哈希命名候选（只读覆盖，不触发改名迁移——NF-R19）**）——每槽摘要行含**槽号 + 完整文件路径** + title/消息数/updatedAt，时间序降序 + 两步交互引导（评审 #2 寻址字段）；单槽检索行扫护栏 **READ_HISTORY_SCAN_MAX = 200,000 行**（流式扫计数早停——超限返回定稿文案 `{"error": "session too large — refine keyword or since/until"}`，不读全文不解析）；目标文件只读（损坏/缺失错误返回不 rename——T-R19.3d）；`checkpoint` 动作面核验含 `versions`（评审 #8——族表句不改）。消歧总纲（D-R19b 逐字稿）落 read_history 描述尾段；互指尾句补 recent_changes（会话级历史用 read_history）/memory search 段（会话消息历史不在 memory——用 read_history——`memory-tool.mjs`）/doc_search + code_search（查设计决策用 doc_search——查实现用 code_search——查会话用 read_history——`tools/code.mjs`）；edit-semantics 六要素 ③ 路由表 read_history 移出 ROUTE_NA（有同行——族表句承接路由元素）。测试 read-history 家族 +8 例（T-R19.1/2/3/3b+3c/3d/7/5/6——含护栏文案逐字断言）。L0+ 验证绿（read-history 25/25 + prompts/edit-semantics 126/126）——L2 全量由父侧链终验跑。
+- **R19 跨会话历史检索 + 检索族消歧（2026-09-06——docs/core/design/SESSION.md 双端同批——VS Code 面）**：`agent-tools/read-history.mjs` 加 `path` 参数（缺省 = 本会话零变化）：path = 完整会话文件路径 → 读目标文件 history 线 + 同 filter 面（role/keyword/tool/since/until/limit/direction——共享 queryMessages）；path = `cwd:<目录>` → 发现面（会话文件 = `~/.thincoder/sessions/<sha1(cwd)>.json.N`，与 CLI 互通——**含历史 12/16 位短哈希命名候选（只读覆盖，不触发改名迁移——NF-R19）**）——每槽摘要行含**槽号 + 完整文件路径** + title/消息数/updatedAt，时间序降序 + 两步交互引导（评审 #2 寻址字段）；单槽检索行扫护栏 **READ_HISTORY_SCAN_MAX = 200,000 行**（流式扫计数早停——超限返回定稿文案 `{"error": "session too large — refine keyword or since/until"}`，不读全文不解析）；目标文件只读（损坏/缺失错误返回不 rename——T-R19.3d）；`checkpoint` 动作面核验含 `versions`（评审 #8——族表句不改）。消歧总纲（D-R19b 逐字稿）落 read_history 描述尾段；互指尾句补 recent_changes（会话级历史用 read_history）/memory search 段（会话消息历史不在 memory——用 read_history——`memory-tool.mjs`）/doc_search + code_search（查设计决策用 doc_search——查实现用 code_search——查会话用 read_history——`tools/code.mjs`）；edit-semantics 六要素 ③ 路由表 read_history 移出 ROUTE_NA（有同行——族表句承接路由元素）。测试 read-history 家族 +8 例（T-R19.1/2/3/3b+3c/3d/7/5/6——含护栏文案逐字断言）。L0+ 验证绿（read-history 25/25 + prompts/edit-semantics 126/126）——L2 全量由父侧链终验跑。
 
-- **R18 长输出命令先落盘纪律条款（2026-09-06——AGENT-LOOP.md §26 双端同批——VS Code 面）**：`src/prompts/system.md` 工具纪律区（Rules 段）插 D-R18 条款逐字稿（镜像锚——本端照抄一字不改——字节比对程序验证 = true）+ 日志位置/清理执行注（评审 #7——OS 临时目录或 `~/.thincoder/` 类非工作区位置、查毕删除——条款逐字文未改）。测试 prompts.test.mjs +2 例（T-R18.1 条款逐字锚 + T-R18.2 执行注锚 + 条款恰好一次）。L0+ 验证绿——L2 全量由父侧链终验跑。
+- **R18 长输出命令先落盘纪律条款（2026-09-06——docs/core/design/AGENT-LOOP.md 双端同批——VS Code 面）**：`prompts/system` 工具纪律区（Rules 段）插 D-R18 条款逐字稿（镜像锚——本端照抄一字不改——字节比对程序验证 = true）+ 日志位置/清理执行注（评审 #7——OS 临时目录或 `~/.thincoder/` 类非工作区位置、查毕删除——条款逐字文未改）。测试 prompts.test.mjs +2 例（T-R18.1 条款逐字锚 + T-R18.2 执行注锚 + 条款恰好一次）。L0+ 验证绿——L2 全量由父侧链终验跑。
 
-- **测试分层 Phase 3：镜像转 slow + 存量清理（2026-09-06——TESTING.md §1 双端批收官——VS Code 面）**：行为镜像用例 35 案转 slow 门（scheduler/eng-delivery/subagent-async/execute——端差异面留快层）；删除迁移锁/元测试/同锚多断 9 条清单（1206→1204，差额 -2 对账）；红线收窄镜像（system.md + 根 METHODOLOGY.md）。测试 T-T4b（镜像归册 + 端差异面留存）+ T-T5。实测快层 **11.6s**（较 Phase 2 再降 4.7s），test:full 1204/1204 全绿。
+- **测试分层 Phase 3：镜像转 slow + 存量清理（2026-09-06——docs/core/design/TESTING.md 双端批收官——VS Code 面）**：行为镜像用例 35 案转 slow 门（scheduler/eng-delivery/subagent-async/execute——端差异面留快层）；删除迁移锁/元测试/同锚多断 9 条清单（1206→1204，差额 -2 对账）；红线收窄镜像（system + 根 docs/core/requirements/METHODOLOGY.md）。测试 T-T4b（镜像归册 + 端差异面留存）+ T-T5。实测快层 **11.6s**（较 Phase 2 再降 4.7s），test:full 1204/1204 全绿。
 
-- **测试分层 Phase 2：eng-coder 首次实现降 L0+（2026-09-06——TESTING.md §1 D-T3 镜像面）**：`engineering-sub.md` 同锚修订（L0+ 首次实现 / L1 收窄显式升级档 / 报告义务句——与 CLI 逐字一致）；测试 T-T4 镜像断言；ARCHITECTURE.md「测试基建 Phase 2」变更段。实测快层 16.3s 全绿 1206 用例。
+- **测试分层 Phase 2：eng-coder 首次实现降 L0+（2026-09-06——docs/core/design/TESTING.md D-T3 镜像面）**：`engineering-sub` 同锚修订（L0+ 首次实现 / L1 收窄显式升级档 / 报告义务句——与 CLI 逐字一致）；测试 T-T4 镜像断言；docs/core/design/ARCHITECTURE.md「测试基建 Phase 2」变更段。实测快层 16.3s 全绿 1206 用例。
 
-- **测试分层 Phase 1：slow 门移植 + 快层归册（2026-09-06——TESTING.md §1 双端批——VS Code 镜像面）**：新建 `test/slow.mjs` + `slow-gate.mjs` + `run-fast.mjs` + `run-full.mjs` + `files.mjs`（套件清单单一来源——替代 package.json 内联 65 文件清单）——机制文件与 CLI 逐字一致（防漏拦截：未标 slow 超阈硬红）；`package.json` test → run-fast、新增 test:full；48 条 >1s/重 IO 用例归册（只加标记零删除）。**实测：npm test 74.4s → 15.5-16.2s（≤30s 达标），test:full 1205/1205 全绿**。存量 flake（subagent-async T5/T5b + suspension T-S1）与 queue-user-message 孤儿清单问题已登记 TODO。
+- **测试分层 Phase 1：slow 门移植 + 快层归册（2026-09-06——docs/core/design/TESTING.md 双端批——VS Code 镜像面）**：新建 `test/slow.mjs` + `slow-gate.mjs` + `run-fast.mjs` + `run-full.mjs` + `files.mjs`（套件清单单一来源——替代 package.json 内联 65 文件清单）——机制文件与 CLI 逐字一致（防漏拦截：未标 slow 超阈硬红）；`package.json` test → run-fast、新增 test:full；48 条 >1s/重 IO 用例归册（只加标记零删除）。**实测：npm test 74.4s → 15.5-16.2s（≤30s 达标），test:full 1205/1205 全绿**。存量 flake（subagent-async T5/T5b + suspension T-S1）与 queue-user-message 孤儿清单问题已登记 TODO。
 
-- **拆分判据修辞防博弈加固（2026-09-06——METHODOLOGY.md 2026-09-06 变更条双端同批）**：根注入体 METHODOLOGY.md 同文同步（文件档判定表 >500 必须拆无例外 / 早期预警线-不可协商底线定位 / 相对大小封堵句 / 动机节封口句 / 反例档案新行）；`methodology-template.md` 三处替换（"fallback, not a goal" 封口 / "the primary yardstick" → "the early-warning line" / "File caps (fallback)" 段改判定表 + Relative size 封堵段——旧句零残留）。测试 T-S1/T-S2 镜像断言（prompts.test.mjs）。存量 17 个 >500 测试文件随 CLI 侧 26 个一并登记 TODO 拆分轮。
+- **拆分判据修辞防博弈加固（2026-09-06——docs/core/requirements/METHODOLOGY.md 2026-09-06 变更条双端同批）**：根注入体 docs/core/requirements/METHODOLOGY.md 同文同步（文件档判定表 >500 必须拆无例外 / 早期预警线-不可协商底线定位 / 相对大小封堵句 / 动机节封口句 / 反例档案新行）；`methodology-template` 三处替换（"fallback, not a goal" 封口 / "the primary yardstick" → "the early-warning line" / "File caps (fallback)" 段改判定表 + Relative size 封堵段——旧句零残留）。测试 T-S1/T-S2 镜像断言（prompts.test.mjs）。存量 17 个 >500 测试文件随 CLI 侧 26 个一并登记 TODO 拆分轮。
 
-- **question 工具使用抑制 + 卡片渲染修复（2026-09-06——AGENT-LOOP.md §22 双端同批——用户实测本端过度提问/大段文字/一条多问/卡片换行折叠）**：`question.mjs` 内联描述与 CLI `question.md` 逐字全量对齐（补 "Use sparingly"、memory 提示等既有缺失 + 三条约束锚——消除两端描述漂移）+ execute 同上限机械校验（question >100 字符 / options >4 条返回错误串、不调 onQuestion——用户裁定值）；prompts 三文件镜像锚（engineering.md Questioning Style 两条 + system.md 确认门形式句 + discipline.md 反模式扩展）；`.question-text` 加 `white-space: pre-wrap` + `max-height: 40vh` 卡内滚动（多行问题不再折叠成一坨）。测试 `test/question.test.mjs` 6 例（T-Q2/3/4/5/5b/8——描述锚断言 + 超限拒绝 + 边界/非数组透传 + CSS 断言）。
+- **question 工具使用抑制 + 卡片渲染修复（2026-09-06——docs/core/design/AGENT-LOOP.md 双端同批——用户实测本端过度提问/大段文字/一条多问/卡片换行折叠）**：`question.mjs` 内联描述与 CLI `thincoder-core/tool-docs/question.md` 逐字全量对齐（补 "Use sparingly"、memory 提示等既有缺失 + 三条约束锚——消除两端描述漂移）+ execute 同上限机械校验（question >100 字符 / options >4 条返回错误串、不调 onQuestion——用户裁定值）；prompts 三文件镜像锚（engineering Questioning Style 两条 + system 确认门形式句 + discipline 反模式扩展）；`.question-text` 加 `white-space: pre-wrap` + `max-height: 40vh` 卡内滚动（多行问题不再折叠成一坨）。测试 `test/question.test.mjs` 6 例（T-Q2/3/4/5/5b/8——描述锚断言 + 超限拒绝 + 边界/非数组透传 + CSS 断言）。
 
-- **subagent action:'check' 删除（2026-09-06——AGENT-LOOP.md §19.8 D-CH1..4——用户裁定"check 是冗余 API"）**：VS 面子代理工具由五动作降为四动作（spawn/status/cancel/escalate）——subagentCheck/MAX_ASYNC_CHECKS/wakeOnAsyncSettle/purgePending 退役（subagent-actions.mjs）；subagent-spec.mjs 枚举删 "check" + 删 n 参数 + Async spawn 段尾部以 D-CH2 锚句逐字替换 §19.7 D-A2（fail-when-unchanged——两端各自内容断言）；subagent.mjs 派发/只读分类/错误文案同步；check 等待者池唤醒循环清理（subagent-async.mjs——自动通道 collectSettledAsync/pending 注入/consumed 墓碑保留——§20 dependsOn consumed 终态语义不变）；n 计数持久化删除（agent.mjs/run-stages.mjs——_asyncCheckN 零残留）；main.md :21 改写自动送达口径（no polling 引导——删除后指向不存在动作会复现阻塞场景）；调度/授权/工具注释的 check 引用同步。测试：check 域用例删 16 条（T3/T4/T12-14/T-M2..M4/T-M10/T-F1/T-F1b/T-SD14 改自动通道/T-SL2 两处 check 断言/advisor 处置守卫测试/advisory#3 check 半段/子依赖项——见交付报告逐条），依赖 T-SD14 改自动送达消费（consumed 墓碑语义经 collectSettledAsync 保留验证）；D-A2 断言在位改为 D-CH2（新增旧锚句零残留断言）；T-M7/T-M8/T-F2/advisor#1 改自动通道消费；edit-semantics 描述锚（⑤ 阻塞性）改同步 spawn 口径。
-- **subagent 工具描述两端对齐 + async 收尾引导（2026-09-06——AGENT-LOOP.md §19.7 D-A1..A4）**：VS 侧 description 以 CLI 权威版（§19.7 D-A1——CLI 2026-09-05 完整版）逐段对齐——统一 "ONE tool, FIVE actions" 头部（动作行/Async spawn 段/§20 调度段/§19.5.6 touched-files 措辞照权威版逐字）；仅保留有意差异：无 panel action（§19.6 AC-P4——保持五动作）；Async spawn 段尾部插入 D-A2 逐字锚句（回合自然收尾、unchecked 结果自动到达——防模型自发 status/check 轮询挂起——D-A4 防再发：两端各自内容断言）。测试：subagent-tool.test.mjs T-M12/T-E16 措辞同步权威版 + 新增 D-A2 锚句逐字断言（fail-when-unchanged）+ edit-semantics.test.mjs 两处描述锚更新。
-- **design token 防伪层删除（2026-09-06——ENGINEERING-MODE.md 2026-09-06 段，用户裁定"安全剧场"）**：advisor.mjs 删 createHmac/TOKEN_SECRET（HMAC 签名/验签/默认密钥）——token 改无签名流程凭证 `uuid:expiresAt`（TTL fail-closed 保留、槽位匹配 `_engDesignTokens.get(designId) === token` 不变、持久化零变更——存储语义不动）；存量 3 段签名 token 一次性失效（格式错拒绝→需重新评审——已接受迁移代价）。测试：advisor.test.mjs 删防伪断言（2 段格式通过/旧 3 段格式错拒绝/错槽 token 拒绝/TTL 窗口 2 段构造/回显正则 2 段）；subagent-tool/subagent-async/eng-delivery 测试辅助 signedToken → unsignedToken；AC-TO1/2 零残留；授权链（评审→签发→spawn 解锁写）回归绿。
+- **subagent action:'check' 删除（2026-09-06——docs/core/design/AGENT-LOOP.md D-CH1..4——用户裁定"check 是冗余 API"）**：VS 面子代理工具由五动作降为四动作（spawn/status/cancel/escalate）——subagentCheck/MAX_ASYNC_CHECKS/wakeOnAsyncSettle/purgePending 退役（subagent-actions.mjs）；subagent-spec.mjs 枚举删 "check" + 删 n 参数 + Async spawn 段尾部以 D-CH2 锚句逐字替换 §19.7 D-A2（fail-when-unchanged——两端各自内容断言）；subagent.mjs 派发/只读分类/错误文案同步；check 等待者池唤醒循环清理（subagent-async.mjs——自动通道 collectSettledAsync/pending 注入/consumed 墓碑保留——§20 dependsOn consumed 终态语义不变）；n 计数持久化删除（agent.mjs/run-stages.mjs——_asyncCheckN 零残留）；main :21 改写自动送达口径（no polling 引导——删除后指向不存在动作会复现阻塞场景）；调度/授权/工具注释的 check 引用同步。测试：check 域用例删 16 条（T3/T4/T12-14/T-M2..M4/T-M10/T-F1/T-F1b/T-SD14 改自动通道/T-SL2 两处 check 断言/advisor 处置守卫测试/advisory#3 check 半段/子依赖项——见交付报告逐条），依赖 T-SD14 改自动送达消费（consumed 墓碑语义经 collectSettledAsync 保留验证）；D-A2 断言在位改为 D-CH2（新增旧锚句零残留断言）；T-M7/T-M8/T-F2/advisor#1 改自动通道消费；edit-semantics 描述锚（⑤ 阻塞性）改同步 spawn 口径。
+- **subagent 工具描述两端对齐 + async 收尾引导（2026-09-06——docs/core/design/AGENT-LOOP.md D-A1..A4）**：VS 侧 description 以 CLI 权威版（§19.7 D-A1——CLI 2026-09-05 完整版）逐段对齐——统一 "ONE tool, FIVE actions" 头部（动作行/Async spawn 段/§20 调度段/§19.5.6 touched-files 措辞照权威版逐字）；仅保留有意差异：无 panel action（§19.6 AC-P4——保持五动作）；Async spawn 段尾部插入 D-A2 逐字锚句（回合自然收尾、unchecked 结果自动到达——防模型自发 status/check 轮询挂起——D-A4 防再发：两端各自内容断言）。测试：subagent-tool.test.mjs T-M12/T-E16 措辞同步权威版 + 新增 D-A2 锚句逐字断言（fail-when-unchanged）+ edit-semantics.test.mjs 两处描述锚更新。
+- **design token 防伪层删除（2026-09-06——docs/core/design/_archive/ENGINEERING-MODE.md 2026-09-06 段，用户裁定"安全剧场"）**：advisor.mjs 删 createHmac/TOKEN_SECRET（HMAC 签名/验签/默认密钥）——token 改无签名流程凭证 `uuid:expiresAt`（TTL fail-closed 保留、槽位匹配 `_engDesignTokens.get(designId) === token` 不变、持久化零变更——存储语义不动）；存量 3 段签名 token 一次性失效（格式错拒绝→需重新评审——已接受迁移代价）。测试：advisor.test.mjs 删防伪断言（2 段格式通过/旧 3 段格式错拒绝/错槽 token 拒绝/TTL 窗口 2 段构造/回显正则 2 段）；subagent-tool/subagent-async/eng-delivery 测试辅助 signedToken → unsignedToken；AC-TO1/2 零残留；授权链（评审→签发→spawn 解锁写）回归绿。
 
-- **会话"当前槽位"按端分离（R4——2026-09-05——SESSION.md §10 引用，CLI 同批）**：本端 end marker `{manifest}.vscode`——面板恢复决策改 resumeSlot（本端记录/一次性继承/全新分配——ensureSlot/status/onProjectChanged 同点）；会话列表高亮按本端记录（D-5）；newSlot/switchToSlot/pick/delete 维护 marker（删记录槽置空、重绑幸存槽写回）。行为差异：无 CLI legacy 单文件兜底；全新目录首用不预写空会话文件（claim 先行、首保存落盘）。L2 1196/1196。
-- **edit 空白差异自动落点镜像 + 编辑纪律三条（2026-09-05——CLI TOOLS.md §14.2 P15.11 + AGENT-LOOP §21 扩展注 2 镜像）**：edit not-found 唯一空白差异窗口自动落点 + note；discipline.md 三条纪律（新鲜读/hash 来源/重试上限）。测试 P15.11a-d + T-N1.8。
+- **会话"当前槽位"按端分离（R4——2026-09-05——docs/core/design/SESSION.md 引用，CLI 同批）**：本端 end marker `{manifest}.vscode`——面板恢复决策改 resumeSlot（本端记录/一次性继承/全新分配——ensureSlot/status/onProjectChanged 同点）；会话列表高亮按本端记录（D-5）；newSlot/switchToSlot/pick/delete 维护 marker（删记录槽置空、重绑幸存槽写回）。行为差异：无 CLI legacy 单文件兜底；全新目录首用不预写空会话文件（claim 先行、首保存落盘）。L2 1196/1196。
+- **edit 空白差异自动落点镜像 + 编辑纪律三条（2026-09-05——CLI docs/core/design/TOOLS.md P15.11 + AGENT-LOOP §21 扩展注 2 镜像）**：edit not-found 唯一空白差异窗口自动落点 + note；discipline 三条纪律（新鲜读/hash 来源/重试上限）。测试 P15.11a-d + T-N1.8。
 - **git 工具 add/rm/commit 多路径（2026-09-05——CLI parity）**：`path` 空格分隔多路径（git add a b c）——git.mjs 三分支 split(/\s+/) + path 描述尾注（保原子串断言）；镜像测试用例（add/rm/commit 多路径覆盖——git.test 21/21）。
 
 ### Changed
 
-- **settings 工具镜像（2026-09-05——CLI SETTINGS-TOOL.md 双端同批）**：settings list/get/set——共享 ~/.thincoder/config.json 写盘 + 热应用；敏感遮罩；类型表自动派生（config-io 收拢 AGENT_DEFAULTS/TRACES_DEFAULTS 单一来源——loadAgentSettings 去内联默认——方案 A）；isReadonlyAction 动作分类。测试 T-S1.*v 6 例 + config-io 48/48。
+- **settings 工具镜像（2026-09-05——CLI docs/core/design/SETTINGS-TOOL.md 双端同批）**：settings list/get/set——共享 ~/.thincoder/config.json 写盘 + 热应用；敏感遮罩；类型表自动派生（config-io 收拢 AGENT_DEFAULTS/TRACES_DEFAULTS 单一来源——loadAgentSettings 去内联默认——方案 A）；isReadonlyAction 动作分类。测试 T-S1.*v 6 例 + config-io 48/48。
 - **P-SL2 停滞机械检测镜像（2026-09-05——CLI AGENT-LOOP §21.1 扩展注 P-SL2 双端同批）**：subagent-scheduler.mjs `detectStall`/`stallErrorText`——混合边环形等待停滞（无 running + queued blocker 闭包无外逃）→ check/status 守卫明确报错列阻塞链（cancel 破环引导）；判据收窄零误报（queued ≥2 + 每 queued ≥1 blocker + depc 排除）；正常路径输出逐字不变。测试 T-SL2 ①-⑥ 追加（scheduler 19/19 + 全量 1135/1135）。
-- **普通模式两段式镜像（2026-09-05——CLI AGENT-LOOP §21 F-N1.5/F-N1.6）**：main.md 规模批次默认委托 coder 锚（T-N1.9）+ 任务书七字段标准锚（T-N1.10）。
+- **普通模式两段式镜像（2026-09-05——CLI AGENT-LOOP §21 F-N1.5/F-N1.6）**：main 规模批次默认委托 coder 锚（T-N1.9）+ 任务书七字段标准锚（T-N1.10）。
 
 ### Changed (追加——2026-09-04 后半批)
 
-- **advisor 角色定位锚（AGENT-LOOP.md §12.1 镜像）**：四模板插"Your role"段（独立评审者/证据纪律/边界/中立——与 CLI 同锚）。
-- **子代理人格锚（AGENT-LOOP.md §7.3 镜像）**：coder.md（IMPLEMENTER）+ consult-base.md（证据纪律）——与 CLI 同锚。
-- **审计范围引导（AGENT-LOOP.md §18.13 镜像）**：auditTaskBook 加机械预算句 + engineering-sub.md 审计 quick 档。
+- **advisor 角色定位锚（docs/core/design/AGENT-LOOP.md 镜像）**：四模板插"Your role"段（独立评审者/证据纪律/边界/中立——与 CLI 同锚）。
+- **子代理人格锚（docs/core/design/AGENT-LOOP.md 镜像）**：coder（IMPLEMENTER）+ thincoder-core/prompts/consult-base.md（证据纪律）——与 CLI 同锚。
+- **审计范围引导（docs/core/design/AGENT-LOOP.md 镜像）**：auditTaskBook 加机械预算句 + engineering-sub 审计 quick 档。
 - **工具输出预览保头保尾（CLI §5 镜像）**：run-helpers.mjs buildHeadTailPreview——与 CLI 同语义。
 
 ### Changed
 
-- **子代理零 git（AGENT-LOOP.md §18.5）**：VS Code 端与 CLI 对齐——explore/plan 描述“Receives git context auto-injected”删除，改为“No git context injected—evidence from read/glob/grep and the task book”（本端实现从未注入，现与承诺一致）；explore.md 删除 git 注入声明/命令承诺；审计任务书（auditTaskBook）追加零 git 范围权威声明（`_touchedFiles` 为审计范围——工作区未列改动不作超清单依据）。
+- **子代理零 git（docs/core/design/AGENT-LOOP.md）**：VS Code 端与 CLI 对齐——explore/plan 描述“Receives git context auto-injected”删除，改为“No git context injected—evidence from read/glob/grep and the task book”（本端实现从未注入，现与承诺一致）；explore 删除 git 注入声明/命令承诺；审计任务书（auditTaskBook）追加零 git 范围权威声明（`_touchedFiles` 为审计范围——工作区未列改动不作超清单依据）。
 
 ### Added
 
-- **subagent 异步化 + 批确认（AGENT-LOOP.md §15/§16）**：async spawn（槽位队列 / subagent_check / 上限 4）+ approval 合并询问（approveAll/oneByOne/deny 三选项 webview UI）
-- **deepseek 400 对齐（PROVIDER.md §14.7）**：escape v5（sanitizeLoneSurrogates 孤立代理 → U+FFFD + arguments/reasoning_content 覆盖 + hex odd-run 修复）；UTF-16 安全截断 5 处（context doc 注入 / code.mjs 预览 / offloadToolResult / compact 序列化）；续写构造对齐（prefix 过滤工具消息 + ≤8 文本 + reasoning_content 回传继续而非跳过 + 失败 _warnings）
-- **压缩可见性（CONTEXT-COMPACTION.md §7 D-C3）**：onCompressStart/onCompressFail 回调 + webview 压缩状态行（Compressing context… → Compressed: N tokens freed (Xs) / failed；3 次失败降级说明）
-- **批量形态引导**：edit/apply_patch 描述批量句（两端 parity）+ system.md/engineering.md/main.md 同步
-- **开发体验三项（TOOLS.md §10 / PROVIDER.md §15）**：① lint 零依赖化（eslint 全套删除 → check-syntax 197 文件，workflow/vscodeignore 同步）；② 工具作用域限制移除（execute/git 边界断言删除，描述同步）；③ 模型上下文可配置（settings.json providers[].context K 单位——providerSpec 拷贝覆盖、压缩阈值/状态栏跟随、migrate 透传）
+- **subagent 异步化 + 批确认（docs/core/design/AGENT-LOOP.md/§16）**：async spawn（槽位队列 / subagent_check / 上限 4）+ approval 合并询问（approveAll/oneByOne/deny 三选项 webview UI）
+- **deepseek 400 对齐（docs/core/design/PROVIDER.md）**：escape v5（sanitizeLoneSurrogates 孤立代理 → U+FFFD + arguments/reasoning_content 覆盖 + hex odd-run 修复）；UTF-16 安全截断 5 处（context doc 注入 / code.mjs 预览 / offloadToolResult / compact 序列化）；续写构造对齐（prefix 过滤工具消息 + ≤8 文本 + reasoning_content 回传继续而非跳过 + 失败 _warnings）
+- **压缩可见性（docs/core/design/CONTEXT-COMPACTION.md D-C3）**：onCompressStart/onCompressFail 回调 + webview 压缩状态行（Compressing context… → Compressed: N tokens freed (Xs) / failed；3 次失败降级说明）
+- **批量形态引导**：edit/apply_patch 描述批量句（两端 parity）+ `system` ∥ `engineering` ∥ `main` 同步
+- **开发体验三项（docs/core/design/TOOLS.md / docs/core/design/PROVIDER.md）**：① lint 零依赖化（eslint 全套删除 → check-syntax 197 文件，workflow/vscodeignore 同步）；② 工具作用域限制移除（execute/git 边界断言删除，描述同步）；③ 模型上下文可配置（settings.json providers[].context K 单位——providerSpec 拷贝覆盖、压缩阈值/状态栏跟随、migrate 透传）
 ### Added
 
-- **MCP Streamable POST 误判修复（CLI parity，MCP.md §4）+ 面板 [Edit]/[Test]**：http transport 增 postOnly 标记——GET SSE 405 降级后的纯 POST 模式 `isAlive()` 不再误判死（glm-websearch 类 server 的 reconnect failed 根因，与 CLI 同构）；`probeMcpServer` 镜像导出（一次性探活 initialize + tools/list，零副作用）；MCP 面板每行新增 [Edit]/[Test] 按钮——edit 复用添加表单（name 锁定、逐字段预填、token 字段、headers 逗号分隔提示 `k=v, k2=v2`），test 结果（工具数/延迟/错误透传）渲染到服务器行下；config-io 增 `updateMcpServer` 原位更新（数组序保持）；**[Reconnect] 死按钮修复**——webview 一直在发 `reconnectMcp` 消息但路由表无 case（路由拆分时丢失），面板重连按钮此前完全无效；token 一等字段（connect 链合成 `Authorization: Bearer <token>`，显式 headers 优先）随面板 token 表单字段一并落地
+- **MCP Streamable POST 误判修复（CLI parity，docs/core/design/MCP.md）+ 面板 [Edit]/[Test]**：http transport 增 postOnly 标记——GET SSE 405 降级后的纯 POST 模式 `isAlive()` 不再误判死（glm-websearch 类 server 的 reconnect failed 根因，与 CLI 同构）；`probeMcpServer` 镜像导出（一次性探活 initialize + tools/list，零副作用）；MCP 面板每行新增 [Edit]/[Test] 按钮——edit 复用添加表单（name 锁定、逐字段预填、token 字段、headers 逗号分隔提示 `k=v, k2=v2`），test 结果（工具数/延迟/错误透传）渲染到服务器行下；config-io 增 `updateMcpServer` 原位更新（数组序保持）；**[Reconnect] 死按钮修复**——webview 一直在发 `reconnectMcp` 消息但路由表无 case（路由拆分时丢失），面板重连按钮此前完全无效；token 一等字段（connect 链合成 `Authorization: Bearer <token>`，显式 headers 优先）随面板 token 表单字段一并落地
 
 ### Changed
 
@@ -357,7 +366,7 @@ All notable changes to ThinCoder VS Code are documented here.
 
 ### Added
 
-- **MCP Streamable POST 误判修复（CLI parity，MCP.md §4）+ 面板 [Edit]/[Test]**：http transport 增 postOnly 标记——GET SSE 405 降级后的纯 POST 模式 `isAlive()` 不再误判死（glm-websearch 类 server 的 reconnect failed 根因，与 CLI 同构）；`probeMcpServer` 镜像导出（一次性探活 initialize + tools/list，零副作用）；MCP 面板每行新增 [Edit]/[Test] 按钮——edit 复用添加表单（name 锁定、逐字段预填、token 字段、headers 逗号分隔提示 `k=v, k2=v2`），test 结果（工具数/延迟/错误透传）渲染到服务器行下；config-io 增 `updateMcpServer` 原位更新（数组序保持）；**[Reconnect] 死按钮修复**——webview 一直在发 `reconnectMcp` 消息但路由表无 case（路由拆分时丢失），面板重连按钮此前完全无效；token 一等字段（connect 链合成 `Authorization: Bearer <token>`，显式 headers 优先）随面板 token 表单字段一并落地
+- **MCP Streamable POST 误判修复（CLI parity，docs/core/design/MCP.md）+ 面板 [Edit]/[Test]**：http transport 增 postOnly 标记——GET SSE 405 降级后的纯 POST 模式 `isAlive()` 不再误判死（glm-websearch 类 server 的 reconnect failed 根因，与 CLI 同构）；`probeMcpServer` 镜像导出（一次性探活 initialize + tools/list，零副作用）；MCP 面板每行新增 [Edit]/[Test] 按钮——edit 复用添加表单（name 锁定、逐字段预填、token 字段、headers 逗号分隔提示 `k=v, k2=v2`），test 结果（工具数/延迟/错误透传）渲染到服务器行下；config-io 增 `updateMcpServer` 原位更新（数组序保持）；**[Reconnect] 死按钮修复**——webview 一直在发 `reconnectMcp` 消息但路由表无 case（路由拆分时丢失），面板重连按钮此前完全无效；token 一等字段（connect 链合成 `Authorization: Bearer <token>`，显式 headers 优先）随面板 token 表单字段一并落地
 
 ### Changed
 
@@ -373,7 +382,7 @@ All notable changes to ThinCoder VS Code are documented here.
 ### Changed
 
 - **跨端会话共享一致性（会诊 4 模型收敛）**：sessionStart 打点（saveLines 只赋一次）；F2 写前磁盘校验（同会话并发追加 → 轮转 .bak 保留）；legacy transient 读+写双点过滤；contextHistory 机读线判定（length>0）；listSlots 懒加载元数据
-- **提示词同步**：`system.md` 追加操作并行化纪律条款（Parallelize aggressively——独立只读调用批并行 / `edits` 数组多文件编辑 / 独立子项目拆分子 agent（F7 触发条件：不共享文件 + 无交叉依赖 + 各自有测试）+ 不并行边界（同文件写入 / 依赖链 / 审批风暴 / 同仓库并发 git / 有状态操作）+ 微操作不并行）——与 CLI byte-identical
+- **提示词同步**：`system` 追加操作并行化纪律条款（Parallelize aggressively——独立只读调用批并行 / `edits` 数组多文件编辑 / 独立子项目拆分子 agent（F7 触发条件：不共享文件 + 无交叉依赖 + 各自有测试）+ 不并行边界（同文件写入 / 依赖链 / 审批风暴 / 同仓库并发 git / 有状态操作）+ 微操作不并行）——与 CLI byte-identical
 
 ### Fixed
 
@@ -392,7 +401,7 @@ All notable changes to ThinCoder VS Code are documented here.
 ### Changed
 
 - **历史懒加载单页 50→20 条**（CLI parity）：向上滚到会话顶加载更早一页的粒度更平顺，两端同节拍
-- **RELEASE.md**：发布后轮询确认残留清理（2026-08-31 用户裁定废止——Marketplace/Open VSX 审核队列天然滞后，publish 正确返回即发布完成）
+- **docs/RELEASE.md**：发布后轮询确认残留清理（2026-08-31 用户裁定废止——Marketplace/Open VSX 审核队列天然滞后，publish 正确返回即发布完成）
 
 ### Tests
 
@@ -407,7 +416,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **提示词同步**：`system.md` task 跟踪条款升级为 "EVERY tier — even Small"（与 CLI byte-identical）
+- **提示词同步**：`system` task 跟踪条款升级为 "EVERY tier — even Small"（与 CLI byte-identical）
 
 ### Tests
 
@@ -418,7 +427,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - **会话人读线落盘瘦身（与 CLI 0.12.51 同款 `slimForDisplay`）**：`saveLines` 写入时对人类线 `history` 做 copy-on-write 映射——tool args 截 300 字符、tool 结果截 500、多模态图剥 base64 只留 text part；**机读线（contextHistory）一字不动**（provider 前缀缓存/配对零风险，与 CLI 逐字节同契约）；`historyWindow` 只渲染字符串 content（从不解析 arguments），瘦身后 webview 显示安全
-- **提示词同步**：`engineering.md` / `eng-coder.md` 与 CLI 端 byte-identical（含工程模式 UI/交互决策全链路落档条款、测试文档口径）
+- **提示词同步**：`engineering` / `eng-coder` 与 CLI 端 byte-identical（含工程模式 UI/交互决策全链路落档条款、测试文档口径）
 
 ### Tests
 
@@ -432,8 +441,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **METHODOLOGY 三缺口修复**（与 CLI 0.12.50 同步）：需求文档三层结构落地（总目标/功能用户故事/非功能标准）；交付评审补测试文档口径（无覆盖=评审不通过）；METHODOLOGY.md 缺失警告点名后果（引用悬空+硬流程失效），删除 "eng tool's write mode" 陈旧指引
-- **工程模式 UI/交互决策全链路落档**（用户报告"agent 无视讨论过的 UI 设计"）：设计文档要素扩项——涉及界面时必须收录与用户达成的每条 UI/交互决策（布局/流程/控件行为/状态反馈），未定标 open 不静默发明；eng-coder 任务书必须复述这些决策（或指向设计文档具体章节）——子代理零上下文，留在聊天里的决策永远到不了它；`eng-coder.md` 执行侧闭合——缺失的界面决策停下报告，不自行发明。与 CLI 0.12.50 byte-identical
+- **METHODOLOGY 三缺口修复**（与 CLI 0.12.50 同步）：需求文档三层结构落地（总目标/功能用户故事/非功能标准）；交付评审补测试文档口径（无覆盖=评审不通过）；docs/core/requirements/METHODOLOGY.md 缺失警告点名后果（引用悬空+硬流程失效），删除 "eng tool's write mode" 陈旧指引
+- **工程模式 UI/交互决策全链路落档**（用户报告"agent 无视讨论过的 UI 设计"）：设计文档要素扩项——涉及界面时必须收录与用户达成的每条 UI/交互决策（布局/流程/控件行为/状态反馈），未定标 open 不静默发明；eng-coder 任务书必须复述这些决策（或指向设计文档具体章节）——子代理零上下文，留在聊天里的决策永远到不了它；`eng-coder` 执行侧闭合——缺失的界面决策停下报告，不自行发明。与 CLI 0.12.50 byte-identical
 
 ### Tests
 
@@ -477,13 +486,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **GLM-5.3-Flash 模型支持**：智谱 2026-08-26 发布的原生多模态 Flash 档位模型——1M 上下文 + 128K 输出 + 文本/图片输入，模型选择器可选（不改默认预设）
-- **版本号切 CalVer**：`年份.月份.月内计数`（2026=0、8月=8、月内第1版）——从 0.1.52 切到 0.8.1（0.1→0.8 前进，规范见 RELEASE.md）
+- **版本号切 CalVer**：`年份.月份.月内计数`（2026=0、8月=8、月内第1版）——从 0.1.52 切到 0.8.1（0.1→0.8 前进，规范见 docs/RELEASE.md）
 
 ## [0.1.52] — 2026-08-27
 
 ### Fixed
 
-- **checklist 工具坐标系断裂**：`add` 返回任务 ID、`mark` 却只收列表位置 index——agent 拿 ID 定位不到条目、只能猜 index，误标无关条目（线上事故）。修复：`mark` 加 `id` 参数（优先于 index）；auto-ID 按「最大根号+1」分配（含 `checklist-done.md` 双文件扫描，归档 ID 恒占位不复用）；历史重复 `T[\d.]+:` 前缀读入即归一；标记父任务 done 时子任务非全 done 则拒绝（防静默丢弃子树），全 done 则递归归档整棵子树
+- **checklist 工具坐标系断裂**：`add` 返回任务 ID、`mark` 却只收列表位置 index——agent 拿 ID 定位不到条目、只能猜 index，误标无关条目（线上事故）。修复：`mark` 加 `id` 参数（优先于 index）；auto-ID 按「最大根号+1」分配（含 `checklist-done` 双文件扫描，归档 ID 恒占位不复用）；历史重复 `T[\d.]+:` 前缀读入即归一；标记父任务 done 时子任务非全 done 则拒绝（防静默丢弃子树），全 done 则递归归档整棵子树
 
 ## [0.1.51] — 2026-08-26
 
@@ -512,7 +521,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Docs
 
-- Settings 6 份历史批次文档合并为 `SETTINGS.md` 现行权威源；文档状态修复（13 处"待评审"→"已实现"）
+- Settings 6 份历史批次文档合并为 `docs/vsc/design/SETTINGS.md` 现行权威源；文档状态修复（13 处"待评审"→"已实现"）
 
 ## [0.1.49] — 2026-08-25
 
@@ -566,7 +575,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - **主 agent 委托策略** + **历史卫生**（轮末探索摘要 + 压缩 `SUMMARIZE_PROMPT` 保真两清单）：与 CLI 0.12.39 同步
-- **编码纪律**：`discipline.md` 工作流程 + 调试策略要求 `task`；「改码前读文档」「中/小改后更新文档」嵌入 Workflow 箭头序列
+- **编码纪律**：`discipline` 工作流程 + 调试策略要求 `task`；「改码前读文档」「中/小改后更新文档」嵌入 Workflow 箭头序列
 
 ### Fixed
 
@@ -604,11 +613,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Refactor
 
 - **文件超限清零**：chat.js（1654→247）、settings.js（1079→87）、chat-panel.mjs（656→275）拆分为多模块，共享状态集中到 `webview/state.js`；agent.mjs 抽 `setup.mjs`
-- **SSE tool_calls 防御性合并**：openai transport + compact.mjs 与 CLI 对齐（PROVIDER.md §10）
+- **SSE tool_calls 防御性合并**：openai transport + compact.mjs 与 CLI 对齐（docs/core/design/PROVIDER.md）
 
 ### Prompt
 
-- **确认纪律 carve-out**：system.md 补 doc/code 一致性例外（与 CLI 同步）
+- **确认纪律 carve-out**：system 补 doc/code 一致性例外（与 CLI 同步）
 
 ## [0.1.41] — 2026-08-22
 
@@ -633,12 +642,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Prompt system
 
-- **提示词借鉴增量（kimi-code 对照，对齐 CLI）**：explore.md 新增 Thoroughness levels 三档（quick 单点定向 / medium 默认适度并行 / thorough 全面分析且报告须列出搜索过什么与没找到什么）；main.md Delegate well 补委派 explore 时在 task 描述中指定彻底度（未指定走默认）；system.md 确认理解句补 "including the most important acceptance criteria"；subagent 工具 description 同步补彻底度说明。两端 15 个 prompt 文件保持 byte-identical
-- **开工前计划确认纪律（对齐 CLI）**：system.md 追加无豁免纪律——任何写文件动作（write/edit/apply_patch/insert_after/delete/hashline_edit 及一切写文件的 bash）前必须纯文字复述理解+计划要点并等待用户明确确认（未确认/沉默/用户回复新问题或新要求 → 一律不动手；"这太明显了不用问"不是跳过理由；用户的新问题不是确认；需求变化后重新复述重新确认）；engineering.md 澄清完成后、写需求/设计文档前同样须把理解+计划文字化并等待确认。两端 15 个 prompt 文件保持 byte-identical（两端测试断言关键句）
+- **提示词借鉴增量（kimi-code 对照，对齐 CLI）**：explore 新增 Thoroughness levels 三档（quick 单点定向 / medium 默认适度并行 / thorough 全面分析且报告须列出搜索过什么与没找到什么）；main Delegate well 补委派 explore 时在 task 描述中指定彻底度（未指定走默认）；system 确认理解句补 "including the most important acceptance criteria"；subagent 工具 description 同步补彻底度说明。两端 15 个 prompt 文件保持 byte-identical
+- **开工前计划确认纪律（对齐 CLI）**：system 追加无豁免纪律——任何写文件动作（write/edit/apply_patch/insert_after/delete/hashline_edit 及一切写文件的 bash）前必须纯文字复述理解+计划要点并等待用户明确确认（未确认/沉默/用户回复新问题或新要求 → 一律不动手；"这太明显了不用问"不是跳过理由；用户的新问题不是确认；需求变化后重新复述重新确认）；engineering 澄清完成后、写需求/设计文档前同样须把理解+计划文字化并等待确认。两端 15 个 prompt 文件保持 byte-identical（两端测试断言关键句）
 
 ### Docs & advisor
 
-- **文档归属纪律 + advisor 设计评审增强（对齐 CLI，规格见 CLI AGENT-LOOP.md §12）**：新建 `docs/design/README.md` 文档地图（板块→文档映射表 + Settings 板块 6 文档"待合并（TODO）"标注 + 归属规则）；system.md 补文档归属纪律条款（写文档前先查地图定位所属板块——找到就改、不得为既有板块新建文件；确无归属才新建并登记；同一机制只在一处详述权威源、其余引用不复制）；advisor-design.md 加第 7 维 **Document ownership**（与现有文档矛盾 🔴、该并入却新建/重复描述 🟡）与引用纪律（引用原文用精确 file:line、未核实标注 unverified）；design 提示词 fallback 删除转硬加载（`loadPrompt` 同 round1/2/3 待遇，缺失即抛错——静默降级会丢 Approval Signal 规则致评审无法批准）；messages.mjs design 分支 Instructions 补 Methodology compliance 维度、存在文档地图时注入 Document Map 段供归属检查对照。两端 prompts 保持 byte-identical、测试同步覆盖
+- **文档归属纪律 + advisor 设计评审增强（对齐 CLI，规格见 CLI docs/core/design/AGENT-LOOP.md）**：新建 `docs/README.md` 文档地图（板块→文档映射表 + Settings 板块 6 文档"待合并（TODO）"标注 + 归属规则）；system 补文档归属纪律条款（写文档前先查地图定位所属板块——找到就改、不得为既有板块新建文件；确无归属才新建并登记；同一机制只在一处详述权威源、其余引用不复制）；thincoder-core/prompts/advisor-design.md 加第 7 维 **Document ownership**（与现有文档矛盾 🔴、该并入却新建/重复描述 🟡）与引用纪律（引用原文用精确 file:line、未核实标注 unverified）；design 提示词 fallback 删除转硬加载（`loadPrompt` 同 round1/2/3 待遇，缺失即抛错——静默降级会丢 Approval Signal 规则致评审无法批准）；messages.mjs design 分支 Instructions 补 Methodology compliance 维度、存在文档地图时注入 Document Map 段供归属检查对照。两端 prompts 保持 byte-identical、测试同步覆盖
 
 ## [0.1.39] — 2026-08-21
 
@@ -733,8 +742,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Prompt system
 
-- **Attention optimization + cross-end consistency**: split over-long sentences in main.md / discipline.md / advisor-round1/2/3; fixed an escalate-timing contradiction (up-front ability judgment, not post-failure); unified Review discipline + advisor rounds across both ends — all 15 prompt files now byte-identical with the CLI
-- consult_start + main.md carry the 会诊 Chinese alias (parity with the 飞刀 alias)
+- **Attention optimization + cross-end consistency**: split over-long sentences in main / discipline / advisor-round1/2/3; fixed an escalate-timing contradiction (up-front ability judgment, not post-failure); unified Review discipline + advisor rounds across both ends — all 15 prompt files now byte-identical with the CLI
+- consult_start + main carry the 会诊 Chinese alias (parity with the 飞刀 alias)
 
 ## [0.1.26] — 2026-08-16
 
@@ -746,13 +755,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Terminology unification (user decision: one word for one thing)
 
-- **"surgeon" removed — everything is "escalate"**: the tool name and the spawned sub-agent's role were two words for one thing (escalate / 飞刀 / surgeon), and models confused them — kimi's first real run looked for a "surgeon" tool (it was a role, not a tool) and fell back to ad-hoc code; a main agent imported the escalate module instead of calling it. Now: role "surgeon" → "escalate", report/panel labels unified, ESCALATE.md glossary rewritten (escalate = the only technical name; 飞刀 = Chinese alias)
+- **"surgeon" removed — everything is "escalate"**: the tool name and the spawned sub-agent's role were two words for one thing (escalate / 飞刀 / surgeon), and models confused them — kimi's first real run looked for a "surgeon" tool (it was a role, not a tool) and fell back to ad-hoc code; a main agent imported the escalate module instead of calling it. Now: role "surgeon" → "escalate", report/panel labels unified, docs/core/design/ESCALATE.md glossary rewritten (escalate = the only technical name; 飞刀 = Chinese alias)
 
 ### Fixed
 
 - **Coder sub-agents (subagent + escalate) get verify + advisor** — their system prompt names both tools but the tool table only gave them to depth-0 and eng-coder; the escalate surgeon hit "unknown tool verify" and self-verified via bash node --check/npm test. Diagnosed by a real deepseek escalate run
 - **Consult cards showed FAILED (red) after user Stop** — read as "stop didn't work". cleanupConsultSessions now marks stopped before aborting so children settle as TERMINATED (clean grey), not FAILED
-- Escalate description + main.md: direct-call guard (call the tool, never script the module)
+- Escalate description + main: direct-call guard (call the tool, never script the module)
 
 ## [0.1.24] — 2026-08-16
 
@@ -820,7 +829,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Consultation hardening round 2 (live regression findings)
 
-- Consultants run on a lean consult-base.md system prompt (no main-agent persona conflict, budget guidance with concrete numbers)
+- Consultants run on a lean thincoder-core/prompts/consult-base.md system prompt (no main-agent persona conflict, budget guidance with concrete numbers)
 - `question` excluded from ALL subagents — a background child must never prompt the user and hang
 - Watchdog timeouts settle as "timed out after Nmin" (was indistinguishable from a provider crash); default raised 5→10 min
 - consult_check description warns against batching with dependent calls
@@ -846,7 +855,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - consult_stop'd children settle as terminated and no longer flood the reply queue with fake-failure notes
 - Wall-clock watchdog per consultant (`agent.consultTimeoutMs`, default 5 min) + turn budget cut to 15 (`agent.consultTurns`)
-- Consultants run as their own `consult` role — consult.md overlay, no explore-persona conflict, read-only tools
+- Consultants run as their own `consult` role — consult overlay, no explore-persona conflict, read-only tools
 - Stall detection no longer false-fires on consult_check loops; stall / verify-exhaustion reminders suggest consult_start when configured
 - main_history hardened: base64 images omitted, assistant tool calls surfaced, 60KB byte budget
 - Panel: consult cards show the model name; answered/terminated/failed get proper colors + localized labels (was: everything red + raw English)

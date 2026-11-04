@@ -3,6 +3,35 @@
 All notable changes to the core package are documented here.
 Format: Keep a Changelog · 中文 · 号在发布时定（CalVer——见 `docs/RELEASE.md` §4）。
 
+## [0.11.1] — 2026-11-04
+
+### Added
+
+- **`ssh` 文件传输**：工具新增 `put` / `get` 两动作（单文件、二进制安全）——执行体 = 系统 `scp`，缺省 `-O`（经典协议，网络设备普遍只实现这一支），`protocol:"sftp"` 可覆盖；硬超时杀树；`get` 半截档按「字节数或 mtime 变过」才删，未被动过的旧档不删。
+- **写门射程扩到十三把**：`ssh` 入入口集，但**只 `get` 要号**（`put` 写远端，本门不判）；`touchedPaths` 钩子回绝对形，`~` 落点不再被判成「项目内虚构路径」。
+- **项目标准档声明口 `docRoot.standards`**：评审的「方法论符合度」维度不再是空跑。
+- **`path-resolve.mjs`** ∥ **`tools/process-doc-mark.mjs`** ∥ **`thincoder-core/prompts/persona-tester.md`**（tester 角色人格）。
+- **SSE 首 chunk 与流中途分窗**：长 prefill 不再被 120s 静默超时误杀。
+- **`x-opencode-session` 改为每会话一个**（值位模板 `${sessionId}`）。
+- **`ledger/count` 跨项目读面**：界改用调用方 `cwd`。
+
+### Changed
+
+- **派单动作表 = 四列**（动作 / 落点 / 期望 / **原因**）——原因格写依据（设计判据 / 实测 / 裁定），不是「不改会怎样」；写门教学块射程行同步补 `ssh` 并写明两半。
+- **台账契约五面收到同一句上**：回执分流 ∥ 待核销拒文 ∥ 逐边枚举 ∥ §5 门判据 ∥ 六态迁移表。
+- **一本批档一并发**；打回即重置 §3 状态行。
+- **提示词面**：单测档住哪 ∥ 先例必须在盘 ∥ 无一越档。
+
+### Fixed
+
+- **doc-check 围栏闭合判定加长度**：嵌套围栏不再把代码行并成段落落。
+- **`ssh` 有状态剥离 ＋ 帽窗**：保头保尾、中段可取回。
+- **`ledger` evidence 读数**从「尺寸超标」改成「太长、读不下去」。
+
+### Removed
+
+- **轻通道退役**：`agent/light-round.mjs` ∥ `agent/live-batch.mjs` ∥ `agent/unbooked-pen.mjs` ∥ `scripts/api-contract.mjs` 及其文档三档。
+
 ## [0.10.13] — 2026-10-26
 
 ### Added

@@ -256,6 +256,26 @@ Code conventions: pure `.mjs`, no semicolons, no third-party npm dependencies al
 
 ## Changelog
 
+### 0.12.81 (2026-11)
+- **Core `^0.11.1`** — ssh file transfer (`put` / `get`, single file, classic SCP by default); the write gate now reaches `ssh` (`get` only); task-book action tables carry a reason column; SSE first-chunk / mid-stream split; ledger contract unified on one sentence.
+- `ledger/count`: the boundary follows the caller `cwd` (cross-project read face).
+- Turn-cap card reports both the segment and the cumulative count; the stale `(limit)` line is gone.
+
+### 0.12.80 (2026-10)
+- **Core `^0.10.13`** — model requests carry a product identity header (`ThinCoder/<surface>/<version>`).
+
+### 0.12.79 (2026-10)
+- **Core `^0.10.12`** — ledger root errors are surfaced instead of silently returning an empty set; batch creation names the project under multi-root workspaces.
+
+### 0.12.78 (2026-10)
+- `modelContext` duplicate keys no longer error — two spellings that normalise to the same model are treated as one entry.
+
+### 0.12.77 (2026-10)
+- **Core `^0.10.10`** — prompt face rewritten (one rule per line), new "check the docs before acting" section; subagents gain the read-only `manifest` face.
+
+### 0.12.76 (2026-10)
+- Network tools reuse the DeepSeek key from `providers[]` (`websearch` / `fetch`), zero new config.
+
 ### 0.12.75 (2026-10)
 - **Core `^0.10.8`** — builtin `doc_check` (document-discipline machine check as a product tool: anchors + line width, report-only) and ledger root derivation (single read/write criterion) ride in with the core.
 - Prompt-face corrections: Chinese = design docs / English = code split landed; runtime face doc-reference removal; online-verification guidance; S1/S2 tuning.

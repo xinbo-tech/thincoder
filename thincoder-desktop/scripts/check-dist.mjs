@@ -15,7 +15,7 @@
  *   更新面块（+4 · 2026-10-03 桌面发布·阶段二批——`docs/desktop/design/PACKAGING.md` §2.8.2）——latest.yml 两读 ∥ sha512 对盘 ∥ app-update.yml；基 64 填充不敏感（形 = 实施窗钉定）。
  * 版本面（P1 · 对位 check-vsix 断言 B ∕ F——父侧 2026-09-29）：两包内嵌版本逐字 = 源 `thincoder-core` ∕`thincoder-render-core` package.json；
  * D 族（提示词面完备性——#616 批 · 2026-10-15；对位 `check-vsix` 断言 D）：asar 内 `node_modules/@thincoder/core/` 下 `prompts` ∕ `tool-docs` 两目录——
- *   ① 档数硬等口径（16 ∥ 54）；② 档名集合逐字 = 源树同名目录；③ 逐档 sha256 = 源档字节；win ∥ linux 两分支**同 helper 同判**（`docs/desktop/design/PACKAGING.md` §2.5 ∥ §2.11.3）。
+ *   ① 档数硬等口径（17 ∥ 54）；② 档名集合逐字 = 源树同名目录；③ 逐档 sha256 = 源档字节；win ∥ linux 两分支**同 helper 同判**（`docs/desktop/design/PACKAGING.md` §2.5 ∥ §2.11.3）。
  */
 import { createHash } from "node:crypto"
 import { closeSync, existsSync, openSync, readFileSync, readSync, readdirSync } from "node:fs"
@@ -122,8 +122,8 @@ function readAsarEntry({ header, dataStart }, fd, entry) {
   return buf
 }
 
-/** D 族口径（档数硬等——`prompts` 16 ∥ `tool-docs` 54；同源 = `thincoder-vscode/scripts/check-vsix.mjs` `EXPECT`——两处硬等，改一改二；实读 2026-10-22）。 */
-const PROMPT_FACE_EXPECT = { prompts: 16, "tool-docs": 54 }
+/** D 族口径（档数硬等——`prompts` 17 ∥ `tool-docs` 54；同源 = `thincoder-vscode/scripts/check-vsix.mjs` `EXPECT`——两处硬等，改一改二；实读 2026-11-04）。 */
+const PROMPT_FACE_EXPECT = { prompts: 17, "tool-docs": 54 }
 
 /** 源树提示词面（档名 → sha256；单源 = `thincoder-core/<dir>/*.md`）。 */
 function repoPromptFace(dir) {

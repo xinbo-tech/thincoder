@@ -1,3 +1,14 @@
+# Changelog
+
+All notable changes to ThinCoder Desktop are documented here.
+
+## [0.11.1] — 2026-11-04
+
+### Changed
+
+- **升级核到 `0.11.1`**：承载「`ssh` 文件传输 `put` / `get`」「写门射程含 `ssh`（只 `get` 要号）」「派单动作表四列（加原因）」「SSE 首 chunk 与流中途分窗」「`x-opencode-session` 每会话一个」「台账契约五面同口径」。本端代码零改。
+- **上下文窗口展示串统一由核出词**：声明 `1024`（= 1M）此前显示 `1024K`，现显示 `1M`；`128` 仍是 `128K`。三端同源，端侧不再自拼单位。
+
 ## [0.10.13] — 2026-10-26
 
 ### Changed
@@ -24,14 +35,6 @@
 ### Changed
 
 - **渠道行窗口值改读已声明值**：不取 `providerSpec().context`（渠道条目不携模型，写 128 会显示 125K）。
-
-# Changelog
-
-All notable changes to ThinCoder Desktop are documented here.
-
-### Changed
-
-- **上下文窗口展示串统一由核出词**：声明 `1024`（= 1M）此前显示 `1024K`，现显示 `1M`；`128` 仍是 `128K`。三端（CLI / VSC / 桌面）同源，端侧不再自拼单位。
 
 ## [0.10.10] — 2026-10-22
 
