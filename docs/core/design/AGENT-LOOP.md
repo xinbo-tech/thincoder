@@ -134,7 +134,7 @@
    （VSC 端壳载体表 `thincoder-vscode/src/extension/panel-turn-loop.mjs:79`——**现读 = 16 款**（＋`_unsettledDigests` ∕ `_daSession`）；细则见 `AGENT-LOOP-UPSTREAM.md` §6.27.12.12）
    （父侧直接执行 · 可 revert）——`history` 有容器 ⇒ 绑到 `agent` 字段；`history` 缺 ⇒ **先在 `history` 侧补建**再绑（新建回写载体的落点——否则新建落 per-run `agent`、跨 run 断裂）。
 - **验收**：见验收点 2 扩展（「不预置载体字段」夹具——机制须自建容器、同组断言与预置形同值）。
-- **guard 载体（相邻面 · 非本表字段集）**：auto-turn guard 的 7 键标记集与快照 / 回填 = **核单点**（`thincoder-core/agent/helpers.mjs`——`INHERITED_GUARD_KEYS` / `snapshotGuard` / `restoreGuard`）；**载体留端**（核 = `agent._inheritedGuard` 字段 · 端壳 = 宿主容器 `panel._guardCarry`）。本表 15 款 = 挂起载体字段集，与 guard 键集两不相交。
+- **guard 载体（相邻面 · 非本表字段集）**：auto-turn guard 的标记集（**清单单源 = `INHERITED_GUARD_KEYS`**，现 9 键）与快照 / 回填 = **核单点**（`thincoder-core/agent/helpers.mjs`——`INHERITED_GUARD_KEYS` / `snapshotGuard` / `restoreGuard`）；**载体留端**（核 = `agent._inheritedGuard` 字段 · 端壳 = 宿主容器 `panel._guardCarry`）。本表 15 款 = 挂起载体字段集，与 guard 键集两不相交。
 
 **端特有面（④ 段——不归核）**：
 
@@ -391,7 +391,7 @@ PreToolUse hooks → 阻断
 **用例档** = `test/integration/empty-response-retry.test.mjs`；三行断言住在 `15-1`–`15-3` 表的「断言到的业务结果」列与 `test/RTM.md` 故事 15（`15-1`–`15-3`）（D2 不复写断言细节）。
 2. **pending tasks 提醒**：有 pending **且后台池已空**（`!poolLive(agent)`——与挂起尾巴同判据）→ 注入任务列表提醒并继续循环；**最多推回一次**（`_taskPushbacks`，task 工具更新列表即重置）——模型第二次坚持收尾则放行。池里仍有在飞条目时门不触发：task 一更新就归零 × 有 pending 即推回，会把回合拖到小时级（机制单源 = `docs/core/design/TIMEOUT-DIGEST.md` §2.3）。
 3. **verify guard**（opt-in `verifyGuard: true`，工程模式除外）：改过代码未 verify → 推回调 verify（≤2 次）；verify 失败 → 推回修复（≤3 次）；耗尽 → 诚实声明提醒。
-4. **advisor guard**（opt-in `advisor.guard === true`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 轮）。
+4. **advisor guard**（opt-in `advisor.guard === true`，工程模式除外）：改过代码未评审 → 推回调 advisor（≤3 条 / 进展窗口；且每段未评审周期 ≤5 条硬上限——两层口径见 `ADVISOR-CONVERGENCE.md` §6.4）；两层任一停推 ⇒ 推一条诚实提醒（要求模型在回答里明说未经评审）后放行。
    advisor 评审能力**恒启用**（不依赖开关；未配 `advisor.provider` 时继承主 provider）；`advisor.enabled` 字段已废弃。
    guard 是**会话级**（`/advisor` 切换、`saveSession` / `applySession` 往返 `data.advisor.guard`），config.json 的 `agent.advisor.guard` 退为兼容镜像。
 5. 通过 → `pushReal` assistant 回复 + 返回 content。

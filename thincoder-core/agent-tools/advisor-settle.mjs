@@ -205,6 +205,10 @@ export function settleAdvisorRun(agent, entry) {
     )) || launchRefused
     if (!failureVerdict) {
       agent._calledAdvisorThisRun = true
+      // ADVISOR-CONVERGENCE.md §6.4 B 复位点 2（异步面）：非陈旧且非失败结算 ⇒ 评审真的覆盖了这份代码
+      // ⇒ 本未评审周期结束，下一周期起于完整预算。
+      agent._advisorReminders = 0
+      agent._advisorHonestySent = false
     }
   } else if (run.reviewType === "design" && entry.designToken && result != null) {
     // fix B（stale 分支）：陈旧评审不签发——digest 不得展示未注册 token——先剥

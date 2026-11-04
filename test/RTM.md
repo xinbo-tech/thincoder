@@ -361,6 +361,20 @@
 | 31-1 | 会话里对一个词跑 `grep`、`bash`（脚本印同一批行：相对形 ∥ 驱动绝对形 ∥ MSYS 形）、`execute`（`code` 里 `readFileSync` 打印同两份档）、后台径再起一条 `async` 后台任务读其结算文本，VSC 端再以 `terminal` 缺省与 `"visible"` 各跑一次 `bash`；该词同时出现在一份批档、一份 `_archive` 档与一份状态档里 | 各面分别：过程档行以 `[process doc: not a design basis]` 开头且行其余部分逐字不变；状态档行逐字等于 `<file>:<line>: <text>`（无前缀）；命令面（`bash` ∥ 后台摘要 ∥ `execute` ∥ VSC 两出口）输出末尾多一行汇总且 N = 实标行数；`grep` 面零汇总行；`filter` 按原始行命中（前缀不参与过滤） | ✅ 通过 | 2026-11-02 | 实施席（eng-coder） | — | `test/integration/grep-process-doc-mark.test.mjs` |
 | 31-2 | 同一次命令面输出里只用「长得像路径、盘上不存在」的日志行；另在一个祖先链无 manifest 的目录里跑同一件事 | 该行零打标、不进汇总计数（N = 0 ⇒ 无汇总行，输出逐字节不变）；出辖目录的命中行同样零打标 | ✅ 通过 | 2026-11-02 | 实施席（eng-coder） | — | `test/integration/grep-process-doc-mark.test.mjs` |
 
+### 32. advisor guard 的提醒到顶就停，未评审要说出来
+
+> 目的：推回提醒不会因为中间读了几次文件就回满重来——同一未评审周期里提醒有硬上限，两层（进展窗口 ∥ 周期）任一停推就推恰好一条诚实提醒，然后放行收尾、不静默。
+> 节注：回指 = `docs/core/design/ADVISOR-CONVERGENCE.md` §6.4（A ∥ B 两层口径 · 到顶行为）；缺口来源 = 用户来信 2026-10-29「advisor guard 死锁：提醒可无限重复（实测单会话 624 轮）」；交互组件 = 回合环工具批执行处的预算复位（`thincoder-core/agent/turn-loop.mjs` 的写序比）⟷ 完成守卫推回判定（`thincoder-core/agent/completion.mjs`）⟷ 子代理合并推进写序（`thincoder-core/agent-tools/subagent-async.mjs`）⟷ guard 状态携带（`thincoder-core/agent/helpers.mjs` 的 `INHERITED_GUARD_KEYS`）；进入口 = CLI 会话开 `advisor.guard` 后，让助手改代码再一路只读、始终不调 `advisor`；四态（行序）= 32-1 正常（层 1 先耗尽）· 32-2 正常（推满 5 条）· 32-3 边界（子代理合并算进展）· 32-4 边界（诚实提醒位随新进展复位）。
+
+| 编号 | 怎么做 | 怎么算通过 | 结果 | 执行日期 | 执行人 | 异常 | 证据 |
+|---|---|---|---|---|---|---|---|
+| 32-1 | CLI 会话开 `advisor.guard`，让助手改一处代码；此后每轮只 `read` 文件、始终不调 `advisor`，连续收尾 | 会话最终正常收尾（不抛、不挂）；层 1 耗尽即停推（提醒恰好 3 条，其余批次不改这个数——读 10 次后仍是 3 条，不是 13 条）；其后恰好 1 条诚实提醒，文案里的条数写实（3）且要求「在回答里明说这段代码未经评审」；无新进展时诚实提醒只发一次（再收尾即放行）。**诚实分界**：机制侧（条数 ∥ 文案）机判；助手最终回答是否真写了「未经评审」= 人读，不作机判断言 | 通过 | 2026-11-04 | 实施席（eng-coder） | 修前红：层 1 先耗尽时两支都不进 ⇒ 直接 `done`、零诚实提醒（静默交付未评审代码） | `test/integration/advisor-guard-reminder-cap.test.mjs` |
+| 32-2 | 同 32-1 的开关与起手，但两次写之间只夹一次被推回的收尾、如此反复共 5 次成功写文件（每次写都把进展窗口回满）；写与推回之间不读文件（到顶后读一批即放行）、始终不调 `advisor` | 同一未评审周期内推回提醒恰好 5 条，第 5 条带末条句（`This is reminder 5 of 5 — the last one`）；其后恰好 1 条诚实提醒（条数写实 = 5），不发第 2 条；会话正常收尾 | 通过 | 2026-11-04 | 实施席（eng-coder） | 修前红：预算被任意工具批清零 ⇒ 同一条提醒可重复到数百轮（用户来信实测 624 轮） | `test/integration/advisor-guard-reminder-cap.test.mjs` |
+| 32-3 | 父侧不直接写文件，改动走委托：集成夹具工具 `delegate_merge` 把子代理的改动合进父侧修改追踪（真 `mergeChildMutations`）；父侧不读文件、不调 `advisor` | 合并算进展 ⇒ 推回预算复位：提醒条数越过 3 继续推（不是停在 3 冻死），最终到上限 5 条 + 恰好 1 条诚实提醒；会话正常收尾 | 通过 | 2026-11-04 | 实施席（eng-coder） | 修前红：合并不是 `FILE_MUTATORS` 工具调用 ⇒ 只认写工具的判据下预算永不复位，全委托会话层 1 冻死 | `test/integration/advisor-guard-reminder-cap.test.mjs` |
+| 32-4 | 接 32-1 的形态：层 1 耗尽、计数停在 3 并已发过一条诚实提醒之后，助手再成功写一次代码（写序推进），随后仍只 `read`、不调 `advisor`、连续收尾 | 写序推进复位层 1 与诚实提醒位 ⇒ 推回续推（计数 4、然后 5，第 5 条带末条句），再推一条诚实提醒（条数写实 5）；两条诚实提醒之间无一次静默收尾；会话正常收尾 | 通过 | 2026-11-04 | 实施席（eng-coder） | 修前红：一次性位不随进展复位 ⇒ 诚实提醒之后又改代码仍静默放行（未评审即交付不吭声） | `test/integration/advisor-guard-reminder-cap.test.mjs` |
+
+★ 32-3：委托入口是集成夹具工具 `delegate_merge`，不是真 `subagent` 调用——`thincoder-core/agent-tools/` 的 spawn 面三处合入点（`subagent.mjs` 一处 ∥ `subagent-async.mjs` 两处）均带 `role === "eng-coder"` 门，夹具里起不了真子代理（要设计 token）。escalate 面合入点无角色门，但同样要真子代理回合，本例未驱动；被评的机制是真的（`mergeChildMutations` 推进父侧写序 ⇒ 层 1 预算复位），真调用点接线不在本例断言内。
+
 ## VS Code 端（thincoder-vscode）
 
 > 本端集成层按故事设立（编号先行：先定 RTM 编号，再落用例标题 `test('<编号> …')`）。

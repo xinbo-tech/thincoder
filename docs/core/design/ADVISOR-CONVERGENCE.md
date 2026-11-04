@@ -164,7 +164,7 @@ CN: 每项不修必须携理由（技术反驳+证据 ∥ 认账不修的显式�
 - **纪律面（提示词面 = 逐字建议，落笔权在主 agent）**：两处提示词末句（EN 运行面）`thincoder-core/prompts/discipline-normal.md:126` · `thincoder-core/prompts/persona-engineering.md` §Review convergence 的 `Rounds are uncapped — repeated mechanical failure (same criterion) ⇒ stop and report.`——
   **落点（N5）**：末句 = en `No round cap — repeated mechanical failure (same criterion) ⇒ stop and report.`（句首两段逐字保留）。
 - **轮次字段保留（区分对待——勿一刀切）**：每实例的轮次（`run.round`）**保留**——它是**提示词衰减**（§2.1 轮次表）与 TUI / VSC 轮次显示的数据源；**轮次不是终止判据**，不参与任何拒发判定。
-- **保留的既有自限**（逐条登记——都不是「评审发起封禁」）：工具轮硬帽 100（§2.3 宿主打断死循环）· 评审墙钟预算（F15）· completion guard 每 run 推回上限 `MAX_ADVISOR_PUSHBACKS`（guard 自身节流）· 异步池并发上限（资源保护归调度域）。
+- **保留的既有自限**（逐条登记——都不是「评审发起封禁」）：工具轮硬帽 100（§2.3 宿主打断死循环）· 评审墙钟预算（F15）· completion guard 推回预算——两层口径：进展窗口 `MAX_ADVISOR_PUSHBACKS` ≤ 3 条 ∥ 未评审周期 `MAX_ADVISOR_REMINDERS` ≤ 5 条（权威面 §6.4；两者都只节流 guard 自身的提醒，不封禁评审发起）· 异步池并发上限（资源保护归调度域）。
 - **终止从哪来**：正常路径 = pass / changes-required 收敛；失败路径 = **失败有结论**（§3.2）——「有结论」即出口，不需要计数器兜底。
 
 ### 3.2 失败路径：有结论 + 停下上报（F28 / F29）
@@ -303,13 +303,17 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
     && !agent._calledAdvisorThisRun   // ② 修改尚未被评审覆盖
     && hasCodeMutations(agent)        // 内容判定——产品代码全算，文档/临时件排除
 
-    && advisorPushbacks < MAX_ADVISOR_PUSHBACKS) { 推回 }
+    && advisorPushbacks < MAX_ADVISOR_PUSHBACKS   // 层 1：单个进展窗口（§6.4 A）
+    && (agent._advisorReminders ?? 0) < MAX_ADVISOR_REMINDERS) { 推回 }  // 层 2：周期硬上限（§6.4 B）
+// 任一层停推（层 1 或层 2 耗尽，两条合取不再成立）且 `_advisorHonestySent` 未置 ⇒ 推一条诚实提醒（置位）并
+// continue；位已置 ⇒ done 放行（§6.4「到顶行为」——「未评审」不许静默成「已交付」）。位随写序推进点归假
+// （复位点 3）⇒ 有新进展时该次停推再得一条。
 ```
 
 - **② = “评审已覆盖”位**：评审完成置真（同步：工具结果记账；异步：非陈旧结算）——表示“当前代码状态已被评审覆盖”；**再次修改代码**置回假——这就是“失效”。没有 ②，修改事实永不消除 → guard 无限推回、run 永不完成；没有失效重置，评审后修复的问题无人验证 → 收敛断裂。**失效是收敛循环（评审 → 修复 → 再评审 → … 直到 0 🔴，或失败路径给出结论）的引擎**。
 - **guard opt-in**：默认关闭（advisor 工具本身永远可用，guard 只控制完成时是否推回）；**工程模式永不启用**（工程模式的评审义务由 token / 门禁链机械强制）；仅顶层 run。
 - **异步交互**：评审启动后发生文件写 → 结算判 **stale** → 不置“评审已覆盖”、不签 token → guard 继续推回发起新评审；非陈旧的代码评审结算 → 置位。
-- 子代理代码合并（eng-coder 返回）→ 合并进父侧修改追踪并使先前 verify / advisor 标记失效——父代理无法通过“把改动委托给 eng-coder”跳过代码评审。
+- 子代理代码合并（eng-coder 返回）→ 合并进父侧修改追踪、使先前 verify / advisor 标记失效，并按 §6.4 A 判据 2 复位 advisor 推回预算——父代理无法通过“把改动委托给 eng-coder”跳过代码评审。
 - 新 run → 重置为未评审（新评审周期）→ 按条件判定。
 
 ### 6.3 触发路径清单
@@ -324,6 +328,64 @@ if (!pending                          // 异步评审在飞/排队 → 未决不
 | verify / task / question / plan 等 | 否 | 否 |
 | 异步评审在飞（池内 / 排队） | 不推回（未决 ≠ 未评审）；陈旧结算后恢复推回 | — |
 | 新 run（新任务） | 重置为未评审（新评审周期） | 按条件判定 |
+
+### 6.4 推回预算的两层口径（A：真进展才回满 · B：未评审周期硬上限）
+
+**A —— 预算只在被审对象真的变了时回满**
+
+推回预算 `advisorPushbacks` 的复位判据 = **被审对象真的变了**，落成一条：本批内父侧的**写序** `agent._mutationSeq` 推进了（谓词 `wroteSince(agent, agent._mutSeqMark)`，与零落笔看门狗同源——`_mutSeqMark` 每轮头前移，批后比一次）。
+
+写序只有一个推进面，两个写者：
+
+1. **成功的文件写工具**（`FILE_MUTATORS`）——`thincoder-core/agent/dispatch-gates.mjs` 的 `noteExecutedMutation`（失败写入不推进：它带「结果非 `Error:` 前缀」的门）。
+2. **子代理代码合并**——`mergeChildMutations` 把子代理改动合进父侧、并按 `noteMutations` 推进写序。
+
+读文件 / 搜代码 / lsp / bash / git 这类批次**不复位**。
+
+- **判据为什么是它**：预算的语义 = 同一条提醒给模型 N 次机会。只读批次对被审代码零改变，复位它就把「N 次机会」变成无限次——实测形态是模型读一次文件、提醒来一条，无限重复。
+- **子代理合并在判据内、不另立**：§6.3 已把「子代理代码合并」判为评审失效 = 是（父代理不能靠把改动委托出去跳过评审），但合并**不是** `FILE_MUTATORS` 工具调用——只认写工具时，全委托形态的父侧预算永不复位，层 1 缺口 3 条即冻死，与只读形态同病。依据 = 批档 §1「缺口二」裁定；可复现路径 = `thincoder-core/agent-tools/subagent-async.mjs` 的 `mergeChildMutations`（实读「`if (parent._calledAdvisorThisRun) parent._calledAdvisorThisRun = false`」）在子代理工具调用里执行，该批 `results` 里没有任何 `FILE_MUTATORS` 工具。
+  单源而非双判据：写序本就是「被审对象变了」的既有载体（陈旧判定与零落笔看门狗共用），合并早已推进它——再抽一个谓词 = 同一件事两处判据，必漂移。
+- **残余（如实）**：合并发生在**批次之外**（异步子代理在收尾 / 摘要窗口结算）时，下一轮头把标前移已越过它，本窗口不复位——表现为该周期提前进入诚实提醒，不放宽任何判据。
+- **verify 面零改**：`guardPushbacks`（verify 推回预算）仍在工具批执行处**无条件**清零——成功的批与报错的批同样清零。依据 thincoder-core/agent/turn-loop.mjs「任一工具批即回满」。它与 advisor 面同处一段但不再共用判据：advisor 面只在写序推进时复位。verify 面是否存在同族病理，本批未量，不做推断。
+
+**B —— 未评审周期（episode）的提醒硬上限**
+
+- 计数器 `agent._advisorReminders` = 本周期已发出的 advisor 提醒条数；上限常量 `MAX_ADVISOR_REMINDERS = 5`。到顶诚实提醒的一次性位 = `agent._advisorHonestySent`（同周期；计数只在周期起点 ∥ 终点两处归零，一次性位另随写序推进点归假——见下「复位点穷举」）。
+- **计数器为什么挂在 agent 上、不挂在回合环**：`turn-loop.mjs` 的 `advisorPushbacks` 是 `runAgent` 体内的局部变量，每次进入 `runAgent` 归零；轮数墙续跑（`TURN-CAP-CONTINUE.md`）正是再次进入 `runAgent`——局部计数器随之回满，这就是「单会话 624 轮」成立的机制。挂 agent 上的计数在续跑（`resume: true`）面不复位，与 `run-start.mjs`「mutation/guard 连续性必须跨续跑存活」的既有口径同向。
+- **周期（episode）** = 从「代码被改且无评审覆盖」到「评审真的覆盖了这份代码」。复位点穷举（三处，别处零写）——两个复位对象的落点不同：
+  - `agent._advisorReminders = 0`（周期计数）：只在下面 1 ∥ 2 两处（周期起点 ∥ 终点）。
+  - `agent._advisorHonestySent = false`（诚实提醒位）：1 ∥ 2 两处，**另加** 3（写序推进点）——有新进展 ⇒ 该次交付重新需要一句诚实声明。
+  1. **新用户回合起点 · 无继承时**——`thincoder-core/agent/run-start.mjs` 的 `if (!resume)` 块里，`agent._verifyRetries = 0` / `agent._advisorRound = 0` 所在的 `else` 分支（即 `_inheritedGuard` 为空那一支）；续跑（`resume: true`）整块不执行，不复位。
+     - **与 `restoreGuard` 的先后**：该块形如 `if (g) { restoreGuard(agent, g); agent._inheritedGuard = null } else { …复位… }`——两支互斥，本复位只在 `else` 支，故不存在「先清零又被回填」或「先回填又被清零」。回填支逐字覆盖为快照值（`restoreGuard` 只拷 `INHERITED_GUARD_KEYS` 内的键），`_inheritedGuard = null` 即消费点，一个快照只被一个回合取走。
+     - **哪些 run 过这一块**：`resume !== true` 的每个 run 都进 `if (!resume)`——包括 digest / timer / upstream 三类自动回合（它们同样不带 `resume`）。故复位另加一条「非自动回合」的合取（`!(autoTurn || upstreamTurn || timerTurn)`）：**自动回合不清零**。理由 = 自动回合不改代码、也不评审，它落在周期中间而非起点；清零会让「用户回合 → 自动回合 → 用户回合」的链每段重新拿满 5 条，上限被自动回合吃掉。
+     - **读数（自动回合不清零）**：自动回合收尾走 `thincoder-core/agent/run-stages.mjs` 的 `agent._inheritedGuard = snapshotGuard(agent)`（仅 `autoTurn` ∧ 正常结束时）；下一次用户回合在复位块 `if (g)` 支经 `restoreGuard` 回填 ⇒ 两字段随快照跨自动回合连续。两字段不在 `INHERITED_GUARD_KEYS` 时，回填不带它们、`else` 支又因 `g` 非空不执行 ⇒ 计数冻结在自动回合前的值——这条正是为什么要进清单。
+  2. **评审覆盖成立处**——同步面 `record-results.mjs`（`agent._calledAdvisorThisRun = true` 的那一处，未完成尾不计）与异步面 `agent-tools/advisor-settle.mjs`（非陈旧结算）。理由：覆盖之后模型再改代码，是一个**新**的未评审周期，应得完整预算；不复位则预算在一个长回合内被历史周期吃完，guard 对后续周期静默。
+  3. **写序推进点（位随新进展复位）**——`thincoder-core/agent/turn-loop.mjs` 的工具批执行处：`if (wroteSince(agent, agent._mutSeqMark)) {` 之内 `advisorPushbacks = 0` 与 `agent._advisorHonestySent = false` 两行手拉手。
+     - **复位什么、不复位什么**：复位层 1 预算与诚实提醒位；**不复位** `agent._advisorReminders`——那是层 2 的周期上限计数，复位它等于取消周期上限。
+     - **为什么位要跟着复位**：只复位预算、不复位位，「已发诚实提醒 → 又改代码 → 再收尾」这一段就静默放行（未评审即交付不吭声）——正是本机制要堵的形状；跟着复位，则每次「停推且仍未评审」的收尾各得一条，重复次数由模型真改了几次自然限定。
+- **到顶行为（照 verify 面同构，不新造机制）**：回合判定为「未评审」而**这一轮推不成**（层 1 或层 2 任一耗尽）且位未置 ⇒ guard 推**一条诚实提醒**（置位、`continue`），要求模型在自己的回答里明说「这段代码未经评审」；下一轮仍推不成且位已真 ⇒ `done` 放行。位随写序推进点归假 ⇒ **每次「停推且仍未评审」的收尾各得一条**，重复次数由模型真改了几次自然限定；无新进展的周期只一条。文案只陈述事实（几条已发 ∥ 代码未评审 ∥ 二选一），**不**承诺「不再推」——新进展之后确实还会再推提醒。
+  - **为什么是「任一层停推」而不是「推满 5 条」**：层 1 的预算只在真的写文件（或有子代理合并）时回满（上文 A），所以「改过一次代码后只读不写」是最常见的形态——层 1 停在 3 条、周期计数也停在 3，只认 5 条的到顶条件永不成真 ⇒ 两支都不进、直接 `done`、零诚实提醒，正是本机制要挡的「未评审即交付且静默」。现行判据（逐字实读）：`thincoder-core/agent/turn-loop.mjs` 的复位整段在 `if (wroteSince(agent, agent._mutSeqMark)) {` 之内；`thincoder-core/agent/completion.mjs` 的到顶分支条件含 `((agent._advisorReminders ?? 0) >= MAX_ADVISOR_REMINDERS || advisorPushbacks >= MAX_ADVISOR_PUSHBACKS)`——两层任一耗尽即成真。
+  - **形态先例（verify 面到顶）**：`thincoder-core/agent/completion.mjs` 注释逐字「`// Exhausted retries — inject honesty reminder once`」，其提醒文案逐字开头「`[System reminder: ${MAX_VERIFY_RETRIES} verify attempts exhausted. You have not passed verification.`」。advisor 面照此形、只换主语：要求模型把「未经评审」说在自己的回答里——**不带**任何用户可见标记 / 新字段 / 配置键。
+  - **末条推回文案（逐字——第 5 条 = 既有提醒正文 + 末条句）**：正文与前 4 条逐字相同（现有推回 `content`），末条句追加在正文之后：
+
+```text
+[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${rounds + 1}). Call the `advisor` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format). This is reminder ${MAX_ADVISOR_REMINDERS} of ${MAX_ADVISOR_REMINDERS} — the last one. If you deliver without an advisor review, state explicitly in your reply to the user that this code has not been reviewed.]
+```
+
+  - **到顶诚实提醒文案（逐字——`_advisorHonestySent` 置真时推的那一条）**：
+
+```text
+[System reminder: ${agent._advisorReminders ?? 0} advisor reminders sent. You have not had this code reviewed. Either call the `advisor` tool now, or state explicitly in your reply that this code has not been reviewed — do not present the work as reviewed. The user needs to know it is unreviewed.]
+```
+
+  - **断言引同一份逐字**：判据 = 末条句字面 `This is reminder`——第 1–4 条文案里无此字面（五条共用开头 `[System reminder: `，「含 reminder 一词」不作判据）；第 5 条含 `This is reminder 5 of 5 — the last one`（`MAX_ADVISOR_REMINDERS = 5` 代入）；到顶条含 `advisor reminders sent.` ∧ `state explicitly in your reply that this code has not been reviewed`（条数写实——3 或 5，取 `agent._advisorReminders`；断言不写死条数）。用例的文案比对取自上面两块，不另写一份。
+  - **旧形（两字段缺失）**：两字段以 `?? 0` / `?? false` 读——缺失即视作 0 / 假，首条提醒照推、计数转 1；`thincoder-core/agent.mjs` 的默认对象因此零改（不新增初值），升级前的旧 agent 对象不需要迁移。
+  - **一次性位 `agent._advisorHonestySent`**：周期两处复位点外，另随写序推进点（复位点 3）归假——无新进展的周期一条、有新进展后该次停推再得一条；不作 `runAgent` 体内局部变量——续跑重进 `runAgent` 时局部量每次回假，诚实提醒会随续跑重复。
+  - **为什么不复用 verify 的 `honestReminderInjected`**：它是 `runAgent` 局部（`handleCompletion` 第 6 形参，契约行逐字「`@param {boolean} honestReminderInjected - whether exhausted-verify reminder was already sent (mutated)`」）。两面共用一个位，两 guard 同开时先到的一方即把另一方的诚实提醒吞掉——advisor 那一条正是本档要保的「未经评审」声明。
+  - **为什么必须有这一条**：到顶后静默放行 = 把「未评审即交付」这条业务失败做成静默成功，而这道 guard 存在的目的就是挡它；提醒的作用是提醒、不是把回合焊死——同一条提醒重复 624 次严格劣于 5 条 ＋ 1 条诚实声明。
+- **状态的跨段存活**：`_advisorReminders` / `_advisorHonestySent` 与本族 run 级字段同进 `thincoder-core/agent/helpers.mjs` 的 `INHERITED_GUARD_KEYS`。依据 thincoder-core/agent/helpers.mjs「快照/回填两 helper 共用本清单」：不在清单里的字段，自动回合收尾留下的 guard 三态（`run-stages.mjs` 的 `agent._inheritedGuard = snapshotGuard(agent)`）会被 `restoreGuard` 回填，而计数不随——下一次用户回合计数从零起，上限形同没设。同族既有键逐字含「`"_touchedFiles", "_verifyRetries", "_advisorRound",`」。
+- **上限取 5 而非 3**：进展窗口预算保持原值 3；周期上限再给一次「真改了代码还是漏评审」的宽限。5 条仍不评审的模型不是在等提醒。
+- **两层的叠加**：单个周期内 ≤ `MAX_ADVISOR_REMINDERS`（5）条，任一进展窗口内 ≤ `MAX_ADVISOR_PUSHBACKS`（3）条。
 
 ## 7. 响应表纪律（Action 四值）
 

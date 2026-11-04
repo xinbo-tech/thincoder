@@ -156,9 +156,13 @@ export class ContinueError extends Error {
 export const INHERITED_GUARD_KEYS = [
   "_mutatedThisRun", "_verifiedThisRun", "_verifyPassed", "_calledAdvisorThisRun",
   "_touchedFiles", "_verifyRetries", "_advisorRound",
+  // ADVISOR-CONVERGENCE.md §6.4「状态的跨段存活」：advisor 提醒计数与到顶诚实提醒的一次性位同进清单——
+  // 不在清单里的字段不被 `restoreGuard` 回填，而自动回合收尾留下的 guard 三态照旧回填 ⇒ 计数不随、
+  // 下一次用户回合从零起，B 的周期上限形同没设。
+  "_advisorReminders", "_advisorHonestySent",
 ]
 
-/** 写侧单点：快照 7 键 → 纯对象（载体形态由调用方决定——核 = agent 字段 / 端 = 宿主容器）。 */
+/** 写侧单点：快照 `INHERITED_GUARD_KEYS` 全部键 → 纯对象（载体形态由调用方决定——核 = agent 字段 / 端 = 宿主容器）。 */
 export function snapshotGuard(agent) {
   const snap = {}
   for (const k of INHERITED_GUARD_KEYS) snap[k] = agent[k]

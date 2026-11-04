@@ -13,6 +13,9 @@ import { poolLive } from "./suspension.mjs"
 const MAX_VERIFY_PUSHBACKS = 2
 const MAX_VERIFY_RETRIES = 3
 const MAX_ADVISOR_PUSHBACKS = 3
+// 层 2（ADVISOR-CONVERGENCE.md §6.4 B）：同一未评审周期的提醒硬上限——续跑与段重启都不回满。
+// 取 5 而非 3：进展窗口预算保持原值 3，周期上限再给一次「真改了代码还是漏评审」的宽限。
+const MAX_ADVISOR_REMINDERS = 5
 const MAX_EMPTY_RETRIES = 2
 
 /**
@@ -152,13 +155,51 @@ export function handleCompletion(agent, response, depth, turn, guardPushbacks, h
     const pending = advisorReviewPending(agent)
     // rounds 仅作提醒文案显示（撤 cap——轮次不是终止判据；ADVISOR-CONVERGENCE.md §3.1）。
     const rounds = effectiveAdvisorRound(agent)
-    if (!pending && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
-        && advisorPushbacks < MAX_ADVISOR_PUSHBACKS) {
+    // 「未评审即收尾」的四项合取（既有判据逐字零改）+ 两支出口（推回一条 ∥ 任一层停推后的到顶诚实提醒，§6.4 A/B）。
+    // `!pending` 同属两支的一部分：异步评审在飞 = 未决，不是未评审——此时推「未经评审」的诚实声明
+    // 会与正在跑的评审自相矛盾。
+    const unreviewed = !pending && agent._mutatedThisRun && !agent._calledAdvisorThisRun && hasCodeMutations(agent)
+    // 层 1（进展窗口，§6.4 A）+ 层 2（未评审周期，§6.4 B）都还有余量 ⇒ 推一条。
+    // 计数落 agent：回合环那个 `advisorPushbacks` 是 `runAgent` 局部量，续跑重进即归零（上限形同没设）。
+    if (unreviewed && (agent._advisorReminders ?? 0) < MAX_ADVISOR_REMINDERS && advisorPushbacks < MAX_ADVISOR_PUSHBACKS) {
+      agent._advisorReminders = (agent._advisorReminders ?? 0) + 1
       advisorPushbacks++
       pushReal(agent, { role: "assistant", content: response.content })
       agent.history.push({
         role: "user",
-        content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${rounds + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format).]`,
+        content: `[System reminder: you changed code in this run and MUST get an advisor review before finishing (round ${rounds + 1}). Call the \`advisor\` tool now. This is required, not optional — do not skip it even if you believe the changes are trivial — the review will be quick either way. After the review, produce a response table for every issue found (see discipline rules for format).${
+          agent._advisorReminders >= MAX_ADVISOR_REMINDERS
+            ? ` This is reminder ${MAX_ADVISOR_REMINDERS} of ${MAX_ADVISOR_REMINDERS} — the last one. If you deliver without an advisor review, state explicitly in your reply to the user that this code has not been reviewed.`
+            : ""
+        }]`,
+      })
+      callbacks.onSubTurnBreak?.()
+      callbacks.onTurnEnd?.(agent, turn)
+      return { action: "continue", guardPushbacks, honestReminderInjected, advisorPushbacks }
+    }
+    // **任一层停推**（层 1 或层 2 耗尽 ⇒ 本轮推不成）⇒ 推**一条**诚实提醒，其后本轮放行收尾。
+    // 判据不写成「推满 5 条」：层 1 的预算只在真写了文件时回满（§6.4 A），所以「改过一次代码后只读不写」
+    // 是最常见形态——层 1 停在 3 条时只认 5 条的到顶条件永不成真，两支都不进 ⇒ 直接 `done`、零诚实提醒，
+    // 正是本机制要挡的「未评审即交付且静默」。
+    // 到顶静默放行 = 把「未评审即交付」这条业务失败做成静默成功，而这道 guard 存在的目的就是挡它：
+    // 形态照 verify 面到顶（本档上方 `// Exhausted retries — inject honesty reminder once`）——同形、
+    // 只换主语，不新增用户可见标记 / 字段 / 配置键。
+    // 一次性位的复位口径（§1 20:39 裁定）：位**随新进展复位**——与推回预算同一处（`turn-loop.mjs` 的写序推进
+    // 点，两行手拉手），另在本周期两处复位点（新用户回合起点 ∥ 评审覆盖成立处）一并归假。故口径是
+    // 「每次停推且仍未评审的收尾恰得一条诚实提醒」——不存在「发过一条之后本周期彻底静默」的第二条静默途径，
+    // 而「本轮发过就再也不发」会让「诚实提醒 → 又改代码 → 再收尾」整段不吭声（正是本批要堵的形状）。
+    // 文案只陈述事实（几条已发 ∥ 代码未评审 ∥ 二选一），**不**许诺「不再推」——层 1 先耗尽的形态下，
+    // 后续有新进展仍会再推提醒（§1 20:39 裁定第二条）。条数取 `?? 0`：复位点 2 清零后层 1 耗尽可达，别读出 undefined。
+    if (
+      unreviewed
+      && ((agent._advisorReminders ?? 0) >= MAX_ADVISOR_REMINDERS || advisorPushbacks >= MAX_ADVISOR_PUSHBACKS)
+      && !agent._advisorHonestySent
+    ) {
+      agent._advisorHonestySent = true
+      pushReal(agent, { role: "assistant", content: response.content })
+      agent.history.push({
+        role: "user",
+        content: `[System reminder: ${agent._advisorReminders ?? 0} advisor reminders sent. You have not had this code reviewed. Either call the \`advisor\` tool now, or state explicitly in your reply that this code has not been reviewed — do not present the work as reviewed. The user needs to know it is unreviewed.]`,
       })
       callbacks.onSubTurnBreak?.()
       callbacks.onTurnEnd?.(agent, turn)

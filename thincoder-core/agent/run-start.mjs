@@ -130,6 +130,14 @@ export async function beginRun(agent, input, callbacks, {
       agent._zeroWriteAlerted = false
       agent._verifyRetries = 0
       agent._advisorRound = 0
+      // ADVISOR-CONVERGENCE.md §6.4 B 复位点 1（穷举两处之一）：新用户回合起点 · 无继承时——回到完整预算。
+      // 「非自动回合」合取：digest / timer / upstream 三类自动回合同样不带 `resume`（同样进本块），
+      // 但它们落在周期中间而非起点——不清零，否则「用户回合 → 自动回合 → 用户回合」每段重新拿满 5 条，
+      // 上限被自动回合吃掉。自动回合留下的值经 `INHERITED_GUARD_KEYS` 回填（`if (g)` 支）。
+      if (!(autoTurn || upstreamTurn || timerTurn)) {
+        agent._advisorReminders = 0
+        agent._advisorHonestySent = false
+      }
       agent._advisorSession = null // advisor session is per-run: discard when the task ends, next task starts fresh
       agent._emptyRetries = 0 // empty-response retry budget is per-run: a fresh user turn restarts from zero
       agent._compressFailures = 0 // compaction summary-failure counter is per-run: a fresh user turn restarts from zero

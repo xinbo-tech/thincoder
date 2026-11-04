@@ -134,7 +134,13 @@ export async function recordToolResults(agent, toolByName, results) {
           // （含类型不可判——run 缺失的 legacy 直调）⇒ 不置「已覆盖」（与 settle 面
           // 逐条 parity；设计评审保持计入——无代码面）。
           const incomplete = advisorIncompleteMarker(String(result))
-          if (!(incomplete && run?.reviewType !== "design")) agent._calledAdvisorThisRun = true
+          if (!(incomplete && run?.reviewType !== "design")) {
+            agent._calledAdvisorThisRun = true
+            // ADVISOR-CONVERGENCE.md §6.4 B 复位点 2（同步面）：评审覆盖成立 ⇒ 本未评审周期结束，
+            // 下一周期起于完整预算（未完成尾不计——与覆盖标记同一判据分摊）。
+            agent._advisorReminders = 0
+            agent._advisorHonestySent = false
+          }
           if (reviewId !== undefined) {
             if (run) {
               run.round++

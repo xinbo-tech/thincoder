@@ -19,7 +19,7 @@ import {
   turnFrame, // 第 19 批（TURN-ACROSS-SEGMENTS）：跨段累计编号帧（设计 TURN-CAP-CONTINUE.md §4）
   ContinueError,
   FILE_MUTATORS, toolTouchPaths,
-  wroteSince, // #934（§6.32.2 ① 判据式）：写序是否推进——轮顶 ∥ 撞帽收尾两处判据点共用
+  wroteSince, // #934（§6.32.2 ① 判据式）：写序是否推进——轮顶 ∥ 撞帽收尾 ∥ advisor 预算复位（§6.4 A）三处判据点共用
 } from "./helpers.mjs"
 
 export async function runTurnLoop(agent, {
@@ -157,7 +157,8 @@ export async function runTurnLoop(agent, {
     // 空响应预算复位（AGENT-LOOP.md §6.5① · D-AL28）：本轮响应**有实质** ⇒ 计数清 0（实质 = 有正文
     // 或带工具调用；判据单源 = completion.mjs `isSubstantiveResponse`）。落位 = 本轮响应存在的第一处、
     // 也是四支路（下方流规则 abort ∥ 用户中断 ∥ 工具批 ∥ 零工具）发散前的最后一处——落进任一分支都会漏其余三支。
-    // 与下方 `guardPushbacks = 0`（工具批执行处）分工：那处复位的是 verify ∥ advisor 推回预算、只看「有工具批」；
+    // 与下方工具批执行处的推回预算复位分工：那处复位 verify ∥ advisor 两面——verify 面看「有工具批」、
+    // advisor 面看「本批写序推进」（§6.4 A：成功的文件写 ∥ 子代理合并才算进展，读文件不算）；
     // 本处复位空响应预算、看「有实质」——正文本身已是实质，不必等工具批。
     if (isSubstantiveResponse(response)) agent._emptyRetries = 0
 
@@ -297,9 +298,23 @@ export async function runTurnLoop(agent, {
       continue
     }
 
-    // Model is executing tools → real work: reset guard pushback counters
+    // Model is executing tools.
+    // verify 面：任一工具批即回满（`guardPushbacks = 0` 字面与行为逐字不变——批失败时同样清零，本批未动）。
     guardPushbacks = 0
-    advisorPushbacks = 0
+    // advisor 面（ADVISOR-CONVERGENCE.md §6.4 A）：预算只在被审对象真的变了时回满——判据 = 本批写序
+    // 推进了（`wroteSince`，与零落笔看门狗同源；`_mutSeqMark` 轮头前移、此处批后比一次）。写序唯一推进面
+    // = `noteMutations`，两个写者：成功的文件写工具（`dispatch-gates.mjs` 的 `noteExecutedMutation`，带
+    // 非 `Error:` 前缀门）与子代理代码合并（`mergeChildMutations`）——故合入也算进展，不另立判据。
+    // 读文件 / 查代码 / bash / git 一概不复位：它们对被审代码零改变，复位就把「同一条提醒给 N 次机会」
+    // 变成无限次（实测形态 = 模型读一次文件、提醒来一条，无限重复）。
+    // 到顶诚实提醒的一次性位与本预算同点复位（两行手拉手——§1 20:39 裁定）：有新进展 ⇒ 该次交付重新需要
+    // 一句诚实声明；若在这里只复位预算、不复位位，则「发过诚实提醒 → 又改代码 → 再收尾」会静默放行
+    // （未评审即交付不吭声），而那正是本批要堵的形状。`agent._advisorReminders` **不**随进展复位——
+    // 它是未评审周期的上限计数（层 2 的 5 条），复位它等于把周期上限取消。
+    if (wroteSince(agent, agent._mutSeqMark)) {
+      advisorPushbacks = 0
+      agent._advisorHonestySent = false
+    }
 
     // Commit tool results (pairing, multimodal deferral, mutation accounting, reindex)
     await recordToolResults(agent, toolByName, results)
