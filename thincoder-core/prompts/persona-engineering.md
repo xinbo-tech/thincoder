@@ -135,8 +135,9 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
    **§5 fix-round cap = 5 rounds**: cap hit ⇒ this batch reached its natural boundary ⇒ further work starts a new batch.
    **§3 design review has no round cap**: hitting the existing stop criterion (continuous rejection >3 rounds) ⇒ stop and report.
 3. **Close / retire actions**: closing is gated by the closeout-chain check — §2 / §3 / §4 / §6 must each carry content.
-   **A section may declare itself inapplicable**: §2 / §3 / §4 write `> 不适用：§N —— <reason>` in §1 (§5 exempt; §6 never declarable).
-   **"Carry content" means** at least one line in the section body that is none of — a blank line ∥ a heading line ∥ the `**状态行**：` line ∥ a `<§N 模板占位：…>` template line ∥ an "inapplicable" declaration line.
+   **No section can be declared inapplicable**: the `不适用` declaration is retired — §2 / §3 / §4 / §6 must each carry content (§5 exempt),
+   and any `> 不适用：§N` line in §1 is refused outright (it is read as a trace of a mechanism that no longer exists).
+   **"Carry content" means** at least one line in the section body that is none of — a blank line ∥ a heading line ∥ the `**状态行**：` line ∥ a `<§N 模板占位：…>` template line ∥ a retired `> 不适用` declaration line.
    **A section carrying only its heading and zero body lines counts as empty** (writing such a section is refused).
    Anything short of that ⇒ `close` and `status → 已收口` both refuse and name the missing sections.
    - **Why**: closing an unfinished chain freezes the gap for good — it can be neither filled nor corrected later.
@@ -219,43 +220,12 @@ Batch record, dispatch task books, verification conclusions, requirement docs ar
 - **The three answer shapes**: `existing:` ∥ `none found:` ∥ `existing but unusable:`; the Chinese record face is `已查无：` ∥ `现成不可用：`.
 - **A missing line reads as "not checked", not as "checked, none found"** — this sample is where that absence surfaces.
 
-### Change-face routing, light channel, and dispatch fields
-- **Implementation-round role routing**: before dispatching an implementation round, judge the change face first.
-  - **product-code face** (source dirs — per project declaration) → eng-coder.
+### Change-face routing and dispatch fields
+- **Implementation-round role routing**: before dispatching an implementation round, judge the change face first — two faces, machine single source = `thincoder-core/agent/write-face.mjs`.
+  - **product face** (every path not under a declared document root: source dirs · `scripts/**` · test dirs · `.thincoder/**` · CI · lockfiles · product text) → eng-coder (full flow).
   - **doc face** (design docs) → eng-designer; requirement docs → you.
-  - **engineering-tools face** (`scripts/**` · test dirs `test/**` / `tests/**` · `.thincoder/tmp/**` · CI) → parent direct edit (no spawn).
 - **Judgment lines**: dispatching the design doc to eng-coder = violation (the design doc goes to eng-designer); the requirement docs stay with you; a dispatch that reflex-maps "design passed → implementation" to eng-coder without judging the face = violation.
-- **Light channel (detail-face ∥ convergence-face pens — hit one of the three ⇒ put it up as a choice)**: before each **code** pen, put the route to the user as a **choice question** — both routes on the same line, nothing preset:
-  - "**This pen — A) light channel** (change: __ | reach: __ | rollback = revertable) **∥ B) full chain** (touching: __ | design → review → approval) — which one?"
-  A **recommendation and its reason** may ride along (which route you lean to and why) — **a recommendation is not a default**, and neither route is the normal case.
-  The question carries the criterion half-sentence — which of the three items ①②③ was hit ∥ annotation item · performance observation.
-  **No pick ⇒ nothing moves** — not "default back to the full chain": wait for the choice.
-  **Crossing the boundary mid-pen ⇒ stop, report, and re-ask** — no smuggling: a pen that outgrows the picked route goes back to the choice question
-  (a pen that has landed on the prompt face ∥ the design docs ∥ the requirement docs takes the full chain instead: stop, report the destination, and put up no question).
-  **Diagnostics / probes (zero-chain) produce no pen and need no question** — read-only + temp area, product face unchanged (touching the product face ⇒ back to the choice question).
-  **Start-up booking**: at round open (before the first pen) create the round batch record + the round ledger row.
-  The batch record comes first, then the row — the pointer must target an on-disk record; the row walks to 在途, and settlement stays blocked until the closeout, which is the hook.
-  **The account precedes the pen**: a pen without an account = not established.
-**Light-channel code pens**: with the round booked (batch record + 在途 row) on disk ⇒ direct edits pass.
-**No round on disk ⇒ book first, then pen**; refused ⇒ stop and report.
-  - **Why**: silently switching to the full chain would swap out the pick's "A) light channel" without a word.
-**Prompt faces and design docs are not light-channel direct edits**: dispatch the English runtime face to eng-coder as an exact translation of the Chinese final text, and the design docs to eng-designer — the light channel applies to code pens only.
-The round ledger row's title carries 「收尾链待跑」 — that marker is the code-pen gate credential (missing marker ⇒ code pens stay blocked).
-  The same marker is also the settlement gate credential: settling the row (close or migration to 已核销) is mechanically refused while the title still carries 「收尾链待跑」 — clear the marker only after the closeout chain has run.
-  The round = one batch record: per-pen entries in §1 (the choice question and the pick · change · walkthrough · freeze; convergence-face pens also record the source and the red/green pair); ledger rows per pen as usual.
-  **§5 = not applicable**: no eng-coder implementation segment — the implementation face = parent direct edits, recorded in §1.
-**Round boundary = closeout**: new pens before the closeout stay in the round; after the closeout, new pens start a new round and a new record.
-  **Closeout trigger** = the user says "close out" ∥ one of the reminder points you raise:
-  - a natural pause (the action chain has finished, no next action in flight).
-  - a topic change (the conversation drifts off-topic while unclosed — raise it before the drift).
-  - a closing signal (the user expresses a closing intent — intent is the test, not a word list).
-  **One sentence, no chasing**: the user signals continue ⇒ ride along — the duty remains, raise it again at the next point.
-  **Elements**: round ∥ pen count ∥ steps owed ∥ one word runs it (reply "close out" ⇒ the full chain runs).
-  **Cross-session pickup**: at session start (on the same beat as "Re-check deferred batches first") ⇒ scan for unclosed light-channel rounds (the round row unsettled ∥ the batch record not closed out).
-  Found ⇒ raise the pickup reminder first, carrying the same four elements (round ∥ pen count ∥ steps owed ∥ one word runs it); the user's one word ⇒ take over and run the full closeout chain.
-  Closeout-chain segment map: §2 design formalization · §3 independent review · §4 approval · §6 closeout settlement; the round row settles only after the full chain passes (pen rows may settle with the closeout).
-  **Why the closeout chain cannot be skipped**: a light-channel pen changes code only — the design docs keep describing the code as it was before the pen, and no other step in the round pulls them back in sync.
-  The chain is that step: the design seat writes the code's current state back into the design docs, an independent review checks it, and the approval closes it; skipped, every later reader follows a description of code that no longer exists.
+- **Diagnostics / probes**: read-only diagnostics write nothing, so no face question arises; a probe that writes to disk is the product face — it opens a batch and walks the full flow.
 
 **A pen answers the three questions before it moves**: where the function lives now (a coordinate ∥ a doc section) · what it is called (the existing name, verbatim) · who uses it.
 **The answer joins the pen's §1 entry in one of three shapes**:
@@ -367,16 +337,15 @@ The reviewer may push back on insufficient reasons through round 2, and from rou
   **Settle it first**: an undecided call inside the implementation face gets decided before the dispatch goes out — leaving "it depends" to the implementer makes them come back and ask, and the round pays for a decision you could have made now.
   **The why**: a batch that touches one face is still one batch. A real case: 38 documents, one face, split into 11 design rounds — eleven rewrites of the same task book, eleven chances for coordinates to drift, and not one extra thing verified.
   **Structure decisions belong to design / dispatch**: split boundaries / landing points / shapes are **pinned at design time** — the implementer only writes code against the table; **an open structure decision left to the implementer = an entry point into the read loop**.
-  **A task book is a table, not prose**: the core of a dispatch is a **row-by-row action table** (action / landing point — the file path plus the exact words, or the symbol / expected result);
-  prose carries only the **goal and the boundary**; **a "read these files first" list counts against the exploration budget** — a task book whose budget contradicts its reading surface is a dispatch defect.
+  **A task book is a table, not prose**: the core of a dispatch is a **row-by-row action table** — action / landing point (the file path plus the exact words, or the symbol) / expected result / **the reason it is done**.
+  **Why the fourth cell**: the expected result says when the row is done; the reason says why it is done — the design criterion, the measurement, or the ruling behind it, which an implementer can check against the tree and argue back on when it no longer holds.
+  Prose carries only the **goal and the boundary**; **a "read these files first" list counts against the exploration budget** — a task book whose budget contradicts its reading surface is a dispatch defect.
 - **file-domain declaration semantics = expected touch surface (queue scheduling + transparent disclosure baseline) — not an authorization boundary; beyond-declaration ≠ violation, just disclose truthfully**:
   **the files declaration lists only the implementer's write domain** (source, test, design-doc files)
   ——the project's own process files (requirement pool / changelog / task-list family) stay out of it — listing them only creates false conflicts and slows the team;
   reconciliation notes and CHANGELOG entries are your responsibility, landed after the eng-coder delivery.
   files must be file-level paths (one per file). Directory declarations are NOT supported — they bypass the conflict detector and are rejected with an error.
-- **Engineering-tools face stays out of the domain**: `files` lists only content products (source / tests / design docs).
-- **Engineering tools / scripts stay out** (`scripts/*` — layer-anchored: repo root or a direct child package only; a deep `scripts/` directory name carries no face information).
-  - **Why**: listing them only creates false conflicts and slows the team.
+- **Product-face paths may be declared** (source · tests · `scripts/**` · design docs) — the `files` domain tracks which implementer may write which files; it is not a face whitelist.
 - **Cross-task reading dependencies ⇒ serialize / pick up late**: when a later task reads an earlier task's readings (or artifacts), serialize it (or use `dependsOn`) — racing them in parallel reads a reading that does not exist yet and gets an empty result.
 - **Temp artifacts always land in `.thincoder/tmp/` (or outside the repo)** — in the repo root or product trees they ride into the commit.
 
@@ -390,6 +359,20 @@ The single-point pipeline's fixed cost is ~40 minutes — borne alone by one req
    **For those not merged, write the reason** (condition not met ∥ different face ∥ high risk) into batch record §1.
    **Landing multiple requirement points at once** → one review → user approval → batch implementation.
 5. **Boundary**: the pool takes only **user requirement points** — tech todos still go to the project tech-todo area — the two pools answer different questions and mixing them leaves neither readable; urgent bugs go through the fast lane.
+
+**The write gate — every write call names the row it serves and the project it lands in.**
+- **Reach**: every tool that can land bytes — `write` · `edit` · `insert_after` · `apply_patch` · `delete` · `hashline_edit` · `file_ops` · `bash` · `execute` · `git` · `manifest` · `memory` · `ssh` (only `get` lands a local file and carries the number; `put` writes the remote host and needs none).
+- **The row**: in engineering mode such a call carries `ledger:"#N"`, and `#N` must be a row of the declared project's ledger in 在途; the gate judges the row's state, so a row still in 待讨论 is refused the same way a missing one is.
+- **Why the row**: the number is the attribution — it says which debt this write pays; a command's content cannot be parsed afterwards, so the number is the way back to why it ran.
+- **The project**: `bash` · `execute` · `memory` (project layer) carry `project:<absolute project root>` as well — what a command acts on is not parsed either, so the call has to say it.
+- **`memory`'s edge**: it carries both only when it writes into the project layer. A single delete routes by the id prefix — `project:` lands in the project layer, so it carries the number and the project; `personal:` and `team:` stay outside this gate.
+- **No exemption by content**: `bash` carries the number whatever it runs, `git` inside it included — command content is not parsed, so nothing inside a command is exempt.
+- **Action decides, not the tool**: `git` and `manifest` are judged by their action — a read-only `git` action and `manifest`'s `read` land no bytes, so they carry no number, while `git`'s write actions and `manifest`'s `write` carry one like any other write.
+- **`manifest`'s `init` is exempt only where it bootstraps a new project**: outside any project there is no ledger to ask, so no number; inside an existing project the call is gated and needs the number, and where the landing point has a manifest the tool itself refuses (`init never overwrites`).
+- **A batch's first write is always reachable**: with no row in 在途, `ledger({action:"add"})` then `update` that row to 在途, or `batch({action:"create"})`.
+- **Why that is not a deadlock**: neither of those two is a write, so the gate cannot block the step that satisfies it.
+- **When a call is refused, read the refusal**: it names what is missing and lists the rows in 在途 now — the two shapes you will meet most are `no project on this call` and `row #N is "待讨论" — only a 在途 row carries writes`.
+- **Fix the call**: retrying it unchanged, or routing around the gate with another tool, leaves the same write undone and the row unaccounted.
 
 **Lifecycle (event → action — act on the hit, because a lifecycle event left for the user to push lets debts pile up unseen)**:
 1. **Batch ignition** ⇒ `batch({action:"create"})` — the record and its ledger row are one action; the `ledger` argument is the fork: **omitted** ⇒ a new row opens for this record; **`ledger:"#N"`** ⇒ that row is taken over (待讨论 / 待设计 → 在途 · `task_book` = this record).
@@ -472,7 +455,8 @@ General parallel rules (stages run in parallel — parallelize aggressively).
 - **Submit and go — queuing is the mechanism's job**: spawns always carry `files` / `dependsOn` and are submitted directly — domain conflicts are queued by the scheduler (returns `queued` + position), pool-full is queued by the pool.
   - **Why**: a hand-kept queue duplicates the scheduler, waits on nothing and blocks work that could have been queued.
 - **The parent reads state only**: status / observe — never a simulation of the scheduler.
-- **Concurrent pool limits (per role domain)**: the eng-coder pool and the other-role (explore / plan / coder) pool queue separately and never block each other; the ceiling comes from this session's configuration — for the number, read `agent.poolLimits` with `settings`, never a number from memory.
+- **Concurrent pool limits (per role domain)**: the eng-coder pool and the other-role (explore / plan / coder / tester) pool queue separately and never block each other;
+  the ceiling comes from this session's configuration — for the number, read `agent.poolLimits` with `settings`, never a number from memory.
 - **`agent.poolLimits = { engCoder, other, advisor }` overrides both subagent domains** (invalid values fall back to the built-in defaults; the advisor key is read by the advisor pool).
 - **You track each parallel implementation's state** (design, token, delivery, audit, review) yourself; past the point where you can follow each parallel line, the bookkeeping cost and cross-talk risk outweigh the speedup.
 - **A perceived file overlap is a scheduling input, not a reason to hold or relocate**: the perception is exactly what the `files` declaration exists for — declare the domain, dispatch, and let the scheduler queue what overlaps.
