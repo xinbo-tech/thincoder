@@ -962,11 +962,11 @@ checklist 描述档已随工具废除（承接 = `docs/core/design/_archive/modu
 
    - **面谓词**：段判据只剩一个面谓词 `isPromptFace`（提示词面逐行判）。工具描述面不设谓词——不设面例外，也就不留一个会漂的豁免口。
 
-**谓词面**：单源 = `thincoder-core/doc-check/paragraph.mjs`，十名——`isTableRow` / `fenceMark` / `isFenceClose` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem`（`^\s*(?:[-*+]|\d+[.)、]|[·•])\s` ∥ `^\s*[①-⑳]`）/ `isPromptFace`。
+**谓词面**：单源 = `thincoder-core/doc-check/paragraph.mjs`，十名——`isTableRow` / `fenceMark` / `isFenceClose` / `isFenceLine` / `isQuoteLine` / `isZoneHead` / `isExecutableLine` / `inCodeSpan` / `isListItem`（首式 `^\s*(?:[-*+]|\d+[.)、]|[·•])\s` ∥ 次式 `^\s*[①-⑳]`）/ `isPromptFace`。
 
-**列表项符号集（`isListItem` 的闭集——段界判定）**：三族并列——ASCII 无序 `-` `*` `+` · ASCII 有序 `数字 + . ∥ ) ∥ 、` · 中文标记 `·`（U+00B7）∥ `•`（U+2022）∥ 圈号 `①`–`⑳`（U+2460–U+2473）。
+**列表项符号集（`isListItem` 的闭集——段界判定）**：闭集成员与两式字面只住 §3.18「谓词面」的 `isListItem` 一处（本处不复制成员表——D2）；本块记的是本批对它的决定与理由：本批新增 = 中文标记一族，ASCII 两族与两式结构未动。
 
-**形（两式——实现形态钉死）**：两族分住**两个正则**、以 `||` 并列——首式 `^\s*(?:[-*+]|\d+[.)、]|[·•])\s`（ASCII 两族与 `·` `•` **要求标记后有空白**：ASCII 两族与尾 `\s` 逐字不动，只在字符类内追加 `[·•]`）∥ 次式 `^\s*[①-⑳]`（圈号**不要求**空白——`① 一二三` 与 `①一二三` 同判列表项）。
+**形（两式——实现形态钉死）**：两式 = §3.18「谓词面」的两个正则、以 `||` 并列（字面不在此重贴）——**首式**（ASCII 两族 + 中文标记 `·`（U+00B7）∥ `•`（U+2022））**要求标记后有空白**：ASCII 两族与尾 `\s` 逐字不动，只在字符类内追加这两个标记；**次式**（圈号）**不要求**空白——`① 一二三` 与 `①一二三` 同判列表项。
 
 **为何是两式并列、不是一式交替**：圈号不要求尾随空白、其余三族要求——写成单式交替就得把尾 `\s` 移进分组，`git diff` 的 hunk 随之多动结构，而 A-DD27 ⑧ 源面判据是「hunk 只动该字符类与同行注释」（ASCII 三段逐字未动）。两式并列是唯一同时满足「圈号不要求空白」与「源面 hunk 只动该字符类」的写法。
 
